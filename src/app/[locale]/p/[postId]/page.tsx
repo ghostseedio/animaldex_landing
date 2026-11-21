@@ -105,10 +105,10 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
     // Somebody who opened a shared link: the app, and the animal's own page and voice.
     const animal = discoverPostAnimal(post);
     // Structured data names images Google can fetch: the animal's share card and its own artwork
-    // (/img/species), or the site card. The capture photo (og:image, for link previews) is under /api/.
+    // (/img/species), or the field guide's card. The capture photo (og:image, for link previews) is under /api/.
     const ldImages = animal
         ? [ogCardImageUrl("species", animal.slug), ...((await getExactSpeciesArtworkFile(animal.slug).catch(() => null)) ? [speciesImageUrl(animal.slug)] : [])]
-        : [getAbsoluteAssetUrl("/images/og.png")];
+        : [ogCardImageUrl("page", "animals")];
     const jsonLd = discoverPostJsonLd(seo, {pageUrl, imageUrl: ldImages, videoUrl, siteUrl: getAbsoluteUrl(params.locale)});
     const [t, askT, animalsT, messages] = await Promise.all([
         getScopedTranslator(params.locale, "post"),
