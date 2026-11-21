@@ -5,8 +5,11 @@ import Link from "@/app/[locale]/_components/link";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkIconUrl} from "@/ark-scene/placeholder-icon";
 import {healHeart} from "@/components/debates/use-debates";
-import {ARK_HEARTS_MAX, arkCanRestoreHeart, arkLivesText, arkRecoveringText, clampArkHearts, type ArkAnimalHearts, type ArkHeartsWords} from "@/lib/ark-hearts";
+import {ARK_HEARTS_MAX, arkCanRestoreHeart, arkLivesText, arkRecoveringText, type ArkAnimalHearts, type ArkHeartsWords} from "@/lib/ark-hearts";
 import {fillArkWords} from "@/lib/ark-words";
+import {ArkHeartIcons} from "@/app/[locale]/(composited)/ark/ark-heart-icons";
+
+export {ArkHeartIcons};
 
 /**
  * Hearts are lives (AnimalDex docs/ark/HEARTS-LIVES-DESIGN.md, section 6, "Card UI"), on the owner's own card only:
@@ -15,19 +18,6 @@ import {fillArkWords} from "@/lib/ark-words";
  * more life for your animal in the Ark." under it. Out of Credits, a link to the site's Credits page.
  */
 
-export function ArkHeartIcons({hearts, size = 14}: {hearts: number; size?: number}) {
-    const n = clampArkHearts(hearts);
-    return (
-        <span className="inline-flex shrink-0 items-center gap-0.5 text-[#ff8f8f]" aria-hidden="true">
-            {Array.from({length: ARK_HEARTS_MAX}, (_, index) => (
-                <svg key={index} viewBox="0 0 24 24" style={{width: size, height: size}} fill={index < n ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2.2} strokeLinejoin="round">
-                    <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
-                </svg>
-            ))}
-        </span>
-    );
-}
-
 type LivesProps = {
     entry: ArkAnimalHearts;
     words: ArkHeartsWords;
@@ -35,10 +25,12 @@ type LivesProps = {
     cost: number;
     /** A heart restored: the card's new count (the page updates every animal that card brought). */
     onRestored: (captureId: string, hearts: number) => void;
+    /** On the owner's own card the hearts are in the header (once): this row keeps only "Recovering…" and the restore. */
+    heartsInHeader?: boolean;
 };
 
 /** The lives row and its restore button. */
-export function ArkLivesRow({entry, words, locale, cost, onRestored}: LivesProps) {
+export function ArkLivesRow({entry, words, locale, cost, onRestored, heartsInHeader = false}: LivesProps) {
     const [restoring, setRestoring] = useState(false);
     const [problem, setProblem] = useState<{text: string; credits: boolean} | null>(null);
     const now = useNow(entry.status === "recovering");
@@ -56,15 +48,21 @@ export function ArkLivesRow({entry, words, locale, cost, onRestored}: LivesProps
         });
     };
     return (
-        <div className="mt-1.5" data-testid="ark-card-lives" data-hearts={entry.hearts} data-status={entry.status}>
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] leading-snug">
-                <ArkHeartIcons hearts={entry.hearts} />
-                <span className="sr-only">{fillArkWords(words.label, {n: entry.hearts})}</span>
-                <span className="font-semibold text-ink-100">{arkLivesText(entry.hearts, words, locale)}</span>
-                {entry.status === "recovering" ? (
-                    <span data-testid="ark-card-recovering" className="rounded-full bg-[#2a3350] px-2 py-0.5 text-[11.5px] font-semibold text-[#c9d6ff]">{arkRecoveringText(entry, now, words, locale)}</span>
-                ) : null}
-            </p>
+        <div className={heartsInHeader ? "mt-1" : "mt-1.5"} data-testid="ark-card-lives" data-hearts={entry.hearts} data-status={entry.status}>
+            {!heartsInHeader || entry.status === "recovering" ? (
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] leading-snug">
+                    {heartsInHeader ? null : (
+                        <>
+                            <ArkHeartIcons hearts={entry.hearts} />
+                            <span className="sr-only">{fillArkWords(words.label, {n: entry.hearts})}</span>
+                            <span className="font-semibold text-ink-100">{arkLivesText(entry.hearts, words, locale)}</span>
+                        </>
+                    )}
+                    {entry.status === "recovering" ? (
+                        <span data-testid="ark-card-recovering" className="rounded-full bg-[#2a3350] px-2 py-0.5 text-[11.5px] font-semibold text-[#c9d6ff]">{arkRecoveringText(entry, now, words, locale)}</span>
+                    ) : null}
+                </p>
+            ) : null}
             {arkCanRestoreHeart(entry) ? (
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <button

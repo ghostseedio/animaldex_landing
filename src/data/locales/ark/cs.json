@@ -1037,7 +1037,9 @@
             "age": "Věk",
             "left": "Zbývá {time}",
             "ticker": "Tento týden roste a klesá",
-            "talk": "Mluvit"
+            "talk": "Mluvit",
+            "tier": "Třída",
+            "tierHint": "Třída {tier}: stupeň bojové síly fotky, která ho přivedla na palubu"
         },
         "how": {
             "lead": "Živý 3D svět skutečných zvířat, který řídí pravidla přírody.",
@@ -1060,6 +1062,13 @@
             "wild": "Divočina",
             "town": "Město",
             "arkYear": "1 rok na Arše"
+        },
+        "lifeHelp": {
+            "button": "Co znamená ukazatel života",
+            "bar": "Plný pruh: dosud prožitý život, zbarvený podle toho, jak se mu daří (zelená dobře, jantarová stáří nebo ohrožení, červená hlad)",
+            "now": "Bílá značka: teď",
+            "end": "Šrafovaný konec: kdy pravděpodobně zemře stářím, jako rozmezí, ne slib",
+            "heart": "Srdce %: jeho šance přežít další rok Archy (asi 2 týdny reálného času), se započtením blízkých predátorů, hladu, věku a vypuštění"
         }
     },
     "talkPage": {

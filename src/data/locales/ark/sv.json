@@ -1037,7 +1037,9 @@
             "age": "Ålder",
             "left": "{time} kvar",
             "ticker": "Ökar och minskar den här veckan",
-            "talk": "Prata"
+            "talk": "Prata",
+            "tier": "Nivå",
+            "tierHint": "Nivå {tier}: stridskraftsbetyg för fotot som tog den ombord"
         },
         "how": {
             "lead": "En levande 3D-värld av riktiga djur, styrd av naturens regler.",
@@ -1060,6 +1062,13 @@
             "wild": "Vild",
             "town": "Stad",
             "arkYear": "1 Ark-år"
+        },
+        "lifeHelp": {
+            "button": "Vad livsstapeln betyder",
+            "bar": "Fylld stapel: livet hittills, färgad efter hur den mår (grön bra, bärnsten gammal eller i fara, röd hungrig)",
+            "now": "Vitt streck: nu",
+            "end": "Randigt slut: när den troligen dör av ålder, som ett spann, inte ett löfte",
+            "heart": "Hjärta %: chansen att överleva nästa Arkår (cirka 2 veckor i verkligheten), med rovdjur i närheten, hunger, ålder och utsläppning medräknade"
         }
     },
     "talkPage": {

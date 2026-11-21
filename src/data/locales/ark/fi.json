@@ -1037,7 +1037,9 @@
             "age": "Ikä",
             "left": "Jäljellä {time}",
             "ticker": "Kasvussa ja laskussa tällä viikolla",
-            "talk": "Juttele"
+            "talk": "Juttele",
+            "tier": "Taso",
+            "tierHint": "Taso {tier}: sen kuvan taisteluvoiman arvosana, joka toi sen Arkkiin"
         },
         "how": {
             "lead": "Elävä 3D-maailma oikeista eläimistä, luonnon sääntöjen mukaan.",
@@ -1060,6 +1062,13 @@
             "wild": "Villi",
             "town": "Kaupunki",
             "arkYear": "1 Arkin vuosi"
+        },
+        "lifeHelp": {
+            "button": "Mitä elämäpalkki tarkoittaa",
+            "bar": "Täysi palkki: tähän asti eletty elämä, värjättynä voinnin mukaan (vihreä hyvin, meripihka vanha tai vaarassa, punainen nälkäinen)",
+            "now": "Valkoinen viiva: nyt",
+            "end": "Raidallinen pää: milloin se todennäköisesti kuolee vanhuuteen, välinä, ei lupauksena",
+            "heart": "Sydän %: sen mahdollisuus selvitä seuraava Arkin vuosi (noin 2 viikkoa oikeaa aikaa), huomioiden lähellä olevat pedot, nälkä, ikä ja vapautus"
         }
     },
     "talkPage": {

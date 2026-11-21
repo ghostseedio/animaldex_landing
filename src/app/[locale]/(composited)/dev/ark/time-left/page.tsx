@@ -7,7 +7,7 @@ import ArkTimeLeftGallery from "./gallery-client";
  * DEV ONLY: the life block (age, life stage, a life bar and "Estimated time left", decision 389, `lib/ark-time-left.ts`) on
  * the real Ark card and in Ark Lite, from a fixture world and fixture food-chain answers (no server, no database). 404s in production.
  *
- *   /dev/ark/time-left?animal=young|adult|old|hunted|prime|good|hungry|safe|pet|human|child&view=card|lite[&grace=0|ahead|live][&lang=de]
+ *   /dev/ark/time-left?animal=young|adult|old|hunted|prime|good|hungry|safe|pet|human|child&view=card|lite[&grace=0|ahead|live][&lang=de][&tier=A&hearts=2]
  *
  * young: born aboard a month ago; adult: arrived, healthy; old: the old vole; hunted: a wild hedgehog with foxes about;
  * prime / good: the same wood's hedgehogs at those thrive bands (the foxes take the weaker first); hungry: a starving fox;

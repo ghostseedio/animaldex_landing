@@ -5234,7 +5234,9 @@
       "age": "Umur",
       "left": "Sisa {time}",
       "ticker": "Naik dan turun minggu ini",
-      "talk": "Bicara"
+      "talk": "Bicara",
+      "tier": "Tingkat",
+      "tierHint": "Tingkat {tier}: nilai kekuatan bertarung dari foto yang membawanya ke Bahtera"
     },
     "how": {
       "lead": "Dunia 3D hidup berisi hewan sungguhan, berjalan dengan aturan alam.",
@@ -5257,6 +5259,13 @@
       "wild": "Liar",
       "town": "Kota",
       "arkYear": "1 tahun Bahtera"
+    },
+    "lifeHelp": {
+      "button": "Arti bilah kehidupan",
+      "bar": "Bilah penuh: hidup yang sudah dijalani, diwarnai menurut keadaannya (hijau baik, kuning tua atau berisiko, merah lapar)",
+      "now": "Garis putih: sekarang",
+      "end": "Ujung bergaris: kapan kemungkinan ia mati karena usia tua, sebagai rentang, bukan janji",
+      "heart": "Hati %: peluangnya bertahan satu tahun Bahtera berikutnya (sekitar 2 minggu waktu nyata), dengan menghitung pemangsa di dekatnya, rasa lapar, usia, dan pelepasan"
     }
   },
   "seo": {

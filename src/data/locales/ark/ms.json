@@ -1037,7 +1037,9 @@
             "age": "Umur",
             "left": "Tinggal {time}",
             "ticker": "Meningkat dan menurun minggu ini",
-            "talk": "Berbual"
+            "talk": "Berbual",
+            "tier": "Peringkat",
+            "tierHint": "Peringkat {tier}: gred kuasa bertarung foto yang membawanya ke Bahtera"
         },
         "how": {
             "lead": "Dunia 3D hidup haiwan sebenar, berjalan mengikut peraturan alam.",
@@ -1060,6 +1062,13 @@
             "wild": "Liar",
             "town": "Bandar",
             "arkYear": "1 tahun Bahtera"
+        },
+        "lifeHelp": {
+            "button": "Maksud bar hayat",
+            "bar": "Bar penuh: hayat yang telah dilalui, diwarnakan mengikut keadaannya (hijau baik, ambar tua atau berisiko, merah lapar)",
+            "now": "Tanda putih: sekarang",
+            "end": "Hujung berjalur: bila ia mungkin mati kerana tua, sebagai julat, bukan janji",
+            "heart": "Hati %: peluangnya untuk terus hidup tahun Bahtera seterusnya (kira-kira 2 minggu masa sebenar), mengambil kira pemangsa berdekatan, lapar, umur dan pelepasan"
         }
     },
     "talkPage": {

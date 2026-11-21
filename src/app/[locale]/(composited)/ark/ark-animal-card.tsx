@@ -21,6 +21,7 @@ import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 import type {ArkCapturePhoto} from "@/lib/ark-capture-photo";
 import {arkPhotoShownOn} from "@/lib/ark-photo-label";
 import {ArkLivesRow} from "@/app/[locale]/(composited)/ark/ark-lives";
+import {ArkCaptureBadges} from "@/app/[locale]/(composited)/ark/ark-capture-badges";
 import {ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-card-focus";
 import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
 import {arkCycleKey, arkCycleOf, arkCycleStep, type ArkCycle} from "@/lib/ark-cycle";
@@ -394,6 +395,9 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                                     <span className="sr-only">{simple?.number ?? "AnimalDex number"} </span>{arkIndexNumber(species.number)}
                                 </span>
                             ) : null}
+                            {/* Its capture's battle tier and hearts (owner 2026-11-21), from its life story: the server's
+                                `capture_tier_for_capture` and `challenge_health`, only for an animal that arrived with its own capture. */}
+                            <ArkCaptureBadges life={life} words={words} ownHearts={lives && animal.mine ? lives.entry.hearts : null} />
                             {activity ? (
                                 <span data-testid="ark-card-now" data-activity={activityKey ?? undefined} aria-live="polite" className={`hidden min-w-0 shrink items-center gap-1.5 truncate rounded-full px-2 py-[3px] text-[11.5px] font-semibold leading-none sm:inline-flex ${asleepNow ? "bg-[#7c8cff]/15 text-[#c9d6ff]" : "bg-primary-400/[0.12] text-primary-100"}`}>
                                     <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${asleepNow ? "bg-[#9fb0ff]" : "bg-primary-300 motion-safe:animate-pulse"}`} />
@@ -438,7 +442,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         {snapshot ? <Suspense fallback={<div className="h-[2.6rem]" />}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense> : null}
                         {/* Release to the Wild (P1-8, behind the server's switch) and carers (decision 418), then who is around it: what it eats, what could hunt it, its mates, as icons (lane ark-relation-lines; no fallback is React 18's null). */}
                         <Suspense><ArkTimeLeft release={Link} animal={animal} words={words} locale={locale} day={arkDay} scene={scene} snapshot={snapshot} /></Suspense>
-                        {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} /> : null}
+                        {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} heartsInHeader /> : null}
                         {placeholder ? <p className="text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
                         {/* The last of its kind aboard (the server's last_of_kind), or a lone founder (decision 389): it ages out honestly unless another is caught. */}
                         {animal.last_of_kind || animal.lone ? <p data-testid="ark-card-last-of-kind" className="text-[12px] font-semibold leading-snug text-[#ffe2a8]">{animal.last_of_kind ? words.life.lastOfKind : words.life.lone ?? "Lone founder"}</p> : null}

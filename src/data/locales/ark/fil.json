@@ -1037,7 +1037,9 @@
             "age": "Edad",
             "left": "{time} na lang",
             "ticker": "Dumarami at kumokonti ngayong linggo",
-            "talk": "Kausapin"
+            "talk": "Kausapin",
+            "tier": "Tier",
+            "tierHint": "Tier {tier}: grado ng lakas sa laban ng litratong nagdala nito sa Ark"
         },
         "how": {
             "lead": "Isang buhay na 3D na mundo ng totoong mga hayop, na pinatatakbo ng mga tuntunin ng kalikasan.",
@@ -1060,6 +1062,13 @@
             "wild": "Ligaw",
             "town": "Bayan",
             "arkYear": "1 taon sa Arko"
+        },
+        "lifeHelp": {
+            "button": "Ano ang ibig sabihin ng life bar",
+            "bar": "Buong bar: buhay na nalakbay hanggang ngayon, kulay ayon sa lagay nito (berde maayos, amber matanda o nanganganib, pula gutom)",
+            "now": "Puting guhit: ngayon",
+            "end": "May guhit na dulo: kung kailan ito malamang mamatay sa katandaan, bilang saklaw, hindi pangako",
+            "heart": "Puso %: tsansa nitong mabuhay sa susunod na taon ng Ark (mga 2 linggo sa totoong oras), kasama ang mga maninilang malapit, gutom, edad at paglaya"
         }
     },
     "talkPage": {

@@ -18,15 +18,24 @@ type BattleTierChipProps = {
     tier: AnimalBattleTier;
     compact?: boolean;
     className?: string;
+    /** The word before the letter ("Tier"), translated where the caller has it. */
+    label?: string;
+    /** Its tooltip and accessible name (default "Tier {tier}"). */
+    title?: string;
+    /** Square corners (the Ark card's chips) instead of a pill. */
+    square?: boolean;
+    testId?: string;
+    /** Extra classes on the word before the letter (the Ark card hides it on a phone, where the name needs the room). */
+    labelClassName?: string;
 };
 
-export default function BattleTierChip({tier, compact = false, className = ""}: BattleTierChipProps) {
+export default function BattleTierChip({tier, compact = false, className = "", label = "Tier", title, square = false, testId, labelClassName = ""}: BattleTierChipProps) {
     const tint = TIER_TINT[tier];
 
     return (
         <span
             className={[
-                "inline-flex shrink-0 items-center gap-1 rounded-full font-black uppercase",
+                `inline-flex shrink-0 items-center gap-1 ${square ? "rounded-md" : "rounded-full"} font-black uppercase`,
                 compact ? "h-[22px] px-2" : "h-[26px] px-2.5",
                 className
             ].join(" ")}
@@ -35,15 +44,20 @@ export default function BattleTierChip({tier, compact = false, className = ""}: 
                 backgroundImage: `linear-gradient(${rgba(tint, 0.18)}, ${rgba(tint, 0.18)}), linear-gradient(rgba(0,0,0,0.36), rgba(0,0,0,0.36))`,
                 boxShadow: `inset 0 0 0 1px ${rgba(tint, 0.38)}`
             }}
-            title={`Tier ${tier}`}
+            title={title ?? `Tier ${tier}`}
+            role={title ? "img" : undefined}
+            aria-label={title}
+            data-testid={testId}
+            data-tier={testId ? tier : undefined}
         >
             <span
-                className={compact ? "text-[0.5rem] tracking-[0.12em]" : "text-[0.55rem] tracking-[0.12em]"}
+                className={`${compact ? "text-[0.5rem] tracking-[0.12em]" : "text-[0.55rem] tracking-[0.12em]"} ${labelClassName}`}
                 style={{color: rgba(tint, 0.78)}}
+                aria-hidden={title ? true : undefined}
             >
-                Tier
+                {label}
             </span>
-            <span className={compact ? "text-[0.7rem] leading-none" : "text-[0.8rem] leading-none"}>
+            <span aria-hidden={title ? true : undefined} className={compact ? "text-[0.7rem] leading-none" : "text-[0.8rem] leading-none"}>
                 {tier}
             </span>
         </span>

@@ -1037,7 +1037,9 @@
             "age": "Umri",
             "left": "Imebaki {time}",
             "ticker": "Wanaostawi na wanaopungua wiki hii",
-            "talk": "Ongea"
+            "talk": "Ongea",
+            "tier": "Daraja",
+            "tierHint": "Daraja {tier}: alama ya nguvu ya mapigano ya picha iliyomleta Safinani"
         },
         "how": {
             "lead": "Ulimwengu hai wa 3D wa wanyama halisi, unaoendeshwa na sheria za maumbile.",
@@ -1060,6 +1062,13 @@
             "wild": "Porini",
             "town": "Mjini",
             "arkYear": "Mwaka 1 wa Safina"
+        },
+        "lifeHelp": {
+            "button": "Maana ya upau wa maisha",
+            "bar": "Upau uliojaa: maisha aliyoishi hadi sasa, kwa rangi ya hali yake (kijani salama, kahawia-njano mzee au hatarini, nyekundu ana njaa)",
+            "now": "Alama nyeupe: sasa",
+            "end": "Mwisho wenye mistari: lini huenda akafa kwa uzee, kama kipindi, si ahadi",
+            "heart": "Moyo %: nafasi yake ya kuishi mwaka ujao wa Safina (takriban wiki 2 za muda halisi), ikihesabu wawindaji walio karibu, njaa, umri na kuachiliwa"
         }
     },
     "talkPage": {

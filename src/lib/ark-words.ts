@@ -510,12 +510,24 @@ export type ArkWords = {
      * name, the life row's "{time} left" and the ticker's name. Optional: English fills.
      */
     simple?: Partial<ArkSimpleWords>;
+    /** The life row's "?" (owner 2026-11-21): what the bar, the tick, the striped end and the heart say. Optional: English fills. */
+    lifeHelp?: Partial<ArkLifeHelpWords>;
     /** /ark/how-it-works, the visual page (lane ARK-SIMPLE): short captions in every Ark language. Optional: English fills. */
     how?: Partial<Record<string, string>>;
 };
 
-export type ArkSimpleWords = {power: string; number: string; age: string; left: string; ticker: string; talk: string};
-export const ARK_SIMPLE_ENGLISH: ArkSimpleWords = {power: "Animal Power", number: "AnimalDex number", age: "Age", left: "{time} left", ticker: "Thriving and declining this week", talk: "Talk"};
+/** `tier` / `tierHint`: the card's battle tier chip (owner 2026-11-21), `{tier}` its letter. */
+export type ArkSimpleWords = {power: string; number: string; age: string; left: string; ticker: string; talk: string; tier: string; tierHint: string};
+export const ARK_SIMPLE_ENGLISH: ArkSimpleWords = {power: "Animal Power", number: "AnimalDex number", age: "Age", left: "{time} left", ticker: "Thriving and declining this week", talk: "Talk", tier: "Tier", tierHint: "Tier {tier}: battle power grade of the photo that brought it aboard"};
+
+export type ArkLifeHelpWords = {button: string; bar: string; now: string; end: string; heart: string};
+export const ARK_LIFE_HELP_ENGLISH: ArkLifeHelpWords = {
+    button: "What the life bar means",
+    bar: "Solid bar: life lived so far, coloured by how it's doing (green well, amber old or at risk, red hungry)",
+    now: "White tick: now",
+    end: "Striped end: when it's likely to die of old age, as a range, not a promise",
+    heart: "Heart %: its chance of surviving the next Ark year (about 2 weeks real time), counting predators nearby, hunger, age and release"
+};
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */
 export type ArkPersonWords = {

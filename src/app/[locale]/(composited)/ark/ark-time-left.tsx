@@ -4,7 +4,7 @@ import React, {Suspense, lazy, useEffect, useMemo, useState} from "react";
 import type SiteLink from "@/app/[locale]/_components/link";
 import {isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import type {ArkAnimal, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
-import {ARK_SIMPLE_ENGLISH, fillArkWords, type ArkWords} from "@/lib/ark-words";
+import {ARK_LIFE_HELP_ENGLISH, ARK_SIMPLE_ENGLISH, fillArkWords, type ArkLifeHelpWords, type ArkWords} from "@/lib/ark-words";
 import {ARK_TIME_LEFT_HOOKS, arkLifeOutlook, arkLifeText, arkNeedsFacts, arkTimeLeftWordsFrom, arkTimeLeftWorldOf, type ArkLifeBar, type ArkTimeLeftFacts} from "@/lib/ark-time-left";
 import {arkTimeLeftFetch, readArkTimeLeftFacts, type ArkTimeLeftFetch} from "@/lib/ark-time-left-facts";
 import {arkReleasedEntry, useArkReleased} from "@/lib/ark-release-read";
@@ -112,14 +112,15 @@ function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeL
     const tone: LifeTone = hungry ? "bad" : warm ? "warn" : "good";
     const why = [hungry ? words.life.hungry : null, ...(left?.reasons ?? [])].filter((line): line is string => Boolean(line)).filter((line) => !/\{|Ark day/.test(line));
     const leftValue = left ? fillArkWords(simple.left, {time: lowerFirst(left.value, locale)}) : null;
+    const help = {...ARK_LIFE_HELP_ENGLISH, ...(words.lifeHelp ?? {})};
     return (
         <section data-testid="ark-card-time-left" data-tone={outlook.tone} aria-label={text.label} className="min-w-0">
             {outlook.bar || (chance && outlook.chance) ? (
                 // No lifespan read (no bar) and no chance: no empty track, the age line alone.
-                <div className="mb-1.5 flex items-center gap-3">
+                <ArkLifeHelp words={help} bar={Boolean(outlook.bar)} chance={Boolean(chance && outlook.chance)}>
                     {outlook.bar ? <ArkLifeBarMarks bar={outlook.bar} tone={tone} /> : <span className="flex-1" />}
                     {chance && outlook.chance ? <ArkChanceHeart percent={outlook.chance.percent} label={`${chance.title}: ${chance.value}`} tone={tone} locale={locale} /> : null}
-                </div>
+                </ArkLifeHelp>
             ) : null}
             <p className="flex min-w-0 items-center justify-between gap-3 text-[12.5px] font-semibold leading-tight text-ink-100">
                 {text.age ? (
@@ -136,6 +137,68 @@ function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeL
                 ) : null}
             </p>
         </section>
+    );
+}
+
+/**
+ * The life row with its "?" (owner 2026-11-21): a small square button beside the heart that opens, under the row, one
+ * line each for what the bar, the tick, the striped end and the heart say. A tap or a click (no hover-only), Escape or a
+ * tap elsewhere closes it; the button says whether it is open (`aria-expanded`) and which block it opens.
+ */
+function ArkLifeHelp({words, bar, chance, children}: {words: ArkLifeHelpWords; bar: boolean; chance: boolean; children: React.ReactNode}) {
+    const [open, setOpen] = useState(false);
+    const id = React.useId();
+    const box = React.useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!open) return;
+        const away = (event: PointerEvent) => {
+            if (box.current && !box.current.contains(event.target as Node)) setOpen(false);
+        };
+        document.addEventListener("pointerdown", away);
+        return () => document.removeEventListener("pointerdown", away);
+    }, [open]);
+    const lines: Array<[string, React.ReactNode]> = [
+        ...(bar ? [
+            ["bar", <span key="s" className="mt-[3px] h-2 w-4 shrink-0 rounded-full" style={{background: TONE.good}} />],
+            ["now", <span key="n" className="mt-[1px] h-3 w-[2px] shrink-0 bg-white" />],
+            ["end", <span key="e" className="mt-[3px] h-2 w-4 shrink-0 rounded-full" style={{background: `repeating-linear-gradient(135deg, ${TONE.good}88 0 3px, ${TONE.good}33 3px 6px)`}} />]
+        ] as Array<[string, React.ReactNode]> : []),
+        ...(chance ? [["heart", <svg key="h" viewBox="0 0 16 16" className="mt-[1px] h-3 w-3 shrink-0" aria-hidden="true"><path d="M8 14.2S1.6 10.4 1.6 5.8A3.4 3.4 0 0 1 8 4.2a3.4 3.4 0 0 1 6.4 1.6C14.4 10.4 8 14.2 8 14.2z" fill={TONE.good} /></svg>]] as Array<[string, React.ReactNode]> : [])
+    ];
+    return (
+        <div ref={box} className="mb-1.5" onKeyDown={(event) => {
+            if (event.key !== "Escape" || !open) return;
+            event.stopPropagation();
+            setOpen(false);
+        }}>
+            <div className="flex items-center gap-3">
+                {children}
+                <button
+                    type="button"
+                    data-testid="ark-card-life-help"
+                    aria-expanded={open}
+                    aria-controls={id}
+                    aria-label={words.button}
+                    title={words.button}
+                    onClick={() => setOpen((was) => !was)}
+                    className={`-my-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-[11px] font-bold leading-none transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none ${open ? "border-primary-400 bg-primary-400/15 text-primary-100" : "border-line-100 text-ink-200 hover:border-primary-400 hover:text-white"}`}
+                >
+                    <span aria-hidden="true">?</span>
+                </button>
+            </div>
+            {open ? (
+                <div id={id} role="note" aria-label={words.button} data-testid="ark-card-life-help-box" className="rows-in mt-1.5 rounded-md border border-line-200 bg-canvas-950/90 px-2.5 py-2">
+                    <ul className="space-y-1">
+                        {lines.map(([key, mark]) => (
+                            <li key={key} className="flex items-start gap-2 text-[11.5px] leading-snug text-ink-200">
+                                {mark}
+                                <span>{words[key as "bar" | "now" | "end" | "heart"]}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            ) : null}
+        </div>
     );
 }
 

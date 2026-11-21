@@ -513,7 +513,27 @@ export type ArkLife = {
     area: ArkArea | null;
     /** Its descendants ever born, by generation, and how many live (null from an older server). */
     lineage: ArkLineage | null;
+    /**
+     * The battle tier (S..E) of the capture that brought it aboard: the server's `capture_tier_for_capture`, which
+     * /api/ark/life adds to the answer (`capture_tier`). Only for an animal that arrived with a capture of its own: one
+     * born on the Ark has none (never its parent's). Absent or null: no chip. Never worked out here from stats.
+     */
+    capture_tier?: ArkCaptureTier | null;
+    /**
+     * That capture's hearts (0..3): its lives in the Ark, shown read-only on every card (owner 2026-11-21). The server's
+     * `captures.challenge_health`, added by /api/ark/life while `ark_hearts` is on and its bringer holds the card. Null
+     * for an animal born on the Ark, or when the server says nothing.
+     */
+    capture_hearts?: number | null;
 };
+
+export const ARK_CAPTURE_TIERS = ["S", "A", "B", "C", "D", "E"] as const;
+export type ArkCaptureTier = (typeof ARK_CAPTURE_TIERS)[number];
+
+/** The server's tier letter, checked: one of S..E, else null. */
+export function decodeArkCaptureTier(value: unknown): ArkCaptureTier | null {
+    return ARK_CAPTURE_TIERS.find((tier) => tier === value) ?? null;
+}
 
 function count(value: unknown): number {
     return whole(value) ?? 0;
@@ -575,7 +595,10 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
         // Once it has died it has no condition (the contract's null); the read's band otherwise.
         thrive: died ? null : decodeArkThriveField(row.thrive),
         area: arkArea(row.area),
-        lineage: decodeArkLineage(row.lineage)
+        lineage: decodeArkLineage(row.lineage),
+        // Its own capture's tier only: an animal born aboard never shows one (its parent's is not its own).
+        capture_tier: origin.kind === "born" ? null : decodeArkCaptureTier(row.capture_tier),
+        capture_hearts: origin.kind !== "born" && typeof row.capture_hearts === "number" && Number.isInteger(row.capture_hearts) && row.capture_hearts >= 0 && row.capture_hearts <= 3 ? row.capture_hearts : null
     };
 }
 
