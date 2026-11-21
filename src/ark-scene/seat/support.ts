@@ -173,7 +173,7 @@ export type RigPose = {
     weight: number;
     /**
      * A still animal wholly in one clip of its own (no gait under it, nothing fading): the clip's rows (its first, how
-     * many). Its seat is then taken at the clip's own usual frame (`clipSeat`), not the frame drawn now.
+     * many). It then rests on the vertices that are lowest in the clip's usual frame, its feet (`clipSeat`).
      */
     clip?: {row: number; rows: number} | null;
 };
