@@ -479,6 +479,25 @@
             "caredFarmer": "Sitä hoitaa maanviljelijä",
             "caredKeeper": "Sitä hoitaa eläintenhoitaja"
         },
+        "grew": {
+            "line": "Vahvistui: {stat} +{n} · {cause}",
+            "total": "+{n} Arkista",
+            "note": "Sen eläin ansaitsi Arkissa",
+            "stats": {
+                "dominance": "dominanssi",
+                "speed": "nopeus",
+                "size": "koko",
+                "intelligence": "älykkyys"
+            },
+            "from": {
+                "hunt": "onnistunut saalistus",
+                "escape": "pako saalistajalta",
+                "defend": "munien puolustus",
+                "young": "ensimmäinen poikanen",
+                "raised": "poikasten kasvatus",
+                "old": "pitkä elämä"
+            }
+        },
         "activity": {
             "food": "etsii ruokaa",
             "grazing": "laiduntaa",

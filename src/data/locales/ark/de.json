@@ -479,6 +479,25 @@
             "caredFarmer": "Versorgt vom Landwirt",
             "caredKeeper": "Versorgt von einem Tierpfleger"
         },
+        "grew": {
+            "line": "Stärker geworden: {stat} +{n} · {cause}",
+            "total": "+{n} aus der Ark",
+            "note": "Von seinem Tier in der Ark verdient",
+            "stats": {
+                "dominance": "Dominanz",
+                "speed": "Tempo",
+                "size": "Größe",
+                "intelligence": "Intelligenz"
+            },
+            "from": {
+                "hunt": "eine Jagd",
+                "escape": "eine Flucht",
+                "defend": "Verteidigung der Eier",
+                "young": "das erste Junge",
+                "raised": "Aufzucht der Jungen",
+                "old": "ein langes Leben"
+            }
+        },
         "activity": {
             "food": "sucht Futter",
             "grazing": "grast",

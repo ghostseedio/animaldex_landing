@@ -479,6 +479,25 @@
             "caredFarmer": "농부가 돌보고 있어요",
             "caredKeeper": "사육사가 돌보고 있어요"
         },
+        "grew": {
+            "line": "더 강해짐: {stat} +{n} · {cause}",
+            "total": "Ark에서 +{n}",
+            "note": "Ark에서 이 동물이 얻은 능력치",
+            "stats": {
+                "dominance": "지배력",
+                "speed": "속도",
+                "size": "크기",
+                "intelligence": "지능"
+            },
+            "from": {
+                "hunt": "사냥 성공",
+                "escape": "포식자에게서 탈출",
+                "defend": "알 지키기",
+                "young": "첫 새끼",
+                "raised": "새끼 키우기",
+                "old": "긴 삶"
+            }
+        },
         "activity": {
             "food": "먹이를 찾는 중",
             "grazing": "풀을 뜯는 중",

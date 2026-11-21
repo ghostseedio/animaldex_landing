@@ -479,6 +479,25 @@
             "caredFarmer": "Verzorgd door de boer",
             "caredKeeper": "Verzorgd door een dierverzorger"
         },
+        "grew": {
+            "line": "Sterker geworden: {stat} +{n} · {cause}",
+            "total": "+{n} van de Ark",
+            "note": "Verdiend door zijn dier op de Ark",
+            "stats": {
+                "dominance": "dominantie",
+                "speed": "snelheid",
+                "size": "grootte",
+                "intelligence": "intelligentie"
+            },
+            "from": {
+                "hunt": "een jacht",
+                "escape": "een ontsnapping",
+                "defend": "verdediging van de eieren",
+                "young": "het eerste jong",
+                "raised": "jongen grootbrengen",
+                "old": "een lang leven"
+            }
+        },
         "activity": {
             "food": "zoekt voedsel",
             "grazing": "graast",

@@ -214,7 +214,10 @@ export const CAPTURE_WORDS_EN = {
         speed: "Speed",
         size: "Size",
         intelligence: "Intelligence",
-        rarity: "Rarity"
+        rarity: "Rarity",
+        /** STATS-GROW: points its own Ark animal earned (`ark_stat_gain_totals`), under the stats. */
+        fromArk: "+{n} from the Ark",
+        fromArkDetail: "Earned by its animal on the Ark: {stats}"
     },
     /** The reveal (iOS `CaptureRevealFlowView`) and the reward cards after it. */
     reveal: {

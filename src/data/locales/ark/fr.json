@@ -479,6 +479,25 @@
             "caredFarmer": "Soigné par le fermier",
             "caredKeeper": "Soigné par un soigneur"
         },
+        "grew": {
+            "line": "Plus fort : {stat} +{n} · {cause}",
+            "total": "+{n} grâce à l'Ark",
+            "note": "Gagné par son animal dans l'Ark",
+            "stats": {
+                "dominance": "dominance",
+                "speed": "vitesse",
+                "size": "taille",
+                "intelligence": "intelligence"
+            },
+            "from": {
+                "hunt": "une chasse",
+                "escape": "une fuite",
+                "defend": "la défense de ses œufs",
+                "young": "son premier petit",
+                "raised": "l'élevage de ses petits",
+                "old": "une longue vie"
+            }
+        },
         "activity": {
             "food": "cherche de la nourriture",
             "grazing": "broute",

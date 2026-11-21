@@ -479,6 +479,25 @@
             "caredFarmer": "農家が世話をしています",
             "caredKeeper": "飼育員が世話をしています"
         },
+        "grew": {
+            "line": "強くなった：{stat} +{n}・{cause}",
+            "total": "Arkで+{n}",
+            "note": "Arkでこの動物が得たもの",
+            "stats": {
+                "dominance": "支配力",
+                "speed": "スピード",
+                "size": "サイズ",
+                "intelligence": "知能"
+            },
+            "from": {
+                "hunt": "狩りの成功",
+                "escape": "捕食者から逃げ切った",
+                "defend": "卵を守った",
+                "young": "初めての子",
+                "raised": "子育て",
+                "old": "長い生涯"
+            }
+        },
         "activity": {
             "food": "食べ物を探しています",
             "grazing": "草を食べています",

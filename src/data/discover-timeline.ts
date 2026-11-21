@@ -23,6 +23,7 @@ import {parseDiscoverPostId, type ParsedDiscoverPostId} from "@/lib/discover-pos
 import {identityKindShortLabel} from "@/lib/identity-kind";
 import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
 import {getBattlePower, getBattleTier, toEffectiveStats} from "@/lib/matchup-stats";
+import {decodeCardStatGains, type CardStatGains} from "@/lib/ark-stat-gains";
 import {resolveCanonicalSlugFromIdentity} from "@/lib/species-life-stage-policy";
 import {formatScenarioFamilyLabel, normalizeScenarioFamily} from "@/lib/matchup-result-copy";
 import {logDevPerfEvent, timeDevAsync, timeDevStep} from "@/lib/dev-request-timing";
@@ -156,6 +157,8 @@ export type DiscoverCaptureItem = {
     gameStats: Record<string, number>;
     effectiveGameStats: Record<string, number>;
     statDeltas: Record<string, number>;
+    /** STATS-GROW: the points its own Ark animal earned aboard (the feed's `ark_stat_gains`; in effectiveGameStats), or null. */
+    arkStatGains?: CardStatGains | null;
 };
 
 export type DiscoverAlignmentItem = {
@@ -1029,11 +1032,13 @@ function mapCaptureRow(
     const boosts = statBoosts(row);
     const comparison = comparisonBoosts(row);
     const endorsements = endorsementBonuses(row);
+    const arkStatGains = decodeCardStatGains(row.ark_stat_gains);
+    const ark = arkStatGains ?? {dominance: 0, speed: 0, size: 0, intelligence: 0};
     const effectiveStats = toEffectiveStats(stats, {
-        dominance: boosts.dominance + comparison.dominance + endorsements.dominance,
-        speed: boosts.speed + comparison.speed + endorsements.speed,
-        size: comparison.size + endorsements.size,
-        intelligence: boosts.intelligence + comparison.intelligence + endorsements.intelligence,
+        dominance: boosts.dominance + comparison.dominance + endorsements.dominance + ark.dominance,
+        speed: boosts.speed + comparison.speed + endorsements.speed + ark.speed,
+        size: comparison.size + endorsements.size + ark.size,
+        intelligence: boosts.intelligence + comparison.intelligence + endorsements.intelligence + ark.intelligence,
         rarity: comparison.rarity + endorsements.rarity
     });
     const statDeltas = Object.fromEntries(
@@ -1135,7 +1140,8 @@ function mapCaptureRow(
         endorsementBonuses: endorsements,
         gameStats: stats,
         effectiveGameStats: effectiveStats,
-        statDeltas
+        statDeltas,
+        arkStatGains
     };
 }
 
@@ -1615,7 +1621,9 @@ const richFeedSelect = [
     "profile_username",
     "profile_avatar_url",
     "profile_instagram_url",
-    "score"
+    "score",
+    // STATS-GROW (migration 20261225120000): what its Ark animal earned; read after the migration (else the compatibility select).
+    "ark_stat_gains"
 ].join(",");
 
 const compatibilityFeedSelect = [

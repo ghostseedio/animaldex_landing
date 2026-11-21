@@ -479,6 +479,25 @@
             "caredFarmer": "يعتني به المزارع",
             "caredKeeper": "يعتني به أحد حرّاس حديقة الحيوان"
         },
+        "grew": {
+            "line": "أصبح أقوى: {stat} +{n} · {cause}",
+            "total": "+{n} من Ark",
+            "note": "اكتسبه حيوانه في Ark",
+            "stats": {
+                "dominance": "الهيمنة",
+                "speed": "السرعة",
+                "size": "الحجم",
+                "intelligence": "الذكاء"
+            },
+            "from": {
+                "hunt": "صيد ناجح",
+                "escape": "نجاة من مفترس",
+                "defend": "حماية بيضه",
+                "young": "صغيره الأول",
+                "raised": "تربية صغاره",
+                "old": "عمر طويل"
+            }
+        },
         "activity": {
             "food": "يبحث عن الطعام",
             "grazing": "يرعى",

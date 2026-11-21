@@ -479,6 +479,25 @@
             "caredFarmer": "Stará se o něj farmář",
             "caredKeeper": "Stará se o něj ošetřovatel"
         },
+        "grew": {
+            "line": "Silnější: {stat} +{n} · {cause}",
+            "total": "+{n} z Arku",
+            "note": "Získalo jeho zvíře v Arku",
+            "stats": {
+                "dominance": "dominance",
+                "speed": "rychlost",
+                "size": "velikost",
+                "intelligence": "inteligence"
+            },
+            "from": {
+                "hunt": "úspěšný lov",
+                "escape": "útěk před lovcem",
+                "defend": "obrana vajec",
+                "young": "první mládě",
+                "raised": "odchov mláďat",
+                "old": "dlouhý život"
+            }
+        },
         "activity": {
             "food": "hledá potravu",
             "grazing": "spásá trávu",

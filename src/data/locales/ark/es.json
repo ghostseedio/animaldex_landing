@@ -479,6 +479,25 @@
             "caredFarmer": "Lo cuida el granjero",
             "caredKeeper": "Lo cuida un cuidador"
         },
+        "grew": {
+            "line": "Más fuerte: {stat} +{n} · {cause}",
+            "total": "+{n} del Ark",
+            "note": "Lo ganó su animal en el Ark",
+            "stats": {
+                "dominance": "dominancia",
+                "speed": "velocidad",
+                "size": "tamaño",
+                "intelligence": "inteligencia"
+            },
+            "from": {
+                "hunt": "una caza",
+                "escape": "una huida",
+                "defend": "defensa de sus huevos",
+                "young": "su primera cría",
+                "raised": "criar a sus crías",
+                "old": "una vida larga"
+            }
+        },
         "activity": {
             "food": "buscando comida",
             "grazing": "pastando",

@@ -479,6 +479,25 @@
             "caredFarmer": "Opiekuje się nim rolnik",
             "caredKeeper": "Opiekuje się nim opiekun"
         },
+        "grew": {
+            "line": "Silniejszy: {stat} +{n} · {cause}",
+            "total": "+{n} z Arki",
+            "note": "Zdobyte przez jego zwierzę w Arce",
+            "stats": {
+                "dominance": "dominacja",
+                "speed": "szybkość",
+                "size": "rozmiar",
+                "intelligence": "inteligencja"
+            },
+            "from": {
+                "hunt": "udane polowanie",
+                "escape": "ucieczka przed drapieżnikiem",
+                "defend": "obrona jaj",
+                "young": "pierwsze młode",
+                "raised": "wychowanie młodych",
+                "old": "długie życie"
+            }
+        },
         "activity": {
             "food": "szuka pożywienia",
             "grazing": "pasie się",

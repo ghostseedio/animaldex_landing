@@ -513,6 +513,11 @@ export type ArkLife = {
     area: ArkArea | null;
     /** Its descendants ever born, by generation, and how many live (null from an older server). */
     lineage: ArkLineage | null;
+    /**
+     * Stats grow from Ark life (STATS-GROW): `voyage_animal_stat_gains_v1`'s answer as the server sent it (the route adds
+     * it), decoded by the card's own lazy chunk (`lib/ark-stat-gains.ts`). Null while the switch is off, or nothing earned.
+     */
+    stat_gains?: unknown;
 };
 
 function count(value: unknown): number {
@@ -575,7 +580,8 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
         // Once it has died it has no condition (the contract's null); the read's band otherwise.
         thrive: died ? null : decodeArkThriveField(row.thrive),
         area: arkArea(row.area),
-        lineage: decodeArkLineage(row.lineage)
+        lineage: decodeArkLineage(row.lineage),
+        stat_gains: row.stat_gains ?? null
     };
 }
 

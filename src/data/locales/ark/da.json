@@ -479,6 +479,25 @@
             "caredFarmer": "Passes af landmanden",
             "caredKeeper": "Passes af en dyrepasser"
         },
+        "grew": {
+            "line": "Blev stærkere: {stat} +{n} · {cause}",
+            "total": "+{n} fra Ark",
+            "note": "Optjent af dets dyr i Ark",
+            "stats": {
+                "dominance": "dominans",
+                "speed": "fart",
+                "size": "størrelse",
+                "intelligence": "intelligens"
+            },
+            "from": {
+                "hunt": "en jagt",
+                "escape": "en flugt",
+                "defend": "forsvar af æggene",
+                "young": "dets første unge",
+                "raised": "opfostring af ungerne",
+                "old": "et langt liv"
+            }
+        },
         "activity": {
             "food": "leder efter føde",
             "grazing": "græsser",

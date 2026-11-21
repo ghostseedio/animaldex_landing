@@ -462,6 +462,8 @@ export type ArkWords = {
     live: ArkLiveWords;
     /** The tap card's "Now" and "Next", its log and bars (decision 240). */
     card: ArkCardWords;
+    /** Stats grow from Ark life (STATS-GROW, `lib/ark-stat-gains.ts`); optional: an older bundle lacks it, and English is said. */
+    grew?: Partial<import("@/lib/ark-stat-gains").ArkGrewWords>;
     /** What an animal is doing, in plain words, and the live log's lines of the schedule's moments (decision 240). */
     activity: ArkActivityWords;
     /** The live hunt marker (lane ark-kills-real); optional: an older bundle lacks it. */

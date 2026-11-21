@@ -479,6 +479,25 @@
             "caredFarmer": "Dijaga oleh petani",
             "caredKeeper": "Dijaga oleh seorang penjaga"
         },
+        "grew": {
+            "line": "Lebih kuat: {stat} +{n} · {cause}",
+            "total": "+{n} daripada Ark",
+            "note": "Diperoleh haiwannya di Ark",
+            "stats": {
+                "dominance": "dominasi",
+                "speed": "kelajuan",
+                "size": "saiz",
+                "intelligence": "kecerdasan"
+            },
+            "from": {
+                "hunt": "memburu",
+                "escape": "terlepas daripada pemangsa",
+                "defend": "mempertahankan telurnya",
+                "young": "anak pertamanya",
+                "raised": "membesarkan anaknya",
+                "old": "umur panjang"
+            }
+        },
         "activity": {
             "food": "mencari makanan",
             "grazing": "meragut rumput",

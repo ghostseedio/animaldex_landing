@@ -479,6 +479,25 @@
             "caredFarmer": "O njemu se brine farmer",
             "caredKeeper": "O njemu se brine čuvar"
         },
+        "grew": {
+            "line": "Jači: {stat} +{n} · {cause}",
+            "total": "+{n} iz Arka",
+            "note": "Zaradila ga je njegova životinja u Arku",
+            "stats": {
+                "dominance": "dominacija",
+                "speed": "brzina",
+                "size": "veličina",
+                "intelligence": "inteligencija"
+            },
+            "from": {
+                "hunt": "uspješan lov",
+                "escape": "bijeg od grabežljivca",
+                "defend": "obrana jaja",
+                "young": "prvo mladunče",
+                "raised": "podizanje mladunaca",
+                "old": "dug život"
+            }
+        },
         "activity": {
             "food": "traži hranu",
             "grazing": "pase",

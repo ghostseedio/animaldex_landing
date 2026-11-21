@@ -479,6 +479,25 @@
             "caredFarmer": "Accudito dal contadino",
             "caredKeeper": "Accudito da un guardiano"
         },
+        "grew": {
+            "line": "Più forte: {stat} +{n} · {cause}",
+            "total": "+{n} dall'Ark",
+            "note": "Guadagnato dal suo animale nell'Ark",
+            "stats": {
+                "dominance": "dominanza",
+                "speed": "velocità",
+                "size": "taglia",
+                "intelligence": "intelligenza"
+            },
+            "from": {
+                "hunt": "una caccia",
+                "escape": "una fuga",
+                "defend": "la difesa delle uova",
+                "young": "il primo piccolo",
+                "raised": "crescere i piccoli",
+                "old": "una lunga vita"
+            }
+        },
         "activity": {
             "food": "cerca cibo",
             "grazing": "pascola",

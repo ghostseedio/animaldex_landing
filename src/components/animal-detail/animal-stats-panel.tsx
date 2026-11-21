@@ -10,6 +10,8 @@ import {MAX_ANIMAL_LEVEL_XP, animalLevel, xpForAnimalLevel} from "@/lib/animal-l
 import type {CaptureGradeBreakdown} from "@/lib/capture-grade";
 import {CAPTURE_WORDS_EN, fillCaptureWords, type CaptureWords} from "@/lib/capture-words";
 import {statsClassificationChips, type StatsChip} from "@/lib/capture-card-chips";
+import type {CardStatGains} from "@/lib/ark-stat-gains";
+import {ArkGainNote} from "@/components/animal-detail/ark-gain-note";
 
 /**
  * The Stats tab (iOS `ScanResultMediaScopedStatsBlock` and
@@ -239,7 +241,8 @@ export default function AnimalStatsPanel({
     bondChip = null,
     onBondLevel = null,
     layout = "compact",
-    words = CAPTURE_WORDS_EN.stats
+    words = CAPTURE_WORDS_EN.stats,
+    arkGain = null
 }: {
     speciesName: string;
     speciesSlug: string;
@@ -260,6 +263,8 @@ export default function AnimalStatsPanel({
     onBondLevel?: (() => void) | null;
     layout?: "compact" | "wide";
     words?: StatsWords;
+    /** STATS-GROW: what its animal earned on the Ark (null: nothing, the switch off, or no Ark animal). */
+    arkGain?: CardStatGains | null;
 }) {
     const wide = layout === "wide";
     const columnClass = wide
@@ -298,6 +303,7 @@ export default function AnimalStatsPanel({
                     <div className="mt-3">
                         <SpeciesRadarStats stats={effectiveStats} baseStats={baseStats} labels={statLabels} showsChartChrome={false} />
                     </div>
+                    {arkGain ? <ArkGainNote gain={arkGain} words={words} labels={statLabels} /> : null}
                 </div>
             </div>
             <div className={columnClass}>
