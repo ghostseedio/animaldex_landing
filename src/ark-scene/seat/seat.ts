@@ -96,8 +96,14 @@ export type SeatInput = {
     /** The surface the scene holds it on, if any (its normal), and that surface's sway now. */
     surface: {nx: number; ny: number; nz: number; sway?: {x: number; y: number; z: number}} | null;
     moving: boolean;
-    /** The drawn ground under a point (m), near a height where floors are stacked. */
+    /**
+     * What is under a point when nothing drawn as a mesh is (m): the drawn ground (where floors are stacked, the one
+     * its own motion has it by, not the one by where the pass has moved it: that fed back, a macaw let down a floor
+     * at a time to the aquarium's hall under the zoo), or, over water deeper than it wades, its float line.
+     */
     ground: (x: number, z: number, near?: number) => number;
+    /** Development (the audit's probe): the height its own motion has it at, and so which floor is its. */
+    near?: number;
     /**
      * How far its own motion lifts it off what it is on in a stride (m): a moving rig in a clip of its own (a bound's or a
      * gallop's moment in the air); 0 for one whose feet the locomotion layer plants, a still one, a mesh with no rig.
@@ -276,8 +282,8 @@ export class SeatPass {
         s.kind = input.kind;
         if (this.keepPoints) {
             // Development (the audit's probe, `audit-probe.ts`): the animal as drawn this frame.
-            const holder = input.holder as SeatHolder & {seatDrawn?: {kind: SeatKind; level: string; m: number[]; geometry: BufferGeometry; pose: RigPose | null; height: number; length: number; surface: SeatInput["surface"]; frame: number}};
-            const drawn = (holder.seatDrawn ??= {kind: input.kind, level: "", m: new Array<number>(16).fill(0), geometry: input.geometry, pose: null, height: 0, length: 0, surface: null, frame: 0});
+            const holder = input.holder as SeatHolder & {seatDrawn?: {kind: SeatKind; level: string; m: number[]; geometry: BufferGeometry; pose: RigPose | null; height: number; length: number; surface: SeatInput["surface"]; frame: number; near: number}};
+            const drawn = (holder.seatDrawn ??= {kind: input.kind, level: "", m: new Array<number>(16).fill(0), geometry: input.geometry, pose: null, height: 0, length: 0, surface: null, frame: 0, near: 0});
             drawn.kind = input.kind;
             drawn.level = input.pose ? "rig" : input.level ?? "";
             for (let i = 0; i < 16; i++) drawn.m[i] = input.matrix.elements[i];
@@ -287,6 +293,7 @@ export class SeatPass {
             drawn.length = input.length;
             drawn.surface = input.surface ? {nx: input.surface.nx, ny: input.surface.ny, nz: input.surface.nz, sway: input.surface.sway ? {...input.surface.sway} : undefined} : null;
             drawn.frame = this.frame;
+            drawn.near = input.near ?? input.matrix.elements[13];
         }
         if (this.off) return;
         if (FREE.has(input.kind)) {
@@ -582,7 +589,7 @@ export class SeatPass {
             s.gap = NaN;
             s.on = "none";
             s.doubt += Math.max(dt, 1 / 60);
-            if (s.doubt >= FALL_AFTER || this.forced) {
+            if (s.doubt >= FALL_AFTER) {
                 s.fell = true;
                 s.fellX = e[12] - s.x;
                 s.fellZ = e[14] - s.z;
@@ -666,7 +673,7 @@ export class SeatPass {
                 on = side.kind;
             } else {
                 s.doubt += Math.max(dt, 1 / 60);
-                if (s.doubt < FALL_AFTER && !this.forced && s.solved) waiting = true;
+                if (s.doubt < FALL_AFTER && s.solved) waiting = true;
                 else if (input.surface) {
                     // (Upright as it comes down: not leaning to a leaf that is not there.)
                     s.fell = true;

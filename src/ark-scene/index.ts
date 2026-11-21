@@ -4205,7 +4205,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         (window as unknown as {__arkSeat?: SeatPass}).__arkSeat = seat;
         // The audit's probe (`scripts/ark-seat-audit.mjs`): every drawn animal's body against the scene's own meshes.
         void import("@/ark-scene/seat/audit-probe").then(({SeatProbe}) => {
-            const probe = new SeatProbe(scene, (x, z, near) => standGround(x, z, near));
+            const probe = new SeatProbe(scene, (x, z, near) => standGround(x, z, near), (x, z) => waterTopAt(x, z));
             type Drawn = Parameters<typeof probe.measure>[0];
             const drawnOf = (e: Entry) => (e as Entry & {seatDrawn?: Drawn}).seatDrawn ?? null;
             (window as unknown as {__arkSeatProbe?: unknown}).__arkSeatProbe = {
@@ -6875,10 +6875,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             facts.carried = entry.riding === true;
             facts.hanging = entry.hangFrom != null;
             facts.onWeb = Boolean(surface) && Boolean(webNoted.get(animal.id));
-            facts.flying = entry.air > 0.001 || Boolean(state?.flying) || Boolean(entry.sched?.pose?.aloft);
-            facts.water = Boolean(where.water) || Boolean(where.edge);
-            facts.afloat = where.afloat;
-            facts.den = Boolean(entry.denIn) || Boolean(entry.power?.drop);
+            // (Off the ground by its pose's own rule, with no surface under it: which rule. In a flock or laying on the wing,
+            // it flies; placed in the water, under it or with its base under the surface, it swims; in its burrow's mouth
+            // or held in a tank, a cage or a zoo house whose floor is its own, it is in its den. Anything else the scene
+            // only calls afloat (a bird resting at a pool's edge, 18 cm over the bank) is on its feet, and seated.)
+            const loose = where.afloat && !surface;
+            facts.flying = entry.air > 0.001 || Boolean(state?.flying) || Boolean(entry.sched?.pose?.aloft) || (loose && Boolean(entry.recipeAct || entry.recipeFlock));
+            facts.water = Boolean(where.water) || Boolean(where.edge) || Boolean((where as {underwater?: boolean}).underwater) || (loose && (Boolean(entry.place.water) || where.base < waterTopAt(where.x, where.z) - 0.02));
+            facts.afloat = false;
+            facts.den = Boolean(entry.denIn) || Boolean(entry.power?.drop) || (loose && (Boolean(entry.place.burrow) || Boolean(island?.held(animal.id))));
             facts.growing = grow < 1;
             // (An act on its feet, a stalk, a run, a meal, is seated like any other; one in the air or the water, or fading out, is its own.)
             facts.acting = Boolean(act) && (act!.hidden || act!.scale < 0.999 || SEAT_ACT_FREE.has(act!.state ?? ""));
@@ -6982,7 +6987,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     moving: Boolean(entry.sched?.pose?.moving),
                     // (A moving rig in a clip of its own, no planted feet: its stride's moment in the air is its own.)
                     bounce: rig && !seatGait && entry.sched?.pose?.moving ? Math.min(Math.max(0.25 * modelHeight, 0.02), 0.3) : 0,
-                    ground: (x, z, near) => standGround(x, z, near ?? poseBase),
+                    // (The floor its own motion has it by where floors are stacked; over water deeper than it wades, its float line.)
+                    ground: (x, z) => Math.max(standGround(x, z, poseBase), waterTopAt(x, z) - 0.3 * modelHeight),
+                    near: poseBase,
                     focus: selectedId === animal.id,
                     level
                 });

@@ -23,6 +23,7 @@
  *        [--seat off]                the pass off (the "before" numbers)
  *        [--gl swiftshader]          software WebGL (GitHub's runners)
  *        [--quality high|medium|low] the tier, pinned (default high: 1,200 animals out at once; medium 400)
+ *        [--unbudgeted]              no time budget for the pass (software WebGL: see below)
  *        [--width 900 --height 640]  the page's size (software WebGL: a small one, a frame costs its pixels)
  *        [--gate]                    exit 1 on any failure
  *        [--label after]
@@ -118,6 +119,9 @@ const calm = (hour) =>
         // (Still air: the trees stand where their meshes are, so a perch is measured against the branch as drawn.)
         window.__arkScene.setEnvironment?.({rain: 0, wetness: 0, fog: 0, storm: 0, snow: 0, cloud: 0.15, wind: 0});
     }, hour);
+// (Software WebGL takes the whole machine: a frame's 0.6 ms of seating is then a seat or two, and the roster is never
+// through in a run's time. `--unbudgeted`: every animal seated each frame; the seats are the same, only sooner.)
+if (has("unbudgeted")) await page.evaluate(() => { window.__arkSeat.force = true; });
 await calm(hours[0]);
 await wait(6000);
 /** Each island's whole view, as the page opens on it (taken when the audit first stands on that island). */
