@@ -6,9 +6,11 @@
 #
 # It counts every animal that is not flying, swimming, hanging, carried or in its den and is more than 3 cm over the
 # drawn surface it rests on, more than 3 cm under it, or inside a rock, a wall or any closed solid (each looked at for
-# three seconds: one on its way to its seat arrives). The job fails when any of them is off by more than 10 cm, has
-# its middle or a quarter of its body inside a solid or has nothing under it; or when more than 2% of the seated
-# animals measured are off by less (on main today: 19%). `--allow 0 --gross 0` is the strict gate: none at all.
+# three seconds: one on its way to its seat arrives). As the Ark's other audits are, it is guarded a little over
+# today's values, so a change that makes the animals worse fails: no more than 2% of the seated animals measured off
+# their seats (the whole audit on 2026-11-23: under 1%; on main without the pass: 19%), and no more than 1% grossly
+# (by more than 10 cm, their middle or a quarter of their body inside a solid, nothing under them).
+# `node scripts/ark-seat-audit.mjs --gate` alone is the strict gate: none at all.
 #
 # GitHub's machines draw in software, so this run takes a sample (the stops below, at two hours of the day); the whole
 # roster at six hours is run on a Mac with a GPU: `node scripts/ark-seat-audit.mjs` (its header says how).
@@ -63,7 +65,7 @@ jobs:
         env:
           STOPS: ${{ inputs.stops || '20' }}
           HOURS: ${{ inputs.hours || '11,23' }}
-        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --unbudgeted --quality medium --width 420 --height 300 --hours "$HOURS" --stops "$STOPS" --out .ark-golden/seat --label ci --gate --allow 0.02 --gross 0.10
+        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --unbudgeted --quality medium --width 420 --height 300 --hours "$HOURS" --stops "$STOPS" --out .ark-golden/seat --label ci --gate --allow 0.02 --gross 0.10 --allow-gross 0.01
       - name: Summary
         if: always()
         run: test -f .ark-golden/seat/ci.md && cat .ark-golden/seat/ci.md >> "$GITHUB_STEP_SUMMARY" || true

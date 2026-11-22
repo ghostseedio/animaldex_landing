@@ -169,6 +169,7 @@ const support: number[] = [];
 const gaps: number[] = [];
 const groundGaps: number[] = [];
 const wayPoints: number[] = [];
+const stoneOrder: number[] = [];
 
 const over: number[] = [];
 
@@ -279,7 +280,9 @@ export class SeatPass {
                 s.doubt = 0;
                 s.fell = false;
                 s.urgent = true;
-            } else if (dy !== 0 && Math.hypot(ownX - s.ox, ownZ - s.oz) <= 0.25 * Math.abs(dy)) {
+            } else if (dy !== 0 && Math.abs(s.ty) > 1 && Math.hypot(ownX - s.ox, ownZ - s.oz) <= 0.25 * Math.abs(dy)) {
+                // (Only one brought a long way down or up from where its own motion has it: on the ground an act's walk
+                // moves its height each frame and its place twice a second, and a tapir was held 30 cm under a rising bank.)
                 s.y -= dy;
                 s.ty -= dy;
             }
@@ -1075,8 +1078,8 @@ export class SeatPass {
     /**
      * The worst a closed thing's top stands over the body's underside (m, negative: by how much it is in the body; 0 or
      * more: none), the body moved by (dx, dy, dz): sixty drops over its footprint (its own length and width as it lies),
-     * each top met against the lowest of the body's points within a hand's reach of it. Finds the small stone between
-     * the body's points; a boulder is found by the points themselves.
+     * each rock met (from its top down to its underside or the ground) against the lowest and the highest of the body's
+     * points within a hand's reach. Finds the small stone under a body and the slab through it between its points.
      */
     private stoneUnder(n: number, e: ArrayLike<number>, lowY: number, highY: number, length: number, dx: number, dy: number, dz: number, ground: (x: number, z: number, near?: number) => number): number {
         let mx0 = Infinity;
@@ -1102,19 +1105,44 @@ export class SeatPass {
                 const z = e[2] * lx + e[6] * my + e[10] * lz + e[14] + dz;
                 if (!this.boxed(x, z)) continue;
                 const floor = ground(x, z, lowY);
-                hits.length = 0;
-                if (highY > floor) this.solids.castIn(near, x, highY, z, 0, floor - highY, 0, hits);
-                let top = -Infinity;
-                for (const hit of hits) if (!hit.double && hit.cls & (ROCK | HARD) && hit.ny > 0 && hit.y > top) top = hit.y;
-                if (top <= floor + 0.03) continue;
-                // (The body's underside there: the lowest of its points within reach of the drop.)
+                // (The body there: the lowest and the highest of its points within reach of the drop.)
                 let under = Infinity;
+                let over = -Infinity;
                 for (let i = 0; i < n; i++) {
                     const px = world[i * 3] + dx - x;
                     const pz = world[i * 3 + 2] + dz - z;
-                    if (px * px + pz * pz <= r * r && world[i * 3 + 1] + dy < under) under = world[i * 3 + 1] + dy;
+                    if (px * px + pz * pz > r * r) continue;
+                    const py = world[i * 3 + 1] + dy;
+                    if (py < under) under = py;
+                    if (py > over) over = py;
                 }
-                if (under < Infinity && under - top < worst) worst = under - top;
+                if (under === Infinity) continue;
+                // Down through everything over and in the body's column: a rock is solid from each top down to its
+                // underside (or the ground); a built thing, only a top under the body's own top (a log, a trough).
+                const from = highY + ROCK_REACH;
+                hits.length = 0;
+                if (from > floor) this.solids.castIn(near, x, from, z, 0, floor - from, 0, hits);
+                stoneOrder.length = 0;
+                for (let h = 0; h < hits.length; h++) if (!hits[h].double && hits[h].cls & (ROCK | HARD)) stoneOrder.push(h);
+                stoneOrder.sort((p, q) => hits[q].y - hits[p].y);
+                let top = NaN;
+                for (let k = 0; k <= stoneOrder.length; k++) {
+                    const hit = k < stoneOrder.length ? hits[stoneOrder[k]] : null;
+                    if (hit && hit.cls === HARD) {
+                        if (hit.ny > 0 && hit.y < highY && hit.y > floor + 0.03 && under - hit.y < worst) worst = under - hit.y;
+                        continue;
+                    }
+                    if (hit && hit.ny > 0) {
+                        if (top !== top) top = hit.y;
+                        continue;
+                    }
+                    // (An underside, or the ground at the end: the rock entered at `top` ends here.)
+                    if (top === top) {
+                        const bottom = hit ? hit.y : floor;
+                        if (top > floor + 0.03 && top > under + 0.02 && bottom < over - 0.02 && under - top < worst) worst = under - top;
+                        top = NaN;
+                    }
+                }
             }
         return worst;
     }
