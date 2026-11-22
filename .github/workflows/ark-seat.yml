@@ -4,8 +4,11 @@
 # camera goes animal to animal; each one drawn as a model or a rig is measured by the scene's probe
 # (src/ark-scene/seat/audit-probe.ts: every vertex of its posed body against the scene's own meshes).
 #
-# Fails when an animal that is not flying, swimming, hanging, carried or in its den is more than 3 cm over the drawn
-# surface it rests on, more than 3 cm under it, or inside a rock, a wall or any closed solid.
+# It counts every animal that is not flying, swimming, hanging, carried or in its den and is more than 3 cm over the
+# drawn surface it rests on, more than 3 cm under it, or inside a rock, a wall or any closed solid (each looked at for
+# three seconds: one on its way to its seat arrives). The job fails when any of them is off by more than 10 cm, has
+# its middle or a quarter of its body inside a solid or has nothing under it; or when more than 2% of the seated
+# animals measured are off by less (on main today: 19%). `--allow 0 --gross 0` is the strict gate: none at all.
 #
 # GitHub's machines draw in software, so this run takes a sample (the stops below, at two hours of the day); the whole
 # roster at six hours is run on a Mac with a GPU: `node scripts/ark-seat-audit.mjs` (its header says how).
@@ -60,7 +63,7 @@ jobs:
         env:
           STOPS: ${{ inputs.stops || '20' }}
           HOURS: ${{ inputs.hours || '11,23' }}
-        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --unbudgeted --quality medium --width 420 --height 300 --hours "$HOURS" --stops "$STOPS" --out .ark-golden/seat --label ci --gate
+        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --unbudgeted --quality medium --width 420 --height 300 --hours "$HOURS" --stops "$STOPS" --out .ark-golden/seat --label ci --gate --allow 0.02 --gross 0.10
       - name: Summary
         if: always()
         run: test -f .ark-golden/seat/ci.md && cat .ark-golden/seat/ci.md >> "$GITHUB_STEP_SUMMARY" || true

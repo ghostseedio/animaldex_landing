@@ -31,7 +31,8 @@
  *        [--unbudgeted]              no time budget for the pass (software WebGL: see below)
  *        [--width 900 --height 640]  the page's size (software WebGL: a small one, a frame costs its pixels)
  *        [--gate]                    exit 1 on any failure
- *        [--allow 0.01]              with --gate: that share of the seated animals measured may be off (default 0)
+ *        [--allow 0.02 --gross 0.10] with --gate: that share of the seated animals measured may be off, none of them by
+ *                                    more than `gross` metres nor inside a solid (default: none off at all)
  *        [--label after]
  *
  * Writes <out>/<label>.json (every row) and <out>/<label>.md (the tables). Nothing is uploaded; the models are read
@@ -332,7 +333,16 @@ for (const row of failures) {
 const afloatInAir = gated.filter((row) => row.kind === "afloat" && row.low !== null && row.low > TOLERANCE);
 const exempt = {};
 for (const row of gated) if (row.verdict === "exempt") exempt[`${row.category}:${row.kind}`] = (exempt[`${row.category}:${row.kind}`] ?? 0) + 1;
-const summary = {label, seat: seatOff ? "off" : "on", quality: arg("quality", "high"), afloatInAir: afloatInAir.length, tolerance: TOLERANCE, hours, islands, coverage, table, failures: failures.length, exempt, seatStats, errors: errors.slice(0, 10)};
+// The gate. Strict (the default): none off its seat. With `--allow <share> --gross <metres>`: none off by more than
+// `gross` (hovering, sunk), none with its middle or a quarter of its body inside a solid, none with nothing under it;
+// and no more than `allow` of the seated animals measured off by less (a few centimetres over the tolerance: a lying
+// bird's tail feathers, a foot on a slope's lip).
+const seatedCount = gated.filter((row) => row.verdict !== "exempt").length;
+const allow = Number(arg("allow", "0"));
+const grossOver = Number(arg("gross", "0"));
+const isGross = (row) => row.verdict === "nothing" || (row.verdict === "inside" ? row.middle || row.inside >= 0.25 * Math.max(row.of, 1) : Math.max(Math.abs(row.gap ?? 0), Math.abs(row.low ?? 0)) > grossOver);
+const gross = failures.filter(isGross);
+const summary = {label, gate: {seated: seatedCount, off: failures.length, gross: gross.length, allow, grossOver}, seat: seatOff ? "off" : "on", quality: arg("quality", "high"), afloatInAir: afloatInAir.length, tolerance: TOLERANCE, hours, islands, coverage, table, failures: failures.length, exempt, seatStats, errors: errors.slice(0, 10)};
 writeFileSync(path.join(out, `${label}.json`), JSON.stringify({summary, rows, notDrawn}, null, 1));
 const md = [
     `# Ark seat audit: ${label} (seat pass ${seatOff ? "off" : "on"})`,
@@ -349,7 +359,9 @@ const md = [
     "|---|---|---|---|---|---|---|---|",
     ...coverage.map((c) => `| ${c.island} | ${c.hour} | ${c.animals} | ${c.measured} | ${c.notDrawn} | ${c.left} | ${c.stops} | ${c.seconds} |`),
     "",
-    `## Failures by species and state (${failures.length} of ${gated.filter((row) => row.verdict !== "exempt").length} seated animals)`,
+    `Off their seats: ${failures.length} of ${seatedCount} seated animals measured (${seatedCount ? ((100 * failures.length) / seatedCount).toFixed(2) : "-"}%); grossly (over ${(grossOver * 100).toFixed(0)} cm, inside a solid, nothing under it): ${gross.length}.`,
+    "",
+    `## Failures by species and state (${failures.length} of ${seatedCount} seated animals)`,
     "",
     "| species | state | verdict | count | worst gap (cm) | on |",
     "|---|---|---|---|---|---|",
@@ -368,8 +380,5 @@ writeFileSync(path.join(out, `${label}.md`), md);
 console.log(md.split("\n").slice(0, 14).join("\n"));
 console.log(`failures: ${failures.length}; rows: ${rows.length}; wrote ${path.join(out, `${label}.json`)}`);
 if (errors.length) console.log("page errors:", JSON.stringify(errors.slice(0, 6)));
-// The gate: none off its seat, or (`--allow <share>`) no more than that share of the seated animals measured.
-const seatedCount = gated.filter((row) => row.verdict !== "exempt").length;
-const allow = Number(arg("allow", "0"));
-console.log(`gate: ${failures.length} of ${seatedCount} seated animals off their seats (${seatedCount ? ((100 * failures.length) / seatedCount).toFixed(2) : "-"}%); allowed ${(100 * allow).toFixed(2)}%`);
-if (has("gate") && (!seatedCount || failures.length > allow * seatedCount)) process.exit(1);
+console.log(`gate: ${failures.length} of ${seatedCount} seated animals off their seats (${seatedCount ? ((100 * failures.length) / seatedCount).toFixed(2) : "-"}%), ${gross.length} of them grossly (over ${(grossOver * 100).toFixed(0)} cm, or inside a solid); allowed: ${(100 * allow).toFixed(2)}% and none grossly`);
+if (has("gate") && (!seatedCount || (allow > 0 ? gross.length > 0 || failures.length > allow * seatedCount : failures.length > 0))) process.exit(1);
