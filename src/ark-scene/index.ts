@@ -7006,6 +7006,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     // (A moving rig in a clip of its own, no planted feet: its stride's moment in the air is its own.)
                     bounce: seatLeaping ? Math.min(Math.max(0.35 * modelHeight, 0.03), 0.4) : rig && !seatGait && entry.sched?.pose?.moving ? Math.min(Math.max(0.25 * modelHeight, 0.02), 0.3) : 0,
                     leaping: seatLeaping,
+                    grips: rig ? rig.grips : null,
                     // (The floor its own motion has it by where floors are stacked; over water deeper than it wades, its float line.)
                     ground: (x, z) => {
                         // (Water over the ground there, not a level some lake has elsewhere: `waterTopAt` gave a duck on a

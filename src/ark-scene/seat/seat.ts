@@ -25,7 +25,7 @@
 
 import type {BufferGeometry, Matrix4, Object3D} from "three";
 import {ALL, DrawnSolids, HARD, ROCK, SOFT, TREE, type Near, type SolidHit} from "@/ark-scene/seat/solids";
-import {hullKnown, hullOf, posedHull, type RigPose} from "@/ark-scene/seat/support";
+import {feetOf, hullKnown, hullOf, posedHull, type RigPose} from "@/ark-scene/seat/support";
 
 /** What the scene says the animal is doing, for the seat: the first four are seated, the rest left alone. */
 export type SeatKind = "stand" | "lie" | "perch" | "cling" | "fly" | "swim" | "hang" | "ride" | "carried" | "den" | "afloat" | "hop" | "act" | "swing" | "grow";
@@ -83,13 +83,16 @@ export type SeatState = {
     sz: number;
     /** Moved on with a big offset since its last solve: solved now, whatever the budget. */
     urgent: boolean;
-    /** Solves in a row its body did not answer its offset (something else holds it where it is), and until when it is then left alone. */
-    deaf: number;
+    /** Its body did not answer its offset (something else holds it where it is): until when it is left alone, and how often it has been. */
     mute: number;
     mutes: number;
     wasGap: number;
     wasOff: number;
     wasOwnY: number;
+    /** What a still one's last solve wanted of its offset and did not yet take (it takes what two solves agree on). */
+    lean: number;
+    /** Frames since its own motion last moved it over the ground (a walk the schedule does not call moving: an act's). */
+    idle: number;
     /** Moves onto a surface beside it in a row that left it no nearer one. */
     sides: number;
     /** Held where nothing is drawn (a trunk's side that is not there, a perch over nothing): drawn upright, coming down; and where that was. */
@@ -129,6 +132,8 @@ export type SeatInput = {
      * Its offset follows a rise within this only once it has lasted.
      */
     bounce?: number;
+    /** A rig's grip bones (its feet, hands, paws, claws: `map/grip.ts`): the vertices they carry are its feet. */
+    grips?: ArrayLike<{bone: number}> | null;
     /** In a clip that leaves the ground by its nature (a hop, a bound, a pounce): the audit lets its feet be off it. */
     leaping?: boolean;
     /** The chosen animal: worked out now, whatever the budget. */
@@ -261,6 +266,7 @@ export class SeatPass {
                 s.y -= dy;
                 s.ty -= dy;
             }
+            s.idle = Math.hypot(ownX - s.ox, ownZ - s.oz) > 0.0005 ? 0 : Math.min(s.idle + 1, 99);
             // (Walked on with a big offset: what was under it is not what is under it now.)
             if (Math.hypot(s.tx, s.ty, s.tz) > 0.5 && Math.hypot(ownX - s.sx, ownZ - s.sz) > 0.5) s.urgent = true;
         }
@@ -268,7 +274,7 @@ export class SeatPass {
         s.oy = seated ? ownY : NaN;
         s.oz = seated ? ownZ : NaN;
         // (Eased: a still one over a fifth of a second, no pop; one on the move faster, the ground under it changes as it goes.)
-        const k = s.solved || !seated ? 1 - Math.exp(-Math.min(Math.max(dt, 0), 0.1) * (seated ? (moving ? EASE_MOVING : EASE) : 5)) : 1;
+        const k = s.solved || !seated ? 1 - Math.exp(-Math.min(Math.max(dt, 0), 0.1) * (seated ? (moving || s.idle < 6 ? EASE_MOVING : EASE) : 5)) : 1;
         s.x += (s.tx - s.x) * k;
         s.y += (s.ty - s.y) * k;
         s.z += (s.tz - s.z) * k;
@@ -318,12 +324,12 @@ export class SeatPass {
      * After its matrix is final: work out where it rests, if it is its turn. Sets the target its offset eases to.
      */
     settle(input: SeatInput): void {
-        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, ox: NaN, oy: NaN, oz: NaN, sx: NaN, sz: NaN, urgent: false, deaf: 0, mute: 0, mutes: 0, wasGap: NaN, wasOff: 0, wasOwnY: NaN, sides: 0, fell: false, fellX: 0, fellZ: 0});
+        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, ox: NaN, oy: NaN, oz: NaN, sx: NaN, sz: NaN, urgent: false, mute: 0, mutes: 0, wasGap: NaN, wasOff: 0, wasOwnY: NaN, lean: 0, idle: 99, sides: 0, fell: false, fellX: 0, fellZ: 0});
         s.kind = input.kind;
         if (this.keepPoints) {
             // Development (the audit's probe, `audit-probe.ts`): the animal as drawn this frame.
-            const holder = input.holder as SeatHolder & {seatDrawn?: {kind: SeatKind; level: string; m: number[]; geometry: BufferGeometry; pose: RigPose | null; height: number; length: number; surface: SeatInput["surface"]; frame: number; near: number; leaping: boolean}};
-            const drawn = (holder.seatDrawn ??= {kind: input.kind, level: "", m: new Array<number>(16).fill(0), geometry: input.geometry, pose: null, height: 0, length: 0, surface: null, frame: 0, near: 0, leaping: false});
+            const holder = input.holder as SeatHolder & {seatDrawn?: {kind: SeatKind; level: string; m: number[]; geometry: BufferGeometry; pose: RigPose | null; height: number; length: number; surface: SeatInput["surface"]; frame: number; near: number; leaping: boolean; grips: ArrayLike<{bone: number}> | null}};
+            const drawn = (holder.seatDrawn ??= {kind: input.kind, level: "", m: new Array<number>(16).fill(0), geometry: input.geometry, pose: null, height: 0, length: 0, surface: null, frame: 0, near: 0, leaping: false, grips: null});
             drawn.kind = input.kind;
             drawn.level = input.pose ? "rig" : input.level ?? "";
             for (let i = 0; i < 16; i++) drawn.m[i] = input.matrix.elements[i];
@@ -335,6 +341,7 @@ export class SeatPass {
             drawn.frame = this.frame;
             drawn.near = input.near ?? input.matrix.elements[13];
             drawn.leaping = input.leaping === true;
+            drawn.grips = input.grips ?? null;
         }
         if (this.off) return;
         if (FREE.has(input.kind)) {
@@ -444,9 +451,12 @@ export class SeatPass {
 
     private solve(input: SeatInput, s: SeatState): boolean {
         const hull = hullOf(input.geometry);
-        // Its points: its feet first (the lowest of its rest pose, as posed now), then its hull.
+        // (On the move: the schedule says so, or its own motion has carried it over the ground in the last frames.)
+        const moving = input.moving || s.idle < 6;
+        // Its points: its feet first (`feetOf`, as posed now), then its hull.
         const pose = input.pose;
-        const feet = hull.feet ? posedHull(hull.feet, pose, model) : 0;
+        const soles = feetOf(input.geometry, input.grips);
+        const feet = soles ? posedHull(soles, pose, model) : 0;
         const n = Math.min(feet + posedHull(hull, pose, feet ? model.subarray(feet * 3) : model), MAX_POINTS);
         const e = input.matrix.elements;
         const sway = input.surface?.sway;
@@ -764,33 +774,35 @@ export class SeatPass {
         // A body that stood still and did not answer its offset (it changed, its gap did not: something else holds the
         // body where it is, feet planted in the world): never chased. Back to its own motion, and left a good while.
         const offNow = s.x * ax + s.y * ay + s.z * az;
-        if (fresh || moved || !stayed || input.moving || s.wasGap !== s.wasGap) {
-            s.deaf = 0;
+        if (fresh || moved || !stayed || moving || s.wasGap !== s.wasGap) {
             s.wasGap = fresh || moved ? NaN : gap;
             s.wasOff = offNow;
-        } else if (Math.abs(offNow - s.wasOff) > 0.02) {
-            // (Its offset has gone 2 cm since it was last looked at this way: has its gap gone with it?)
+        } else if (Math.abs(offNow - s.wasOff) > Math.min(Math.max(0.15, 0.5 * height), 0.4)) {
+            // Its offset has gone a good way (15 cm, half its height) since it stood here, and its gap has not gone with
+            // it: something else holds the body where it is. Never chased: back to where its offset was then, and left
+            // alone ten seconds (the chosen animal too), longer each time it happens again.
             const by = offNow - s.wasOff;
-            s.deaf = Math.abs(gap - s.wasGap - by) > 0.7 * Math.abs(by) ? s.deaf + 1 : 0;
+            if (Math.abs(gap - s.wasGap - by) > 0.7 * Math.abs(by)) {
+                s.tx = s.x - ax * by;
+                s.ty = s.y - ay * by;
+                s.tz = s.z - az * by;
+                s.env = NaN;
+                s.lean = 0;
+                s.calm = true;
+                s.mutes = Math.min(s.mutes + 1, 6);
+                s.mute = this.frame + 600 * s.mutes;
+                s.due = s.mute;
+                s.wasGap = NaN;
+                return true;
+            }
             s.wasGap = gap;
             s.wasOff = offNow;
-        }
-        if (s.deaf >= 3) {
-            s.deaf = 0;
-            s.tx = s.ty = s.tz = 0;
-            s.env = NaN;
-            s.calm = true;
-            // (Ten seconds, the chosen animal too; longer each time it happens again.)
-            s.mutes = Math.min(s.mutes + 1, 6);
-            s.mute = this.frame + 600 * s.mutes;
-            s.due = s.mute;
-            return true;
         }
         if (!moved && !waiting) {
             // The gap it would have with no offset along its way, at its lowest over its motion (`SeatState.env`).
             const u = gap - (s.x * ax + s.y * ay + s.z * az);
             // (A still one on its feet in a clip of its own: its feet's own bob, a tenth of its height.)
-            const band = Math.max(input.bounce ?? 0, pose?.clip && among === feet ? Math.min(Math.max(0.12 * height, 0.01), 0.1) : 0);
+            const band = Math.max(input.bounce ?? 0, moving && pose ? Math.min(Math.max(0.25 * height, 0.02), 0.3) : 0, pose?.clip && among === feet ? Math.min(Math.max(0.12 * height, 0.01), 0.1) : 0);
             if (fresh || s.env !== s.env || u <= s.env || band <= 0) {
                 s.env = u;
                 s.above = 0;
@@ -799,14 +811,22 @@ export class SeatPass {
                 s.above += dt;
                 s.env = Math.min(u, Math.max(s.env + (s.above < 0.25 ? 0.05 : 0.05 + 4 * (s.above - 0.25)) * dt, u - band));
             }
-            // Its offset along that way, when where it eases to would leave it more than a centimetre off.
+            // Its offset along that way, when where it eases to would leave it more than a centimetre off. A still one
+            // takes a small change only when two solves agree on its way, and then the lesser of the two: a run on the
+            // spot or a planted foot's give is a few centimetres either way from one solve to the next, not a gap.
             const along = s.tx * ax + s.ty * ay + s.tz * az;
-            const off = s.env + along;
+            let off = s.env + along;
             if (Math.abs(off) > DEAD) {
+                if (!fresh && !moving && Math.abs(off) <= Math.max(0.1, 0.5 * height)) {
+                    const agreed = s.lean !== 0 && s.lean > 0 === off > 0;
+                    const wanted = off;
+                    off = agreed ? (off > 0 ? Math.min(off, s.lean) : Math.max(off, s.lean)) : 0;
+                    s.lean = agreed ? 0 : wanted;
+                } else s.lean = 0;
                 s.tx -= ax * off;
                 s.ty -= ay * off;
                 s.tz -= az * off;
-            }
+            } else s.lean = 0;
         }
         if (sideways && !moved && s.pushes < 8 && s.x === s.tx && s.y === s.ty && s.z === s.tz && (this.pushesLeft > 0 || this.forced || input.focus)) {
             this.pushesLeft--;
@@ -829,8 +849,8 @@ export class SeatPass {
             s.solved = true;
         }
         const settled = !moved && s.env === s.env && Math.abs(s.env + (s.tx * ax + s.ty * ay + s.tz * az)) <= DEAD && s.x === s.tx && s.y === s.ty && s.z === s.tz;
-        s.calm = settled && !input.moving;
-        s.due = this.frame + (waiting ? 4 : settled ? (input.moving ? 2 : 24 + (Math.abs(Math.round(e[12] * 31 + e[14] * 17)) % 12)) : 1);
+        s.calm = settled && !moving && s.lean === 0;
+        s.due = this.frame + (waiting ? 4 : settled && s.lean === 0 ? (moving ? 2 : 24 + (Math.abs(Math.round(e[12] * 31 + e[14] * 17)) % 12)) : 1);
         return true;
     }
 

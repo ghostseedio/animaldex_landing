@@ -49,11 +49,11 @@ export type Hull = {
     joints: Uint16Array | null;
     weights: Float32Array | null;
     /**
-     * Its feet: the vertices lowest in the rest pose (within a sixteenth of its height of its lowest, up to thirty-two
-     * of them, apart). What a body on its feet rests on whatever its clip does with its head: a grazing muzzle or a
-     * pecking bill at the ground is not what it stands on.
+     * Its feet (`feetOf`): what a body on its feet rests on whatever its clip does with its head (a grazing muzzle or a
+     * pecking bill at the ground is not what it stands on). Null: it has none to speak of (a snake, a fish): it rests
+     * on whatever of it is lowest.
      */
-    feet?: Hull;
+    feet?: Hull | null;
 };
 
 const hulls = new WeakMap<BufferGeometry, Hull>();
@@ -143,7 +143,26 @@ export function hullOf(geometry: BufferGeometry): Hull {
                 weights[i * 4 + k] = w.getComponent(v, k);
             }
     });
-    // Its feet: the lowest of the rest pose.
+    const hull: Hull = {vertices, rest, joints, weights};
+    hulls.set(geometry, hull);
+    return hull;
+}
+
+/**
+ * A mesh's feet (kept on its hull). A rig's: the vertices its grip bones carry (`grips`: its feet, hands, paws, claws,
+ * toes, `map/grip.ts`), the lowest few of each in the rest pose; none for a rig with no such bones. Not the lowest of
+ * the rest pose: a bird's rig rests with its wings out and down, lower than its feet, and seated by those it stood
+ * 30 cm in the ground. A still mesh's (no bones: it is drawn as it was made): the lowest of it, within a sixteenth of
+ * its height.
+ */
+export function feetOf(geometry: BufferGeometry, grips: ArrayLike<{bone: number}> | null | undefined): Hull | null {
+    const hull = hullOf(geometry);
+    if (hull.feet !== undefined) return hull.feet;
+    const position = geometry.getAttribute("position") as BufferAttribute;
+    const j = geometry.getAttribute("arkJoints") as BufferAttribute | undefined;
+    const w = geometry.getAttribute("arkWeights") as BufferAttribute | undefined;
+    const n = position.count;
+    const stride = Math.max(1, Math.floor(n / 6000));
     let bottom = Infinity;
     let top = -Infinity;
     for (let v = 0; v < n; v += stride) {
@@ -151,37 +170,64 @@ export function hullOf(geometry: BufferGeometry): Hull {
         if (y < bottom) bottom = y;
         if (y > top) top = y;
     }
-    const low: number[] = [];
-    for (let v = 0; v < n; v += stride) if (position.getY(v) <= bottom + (top - bottom) / 16) low.push(v);
-    low.sort((a, b) => position.getY(a) - position.getY(b));
-    const apart = (top - bottom) * 0.04;
     const chosen: number[] = [];
-    for (const v of low) {
-        if (chosen.length >= 32) break;
-        let clear = true;
-        for (const q of chosen) if (Math.hypot(position.getX(q) - position.getX(v), position.getY(q) - position.getY(v), position.getZ(q) - position.getZ(v)) <= apart) clear = false;
-        if (clear) chosen.push(v);
-    }
-    const pack = (list: number[]): Hull => {
-        const verts = Uint32Array.from(list);
-        const at = new Float32Array(verts.length * 3);
-        const jj = j && w ? new Uint16Array(verts.length * 4) : null;
-        const ww = j && w ? new Float32Array(verts.length * 4) : null;
-        verts.forEach((v, i) => {
-            at[i * 3] = position.getX(v);
-            at[i * 3 + 1] = position.getY(v);
-            at[i * 3 + 2] = position.getZ(v);
-            if (jj && ww && j && w)
-                for (let k = 0; k < 4; k++) {
-                    jj[i * 4 + k] = j.getComponent(v, k);
-                    ww[i * 4 + k] = w.getComponent(v, k);
-                }
-        });
-        return {vertices: verts, rest: at, joints: jj, weights: ww};
+    const apart = (top - bottom) * 0.02;
+    const take = (list: number[], most: number) => {
+        list.sort((a, b) => position.getY(a) - position.getY(b));
+        let taken = 0;
+        for (const v of list) {
+            if (taken >= most) break;
+            let clear = true;
+            for (const q of chosen) if (Math.hypot(position.getX(q) - position.getX(v), position.getY(q) - position.getY(v), position.getZ(q) - position.getZ(v)) <= apart) clear = false;
+            if (clear) {
+                chosen.push(v);
+                taken++;
+            }
+        }
     };
-    const hull: Hull = {vertices, rest, joints, weights, feet: pack(chosen)};
-    hulls.set(geometry, hull);
-    return hull;
+    if (j && w) {
+        if (grips && grips.length) {
+            const byBone = new Map<number, number[]>();
+            for (let g = 0; g < grips.length; g++) byBone.set(grips[g].bone, []);
+            for (let v = 0; v < n; v += stride) {
+                let held = 0;
+                let most = 0;
+                let bone = -1;
+                for (let k = 0; k < 4; k++) {
+                    const weight = w.getComponent(v, k);
+                    if (weight <= 0 || !byBone.has(j.getComponent(v, k))) continue;
+                    held += weight;
+                    if (weight > most) {
+                        most = weight;
+                        bone = j.getComponent(v, k);
+                    }
+                }
+                if (held >= 0.5 && bone >= 0) byBone.get(bone)!.push(v);
+            }
+            const each = Math.max(2, Math.floor(48 / byBone.size));
+            byBone.forEach((list) => take(list, each));
+        }
+    } else {
+        const low: number[] = [];
+        for (let v = 0; v < n; v += stride) if (position.getY(v) <= bottom + (top - bottom) / 16) low.push(v);
+        take(low, 40);
+    }
+    if (!chosen.length) return (hull.feet = null);
+    const verts = Uint32Array.from(chosen);
+    const at = new Float32Array(verts.length * 3);
+    const jj = j && w ? new Uint16Array(verts.length * 4) : null;
+    const ww = j && w ? new Float32Array(verts.length * 4) : null;
+    verts.forEach((v, i) => {
+        at[i * 3] = position.getX(v);
+        at[i * 3 + 1] = position.getY(v);
+        at[i * 3 + 2] = position.getZ(v);
+        if (jj && ww && j && w)
+            for (let k = 0; k < 4; k++) {
+                jj[i * 4 + k] = j.getComponent(v, k);
+                ww[i * 4 + k] = w.getComponent(v, k);
+            }
+    });
+    return (hull.feet = {vertices: verts, rest: at, joints: jj, weights: ww});
 }
 
 const halfTable = (() => {

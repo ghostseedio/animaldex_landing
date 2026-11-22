@@ -28,6 +28,7 @@ export type SeatDrawn = {
     frame: number;
     near: number;
     leaping?: boolean;
+    grips?: ArrayLike<{bone: number}> | null;
 };
 
 export type SeatMeasure = {
@@ -218,19 +219,30 @@ export class SeatProbe {
         const hull = fullHull(drawn.geometry);
         const model = new Float32Array(hull.vertices.length * 3);
         const pose = drawn.pose;
-        // Its feet: the vertices lowest in its rest pose (within a sixteenth of its height of its lowest). On its feet, or
-        // held on a branch, it rests on those as they are posed now, whatever its head does; not a long low body (a snake,
-        // a crocodile), which rests along its length.
+        // Its feet. A rig's: every vertex its grip bones carry (its feet, hands, paws, claws, toes); a still mesh's: the
+        // lowest of it as made, within a sixteenth of its height. On its feet, or held on a branch, it rests on those as
+        // they are posed now, whatever its head does; not a long low body (a snake, a crocodile), which rests along its
+        // length, nor a rig with no such bones.
         let feet: number[] | null = null;
         if ((drawn.kind === "stand" || drawn.kind === "perch") && drawn.length <= 4 * Math.max(drawn.height, 0.002)) {
-            let bottom = Infinity;
-            let top = -Infinity;
-            for (let i = 0; i < hull.vertices.length; i++) {
-                bottom = Math.min(bottom, hull.rest[i * 3 + 1]);
-                top = Math.max(top, hull.rest[i * 3 + 1]);
-            }
             feet = [];
-            for (let i = 0; i < hull.vertices.length; i++) if (hull.rest[i * 3 + 1] <= bottom + (top - bottom) / 16) feet.push(i);
+            if (hull.joints && hull.weights) {
+                const grips = new Set<number>();
+                for (let g = 0; g < (drawn.grips?.length ?? 0); g++) grips.add(drawn.grips![g].bone);
+                for (let i = 0; i < hull.vertices.length; i++) {
+                    let held = 0;
+                    for (let k = 0; k < 4; k++) if (grips.has(hull.joints[i * 4 + k])) held += hull.weights[i * 4 + k];
+                    if (held >= 0.5) feet.push(i);
+                }
+            } else {
+                let bottom = Infinity;
+                let top = -Infinity;
+                for (let i = 0; i < hull.vertices.length; i++) {
+                    bottom = Math.min(bottom, hull.rest[i * 3 + 1]);
+                    top = Math.max(top, hull.rest[i * 3 + 1]);
+                }
+                for (let i = 0; i < hull.vertices.length; i++) if (hull.rest[i * 3 + 1] <= bottom + (top - bottom) / 16) feet.push(i);
+            }
         }
         const n = posedHull(hull, pose, model);
         const e = drawn.m;
