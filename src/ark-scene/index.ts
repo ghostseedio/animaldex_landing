@@ -608,6 +608,8 @@ type Entry = {
     riding?: boolean;
     /** ARK-SEAT: its seat on what is drawn under it (`seat/seat.ts`): the offset it is drawn with, eased. */
     seat?: SeatState;
+    /** ARK-SEAT: a gait of the locomotion layer posed it last frame (not a clip of its own). */
+    seatGait?: boolean;
     /** Its mother's pose as `carriedPose` read it (her id, where): moved with her when the frame's pushes move her. */
     ridingOn?: {id: string; x: number; z: number; base: number};
     /** A rider or a hopper (`riders.ts`): its host, when that was chosen, a flea's time off its host, the host's pace. */
@@ -6916,6 +6918,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 position.y += seated.y;
                 position.z += seated.z;
             }
+            // (A still rig in a clip of its own, no gait under it and nothing fading: kept level on its feet through the clip.)
+            if (rig && state && entry.seat) {
+                const clipNow = !entry.seatGait && !state.from && state.weight >= 0.99 && !entry.sched?.pose?.moving ? rig.clips[state.now.name] : undefined;
+                position.y += seat.clipLift(entry, seatAs, rig.geometry, rig.grips, rig.data, rig.bones, clipNow ? clipRows(clipNow, state.now.phase)[0] : -1, s, dt);
+            }
             matrix.compose(position, rotation, scale.set(s, s, s));
             // ARK-CONTACT round 4 (the town's cat asleep 4 to 14 cm over the lawn): a body lying on the ground in its
             // rig's sleep or lying pose, settled (no fade from another clip), lowered until the pose's own lowest
@@ -6977,6 +6984,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, ...(seatGround ? {ground: seatGround} : {}), actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null, canopy: (surface as {arms?: LocoCanopy | null} | null | undefined)?.arms ?? (entry.hop && (entry.hop.hopping || state.pace > entry.length * 0.1) && !surface && !where.water && brachiates(animal.model_slug, animal.scientific_name) ? {phase: "walk", hand: null, next: null, lead: 1, u: (epochNow * 1.4 + entry.phase) % 1, brachiate: true} : null)}, index);
                 if (perf.on) perf.carve("locomotion", performance.now() - locoAt);
                 seatGait = Boolean(live?.gait);
+                entry.seatGait = seatGait;
                 if (live) {
                     (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, live.code, live.code, 0, state.weight);
                     (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).setXYZW(index, 0, 0, 0, 0);

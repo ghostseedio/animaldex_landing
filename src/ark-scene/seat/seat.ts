@@ -25,7 +25,7 @@
 
 import type {BufferGeometry, Matrix4, Object3D} from "three";
 import {ALL, DrawnSolids, HARD, ROCK, SOFT, TREE, type Near, type SolidHit} from "@/ark-scene/seat/solids";
-import {feetOf, hullKnown, hullOf, posedHull, type RigPose} from "@/ark-scene/seat/support";
+import {feetOf, hullKnown, hullOf, posedHull, soleLevel, type RigPose} from "@/ark-scene/seat/support";
 
 /** What the scene says the animal is doing, for the seat: the first four are seated, the rest left alone. */
 export type SeatKind = "stand" | "lie" | "perch" | "cling" | "fly" | "swim" | "hang" | "ride" | "carried" | "den" | "afloat" | "hop" | "act" | "swing" | "grow";
@@ -93,6 +93,9 @@ export type SeatState = {
     lean: number;
     /** Frames since its own motion last moved it over the ground (a walk the schedule does not call moving: an act's). */
     idle: number;
+    /** What keeps its feet level through a clip of its own (m, `clipLift`): drawn now, and the feet's level it is taken from. */
+    lift: number;
+    liftFrom: number;
     /** Moves onto a surface beside it in a row that left it no nearer one. */
     sides: number;
     /** Held where nothing is drawn (a trunk's side that is not there, a perch over nothing): drawn upright, coming down; and where that was. */
@@ -285,6 +288,29 @@ export class SeatPass {
     }
 
     /**
+     * A still rig in a clip of its own (a walk on the spot, a preen, a scan): what to raise it by this frame so the
+     * lowest of its feet stays level through the clip (m; the clip's own rise and fall of its soles, taken off). The
+     * clip's row now, or -1 when it is not in one (moving, in a gait, fading between two): then it eases back to none.
+     */
+    clipLift(holder: SeatHolder, kind: SeatKind, geometry: BufferGeometry, grips: ArrayLike<{bone: number}> | null, baked: Uint16Array, bones: number, row: number, scale: number, dt: number): number {
+        const s = holder.seat;
+        if (!s || this.off) return 0;
+        let target = 0;
+        if (row >= 0 && (kind === "stand" || kind === "perch") && hullKnown(geometry)) {
+            const soles = feetOf(geometry, grips);
+            if (soles) {
+                const level = soleLevel(soles, baked, bones, row) * scale;
+                if (s.liftFrom !== s.liftFrom) s.liftFrom = level + s.lift;
+                target = s.liftFrom - level;
+            }
+        } else s.liftFrom = NaN;
+        // (Eased a little: a clip's rows are a few a second apart.)
+        s.lift += (target - s.lift) * Math.min(Math.max(dt, 0) * 30, 1);
+        if (Math.abs(s.lift - target) < 0.0005) s.lift = target;
+        return s.lift;
+    }
+
+    /**
      * Whether an animal the scene holds on a surface found nothing drawn there at its last solve: the scene then draws
      * it upright, as one coming down onto what is under it (`kind` "perch", no surface). It is asked again where the
      * scene holds it once it has moved half a metre on.
@@ -324,7 +350,7 @@ export class SeatPass {
      * After its matrix is final: work out where it rests, if it is its turn. Sets the target its offset eases to.
      */
     settle(input: SeatInput): void {
-        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, ox: NaN, oy: NaN, oz: NaN, sx: NaN, sz: NaN, urgent: false, mute: 0, mutes: 0, wasGap: NaN, wasOff: 0, wasOwnY: NaN, lean: 0, idle: 99, sides: 0, fell: false, fellX: 0, fellZ: 0});
+        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, ox: NaN, oy: NaN, oz: NaN, sx: NaN, sz: NaN, urgent: false, mute: 0, mutes: 0, wasGap: NaN, wasOff: 0, wasOwnY: NaN, lean: 0, idle: 99, lift: 0, liftFrom: NaN, sides: 0, fell: false, fellX: 0, fellZ: 0});
         s.kind = input.kind;
         if (this.keepPoints) {
             // Development (the audit's probe, `audit-probe.ts`): the animal as drawn this frame.
@@ -801,8 +827,8 @@ export class SeatPass {
         if (!moved && !waiting) {
             // The gap it would have with no offset along its way, at its lowest over its motion (`SeatState.env`).
             const u = gap - (s.x * ax + s.y * ay + s.z * az);
-            // (A still one on its feet in a clip of its own: its feet's own bob, a tenth of its height.)
-            const band = Math.max(input.bounce ?? 0, moving && pose ? Math.min(Math.max(0.25 * height, 0.02), 0.3) : 0, pose?.clip && among === feet ? Math.min(Math.max(0.12 * height, 0.01), 0.1) : 0);
+            // (A stride's moment in the air; a still one in a clip of its own is kept level through it: `clipLift`.)
+            const band = Math.max(input.bounce ?? 0, moving && pose ? Math.min(Math.max(0.25 * height, 0.02), 0.3) : 0);
             if (fresh || s.env !== s.env || u <= s.env || band <= 0) {
                 s.env = u;
                 s.above = 0;
@@ -907,6 +933,8 @@ export class SeatPass {
             const it = found[c];
             // (Within its own reach under it there was nothing: what is found is further, or it would not be asked.)
             if (!it.x && !it.z && Math.abs(it.gap) <= reach) continue;
+            // (Not a face that is itself inside a rock: one rock's top under another's.)
+            if (this.depthAt(cx + it.x, y - it.gap + 0.01, cz + it.z, 0.5) > 0.02) continue;
             if (it.kind === "ground") {
                 best = it;
                 break;
@@ -921,7 +949,7 @@ export class SeatPass {
             }
             if (same >= 2) best = it;
         }
-        best ??= found.find((it) => it.x !== 0 || it.z !== 0 || Math.abs(it.gap) > reach) ?? null;
+        best ??= found.find((it) => (it.x !== 0 || it.z !== 0 || Math.abs(it.gap) > reach) && this.depthAt(cx + it.x, y - it.gap + 0.01, cz + it.z, 0.5) <= 0.02) ?? null;
         return best;
     }
 

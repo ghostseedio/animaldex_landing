@@ -266,6 +266,33 @@ export type RigPose = {
     clip?: {row: number; rows: number} | null;
 };
 
+const levels = new WeakMap<Hull, Map<number, number>>();
+const levelOut = new Float32Array(3 * 64);
+const levelPose: RigPose = {bones: 0, live: null, liveRow: -1, baked: null, row0: 0, row1: 0, t: 0, from0: 0, from1: 0, fromT: 0, fromWeight: 0, weight: 1};
+
+/**
+ * How high a rig's lowest sole is at one baked row (model units, its own up): what a clip does to its feet's level
+ * from frame to frame, so a body in a clip of its own can be kept on its feet through it (`SeatPass.clipLift`). Kept
+ * per feet and row.
+ */
+export function soleLevel(soles: Hull, baked: Uint16Array, bones: number, row: number): number {
+    let known = levels.get(soles);
+    if (!known) levels.set(soles, (known = new Map()));
+    const kept = known.get(row);
+    if (kept !== undefined) return kept;
+    levelPose.bones = bones;
+    levelPose.baked = baked;
+    levelPose.row0 = levelPose.row1 = row;
+    const n = Math.min(soles.vertices.length, 64);
+    const some: Hull = n === soles.vertices.length ? soles : {vertices: soles.vertices.subarray(0, n), rest: soles.rest, joints: soles.joints, weights: soles.weights};
+    posedHull(some, levelPose, levelOut);
+    let low = Infinity;
+    for (let i = 0; i < n; i++) if (levelOut[i * 3 + 1] < low) low = levelOut[i * 3 + 1];
+    if (known.size > 4096) known.clear();
+    known.set(row, low);
+    return low;
+}
+
 /**
  * The hull's points as posed (model space) into `out` (x y z each); a still mesh's are its rest points. Returns how
  * many.
