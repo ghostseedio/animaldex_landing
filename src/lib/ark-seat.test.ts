@@ -253,3 +253,61 @@ test("seat: a rig's hull points are posed by the rows its shader reads", () => {
     // (A still mesh: its own corners.)
     for (let i = 0; i < hull.vertices.length; i++) assert.ok(Math.abs(Math.abs(out[i * 3]) - 0.5) < 1e-6);
 });
+
+test("seat: its own motion going straight up or down does not carry its seat off; a body that does not answer is not chased", () => {
+    const {scene} = world();
+    const pass = new SeatPass(scene);
+    const geometry = new BoxGeometry(0.2, 0.2, 0.6);
+    geometry.translate(0, 0.1, 0);
+    const matrix = new Matrix4();
+    const one = new Vector3(1, 1, 1);
+    const ground = () => 0;
+    // A bird the schedule has 5 m up in the air, then drifting up 2 cm a frame: on the ground at every frame, its turn or not.
+    const holder: SeatHolder = {};
+    let worst = 0;
+    for (let frame = 0; frame < 120; frame++) {
+        pass.begin();
+        const own = new Vector3(200, 5 + (frame > 30 ? (frame - 30) * 0.02 : 0), 200);
+        const offset = pass.offset(holder, "stand", 1 / 60, false, own.x, own.y, own.z);
+        const drawn = own.clone().add(new Vector3(offset?.x ?? 0, offset?.y ?? 0, offset?.z ?? 0));
+        matrix.compose(drawn, new Quaternion(), one);
+        if (frame > 30) worst = Math.max(worst, Math.abs(drawn.y));
+        // (Its turn only every tenth frame once it is seated.)
+        if (frame < 20 || frame % 10 === 0) pass.settle({holder, kind: "stand", matrix, geometry, pose: null, height: 0.2, length: 0.6, surface: null, moving: false, ground, focus: true});
+    }
+    assert.ok(worst < 0.015, `left behind by ${worst}`);
+    // A body something else holds where it is (its matrix takes no offset): its offset never runs away.
+    const held: SeatHolder = {};
+    let most = 0;
+    for (let frame = 0; frame < 400; frame++) {
+        pass.begin();
+        pass.offset(held, "stand", 1 / 60, false, 210, -0.05, 200);
+        matrix.compose(new Vector3(210, -0.05, 200), new Quaternion(), one);
+        pass.settle({holder: held, kind: "stand", matrix, geometry, pose: null, height: 0.2, length: 0.6, surface: null, moving: false, ground, focus: true});
+        most = Math.max(most, Math.abs(held.seat!.ty));
+    }
+    assert.ok(most < 0.5, `ran away to ${most}`);
+    assert.equal(held.seat!.ty, 0, "left where its own motion has it");
+});
+
+test("seat: on its feet it rests on its feet, not on a head at the ground", () => {
+    // A body with a head hanging 10 cm under its feet's level when posed (a grazing muzzle): two boxes in one mesh, the
+    // feet lowest at rest; drawn pitched nose down so the head's end is under the ground.
+    const {scene} = world();
+    const pass = new SeatPass(scene);
+    const geometry = new BoxGeometry(0.2, 0.2, 0.6, 1, 1, 6);
+    geometry.translate(0, 0.1, 0);
+    const holder: SeatHolder = {};
+    const matrix = new Matrix4();
+    // (Pitched 20 degrees about its hind feet: its fore end 20 cm under the ground, its hind end on it.)
+    const rotation = new Quaternion().setFromEuler(new Euler(0.35, 0, 0));
+    for (let frame = 0; frame < 60; frame++) {
+        pass.begin();
+        const own = new Vector3(220, 0, 200);
+        const offset = pass.offset(holder, "lie", 1 / 60, false, own.x, own.y, own.z);
+        matrix.compose(own.clone().add(new Vector3(offset?.x ?? 0, offset?.y ?? 0, offset?.z ?? 0)), rotation, new Vector3(1, 1, 1));
+        pass.settle({holder, kind: "lie", matrix, geometry, pose: null, height: 0.2, length: 0.6, surface: null, moving: false, ground: () => 0, focus: true});
+    }
+    // Lying, nothing of it is under the ground: lifted until its lowest point is on it.
+    assert.ok(holder.seat!.y > 0.08, `lying, its lowest under the ground: ${holder.seat!.y}`);
+});

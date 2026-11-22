@@ -27,6 +27,7 @@ export type SeatDrawn = {
     surface: {nx: number; ny: number; nz: number; sway?: {x: number; y: number; z: number}} | null;
     frame: number;
     near: number;
+    leaping?: boolean;
 };
 
 export type SeatMeasure = {
@@ -43,6 +44,8 @@ export type SeatMeasure = {
     middle: boolean;
     insideOf: string;
     points: number;
+    /** In a clip that leaves the ground by its nature (a hop, a bound, a pounce): its feet may be off it. */
+    leaping: boolean;
 };
 
 const fulls = new WeakMap<BufferGeometry, Hull>();
@@ -104,7 +107,6 @@ export class SeatProbe {
     private readonly inverse = new Matrix4();
     private readonly box = new Box3();
     private readonly local = new Box3();
-    private readonly feet = new WeakMap<Hull, Map<number, Int32Array>>();
 
     constructor(private readonly scene: Object3D, private readonly floor: (x: number, z: number, near?: number) => number, private readonly water: (x: number, z: number, near?: number) => number = () => -Infinity) {}
 
@@ -212,50 +214,24 @@ export class SeatProbe {
         return out;
     }
 
-    /**
-     * The vertices a still animal in a clip of its own rests on: those lowest (within a twentieth of the mesh's height)
-     * in the clip's usual frame, the row where the whole posed mesh's lowest vertex is at the median of every row's.
-     * Their numbers in the full hull; kept per mesh and clip.
-     */
-    private feetOf(hull: Hull, pose: RigPose): Int32Array {
-        const clip = pose.clip!;
-        let known = this.feet.get(hull);
-        if (!known) this.feet.set(hull, (known = new Map()));
-        const kept = known.get(clip.row);
-        if (kept) return kept;
-        const out = new Float32Array(hull.vertices.length * 3);
-        const at: RigPose = {...pose, live: null, liveRow: -1, fromWeight: 0, weight: 1, t: 0, clip: null};
-        const lows: Array<[number, number]> = [];
-        for (let r = 0; r < Math.max(clip.rows, 1); r++) {
-            at.row0 = at.row1 = clip.row + r;
-            const n = posedHull(hull, at, out);
-            let low = Infinity;
-            for (let i = 0; i < n; i++) low = Math.min(low, out[i * 3 + 1]);
-            lows.push([low, clip.row + r]);
-        }
-        lows.sort((a, b) => a[0] - b[0]);
-        at.row0 = at.row1 = lows[Math.floor((lows.length - 1) / 2)][1];
-        const n = posedHull(hull, at, out);
-        let low = Infinity;
-        let high = -Infinity;
-        for (let i = 0; i < n; i++) {
-            low = Math.min(low, out[i * 3 + 1]);
-            high = Math.max(high, out[i * 3 + 1]);
-        }
-        const feet: number[] = [];
-        for (let i = 0; i < n; i++) if (out[i * 3 + 1] <= low + 0.05 * (high - low)) feet.push(i);
-        const found = Int32Array.from(feet);
-        known.set(clip.row, found);
-        return found;
-    }
-
     measure(drawn: SeatDrawn): SeatMeasure {
         const hull = fullHull(drawn.geometry);
         const model = new Float32Array(hull.vertices.length * 3);
-        // (A still animal in a clip of its own rests on its feet, the vertices lowest in the clip's usual frame, as they
-        // are in the frame drawn now: a bill at the ground is not what it stands on.)
         const pose = drawn.pose;
-        const feet = pose && pose.clip && pose.baked ? this.feetOf(hull, pose) : null;
+        // Its feet: the vertices lowest in its rest pose (within a sixteenth of its height of its lowest). On its feet, or
+        // held on a branch, it rests on those as they are posed now, whatever its head does; not a long low body (a snake,
+        // a crocodile), which rests along its length.
+        let feet: number[] | null = null;
+        if ((drawn.kind === "stand" || drawn.kind === "perch") && drawn.length <= 4 * Math.max(drawn.height, 0.002)) {
+            let bottom = Infinity;
+            let top = -Infinity;
+            for (let i = 0; i < hull.vertices.length; i++) {
+                bottom = Math.min(bottom, hull.rest[i * 3 + 1]);
+                top = Math.max(top, hull.rest[i * 3 + 1]);
+            }
+            feet = [];
+            for (let i = 0; i < hull.vertices.length; i++) if (hull.rest[i * 3 + 1] <= bottom + (top - bottom) / 16) feet.push(i);
+        }
         const n = posedHull(hull, pose, model);
         const e = drawn.m;
         const sway = drawn.surface?.sway;
@@ -286,15 +262,16 @@ export class SeatProbe {
             y1 = Math.max(y1, wy);
             z1 = Math.max(z1, wz);
         }
-        cx /= n;
-        cy /= n;
-        cz /= n;
+        // (Its middle: the middle of its box.)
+        cx = (x0 + x1) / 2;
+        cy = (y0 + y1) / 2;
+        cz = (z0 + z1) / 2;
         const height = Math.max(drawn.height, 0.002);
         const length = Math.max(drawn.length, 0.002);
         // What is under a point when no mesh is: the drawn ground (the floor its own motion has it by, where floors are
         // stacked), or, over water deeper than it wades, its float line.
         const ground = (x: number, z: number) => Math.max(this.floor(x, z, drawn.near), this.water(x, z, drawn.near) - 0.3 * height);
-        const out: SeatMeasure = {kind: drawn.kind, level: drawn.level, gap: null, low: null, on: "", inside: 0, of: 0, middle: false, insideOf: "", points: 0};
+        const out: SeatMeasure = {kind: drawn.kind, level: drawn.level, gap: null, low: null, on: "", inside: 0, of: 0, middle: false, insideOf: "", points: 0, leaping: drawn.leaping === true};
         // (One the scene leaves alone as off the ground by its pose's own rule, a burrow's mouth, a swarm, is measured too,
         // for the record: how far it is from anything drawn.)
         const record = drawn.kind === "afloat";
@@ -322,15 +299,16 @@ export class SeatProbe {
         const seat = (ax: number, ay: number, az: number, face: boolean): {gap: number; low: number; on: string; points: number} | null => {
             const along = (i: number) => world[i * 3] * ax + world[i * 3 + 1] * ay + world[i * 3 + 2] * az;
             let least = Infinity;
-            for (let i = 0; i < n; i++) least = Math.min(least, along(i));
             const band = Math.max(0.004, 0.05 * height);
             const lowest: number[] = [];
-            if (feet && !face) {
+            if (feet && feet.length && !face) {
                 // (Its feet: the lowest of them now.)
-                let low = Infinity;
-                for (let k = 0; k < feet.length; k++) low = Math.min(low, along(feet[k]));
-                for (let k = 0; k < feet.length; k++) if (along(feet[k]) <= low + band) lowest.push(feet[k]);
-            } else for (let i = 0; i < n; i++) if (along(i) <= least + band) lowest.push(i);
+                for (let k = 0; k < feet.length; k++) least = Math.min(least, along(feet[k]));
+                for (let k = 0; k < feet.length; k++) if (along(feet[k]) <= least + band) lowest.push(feet[k]);
+            } else {
+                for (let i = 0; i < n; i++) least = Math.min(least, along(i));
+                for (let i = 0; i < n; i++) if (along(i) <= least + band) lowest.push(i);
+            }
             lowest.sort((a, b) => along(a) - along(b));
             const points: Array<[number, number, number]> = [];
             if (held) {
@@ -452,10 +430,10 @@ export class SeatProbe {
                             clear = y - rockExit(all, y + up);
                             kind = over.target.kind;
                         } else if (over.y - y <= reach) {
-                            // (Built: only with no floor or top it stands over under it.)
+                            // (Built: only with its own underside under the point: under a bench, a sill or a roof is not in it.)
                             let first: {d: number; ny: number} | null = null;
                             for (const hit of this.cast(x, y, z, 0, -1, 0, reach, ROCK | HARD)) if (hit.target.closed && (!first || hit.d < first.d)) first = hit;
-                            if (!first || first.ny <= 0.2) {
+                            if (first && first.ny < -0.2) {
                                 clear = y - over.y;
                                 kind = over.target.kind;
                             }

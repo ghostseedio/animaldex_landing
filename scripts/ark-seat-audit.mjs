@@ -9,7 +9,8 @@
  *
  * It fails (exit 1, with `--gate`) when one flying or swimming has its middle inside a rock, or when an animal that is
  * not flying, swimming, hanging, carried or in its den is
- *   - more than 3 cm over the drawn surface it rests on (hovering: its lowest point, nothing of it touching),
+ *   - more than 3 cm over the drawn surface it rests on (hovering: the lowest of its feet, nothing of it touching;
+ *     not one in a hop's, a bound's or a pounce's clip, whose feet leave the ground by the clip),
  *   - more than 3 cm under it (sunk: its seat, the quarter of its lowest points on uneven ground allowed for), or
  *   - inside a rock, a wall or any closed solid (its middle, or two or more of some forty points of its body, more
  *     than 3 cm under the thing's own top; one on a trunk's or a wall's face is measured against that face instead).
@@ -181,7 +182,8 @@ const verdict = (row) => {
     if (row.middle || row.inside >= 2) return "inside";
     if (row.gap === null) return "nothing";
     // (Hovering: nothing of it touches, its lowest point over the surface. Sunk: its seat under it.)
-    if (row.low > TOLERANCE) return "above";
+    // (In a hop's, a bound's or a pounce's clip its feet leave the ground: that is the clip. Sunk or inside still counts.)
+    if (row.low > TOLERANCE) return row.leaping ? "exempt" : "above";
     if (row.gap < -TOLERANCE) return "below";
     return "ok";
 };

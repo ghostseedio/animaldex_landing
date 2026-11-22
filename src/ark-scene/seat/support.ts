@@ -48,6 +48,12 @@ export type Hull = {
     /** A rig's: four bones and four weights a vertex; null for a still mesh. */
     joints: Uint16Array | null;
     weights: Float32Array | null;
+    /**
+     * Its feet: the vertices lowest in the rest pose (within a sixteenth of its height of its lowest, up to thirty-two
+     * of them, apart). What a body on its feet rests on whatever its clip does with its head: a grazing muzzle or a
+     * pecking bill at the ground is not what it stands on.
+     */
+    feet?: Hull;
 };
 
 const hulls = new WeakMap<BufferGeometry, Hull>();
@@ -137,7 +143,43 @@ export function hullOf(geometry: BufferGeometry): Hull {
                 weights[i * 4 + k] = w.getComponent(v, k);
             }
     });
-    const hull = {vertices, rest, joints, weights};
+    // Its feet: the lowest of the rest pose.
+    let bottom = Infinity;
+    let top = -Infinity;
+    for (let v = 0; v < n; v += stride) {
+        const y = position.getY(v);
+        if (y < bottom) bottom = y;
+        if (y > top) top = y;
+    }
+    const low: number[] = [];
+    for (let v = 0; v < n; v += stride) if (position.getY(v) <= bottom + (top - bottom) / 16) low.push(v);
+    low.sort((a, b) => position.getY(a) - position.getY(b));
+    const apart = (top - bottom) * 0.04;
+    const chosen: number[] = [];
+    for (const v of low) {
+        if (chosen.length >= 32) break;
+        let clear = true;
+        for (const q of chosen) if (Math.hypot(position.getX(q) - position.getX(v), position.getY(q) - position.getY(v), position.getZ(q) - position.getZ(v)) <= apart) clear = false;
+        if (clear) chosen.push(v);
+    }
+    const pack = (list: number[]): Hull => {
+        const verts = Uint32Array.from(list);
+        const at = new Float32Array(verts.length * 3);
+        const jj = j && w ? new Uint16Array(verts.length * 4) : null;
+        const ww = j && w ? new Float32Array(verts.length * 4) : null;
+        verts.forEach((v, i) => {
+            at[i * 3] = position.getX(v);
+            at[i * 3 + 1] = position.getY(v);
+            at[i * 3 + 2] = position.getZ(v);
+            if (jj && ww && j && w)
+                for (let k = 0; k < 4; k++) {
+                    jj[i * 4 + k] = j.getComponent(v, k);
+                    ww[i * 4 + k] = w.getComponent(v, k);
+                }
+        });
+        return {vertices: verts, rest: at, joints: jj, weights: ww};
+    };
+    const hull: Hull = {vertices, rest, joints, weights, feet: pack(chosen)};
     hulls.set(geometry, hull);
     return hull;
 }
@@ -173,116 +215,10 @@ export type RigPose = {
     weight: number;
     /**
      * A still animal wholly in one clip of its own (no gait under it, nothing fading): the clip's rows (its first, how
-     * many). It then rests on the vertices that are lowest in the clip's usual frame, its feet (`clipSeat`).
+     * many). Its feet's own bob in the clip is then its motion, not a gap to close at once.
      */
     clip?: {row: number; rows: number} | null;
 };
-
-/** A clip's own frame to seat a still animal by, and the vertices lowest in it. */
-export type ClipSeat = {
-    /** The row at which the posed body's lowest point is at its usual height over the clip (the median of the rows'). */
-    row: number;
-    /** The vertices lowest at that row (their numbers' rest positions, bones and weights): what the pose rests on. */
-    low: Hull;
-};
-
-const seats = new WeakMap<BufferGeometry, Map<number, ClipSeat>>();
-
-/** Whether a clip's seat is worked out already (the pass makes one new one a frame). */
-export function clipSeatKnown(geometry: BufferGeometry, first: number): boolean {
-    return seats.get(geometry)?.has(first) ?? false;
-}
-
-/**
- * The frame of a clip (its first row, how many) a still animal is seated by: the one where its lowest point is at
- * its usual height, the median over the clip. Not the lowest (a bird pecking has its bill under its feet for a
- * moment: seated by that, it would stand in the air) nor the highest (a hop's top). And the mesh's lowest vertices
- * at that frame, up to thirty-two of them apart: a lying pose rests on its flank and the side of its legs, which the rest
- * pose's hull does not know. Kept per mesh and clip; one whole skin of the mesh, once.
- */
-export function clipSeat(geometry: BufferGeometry, hull: Hull, baked: Uint16Array, bones: number, first: number, rows: number): ClipSeat {
-    let known = seats.get(geometry);
-    if (!known) seats.set(geometry, (known = new Map()));
-    const kept = known.get(first);
-    if (kept) return kept;
-    const pose: RigPose = {bones, live: null, liveRow: -1, baked, row0: 0, row1: 0, t: 0, from0: 0, from1: 0, fromT: 0, fromWeight: 0, weight: 1};
-    const out = new Float32Array(hull.vertices.length * 3);
-    // (Every row of a short clip, every few of a long one.)
-    const step = Math.max(1, Math.floor(rows / 24));
-    const lows: Array<[number, number]> = [];
-    for (let r = 0; r < Math.max(rows, 1); r += step) {
-        pose.row0 = pose.row1 = first + r;
-        const n = posedHull(hull, pose, out);
-        let low = Infinity;
-        for (let i = 0; i < n; i++) if (out[i * 3 + 1] < low) low = out[i * 3 + 1];
-        lows.push([low, first + r]);
-    }
-    lows.sort((a, b) => a[0] - b[0]);
-    const row = lows[Math.floor((lows.length - 1) / 2)][1];
-    // The whole mesh at that row: its lowest vertices.
-    const position = geometry.getAttribute("position") as BufferAttribute;
-    const j = geometry.getAttribute("arkJoints") as BufferAttribute | undefined;
-    const w = geometry.getAttribute("arkWeights") as BufferAttribute | undefined;
-    const picked: number[] = [];
-    if (j && w) {
-        const stride = Math.max(1, Math.floor(position.count / 6000));
-        const count = Math.ceil(position.count / stride);
-        const ys = new Float32Array(count);
-        const xyz = new Float32Array(count * 3);
-        let top = -Infinity;
-        let bottom = Infinity;
-        for (let k = 0; k < count; k++) {
-            const v = k * stride;
-            const x = position.getX(v);
-            const y = position.getY(v);
-            const z = position.getZ(v);
-            let sx = 0;
-            let sy = 0;
-            let sz = 0;
-            for (let c = 0; c < 4; c++) {
-                const weight = w.getComponent(v, c);
-                if (weight <= 0) continue;
-                const o = (row * bones + j.getComponent(v, c)) * 12;
-                sx += weight * (halfTable[baked[o]] * x + halfTable[baked[o + 1]] * y + halfTable[baked[o + 2]] * z + halfTable[baked[o + 3]]);
-                sy += weight * (halfTable[baked[o + 4]] * x + halfTable[baked[o + 5]] * y + halfTable[baked[o + 6]] * z + halfTable[baked[o + 7]]);
-                sz += weight * (halfTable[baked[o + 8]] * x + halfTable[baked[o + 9]] * y + halfTable[baked[o + 10]] * z + halfTable[baked[o + 11]]);
-            }
-            xyz[k * 3] = sx;
-            xyz[k * 3 + 1] = sy;
-            xyz[k * 3 + 2] = sz;
-            ys[k] = sy;
-            if (sy > top) top = sy;
-            if (sy < bottom) bottom = sy;
-        }
-        const order = Array.from({length: count}, (_, k) => k).sort((a, b) => ys[a] - ys[b]);
-        const apart = (top - bottom) * 0.04;
-        for (const k of order) {
-            if (picked.length >= 32 || ys[k] > bottom + (top - bottom) * 0.15) break;
-            let clear = true;
-            for (const q of picked) if (Math.hypot(xyz[q * 3] - xyz[k * 3], xyz[q * 3 + 1] - xyz[k * 3 + 1], xyz[q * 3 + 2] - xyz[k * 3 + 2]) <= apart) clear = false;
-            if (clear) picked.push(k);
-        }
-        for (let i = 0; i < picked.length; i++) picked[i] *= stride;
-    }
-    const vertices = Uint32Array.from(picked);
-    const rest = new Float32Array(vertices.length * 3);
-    const joints = new Uint16Array(vertices.length * 4);
-    const weights = new Float32Array(vertices.length * 4);
-    for (let i = 0; i < vertices.length; i++) {
-        const v = vertices[i];
-        rest[i * 3] = position.getX(v);
-        rest[i * 3 + 1] = position.getY(v);
-        rest[i * 3 + 2] = position.getZ(v);
-        if (j && w)
-            for (let c = 0; c < 4; c++) {
-                joints[i * 4 + c] = j.getComponent(v, c);
-                weights[i * 4 + c] = w.getComponent(v, c);
-            }
-    }
-    const seat = {row, low: {vertices, rest, joints, weights}};
-    known.set(first, seat);
-    return seat;
-}
 
 /**
  * The hull's points as posed (model space) into `out` (x y z each); a still mesh's are its rest points. Returns how

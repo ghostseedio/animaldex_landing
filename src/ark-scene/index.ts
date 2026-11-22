@@ -217,7 +217,7 @@ import {brachiates, canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys
 import type {LocoCanopy} from "@/ark-scene/locomotion/brachiate"; // ARK-CANOPY
 import {ledgeFrame} from "@/ark-scene/rock-ledge"; // ARK-JUNGLE
 import {keepCarriedWithMothers} from "@/ark-scene/carry-cull"; // ARK-JUNGLE
-import {setLocoGround} from "@/ark-scene/locomotion/ground";
+import {locoGround, setLocoGround} from "@/ark-scene/locomotion/ground";
 import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
 import {flightSpec} from "@/ark-scene/locomotion/flight";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
@@ -344,6 +344,8 @@ const LITE_CAPS = {near: 40, nearSpecies: 24, models: 80};
  * motion none.
  */
 const RIG_CAPS_DRAWN = {animals: 24, species: 12};
+/** ARK-SEAT: rig clips that leave the ground by their nature. */
+const SEAT_LEAP_CLIPS = /^(hop|leap|bound|jump|pounce|takeoff|land)/;
 /** ARK-SEAT: an act's states that are off the ground by their own motion (`acts.ts` ActPose.state): left to it. */
 const SEAT_ACT_FREE: ReadonlySet<string> = new Set(["leap", "swim", "fly", "glide", "plunge", "strike_feet", "takeoff"]);
 /** ARK-CONTACT: animals this long (m) or shorter are kept out of the drawn rocks (`insideRock`): the bugs, snails, spiders. */
@@ -6905,7 +6907,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 rotation.setFromEuler(euler.set(0, where.yaw, 0));
                 position.set(where.x, where.base - groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s, where.z);
             }
-            const seated = seat.offset(entry, seatAs, dt, Boolean(entry.sched?.pose?.moving));
+            const seated = seat.offset(entry, seatAs, dt, Boolean(entry.sched?.pose?.moving), position.x, position.y, position.z);
             // (Where its own motion has it, before its seat's offset: which floor is its where floors are stacked, a flat 70 m
             // up a tower. Asked for by where the pass had moved it, that fed back, a floor at a time.)
             const seatNear = position.y;
@@ -6966,8 +6968,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const grounded = !surface && !where.water && !where.afloat && entry.air <= 0.001 && !entry.place.canopy && !entry.place.micro && !entry.place.burrow && !slept && !(island && island.held(animal.id)) && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase));
                 const locoAt = perf.on ? performance.now() : 0;
                 // (ARK-SEAT: on a rock's top or a roof its feet's ground is that top, not the terrain under it.)
-                const seatFloor = entry.seat && entry.seat.floor !== null && (entry.seat.x || entry.seat.y || entry.seat.z) ? entry.seat.floor : null;
-                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, ...(seatFloor !== null ? {ground: () => ({height: seatFloor, nx: 0, ny: 1, nz: 0})} : {}), actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null, canopy: (surface as {arms?: LocoCanopy | null} | null | undefined)?.arms ?? (entry.hop && (entry.hop.hopping || state.pace > entry.length * 0.1) && !surface && !where.water && brachiates(animal.model_slug, animal.scientific_name) ? {phase: "walk", hand: null, next: null, lead: 1, u: (epochNow * 1.4 + entry.phase) % 1, brachiate: true} : null)}, index);
+                const seatFloor = seated && entry.seat && entry.seat.floor !== null ? entry.seat.floor : null;
+                // (And elsewhere the ground the layer plants its feet on goes with its seat: the layer holds a standing body
+                // on its ground in the world whatever its instance says, so a seat that asked it 4 cm up was never answered,
+                // and asked again, and again: horses' and pigeons' offsets ran away by metres with their bodies where they were.)
+                const seatLift = seated ? seated.y : 0;
+                const seatGround = seatFloor !== null ? () => ({height: seatFloor, nx: 0, ny: 1, nz: 0}) : seatLift !== 0 ? (x: number, z: number) => { const g = locoGround()(x, z); return {height: g.height + seatLift, nx: g.nx, ny: g.ny, nz: g.nz, water: g.water}; } : null;
+                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, ...(seatGround ? {ground: seatGround} : {}), actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null, canopy: (surface as {arms?: LocoCanopy | null} | null | undefined)?.arms ?? (entry.hop && (entry.hop.hopping || state.pace > entry.length * 0.1) && !surface && !where.water && brachiates(animal.model_slug, animal.scientific_name) ? {phase: "walk", hand: null, next: null, lead: 1, u: (epochNow * 1.4 + entry.phase) % 1, brachiate: true} : null)}, index);
                 if (perf.on) perf.carve("locomotion", performance.now() - locoAt);
                 seatGait = Boolean(live?.gait);
                 if (live) {
@@ -6980,6 +6987,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // to keep that true or let it go; the far models' hulls and a seat for every animal in the island's whole view
             // were 2 MB of a phone's heap for corrections of a pixel.)
             const seatHeld = entry.seat;
+            // (In a clip that leaves the ground by its nature, a hop, a bound, a pounce: its feet's rise is the clip's.)
+            const seatLeaping = Boolean(rig && state && state.weight > 0.5 && SEAT_LEAP_CLIPS.test(state.now.name));
             if ((level !== "far" || (seatHeld !== undefined && (seatHeld.x !== 0 || seatHeld.y !== 0 || seatHeld.z !== 0 || seatHeld.tx !== 0 || seatHeld.ty !== 0 || seatHeld.tz !== 0))) && seat.wants(entry, seatAs, selectedId === animal.id)) {
                 const rigA = rig && state ? (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute) : null;
                 const rigB = rig && state ? (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute) : null;
@@ -6995,7 +7004,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     surface: seatFell ? null : surface ?? null,
                     moving: Boolean(entry.sched?.pose?.moving),
                     // (A moving rig in a clip of its own, no planted feet: its stride's moment in the air is its own.)
-                    bounce: rig && !seatGait && entry.sched?.pose?.moving ? Math.min(Math.max(0.25 * modelHeight, 0.02), 0.3) : 0,
+                    bounce: seatLeaping ? Math.min(Math.max(0.35 * modelHeight, 0.03), 0.4) : rig && !seatGait && entry.sched?.pose?.moving ? Math.min(Math.max(0.25 * modelHeight, 0.02), 0.3) : 0,
+                    leaping: seatLeaping,
                     // (The floor its own motion has it by where floors are stacked; over water deeper than it wades, its float line.)
                     ground: (x, z) => {
                         // (Water over the ground there, not a level some lake has elsewhere: `waterTopAt` gave a duck on a

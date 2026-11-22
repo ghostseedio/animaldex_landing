@@ -25,7 +25,7 @@
 
 import type {BufferGeometry, Matrix4, Object3D} from "three";
 import {ALL, DrawnSolids, HARD, ROCK, SOFT, TREE, type Near, type SolidHit} from "@/ark-scene/seat/solids";
-import {clipSeat, clipSeatKnown, hullKnown, hullOf, posedHull, type RigPose} from "@/ark-scene/seat/support";
+import {hullKnown, hullOf, posedHull, type RigPose} from "@/ark-scene/seat/support";
 
 /** What the scene says the animal is doing, for the seat: the first four are seated, the rest left alone. */
 export type SeatKind = "stand" | "lie" | "perch" | "cling" | "fly" | "swim" | "hang" | "ride" | "carried" | "den" | "afloat" | "hop" | "act" | "swing" | "grow";
@@ -75,6 +75,23 @@ export type SeatState = {
      * tree's nearer level, a rock field, may be a moment from being drawn).
      */
     doubt: number;
+    /** Where its own motion had it when its offset was last put on (`offset`), and at its last solve: what it has moved by since. */
+    ox: number;
+    oy: number;
+    oz: number;
+    sx: number;
+    sz: number;
+    /** Moved on with a big offset since its last solve: solved now, whatever the budget. */
+    urgent: boolean;
+    /** Solves in a row its body did not answer its offset (something else holds it where it is), and until when it is then left alone. */
+    deaf: number;
+    mute: number;
+    mutes: number;
+    wasGap: number;
+    wasOff: number;
+    wasOwnY: number;
+    /** Moves onto a surface beside it in a row that left it no nearer one. */
+    sides: number;
     /** Held where nothing is drawn (a trunk's side that is not there, a perch over nothing): drawn upright, coming down; and where that was. */
     fell: boolean;
     fellX: number;
@@ -112,6 +129,8 @@ export type SeatInput = {
      * Its offset follows a rise within this only once it has lasted.
      */
     bounce?: number;
+    /** In a clip that leaves the ground by its nature (a hop, a bound, a pounce): the audit lets its feet be off it. */
+    leaping?: boolean;
     /** The chosen animal: worked out now, whatever the budget. */
     focus: boolean;
     /** Development: the level it is drawn at ("near", "far"), for the audit. */
@@ -222,18 +241,34 @@ export class SeatPass {
      * The offset to draw an animal with this frame (eased toward its target), before its matrix is composed. Null:
      * none.
      */
-    offset(holder: SeatHolder, kind: SeatKind, dt: number, moving = false): SeatState | null {
+    offset(holder: SeatHolder, kind: SeatKind, dt: number, moving = false, ownX = NaN, ownY = NaN, ownZ = NaN): SeatState | null {
         const s = holder.seat;
         if (!s || this.off) return null;
         s.kind = kind;
-        if (!SEATED.has(kind) && !HOLDS.has(kind)) {
+        const seated = SEATED.has(kind);
+        if (!seated && !HOLDS.has(kind)) {
             // Let go: back to where its own motion has it, over half a second (one in the air or the water keeps only what
             // takes it out of a rock: `clear`).
             if (!FREE.has(kind)) s.tx = s.ty = s.tz = 0;
             s.solved = false;
         }
+        if (seated && s.solved && ownY === ownY && s.oy === s.oy) {
+            // Where its own motion has it has gone straight up or down since the last frame (a bird the schedule has
+            // drifting in the air, brought down to the ground; a clip's rise the scene put on its body): its seat stays
+            // where it is, not a frame or a turn behind.
+            const dy = ownY - s.oy;
+            if (dy !== 0 && Math.hypot(ownX - s.ox, ownZ - s.oz) <= 0.25 * Math.abs(dy)) {
+                s.y -= dy;
+                s.ty -= dy;
+            }
+            // (Walked on with a big offset: what was under it is not what is under it now.)
+            if (Math.hypot(s.tx, s.ty, s.tz) > 0.5 && Math.hypot(ownX - s.sx, ownZ - s.sz) > 0.5) s.urgent = true;
+        }
+        s.ox = seated ? ownX : NaN;
+        s.oy = seated ? ownY : NaN;
+        s.oz = seated ? ownZ : NaN;
         // (Eased: a still one over a fifth of a second, no pop; one on the move faster, the ground under it changes as it goes.)
-        const k = s.solved || !SEATED.has(kind) ? 1 - Math.exp(-Math.min(Math.max(dt, 0), 0.1) * (SEATED.has(kind) ? (moving ? EASE_MOVING : EASE) : 5)) : 1;
+        const k = s.solved || !seated ? 1 - Math.exp(-Math.min(Math.max(dt, 0), 0.1) * (seated ? (moving ? EASE_MOVING : EASE) : 5)) : 1;
         s.x += (s.tx - s.x) * k;
         s.y += (s.ty - s.y) * k;
         s.z += (s.tz - s.z) * k;
@@ -268,7 +303,8 @@ export class SeatPass {
         if (FREE.has(kind)) return this.frame >= (holder.seat?.due ?? 0) && (this.spent < SEAT_BUDGET_MS || this.forced);
         // (Its turn, or the scenery round it has changed since it was seated: a tree's nearer level, a rock field come in.)
         const s = holder.seat;
-        if (focus || this.forced || !s) return true;
+        if (s && this.frame < s.mute) return false;
+        if (focus || this.forced || !s || s.urgent) return true;
         if (this.frame < s.due && s.seen === this.solids.version) return false;
         if (this.spent >= SEAT_BUDGET_MS) {
             this.short = true;
@@ -282,12 +318,12 @@ export class SeatPass {
      * After its matrix is final: work out where it rests, if it is its turn. Sets the target its offset eases to.
      */
     settle(input: SeatInput): void {
-        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, fell: false, fellX: 0, fellZ: 0});
+        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, ox: NaN, oy: NaN, oz: NaN, sx: NaN, sz: NaN, urgent: false, deaf: 0, mute: 0, mutes: 0, wasGap: NaN, wasOff: 0, wasOwnY: NaN, sides: 0, fell: false, fellX: 0, fellZ: 0});
         s.kind = input.kind;
         if (this.keepPoints) {
             // Development (the audit's probe, `audit-probe.ts`): the animal as drawn this frame.
-            const holder = input.holder as SeatHolder & {seatDrawn?: {kind: SeatKind; level: string; m: number[]; geometry: BufferGeometry; pose: RigPose | null; height: number; length: number; surface: SeatInput["surface"]; frame: number; near: number}};
-            const drawn = (holder.seatDrawn ??= {kind: input.kind, level: "", m: new Array<number>(16).fill(0), geometry: input.geometry, pose: null, height: 0, length: 0, surface: null, frame: 0, near: 0});
+            const holder = input.holder as SeatHolder & {seatDrawn?: {kind: SeatKind; level: string; m: number[]; geometry: BufferGeometry; pose: RigPose | null; height: number; length: number; surface: SeatInput["surface"]; frame: number; near: number; leaping: boolean}};
+            const drawn = (holder.seatDrawn ??= {kind: input.kind, level: "", m: new Array<number>(16).fill(0), geometry: input.geometry, pose: null, height: 0, length: 0, surface: null, frame: 0, near: 0, leaping: false});
             drawn.kind = input.kind;
             drawn.level = input.pose ? "rig" : input.level ?? "";
             for (let i = 0; i < 16; i++) drawn.m[i] = input.matrix.elements[i];
@@ -298,26 +334,27 @@ export class SeatPass {
             drawn.surface = input.surface ? {nx: input.surface.nx, ny: input.surface.ny, nz: input.surface.nz, sway: input.surface.sway ? {...input.surface.sway} : undefined} : null;
             drawn.frame = this.frame;
             drawn.near = input.near ?? input.matrix.elements[13];
+            drawn.leaping = input.leaping === true;
         }
         if (this.off) return;
         if (FREE.has(input.kind)) {
-            if (this.frame >= s.due && (this.spent < SEAT_BUDGET_MS || this.forced)) {
+            if (this.frame >= s.due && (this.spent < SEAT_BUDGET_MS || this.forced) && (hullKnown(input.geometry) || this.hullsLeft-- > 0)) {
                 const started = performance.now();
                 this.clear(input, s);
                 this.spent += performance.now() - started;
             }
             return;
         }
-        if (!SEATED.has(input.kind)) return;
-        if (!input.focus && !this.forced) {
+        if (!SEATED.has(input.kind) || this.frame < s.mute) return;
+        if (!input.focus && !this.forced && !s.urgent) {
             if ((this.frame < s.due && s.seen === this.solids.version) || this.spent >= SEAT_BUDGET_MS) {
                 if (this.spent >= SEAT_BUDGET_MS) this.short = true;
                 return;
             }
             // (Everyone's turn: when a frame's budget does not reach them all, one seated lately waits for those seated longer ago.)
             if (s.solved && this.frame - s.frame < (s.calm ? this.wait : this.wait >> 2)) return;
-            // (A mesh's hull, a clip's seat: one new one a frame.)
-            if (!hullKnown(input.geometry) || (input.pose?.clip && !clipSeatKnown(input.geometry, input.pose.clip.row))) {
+            // (A mesh's hull: one new one a frame.)
+            if (!hullKnown(input.geometry)) {
                 if (this.hullsLeft <= 0) return;
                 this.hullsLeft--;
             }
@@ -341,11 +378,32 @@ export class SeatPass {
         const e = input.matrix.elements;
         const height = Math.max(input.height, 0.002);
         const length = Math.max(input.length, 0.002);
-        // (Its middle: half its height up its own up from where it is drawn.)
-        const scale = Math.hypot(e[4], e[5], e[6]) || 1;
-        const cx = e[12] + (e[4] / scale) * height * 0.5;
-        const cy = e[13] + (e[5] / scale) * height * 0.5;
-        const cz = e[14] + (e[6] / scale) * height * 0.5;
+        // (Its middle: the middle of its posed points' box.)
+        const n = Math.min(posedHull(hullOf(input.geometry), input.pose, model), MAX_POINTS);
+        let x0 = Infinity;
+        let y0 = Infinity;
+        let z0 = Infinity;
+        let x1 = -Infinity;
+        let y1 = -Infinity;
+        let z1 = -Infinity;
+        for (let i = 0; i < n; i++) {
+            const x = model[i * 3];
+            const y = model[i * 3 + 1];
+            const z = model[i * 3 + 2];
+            const wx = e[0] * x + e[4] * y + e[8] * z + e[12];
+            const wy = e[1] * x + e[5] * y + e[9] * z + e[13];
+            const wz = e[2] * x + e[6] * y + e[10] * z + e[14];
+            if (wx < x0) x0 = wx;
+            if (wy < y0) y0 = wy;
+            if (wz < z0) z0 = wz;
+            if (wx > x1) x1 = wx;
+            if (wy > y1) y1 = wy;
+            if (wz > z1) z1 = wz;
+        }
+        if (!n) return;
+        const cx = (x0 + x1) / 2;
+        const cy = (y0 + y1) / 2;
+        const cz = (z0 + z1) / 2;
         const reach = Math.max(0.5, 1.5 * height);
         const far = Math.max(2 * length, 0.3);
         near.length = 0;
@@ -366,7 +424,8 @@ export class SeatPass {
             return;
         }
         s.inside = 1;
-        if (input.kind === "swim") {
+        // (A swimmer deep in rockwork: out sideways to free water. Just under a stone's top, or a flier: up over it.)
+        if (input.kind === "swim" && depth > 0.5 * height) {
             const step = Math.max(0.25 * length, 0.04);
             for (let j = 1; j <= 8; j++)
                 for (let k = 0; k < 8; k++) {
@@ -379,18 +438,15 @@ export class SeatPass {
                     }
                 }
         }
-        s.ty = s.y + depth + 0.5 * height;
+        s.ty = s.y + depth + (input.kind === "swim" ? 0.05 * height + 0.01 : 0.5 * height);
         if (Math.hypot(s.tx, s.ty, s.tz) > MOST) s.tx = s.ty = s.tz = 0;
     }
 
     private solve(input: SeatInput, s: SeatState): boolean {
         const hull = hullOf(input.geometry);
-        // A still rig in a clip of its own (a preen, a peck, a hop on the spot): it rests on the vertices that are lowest
-        // in the clip's usual frame, its feet (`clipSeat`), as they are in the frame drawn now; not on whatever is lowest
-        // now (a bill at the ground would lift the bird). They come first in the points; its hull after them.
+        // Its points: its feet first (the lowest of its rest pose, as posed now), then its hull.
         const pose = input.pose;
-        let feet = 0;
-        if (pose && pose.clip && pose.baked) feet = posedHull(clipSeat(input.geometry, hull, pose.baked, pose.bones, pose.clip.row, pose.clip.rows).low, pose, model);
+        const feet = hull.feet ? posedHull(hull.feet, pose, model) : 0;
         const n = Math.min(feet + posedHull(hull, pose, feet ? model.subarray(feet * 3) : model), MAX_POINTS);
         const e = input.matrix.elements;
         const sway = input.surface?.sway;
@@ -442,8 +498,10 @@ export class SeatPass {
             az = input.surface.nz / l;
         }
         // The points it rests on: the lowest along that way, a few, apart.
-        // (A long low body, a snake, a lizard, a crocodile, rests along its whole length: every point is one it may rest on.)
-        const among = feet && length <= 4 * height ? feet : n;
+        // On its feet (standing, or held on a branch) it rests on its feet, whatever its head does: a grazing muzzle, a
+        // pecking bill. Lying, or on a trunk's or a wall's face, on whatever of it is lowest now; and a long low body (a
+        // snake, a lizard, a crocodile) along its whole length.
+        const among = feet && (input.kind === "stand" || input.kind === "perch") && length <= 4 * height ? feet : n;
         let least = Infinity;
         for (let i = 0; i < among; i++) least = Math.min(least, world[i * 3] * ax + world[i * 3 + 1] * ay + world[i * 3 + 2] * az);
         const band = Math.max(0.004, 0.05 * height);
@@ -579,6 +637,15 @@ export class SeatPass {
         s.frame = this.frame;
         if (this.keepPoints) s.points = support.flatMap((i) => [world[i * 3], world[i * 3 + 1], world[i * 3 + 2]]);
         if (!whole) return false;
+        // (Where its own motion has it now: to tell, next time, whether it has moved on or stood still.)
+        const ownX = s.ox === s.ox ? s.ox : e[12] - s.x;
+        const ownY = s.oy === s.oy ? s.oy : e[13] - s.y;
+        const ownZ = s.oz === s.oz ? s.oz : e[14] - s.z;
+        const stayed = Math.abs(ownX - s.sx) < 0.002 && Math.abs(ownZ - s.sz) < 0.002 && Math.abs(ownY - s.wasOwnY) < 0.002;
+        s.sx = ownX;
+        s.sz = ownZ;
+        s.wasOwnY = ownY;
+        s.urgent = false;
         const dt = Math.min(Math.max(this.clock - s.at, 0), 1);
         s.at = this.clock;
         s.seen = this.solids.version;
@@ -611,10 +678,11 @@ export class SeatPass {
         if (!cling && near.some((it) => it.solid.cls & (ROCK | HARD) && !it.solid.double)) {
             const below = Math.max(gap, 0) + 0.02;
             let closed = Infinity;
-            for (let i = 0; i < n; i++) {
-                const x = world[i * 3];
-                const y = world[i * 3 + 1];
-                const z = world[i * 3 + 2];
+            // (Its points, and its middle: the middle of their box.)
+            for (let i = 0; i <= n; i++) {
+                const x = i < n ? world[i * 3] : (x0 + x1) / 2;
+                const y = i < n ? world[i * 3 + 1] : (y0 + y1) / 2;
+                const z = i < n ? world[i * 3 + 2] : (z0 + z1) / 2;
                 if (!this.boxed(x, z)) continue;
                 hits.length = 0;
                 this.solids.castIn(near, x, y + ROCK_REACH, z, 0, -(ROCK_REACH + below), 0, hits);
@@ -634,9 +702,9 @@ export class SeatPass {
                 }
                 let clear = top > -Infinity ? y - top : Infinity;
                 // (Under a closed thing's own top: in it. A rock however high, and any rock over that one; a built thing only
-                // close over it, with no floor under.)
+                // close over it and with its own underside under the point: under a bench, a sill or a roof is not in it.)
                 if (overNy > 0.2 && overCls === ROCK) clear = y - rockExit(hits, y + up);
-                else if (overNy > 0.2 && overY - y <= reachUp && !this.floorUnder(x, y, z, reachUp)) clear = y - overY;
+                else if (overNy > 0.2 && overY - y <= reachUp && this.undersideBelow(x, y, z, reachUp)) clear = y - overY;
                 if (clear < -0.02) s.inside++;
                 if (clear < closed) closed = clear;
             }
@@ -662,8 +730,10 @@ export class SeatPass {
         if (held && !cling && gap > Math.max(0.1, height) && this.besidesLeft <= 0 && !this.forced && !input.focus) waiting = true;
         else if (held && !cling && gap > Math.max(0.1, height)) {
             this.besidesLeft--;
-            const side = this.beside(cx, least, cz, length, Math.max(0.1, height), length <= 0.6 ? mask : ROCK | HARD, input.ground);
+            // (Moved onto a surface beside it three times and still with nothing under it: slivers. It comes down.)
+            const side = s.sides < 3 ? this.beside(cx, least, cz, length, Math.max(0.1, height), length <= 0.6 ? mask : ROCK | HARD, input.ground) : null;
             if (side) {
+                s.sides++;
                 s.tx = s.x + side.x;
                 s.ty = s.y - side.gap;
                 s.tz = s.z + side.z;
@@ -682,17 +752,45 @@ export class SeatPass {
                     s.fellZ = e[14] - s.z;
                 }
             }
-        } else s.doubt = 0;
+        } else {
+            s.doubt = 0;
+            s.sides = 0;
+        }
         s.gap = gap;
         s.low = gaps[0];
         s.on = on;
         s.floor = on === "ground" || cling ? null : least - gap;
         const fresh = !s.solved;
+        // A body that stood still and did not answer its offset (it changed, its gap did not: something else holds the
+        // body where it is, feet planted in the world): never chased. Back to its own motion, and left a good while.
+        const offNow = s.x * ax + s.y * ay + s.z * az;
+        if (fresh || moved || !stayed || input.moving || s.wasGap !== s.wasGap) {
+            s.deaf = 0;
+            s.wasGap = fresh || moved ? NaN : gap;
+            s.wasOff = offNow;
+        } else if (Math.abs(offNow - s.wasOff) > 0.02) {
+            // (Its offset has gone 2 cm since it was last looked at this way: has its gap gone with it?)
+            const by = offNow - s.wasOff;
+            s.deaf = Math.abs(gap - s.wasGap - by) > 0.7 * Math.abs(by) ? s.deaf + 1 : 0;
+            s.wasGap = gap;
+            s.wasOff = offNow;
+        }
+        if (s.deaf >= 3) {
+            s.deaf = 0;
+            s.tx = s.ty = s.tz = 0;
+            s.env = NaN;
+            s.calm = true;
+            // (Ten seconds, the chosen animal too; longer each time it happens again.)
+            s.mutes = Math.min(s.mutes + 1, 6);
+            s.mute = this.frame + 600 * s.mutes;
+            s.due = s.mute;
+            return true;
+        }
         if (!moved && !waiting) {
             // The gap it would have with no offset along its way, at its lowest over its motion (`SeatState.env`).
             const u = gap - (s.x * ax + s.y * ay + s.z * az);
-            // (A still one in a clip of its own: its feet's own bob, a tenth of its height.)
-            const band = Math.max(input.bounce ?? 0, feet ? Math.min(Math.max(0.12 * height, 0.01), 0.1) : 0);
+            // (A still one on its feet in a clip of its own: its feet's own bob, a tenth of its height.)
+            const band = Math.max(input.bounce ?? 0, pose?.clip && among === feet ? Math.min(Math.max(0.12 * height, 0.01), 0.1) : 0);
             if (fresh || s.env !== s.env || u <= s.env || band <= 0) {
                 s.env = u;
                 s.above = 0;
@@ -818,20 +916,23 @@ export class SeatPass {
         return false;
     }
 
-    /** Whether straight down from a point, within `reach`, the first closed face is a floor or a top it stands over. */
-    private floorUnder(x: number, y: number, z: number, reach: number): boolean {
+    /**
+     * Whether straight down from a point, within `reach`, the first closed face is an underside seen from within (the
+     * bottom of the thing the point is in): with a top over it too, the point is inside something built.
+     */
+    private undersideBelow(x: number, y: number, z: number, reach: number): boolean {
         hits.length = 0;
         this.solids.castIn(near, x, y, z, 0, -reach, 0, hits);
         let first: SolidHit | null = null;
         for (const hit of hits) if (!hit.double && hit.cls & (ROCK | HARD) && (!first || hit.t < first.t)) first = hit;
-        return first !== null && first.ny > 0.2;
+        return first !== null && first.ny < -0.2;
     }
 
     /**
      * How deep a point is inside a closed drawn solid (m under its top; 0: not in one). Straight up from it, the first
      * closed face met is one seen from inside: a rock's top however high (a rock is a lump); a built thing's only within
-     * `reach` and with no floor or top it stands over under it (a roof drawn as one sheet over a room is seen from
-     * behind too, and a ceiling is not a rock).
+     * `reach` and with its own underside under the point (a roof drawn as one sheet over a room is seen from behind
+     * too, and a ceiling, a bench or a sill is not a rock).
      */
     private depthAt(x: number, y: number, z: number, reach: number): number {
         if (!this.boxed(x, z)) return 0;
@@ -842,12 +943,12 @@ export class SeatPass {
         if (first === null || first.ny <= 0.2) return 0;
         const depth = first.t * ROCK_REACH;
         if (first.cls === ROCK) return depth;
-        return this.floorUnder(x, y, z, reach) ? 0 : depth;
+        return this.undersideBelow(x, y, z, reach) ? depth : 0;
     }
 
     /**
      * The share of its footprint (fifteen places over its length and width, as it lies now) that has a closed thing's
-     * top or the ground under it within a third of its height once its lowest point is `rise` higher: whether what it
+     * top or the ground under it within a seventh of its height once its lowest point is `rise` higher: whether what it
      * would be lifted onto carries it. (Its lowest points alone can all be over one small rock under its belly.)
      */
     private carried(rise: number, n: number, e: ArrayLike<number>, height: number, ground: (x: number, z: number, near?: number) => number): number {
@@ -880,26 +981,26 @@ export class SeatPass {
                 if (y + 0.02 > under) this.solids.castIn(near, x, y + 0.02, z, 0, under - y - 0.04, 0, hits);
                 for (const hit of hits) if (!hit.double && hit.cls & (ROCK | HARD) && hit.ny > 0 && hit.y > top) top = hit.y;
                 all++;
-                if (y - top <= Math.max(0.05, 0.33 * height)) held++;
+                if (y - top <= Math.max(0.05, 0.15 * height)) held++;
             }
         return all ? held / all : 1;
     }
 
     /**
      * The nearest move sideways that takes the body out of the closed things it is in: a step at a time each way, to
-     * the first place where none of its points is under a closed thing's own top. Null: none within two body lengths (it is left: the audit says so).
+     * the first place where none of its points is under a closed thing's own top. Null: none within a body length and a half (it is left: the audit says so).
      */
     private wayOut(n: number, cx: number, cy: number, cz: number, length: number, reach: number, ground: (x: number, z: number, near?: number) => number): {x: number; y: number; z: number} | null {
-        const step = Math.max(0.25 * length, 0.04);
+        const step = Math.max(0.125 * length, 0.03);
         const here = ground(cx, cz, cy);
-        const far = step * 8 + length;
+        const far = step * 12 + length;
         // (Every point of it: a place is free when none of them is in anything, as the seat itself then finds.)
         wayPoints.length = 0;
         for (let i = 0; i < n; i++) wayPoints.push(i);
         near.length = 0;
         this.solids.release();
         this.solids.collect(cx - far, cy - reach - length, cz - far, cx + far, cy + ROCK_REACH, cz + far, ROCK | HARD, near);
-        for (let j = 1; j <= 8; j++) {
+        for (let j = 1; j <= 12; j++) {
             for (let k = 0; k < 8; k++) {
                 const dx = Math.cos((k * Math.PI) / 4) * step * j;
                 const dz = Math.sin((k * Math.PI) / 4) * step * j;
