@@ -86,6 +86,7 @@ export type SeatState = {
     /** Its body did not answer its offset (something else holds it where it is): until when it is left alone, and how often it has been. */
     mute: number;
     mutes: number;
+    /** (The lowest of its body along its way off its surface, and its offset, when it was last looked at this way.) */
     wasGap: number;
     wasOff: number;
     wasOwnY: number;
@@ -354,8 +355,8 @@ export class SeatPass {
         s.kind = input.kind;
         if (this.keepPoints) {
             // Development (the audit's probe, `audit-probe.ts`): the animal as drawn this frame.
-            const holder = input.holder as SeatHolder & {seatDrawn?: {kind: SeatKind; level: string; m: number[]; geometry: BufferGeometry; pose: RigPose | null; height: number; length: number; surface: SeatInput["surface"]; frame: number; near: number; leaping: boolean; grips: ArrayLike<{bone: number}> | null}};
-            const drawn = (holder.seatDrawn ??= {kind: input.kind, level: "", m: new Array<number>(16).fill(0), geometry: input.geometry, pose: null, height: 0, length: 0, surface: null, frame: 0, near: 0, leaping: false, grips: null});
+            const holder = input.holder as SeatHolder & {seatDrawn?: {kind: SeatKind; level: string; m: number[]; geometry: BufferGeometry; pose: RigPose | null; height: number; length: number; surface: SeatInput["surface"]; frame: number; near: number; leaping: boolean; grips: ArrayLike<{bone: number}> | null; striding: boolean}};
+            const drawn = (holder.seatDrawn ??= {kind: input.kind, level: "", m: new Array<number>(16).fill(0), geometry: input.geometry, pose: null, height: 0, length: 0, surface: null, frame: 0, near: 0, leaping: false, grips: null, striding: false});
             drawn.kind = input.kind;
             drawn.level = input.pose ? "rig" : input.level ?? "";
             for (let i = 0; i < 16; i++) drawn.m[i] = input.matrix.elements[i];
@@ -368,6 +369,7 @@ export class SeatPass {
             drawn.near = input.near ?? input.matrix.elements[13];
             drawn.leaping = input.leaping === true;
             drawn.grips = input.grips ?? null;
+            drawn.striding = Boolean(input.pose) && (input.moving || s.idle < 6);
         }
         if (this.off) return;
         if (FREE.has(input.kind)) {
@@ -702,7 +704,9 @@ export class SeatPass {
             return true;
         }
         gaps.sort((a, b) => a - b);
-        const sink = input.kind === "lie" ? 0.015 : Math.max(0.015, 0.08 * height);
+        // (How far the lowest of its contacts may be in while the rest carry it: lying, a centimetre and a half; on its
+        // feet, a little on uneven ground; in a stride, a swinging foot or a knuckle the clip takes under the ground's level.)
+        const sink = input.kind === "lie" ? 0.015 : moving && pose ? Math.min(Math.max(0.02, 0.25 * height), 0.3) : Math.max(0.015, 0.08 * height);
         // (Held: the first of it to touch. On its feet: a quarter of them may be a little in, on uneven ground.)
         let gap = held ? chosenGap : Math.min(gaps[Math.floor(0.25 * (gaps.length - 1))], gaps[0] + sink);
         // Every point of its body against the closed things round it (a rock, a wall, a log), not its lowest alone: its
@@ -710,6 +714,7 @@ export class SeatPass {
         // in the thing); the least of those clearances is its seat when it is less than its feet's.
         let moved = false;
         let sideways = false;
+        let closedMin = Infinity;
         s.inside = 0;
         if (!cling && near.some((it) => it.solid.cls & (ROCK | HARD) && !it.solid.double)) {
             const below = Math.max(gap, 0) + 0.02;
@@ -744,6 +749,7 @@ export class SeatPass {
                 if (clear < -0.02) s.inside++;
                 if (clear < closed) closed = clear;
             }
+            closedMin = closed;
             if (closed < gap) gap = closed;
             // Its seat is up on something closed (a rock under a foot, a slab through its flank). Held there, or with half
             // its feet carried by it once up, it stands on it. Else the thing is in its way, not under it: a dragon is
@@ -763,11 +769,13 @@ export class SeatPass {
         // Held on something with nothing near under it: a drawn surface beside it first; none, it comes down, once
         // that has lasted (what it is held on may be a moment from being drawn).
         let waiting = false;
-        if (held && !cling && gap > Math.max(0.1, height) && this.besidesLeft <= 0 && !this.forced && !input.focus) waiting = true;
-        else if (held && !cling && gap > Math.max(0.1, height)) {
+        // (Not one whose body lies on a closed thing by another part of it than its feet: a frog on a rock's shoulder.)
+        const nothing = held && !cling && gap > Math.max(0.1, height) && closedMin > Math.max(0.1, height);
+        if (nothing && this.besidesLeft <= 0 && !this.forced && !input.focus) waiting = true;
+        else if (nothing) {
             this.besidesLeft--;
-            // (Moved onto a surface beside it three times and still with nothing under it: slivers. It comes down.)
-            const side = s.sides < 3 ? this.beside(cx, least, cz, length, Math.max(0.1, height), length <= 0.6 ? mask : ROCK | HARD, input.ground) : null;
+            // (Moved onto a surface beside it and still with nothing under it: a sliver. It comes down where it is.)
+            const side = s.sides < 1 ? this.beside(cx, least, cz, length, Math.max(0.1, height), length <= 0.6 ? mask : ROCK | HARD, input.ground) : null;
             if (side) {
                 s.sides++;
                 s.tx = s.x + side.x;
@@ -779,7 +787,7 @@ export class SeatPass {
                 gap = side.gap;
                 on = side.kind;
             } else {
-                s.doubt += Math.max(dt, 1 / 60);
+                s.doubt = s.sides ? FALL_AFTER : s.doubt + Math.max(dt, 1 / 60);
                 if (s.doubt < FALL_AFTER && s.solved) waiting = true;
                 else if (input.surface) {
                     // (Upright as it comes down: not leaning to a leaf that is not there.)
@@ -801,14 +809,14 @@ export class SeatPass {
         // body where it is, feet planted in the world): never chased. Back to its own motion, and left a good while.
         const offNow = s.x * ax + s.y * ay + s.z * az;
         if (fresh || moved || !stayed || moving || s.wasGap !== s.wasGap) {
-            s.wasGap = fresh || moved ? NaN : gap;
+            s.wasGap = fresh || moved ? NaN : least;
             s.wasOff = offNow;
         } else if (Math.abs(offNow - s.wasOff) > Math.min(Math.max(0.15, 0.5 * height), 0.4)) {
-            // Its offset has gone a good way (15 cm, half its height) since it stood here, and its gap has not gone with
-            // it: something else holds the body where it is. Never chased: back to where its offset was then, and left
-            // alone ten seconds (the chosen animal too), longer each time it happens again.
+            // Its offset has gone a good way (15 cm, half its height) since it stood here, and the lowest of its body has
+            // not gone with it: something else holds the body where it is. Never chased: back to where its offset was
+            // then, and left alone ten seconds (the chosen animal too), longer each time it happens again.
             const by = offNow - s.wasOff;
-            if (Math.abs(gap - s.wasGap - by) > 0.7 * Math.abs(by)) {
+            if (Math.abs(least - s.wasGap - by) > 0.7 * Math.abs(by)) {
                 s.tx = s.x - ax * by;
                 s.ty = s.y - ay * by;
                 s.tz = s.z - az * by;
@@ -821,7 +829,7 @@ export class SeatPass {
                 s.wasGap = NaN;
                 return true;
             }
-            s.wasGap = gap;
+            s.wasGap = least;
             s.wasOff = offNow;
         }
         if (!moved && !waiting) {
@@ -933,8 +941,8 @@ export class SeatPass {
             const it = found[c];
             // (Within its own reach under it there was nothing: what is found is further, or it would not be asked.)
             if (!it.x && !it.z && Math.abs(it.gap) <= reach) continue;
-            // (Not a face that is itself inside a rock: one rock's top under another's.)
-            if (this.depthAt(cx + it.x, y - it.gap + 0.01, cz + it.z, 0.5) > 0.02) continue;
+            // (Not a face that is itself inside a rock, one rock's top under another's, nor a crevice its body does not fit.)
+            if (!this.fits(cx + it.x, y - it.gap, cz + it.z, length)) continue;
             if (it.kind === "ground") {
                 best = it;
                 break;
@@ -949,8 +957,16 @@ export class SeatPass {
             }
             if (same >= 2) best = it;
         }
-        best ??= found.find((it) => (it.x !== 0 || it.z !== 0 || Math.abs(it.gap) > reach) && this.depthAt(cx + it.x, y - it.gap + 0.01, cz + it.z, 0.5) <= 0.02) ?? null;
+        best ??= found.find((it) => (it.x !== 0 || it.z !== 0 || Math.abs(it.gap) > reach) && this.fits(cx + it.x, y - it.gap, cz + it.z, length)) ?? null;
         return best;
+    }
+
+    /** Whether a body of `length` set down at a point is clear of rock: the point, and four a third of its length round it, a little up. */
+    private fits(x: number, y: number, z: number, length: number): boolean {
+        const r = 0.3 * length;
+        if (this.depthAt(x, y + 0.01, z, 0.5) > 0.02) return false;
+        for (let k = 0; k < 4; k++) if (this.depthAt(x + (k === 0 ? r : k === 1 ? -r : 0), y + 0.01 + 0.5 * r, z + (k === 2 ? r : k === 3 ? -r : 0), 0.5) > 0.02) return false;
+        return true;
     }
 
     /** Whether a point is over or under the box of something closed near the body (most points are in none). */

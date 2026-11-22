@@ -7,11 +7,15 @@
  * each one drawn is measured by the scene's probe (`src/ark-scene/seat/audit-probe.ts`): every vertex of its body as
  * posed, against the scene's own meshes with three's Raycaster, not the seat pass's index.
  *
+ * An animal found off its seat is looked at again for three seconds (one on its way there arrives): it counts when it
+ * is off every time.
+ *
  * It fails (exit 1, with `--gate`) when one flying or swimming has its middle inside a rock, or when an animal that is
  * not flying, swimming, hanging, carried or in its den is
  *   - more than 3 cm over the drawn surface it rests on (hovering: the lowest of its feet, nothing of it touching;
  *     not one in a hop's, a bound's or a pounce's clip, whose feet leave the ground by the clip),
- *   - more than 3 cm under it (sunk: its seat, the quarter of its lowest points on uneven ground allowed for), or
+ *   - more than 3 cm under it (sunk: its seat, the quarter of its lowest points on uneven ground allowed for, and in a
+ *     stride one swinging foot the clip takes under the ground's level), or
  *   - inside a rock, a wall or any closed solid (its middle, or two or more of some forty points of its body, more
  *     than 3 cm under the thing's own top; one on a trunk's or a wall's face is measured against that face instead).
  *
@@ -264,12 +268,12 @@ for (const island of islands) {
                 return out;
             }, {ids, skip, target: next.id, island});
             const measured = await measure(null, Array.from(seen));
-            // One caught off its seat is looked at twice more, a fifth of a second apart: a stride's or a landing's moment
-            // passes; one that is off all three times is off.
-            for (let again = 0; again < 2; again++) {
+            // One caught off its seat is looked at again, up to seven times over three seconds: a stride's or a landing's
+            // moment passes, and one on its way to its seat arrives; one that is off every time is off.
+            for (let again = 0; again < 7; again++) {
                 const off = measured.filter((row) => verdict(row) !== "ok" && verdict(row) !== "exempt");
                 if (!off.length) break;
-                await wait(220);
+                await wait(430);
                 for (const row of await measure(off.map((r) => r.id), [])) {
                     const at = measured.findIndex((r) => r.id === row.id);
                     if (at >= 0 && badness(row) < badness(measured[at])) measured[at] = {...row, looks: again + 2};

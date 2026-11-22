@@ -29,6 +29,8 @@ export type SeatDrawn = {
     near: number;
     leaping?: boolean;
     grips?: ArrayLike<{bone: number}> | null;
+    /** A rig in its stride: a swinging foot may be under the ground's level for a moment. */
+    striding?: boolean;
 };
 
 export type SeatMeasure = {
@@ -51,12 +53,13 @@ export type SeatMeasure = {
 
 const fulls = new WeakMap<BufferGeometry, Hull>();
 
-/** Every vertex (a big mesh: every few) as a hull the pose can be put on. */
+/** Every vertex (a very big mesh: every few) as a hull the pose can be put on. */
 function fullHull(geometry: BufferGeometry): Hull {
     const known = fulls.get(geometry);
     if (known) return known;
     const position = geometry.getAttribute("position") as BufferAttribute;
-    const stride = Math.max(1, Math.floor(position.count / 5000));
+    // (Every vertex of all but the heaviest meshes: a body on lumpy rock may touch it by one.)
+    const stride = Math.max(1, Math.floor(position.count / 24000));
     const count = Math.ceil(position.count / stride);
     const vertices = new Uint32Array(count);
     const rest = new Float32Array(count * 3);
@@ -413,7 +416,7 @@ export class SeatProbe {
             }
             if (!gaps.length || !chosen) return null;
             gaps.sort((a, b) => a - b);
-            const sink = drawn.kind === "lie" ? 0.015 : Math.max(0.015, 0.08 * height);
+            const sink = drawn.kind === "lie" ? 0.015 : drawn.striding ? Math.min(Math.max(0.02, 0.25 * height), 0.3) : Math.max(0.015, 0.08 * height);
             // (Held: the best of its contacts. On its feet: a quarter of them may be a little in.)
             let gap = held ? chosen.gap : Math.min(gaps[Math.floor(0.25 * (gaps.length - 1))], gaps[0] + sink);
             if (!face) {
