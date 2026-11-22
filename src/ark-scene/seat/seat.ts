@@ -253,8 +253,10 @@ export class SeatPass {
     offset(holder: SeatHolder, kind: SeatKind, dt: number, moving = false, ownX = NaN, ownY = NaN, ownZ = NaN): SeatState | null {
         const s = holder.seat;
         if (!s || this.off) return null;
-        s.kind = kind;
         const seated = SEATED.has(kind);
+        // (Off its perch and onto its feet, down to lie: what held its offset no longer does. Solved now.)
+        if (seated && s.kind !== kind && SEATED.has(s.kind) && (s.tx !== 0 || s.ty !== 0 || s.tz !== 0)) s.urgent = true;
+        s.kind = kind;
         if (!seated && !HOLDS.has(kind)) {
             // Let go: back to where its own motion has it, over half a second (one in the air or the water keeps only what
             // takes it out of a rock: `clear`).
