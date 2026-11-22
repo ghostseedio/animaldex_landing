@@ -6893,7 +6893,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             facts.flying = entry.air > 0.001 || Boolean(state?.flying) || Boolean(entry.sched?.pose?.aloft) || (loose && Boolean(entry.recipeAct || entry.recipeFlock));
             facts.water = Boolean(where.water) || Boolean(where.edge) || Boolean((where as {underwater?: boolean}).underwater) || (loose && (Boolean(entry.place.water) || where.base < (groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, false, poseBase).water ?? -Infinity) - 0.02));
             facts.afloat = false;
-            facts.den = Boolean(entry.denIn) || Boolean(entry.power?.drop) || (loose && (Boolean(entry.place.burrow) || Boolean(island?.held(animal.id))));
+            // (One the town holds in a tank, a cage, a vivarium or a room is on that container's own floor, which no ground
+            // knows and, at night, nothing draws: pets asleep in the tower's flats were 70 m 'over the ground'. Left to it.)
+            facts.den = Boolean(entry.denIn) || Boolean(entry.power?.drop) || (loose && Boolean(entry.place.burrow)) || Boolean(island?.held(animal.id));
             facts.growing = grow < 1;
             // (An act on its feet, a stalk, a run, a meal, is seated like any other; one in the air or the water, or fading out, is its own.)
             facts.acting = Boolean(act) && (act!.hidden || act!.scale < 0.999 || SEAT_ACT_FREE.has(act!.state ?? ""));
