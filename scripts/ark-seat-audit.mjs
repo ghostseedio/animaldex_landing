@@ -31,6 +31,7 @@
  *        [--unbudgeted]              no time budget for the pass (software WebGL: see below)
  *        [--width 900 --height 640]  the page's size (software WebGL: a small one, a frame costs its pixels)
  *        [--gate]                    exit 1 on any failure
+ *        [--allow 0.01]              with --gate: that share of the seated animals measured may be off (default 0)
  *        [--label after]
  *
  * Writes <out>/<label>.json (every row) and <out>/<label>.md (the tables). Nothing is uploaded; the models are read
@@ -348,7 +349,7 @@ const md = [
     "|---|---|---|---|---|---|---|---|",
     ...coverage.map((c) => `| ${c.island} | ${c.hour} | ${c.animals} | ${c.measured} | ${c.notDrawn} | ${c.left} | ${c.stops} | ${c.seconds} |`),
     "",
-    `## Failures by species and state (${failures.length})`,
+    `## Failures by species and state (${failures.length} of ${gated.filter((row) => row.verdict !== "exempt").length} seated animals)`,
     "",
     "| species | state | verdict | count | worst gap (cm) | on |",
     "|---|---|---|---|---|---|",
@@ -367,4 +368,8 @@ writeFileSync(path.join(out, `${label}.md`), md);
 console.log(md.split("\n").slice(0, 14).join("\n"));
 console.log(`failures: ${failures.length}; rows: ${rows.length}; wrote ${path.join(out, `${label}.json`)}`);
 if (errors.length) console.log("page errors:", JSON.stringify(errors.slice(0, 6)));
-if (has("gate") && (failures.length || !gated.length)) process.exit(1);
+// The gate: none off its seat, or (`--allow <share>`) no more than that share of the seated animals measured.
+const seatedCount = gated.filter((row) => row.verdict !== "exempt").length;
+const allow = Number(arg("allow", "0"));
+console.log(`gate: ${failures.length} of ${seatedCount} seated animals off their seats (${seatedCount ? ((100 * failures.length) / seatedCount).toFixed(2) : "-"}%); allowed ${(100 * allow).toFixed(2)}%`);
+if (has("gate") && (!seatedCount || failures.length > allow * seatedCount)) process.exit(1);

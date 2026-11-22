@@ -159,7 +159,7 @@ const EASE_MOVING = 45;
 export const SEAT_BUDGET_MS = 0.6;
 const GRID_BUDGET_MS = 0.3;
 
-const MAX_POINTS = 168;
+const MAX_POINTS = 200;
 const world = new Float32Array(3 * (MAX_POINTS + 8));
 const model = new Float32Array(3 * MAX_POINTS);
 const hits: SolidHit[] = [];
@@ -1052,19 +1052,19 @@ export class SeatPass {
 
     /**
      * The nearest move sideways that takes the body out of the closed things it is in: a step at a time each way, to
-     * the first place where none of its points is under a closed thing's own top. Null: none within a body length and a half (it is left: the audit says so).
+     * the first place where none of its points is under a closed thing's own top. Null: none within three body lengths (it is left: the audit says so).
      */
     private wayOut(n: number, cx: number, cy: number, cz: number, length: number, reach: number, ground: (x: number, z: number, near?: number) => number): {x: number; y: number; z: number} | null {
         const step = Math.max(0.125 * length, 0.03);
         const here = ground(cx, cz, cy);
-        const far = step * 12 + length;
+        const far = step * 24 + length;
         // (Every point of it: a place is free when none of them is in anything, as the seat itself then finds.)
         wayPoints.length = 0;
         for (let i = 0; i < n; i++) wayPoints.push(i);
         near.length = 0;
         this.solids.release();
         this.solids.collect(cx - far, cy - reach - length, cz - far, cx + far, cy + ROCK_REACH, cz + far, ROCK | HARD, near);
-        for (let j = 1; j <= 12; j++) {
+        for (let j = 1; j <= 24; j++) {
             for (let k = 0; k < 8; k++) {
                 const dx = Math.cos((k * Math.PI) / 4) * step * j;
                 const dz = Math.sin((k * Math.PI) / 4) * step * j;

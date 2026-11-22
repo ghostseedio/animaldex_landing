@@ -344,13 +344,10 @@ export class SeatProbe {
                         points.push([middle[0] + dx - ax * off, middle[1] + dy - ay * off, middle[2] + dz - az * off]);
                     }
             } else {
-                // On its feet: its lowest vertices, eight of them, apart.
-                const picked: number[] = [];
-                for (const i of lowest) {
-                    if (picked.length >= 8) break;
-                    if (picked.every((j) => Math.hypot(world[i * 3] - world[j * 3], world[i * 3 + 1] - world[j * 3 + 1], world[i * 3 + 2] - world[j * 3 + 2]) > 0.12 * length)) picked.push(i);
-                }
-                for (const i of picked) points.push([world[i * 3], world[i * 3 + 1], world[i * 3 + 2]]);
+                // On its feet: every one of its lowest vertices (to a hundred and sixty): on a slope the one that touches is
+                // not the lowest, and a body on lumpy ground may touch it by one.
+                const step = Math.max(1, Math.ceil(lowest.length / 160));
+                for (let k = 0; k < lowest.length; k += step) points.push([world[lowest[k] * 3], world[lowest[k] * 3 + 1], world[lowest[k] * 3 + 2]]);
             }
             const gaps: number[] = [];
             let chosen: {gap: number; on: string} | null = null;

@@ -113,6 +113,10 @@ export function hullOf(geometry: BufferGeometry): Hull {
     const ACROSS = 6;
     const lowY = new Float32Array(ALONG + ACROSS).fill(Infinity);
     const lowAt = new Int32Array(ALONG + ACROSS).fill(-1);
+    // (And along its length the highest of each slice: a slab or a stone through the middle of a tail or a neck is in
+    // none of the outermost points, but it is between a slice's top and its bottom.)
+    const highY = new Float32Array(ALONG).fill(-Infinity);
+    const highAt = new Int32Array(ALONG).fill(-1);
     for (let v = 0; v < n; v += stride) {
         const y = position.getY(v);
         const a = Math.min(Math.floor(((position.getZ(v) - minZ) / Math.max(maxZ - minZ, 1e-9)) * ALONG), ALONG - 1);
@@ -121,12 +125,17 @@ export function hullOf(geometry: BufferGeometry): Hull {
             lowY[a] = y;
             lowAt[a] = v;
         }
+        if (y > highY[a]) {
+            highY[a] = y;
+            highAt[a] = v;
+        }
         if (y < lowY[c]) {
             lowY[c] = y;
             lowAt[c] = v;
         }
     }
     for (let k = 0; k < lowAt.length; k++) if (lowAt[k] >= 0) picked.add(lowAt[k]);
+    for (let k = 0; k < highAt.length; k++) if (highAt[k] >= 0) picked.add(highAt[k]);
     const vertices = Uint32Array.from(picked);
     const rest = new Float32Array(vertices.length * 3);
     const j = geometry.getAttribute("arkJoints") as BufferAttribute | undefined;
