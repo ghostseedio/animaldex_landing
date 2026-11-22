@@ -159,7 +159,7 @@ const EASE_MOVING = 45;
 export const SEAT_BUDGET_MS = 0.6;
 const GRID_BUDGET_MS = 0.3;
 
-const MAX_POINTS = 200;
+const MAX_POINTS = 240;
 const world = new Float32Array(3 * (MAX_POINTS + 8));
 const model = new Float32Array(3 * MAX_POINTS);
 const hits: SolidHit[] = [];
@@ -268,7 +268,18 @@ export class SeatPass {
             // drifting in the air, brought down to the ground; a clip's rise the scene put on its body): its seat stays
             // where it is, not a frame or a turn behind.
             const dy = ownY - s.oy;
-            if (dy !== 0 && Math.hypot(ownX - s.ox, ownZ - s.oz) <= 0.25 * Math.abs(dy)) {
+            if (Math.hypot(ownX - s.ox, dy, ownZ - s.oz) > Math.max(0.5, 40 * Math.min(Math.max(dt, 1 / 60), 0.1))) {
+                // (Not a move: its own motion has it somewhere else, off its limb and down on the ground, a new trip's
+                // start. What seated it there seats nothing here: from none, and seated at once at its next solve.)
+                s.x = s.y = s.z = s.tx = s.ty = s.tz = 0;
+                s.solved = false;
+                s.env = NaN;
+                s.lean = 0;
+                s.sides = 0;
+                s.doubt = 0;
+                s.fell = false;
+                s.urgent = true;
+            } else if (dy !== 0 && Math.hypot(ownX - s.ox, ownZ - s.oz) <= 0.25 * Math.abs(dy)) {
                 s.y -= dy;
                 s.ty -= dy;
             }

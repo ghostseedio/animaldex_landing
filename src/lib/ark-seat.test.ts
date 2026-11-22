@@ -276,6 +276,11 @@ test("seat: its own motion going straight up or down does not carry its seat off
         if (frame < 20 || frame % 10 === 0) pass.settle({holder, kind: "stand", matrix, geometry, pose: null, height: 0.2, length: 0.6, surface: null, moving: false, ground, focus: true});
     }
     assert.ok(worst < 0.015, `left behind by ${worst}`);
+    // Its own motion then has it somewhere else in one frame (off its limb, down on the ground 3 m away): its seat starts
+    // afresh there, it is not carried 6 m under the ground by the offset that held it down from the air.
+    pass.begin();
+    const jumped = pass.offset(holder, "stand", 1 / 60, false, 203, 0, 200);
+    assert.equal(jumped, null, `kept its old offset: ${jumped?.y}`);
     // A body something else holds where it is (its matrix takes no offset): its offset never runs away.
     const held: SeatHolder = {};
     let most = 0;

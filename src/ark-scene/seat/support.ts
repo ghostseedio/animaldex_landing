@@ -117,6 +117,10 @@ export function hullOf(geometry: BufferGeometry): Hull {
     // none of the outermost points, but it is between a slice's top and its bottom.)
     const highY = new Float32Array(ALONG).fill(-Infinity);
     const highAt = new Int32Array(ALONG).fill(-1);
+    // (And its underside more closely, the lowest of each slice's left, middle and right: a stone under a lying body
+    // is between its belly's line and its flanks.)
+    const underY = new Float32Array(ALONG * 3).fill(Infinity);
+    const underAt = new Int32Array(ALONG * 3).fill(-1);
     for (let v = 0; v < n; v += stride) {
         const y = position.getY(v);
         const a = Math.min(Math.floor(((position.getZ(v) - minZ) / Math.max(maxZ - minZ, 1e-9)) * ALONG), ALONG - 1);
@@ -129,6 +133,11 @@ export function hullOf(geometry: BufferGeometry): Hull {
             highY[a] = y;
             highAt[a] = v;
         }
+        const u = a * 3 + Math.min(Math.floor(((position.getX(v) - minX) / Math.max(maxX - minX, 1e-9)) * 3), 2);
+        if (y < underY[u]) {
+            underY[u] = y;
+            underAt[u] = v;
+        }
         if (y < lowY[c]) {
             lowY[c] = y;
             lowAt[c] = v;
@@ -136,6 +145,7 @@ export function hullOf(geometry: BufferGeometry): Hull {
     }
     for (let k = 0; k < lowAt.length; k++) if (lowAt[k] >= 0) picked.add(lowAt[k]);
     for (let k = 0; k < highAt.length; k++) if (highAt[k] >= 0) picked.add(highAt[k]);
+    for (let k = 0; k < underAt.length; k++) if (underAt[k] >= 0) picked.add(underAt[k]);
     const vertices = Uint32Array.from(picked);
     const rest = new Float32Array(vertices.length * 3);
     const j = geometry.getAttribute("arkJoints") as BufferAttribute | undefined;
