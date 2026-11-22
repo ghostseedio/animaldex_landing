@@ -12,9 +12,10 @@
  *  - the site (/ark and every page that mounts the scene): `NEXT_PUBLIC_ARK_CODE_V`, a content hash of the packed scene and
  *    workers, which `scripts/build-ark-bundle.mjs` computes, writes to `public/ark/ark-version.txt` and defines in the
  *    bundles, and `next.config.js` inlines in the pages (so a page and its workers are one build's);
- *  - the apps' panel (`public/ark/embed.html`, a static file): `window.ARK_CODE_V`, `?v=` and the page's own Last-Modified
- *    (the image's build time), which that page puts on every script it asks for and which the scene then keeps on the
- *    ones it asks for itself.
+ *  - the apps' panel (`public/ark/embed.html`, a static file): `window.ARK_CODE_V`, `?v=` and the same version, which the
+ *    image's build stamps into the page (`ARK_BUILT_V`, scripts/ark-embed-stamp.mjs), which that page puts on every script
+ *    it asks for and which the scene then keeps on the ones it asks for itself. (Unstamped, a local build: the page's own
+ *    Last-Modified. It used to be that in the image too, until a cached `COPY public` layer kept an old file time.)
  * With neither (a test, a harness, `next dev` before the first bundle build) the URL stays bare, as it always was.
  */
 

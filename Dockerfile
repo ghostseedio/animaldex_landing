@@ -44,9 +44,13 @@ COPY --from=deps /app/node_modules ./node_modules
 
 FROM builder-base AS builder
 
+# ARK_STAMP_EMBED=1: `prebuild` (scripts/build-ark-bundle.mjs) stamps the Ark's code version into public/ark/embed.html,
+# so the apps' panel asks for this build's scripts by their content hash, not by embed.html's file time (a cached
+# `COPY public` layer keeps an older one while the code is rebuilt). The runner copies that stamped public/.
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
     ADEX_SEO_SSG_NO_REMOTE=1 \
+    ARK_STAMP_EMBED=1 \
     NODE_OPTIONS=--max-old-space-size=6144
 
 # Public / non-secret values inlined into the client bundle at build time.

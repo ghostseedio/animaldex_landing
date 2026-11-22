@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {createRequire} from "node:module";
 import path from "node:path";
+import vm from "node:vm";
 import test, {afterEach, beforeEach} from "node:test";
 import base from "@/ark-scene/fixtures/snapshot-v2.json";
 import {arkCodeSuffix, arkCodeUrl} from "@/ark-scene/code-version";
@@ -153,4 +154,58 @@ test("the headers: a versioned /ark script is cached for good, a bare one is ask
     const match = new RegExp(`^/ark/(${all.source.match(/\((\[[^)]*\]\+\\\.js)\)/)?.[1] ?? "(?!)"})$`);
     for (const name of ["ark-scene.js", "ark-town-worker.js", "ark-prebuild-worker.js", "ark-prebuild-places-worker.js"]) assert.match(`/ark/${name}`, match, name);
     assert.doesNotMatch("/ark/basis/basis_transcoder.js", match);
+});
+
+/** The panel's version lines (`var ARK_BUILT_V …` and `window.ARK_CODE_V = …`), run as the page runs them. */
+function panelVersion(html: string, lastModified: string): string {
+    const start = html.indexOf("var ARK_BUILT_V = ");
+    const line = html.indexOf("window.ARK_CODE_V = ", start);
+    const code = html.slice(start, html.indexOf("\n", line));
+    const sandbox = {window: {} as {ARK_CODE_V?: string}, document: {lastModified}, Date};
+    vm.runInNewContext(code, sandbox);
+    return sandbox.window.ARK_CODE_V ?? "";
+}
+
+test("the apps' panel takes the build's code version, not its own file time (2026-11-23: two deploys, one ?v=)", async () => {
+    const {stampEmbedVersion, embedVersion} = await import("../../scripts/ark-embed-stamp.mjs");
+    const html = readFileSync(path.join(root, "public/ark/embed.html"), "utf8");
+    assert.equal((html.match(/var ARK_BUILT_V = "[^"\n]*";/g) ?? []).length, 1, "one stamp in the panel");
+    assert.equal(embedVersion(html), "", "the committed page is not stamped (the image's build stamps it)");
+    assert.match(html, /window\.ARK_CODE_V = "\?v=" \+ \(ARK_BUILT_V \|\| Date\.parse\(document\.lastModified\) \|\| Date\.now\(\)\);/);
+    assert.ok(html.indexOf("var ARK_BUILT_V") < html.indexOf("\"./ark-scene.js\" +"), "set before any script is asked for");
+
+    // Unstamped (a local build): the page's Last-Modified, as before; no header: the time now.
+    assert.equal(panelVersion(html, "11/21/2026 06:23:54"), `?v=${Date.parse("11/21/2026 06:23:54")}`);
+    assert.match(panelVersion(html, ""), /^\?v=\d{13}$/);
+
+    // Stamped: the version, whatever the file time (a cached `COPY public` layer keeps an old one).
+    const stamped = stampEmbedVersion(html, "877d9aef9084");
+    assert.equal(embedVersion(stamped), "877d9aef9084");
+    assert.equal(panelVersion(stamped, "11/21/2026 01:51:00"), "?v=877d9aef9084");
+    assert.equal(panelVersion(stamped, ""), "?v=877d9aef9084");
+    assert.equal(stamped.length - html.length, "877d9aef9084".length, "only the stamp changes");
+    // Stamped again (a rebuild in the same tree): the new version replaces the old.
+    assert.equal(embedVersion(stampEmbedVersion(stamped, "0123456789ab")), "0123456789ab");
+    // The scene's own workers take the same suffix (code-version.ts reads the page's ARK_CODE_V first).
+    (globalThis as {ARK_CODE_V?: string}).ARK_CODE_V = panelVersion(stamped, "");
+    assert.equal(arkCodeUrl("/ark/ark-town-worker.js"), "/ark/ark-town-worker.js?v=877d9aef9084");
+
+    assert.throws(() => stampEmbedVersion(html, ""), /not a code version/);
+    assert.throws(() => stampEmbedVersion(html, "1795242234000\"; alert(1); \""), /not a code version/);
+    assert.throws(() => stampEmbedVersion("<html></html>", "877d9aef9084"), /0 ARK_BUILT_V stamps/);
+});
+
+test("the image's build stamps the panel with the version it writes to ark-version.txt", () => {
+    const docker = readFileSync(path.join(root, "Dockerfile"), "utf8");
+    const builder = docker.slice(docker.indexOf("FROM builder-base AS builder"), docker.indexOf("FROM node:${NODE_VERSION}-bookworm-slim AS runtime-base"));
+    assert.match(builder, /^\s+ARK_STAMP_EMBED=1 \\$/m, "the builder stage sets ARK_STAMP_EMBED=1");
+    assert.ok(builder.indexOf("ARK_STAMP_EMBED=1") < builder.indexOf("npm run build"), "before `npm run build` (whose prebuild packs and stamps)");
+    assert.match(docker, /COPY --from=builder --chown=nextjs:nodejs \/app\/public \.\/public/, "the runner takes the builder's (stamped) public/");
+    const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as {scripts: Record<string, string>};
+    assert.match(pkg.scripts.prebuild, /build-ark-bundle\.mjs/);
+    const script = readFileSync(path.join(root, "scripts/build-ark-bundle.mjs"), "utf8");
+    assert.match(script, /process\.env\.ARK_STAMP_EMBED === "1"/);
+    assert.match(script, /stampEmbedVersion\(page, version\)/);
+    assert.match(script, /hash\.update\(uiCss\)/, "the UI's styles (asked for with the same ?v=, kept for good) are in the version");
+    assert.ok(script.indexOf("hash.update(uiCss)") < script.indexOf("const version = "), "hashed before the version is taken");
 });

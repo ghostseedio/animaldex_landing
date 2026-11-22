@@ -17,6 +17,7 @@ import {createRequire} from "node:module";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {build, transform} from "esbuild";
+import {stampEmbedVersion} from "./ark-embed-stamp.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dev = process.argv.includes("--dev");
@@ -74,26 +75,16 @@ function bundleOptions(bundle, version, write) {
 
 // The code version (src/ark-scene/code-version.ts): a hash of what the four bundles are before the version is written into them,
 // so the same code is the same version on any machine and an unchanged worker keeps its address (and its cache) across deploys.
+// The UI's styles are in it too: ark-ui.css is asked for with the same `?v=` and kept for good (`immutable`).
 const first = await Promise.all(bundles.map((bundle) => build(bundleOptions(bundle, "", false))));
-const hash = createHash("sha256");
-first.forEach((result, i) => {
-    const js = result.outputFiles.find((file) => file.path.endsWith(".js"));
-    hash.update(`${bundles[i].out}\0`);
-    hash.update(js.contents);
-});
-const version = hash.digest("hex").slice(0, 12);
-
-const results = await Promise.all(bundles.map((bundle) => build(bundleOptions(bundle, version, true))));
-results.forEach((result, i) => {
-    const bytes = Object.values(result.metafile.outputs).reduce((sum, output) => sum + output.bytes, 0);
-    console.log(`public/ark/${bundles[i].out}: ${(bytes / 1024).toFixed(0)} KB`);
-});
-// The UI bundle's styles: Tailwind over exactly the files packed into it (as raw text: their paths, `[locale]` and
+// The UI bundle's styles (from the first pass's inputs, the files the final pass packs, so they are in the version):
+// Tailwind over exactly the files packed into it (as raw text: their paths, `[locale]` and
 // `(composited)`, are glob syntax to Tailwind) (no preflight: the embed's own page keeps its
 // look; a reset scoped to the UI's layer instead), with the site's theme colours and the Ark's glass and ticker rules.
+let uiCss = "";
 {
     const ui = bundles.findIndex((bundle) => bundle.ui);
-    const files = Object.keys(results[ui].metafile.inputs).filter((file) => /\.(tsx|ts|jsx|js)$/.test(file) && !file.includes("node_modules")).map((file) => path.join(root, file));
+    const files = Object.keys(first[ui].metafile.inputs).filter((file) => /\.(tsx|ts|jsx|js)$/.test(file) && !file.includes("node_modules")).map((file) => path.join(root, file));
     const globals = readFileSync(path.join(root, "src/app/[locale]/_assets/globals.css"), "utf8");
     const theme = globals.slice(globals.indexOf(":root,\n.theme-dark {"), globals.indexOf("}", globals.indexOf(":root,\n.theme-dark {")) + 1);
     const arkRules = globals.slice(globals.indexOf("@keyframes rowsIn"), globals.indexOf("/* The Ark's loading screen"));
@@ -110,14 +101,40 @@ results.forEach((result, i) => {
     const postcss = require("postcss");
     const tailwind = require("tailwindcss");
     const css = await postcss([tailwind({...config, content: files.map((file) => ({raw: readFileSync(file, "utf8"), extension: path.extname(file).slice(1)})), corePlugins: {...(config.corePlugins || {}), preflight: false}}), require("autoprefixer")]).process(input, {from: undefined});
-    const out = minify ? (await transform(css.css, {loader: "css", minify: true})).code : css.css;
-    writeFileSync(path.join(root, "public/ark/ark-ui.css"), out);
-    console.log(`public/ark/ark-ui.css: ${(out.length / 1024).toFixed(0)} KB (${files.length} files)`);
+    uiCss = minify ? (await transform(css.css, {loader: "css", minify: true})).code : css.css;
+    console.log(`public/ark/ark-ui.css: ${(uiCss.length / 1024).toFixed(0)} KB (${files.length} files)`);
 }
+const hash = createHash("sha256");
+first.forEach((result, i) => {
+    const js = result.outputFiles.find((file) => file.path.endsWith(".js"));
+    hash.update(`${bundles[i].out}\0`);
+    hash.update(js.contents);
+});
+hash.update("ark-ui.css\0");
+hash.update(uiCss);
+const version = hash.digest("hex").slice(0, 12);
+
+const results = await Promise.all(bundles.map((bundle) => build(bundleOptions(bundle, version, true))));
+results.forEach((result, i) => {
+    const bytes = Object.values(result.metafile.outputs).reduce((sum, output) => sum + output.bytes, 0);
+    console.log(`public/ark/${bundles[i].out}: ${(bytes / 1024).toFixed(0)} KB`);
+});
+writeFileSync(path.join(root, "public/ark/ark-ui.css"), uiCss);
 // The version beside the bundles: next.config.js reads it and inlines it in the pages (`NEXT_PUBLIC_ARK_CODE_V`), so a page
 // and the workers it asks for are one build's. (Built, not committed: .gitignore.)
 writeFileSync(path.join(root, "public/ark/ark-version.txt"), `${version}\n`);
 console.log(`public/ark/ark-version.txt: ${version}`);
+// The apps' panel (`public/ark/embed.html`, a static file) asks for every Ark script with `?v=` + ARK_BUILT_V. The image's
+// build (ARK_STAMP_EMBED=1, the Dockerfile) stamps this version into it, so the panel and the pages ask for one build's code
+// by its content, not by embed.html's file time (a cached `COPY public` layer kept an old one: two deploys, one `?v=`).
+// Not stamped by default: the committed page stays clean, and an unstamped page falls back to its Last-Modified.
+if (process.env.ARK_STAMP_EMBED === "1" || process.argv.includes("--stamp-embed")) {
+    const embedPath = path.join(root, "public/ark/embed.html");
+    const page = readFileSync(embedPath, "utf8");
+    const stamped = stampEmbedVersion(page, version);
+    writeFileSync(embedPath, stamped);
+    console.log(`public/ark/embed.html: stamped ${version}`);
+}
 // Encounter hunting's positions atlas (src/ark-scene/positions/atlas.json, pinned): a static file the scene reads only
 // when the Ark hunts by encounter (`src/ark-scene/hunting.ts`), never in the bundle.
 copyFileSync(path.join(root, "src/ark-scene/positions/atlas.json"), path.join(root, "public/ark/positions-atlas.json"));
