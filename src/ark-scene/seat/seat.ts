@@ -762,6 +762,15 @@ export class SeatPass {
                 if (clear < -0.02) s.inside++;
                 if (clear < closed) closed = clear;
             }
+            // And from the stones' side: a small stone under a body lies between its points. Over its footprint, a grid of
+            // drops: a closed top higher than the body's underside near it is in the body.
+            if (!held) {
+                const under = this.stoneUnder(n, e, y0, y1, length, 0, 0, 0, input.ground);
+                if (under < closed) {
+                    closed = under;
+                    if (under < -0.02) s.inside++;
+                }
+            }
             closedMin = closed;
             if (closed < gap) gap = closed;
             // Its seat is up on something closed (a rock under a foot, a slab through its flank). Held there, or with half
@@ -877,7 +886,7 @@ export class SeatPass {
         }
         if (sideways && !moved && s.pushes < 8 && s.x === s.tx && s.y === s.ty && s.z === s.tz && (this.pushesLeft > 0 || this.forced || input.focus)) {
             this.pushesLeft--;
-            const out = this.wayOut(n, cx, cy, cz, length, reachUp, input.ground);
+            const out = this.wayOut(n, e, cx, cy, cz, length, reachUp, input.ground);
             s.pushes++;
             if (out) {
                 s.tx = s.x + out.x;
@@ -1064,16 +1073,69 @@ export class SeatPass {
     }
 
     /**
+     * The worst a closed thing's top stands over the body's underside (m, negative: by how much it is in the body; 0 or
+     * more: none), the body moved by (dx, dy, dz): sixty drops over its footprint (its own length and width as it lies),
+     * each top met against the lowest of the body's points within a hand's reach of it. Finds the small stone between
+     * the body's points; a boulder is found by the points themselves.
+     */
+    private stoneUnder(n: number, e: ArrayLike<number>, lowY: number, highY: number, length: number, dx: number, dy: number, dz: number, ground: (x: number, z: number, near?: number) => number): number {
+        let mx0 = Infinity;
+        let mx1 = -Infinity;
+        let mz0 = Infinity;
+        let mz1 = -Infinity;
+        let my = 0;
+        for (let i = 0; i < n; i++) {
+            if (model[i * 3] < mx0) mx0 = model[i * 3];
+            if (model[i * 3] > mx1) mx1 = model[i * 3];
+            if (model[i * 3 + 2] < mz0) mz0 = model[i * 3 + 2];
+            if (model[i * 3 + 2] > mz1) mz1 = model[i * 3 + 2];
+            my += model[i * 3 + 1];
+        }
+        my /= Math.max(n, 1);
+        const r = Math.max(0.12 * length, 0.03);
+        let worst = Infinity;
+        for (let u = 0; u < 5; u++)
+            for (let v = 0; v < 12; v++) {
+                const lx = mx0 + ((u + 0.5) / 5) * (mx1 - mx0);
+                const lz = mz0 + ((v + 0.5) / 12) * (mz1 - mz0);
+                const x = e[0] * lx + e[4] * my + e[8] * lz + e[12] + dx;
+                const z = e[2] * lx + e[6] * my + e[10] * lz + e[14] + dz;
+                if (!this.boxed(x, z)) continue;
+                const floor = ground(x, z, lowY);
+                hits.length = 0;
+                if (highY > floor) this.solids.castIn(near, x, highY, z, 0, floor - highY, 0, hits);
+                let top = -Infinity;
+                for (const hit of hits) if (!hit.double && hit.cls & (ROCK | HARD) && hit.ny > 0 && hit.y > top) top = hit.y;
+                if (top <= floor + 0.03) continue;
+                // (The body's underside there: the lowest of its points within reach of the drop.)
+                let under = Infinity;
+                for (let i = 0; i < n; i++) {
+                    const px = world[i * 3] + dx - x;
+                    const pz = world[i * 3 + 2] + dz - z;
+                    if (px * px + pz * pz <= r * r && world[i * 3 + 1] + dy < under) under = world[i * 3 + 1] + dy;
+                }
+                if (under < Infinity && under - top < worst) worst = under - top;
+            }
+        return worst;
+    }
+
+    /**
      * The nearest move sideways that takes the body out of the closed things it is in: a step at a time each way, to
      * the first place where none of its points is under a closed thing's own top. Null: none within three body lengths (it is left: the audit says so).
      */
-    private wayOut(n: number, cx: number, cy: number, cz: number, length: number, reach: number, ground: (x: number, z: number, near?: number) => number): {x: number; y: number; z: number} | null {
+    private wayOut(n: number, e: ArrayLike<number>, cx: number, cy: number, cz: number, length: number, reach: number, ground: (x: number, z: number, near?: number) => number): {x: number; y: number; z: number} | null {
         const step = Math.max(0.125 * length, 0.03);
         const here = ground(cx, cz, cy);
         const far = step * 24 + length;
         // (Every point of it: a place is free when none of them is in anything, as the seat itself then finds.)
         wayPoints.length = 0;
-        for (let i = 0; i < n; i++) wayPoints.push(i);
+        let lowY = Infinity;
+        let highY = -Infinity;
+        for (let i = 0; i < n; i++) {
+            wayPoints.push(i);
+            if (world[i * 3 + 1] < lowY) lowY = world[i * 3 + 1];
+            if (world[i * 3 + 1] > highY) highY = world[i * 3 + 1];
+        }
         near.length = 0;
         this.solids.release();
         this.solids.collect(cx - far, cy - reach - length, cz - far, cx + far, cy + ROCK_REACH, cz + far, ROCK | HARD, near);
@@ -1087,6 +1149,8 @@ export class SeatPass {
                     const i = wayPoints[w];
                     if (this.depthAt(world[i * 3] + dx, world[i * 3 + 1] + dy, world[i * 3 + 2] + dz, reach) > 0.02) free = false;
                 }
+                // (And no stone under it there.)
+                if (free && this.stoneUnder(n, e, lowY + dy, highY + dy, length, dx, dy, dz, ground) < -0.02) free = false;
                 if (free) return {x: dx, y: dy, z: dz};
             }
         }
