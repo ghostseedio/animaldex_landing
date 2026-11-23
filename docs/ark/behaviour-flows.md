@@ -254,8 +254,11 @@ Rules:
 - **Card log** is its last steps, newest first. Repeats merge.
 - **Live log moments are the server's events only** (section 0): caught, cached, near miss (`escaped`), dug up its
   cache. Always said (weight 1). The Ark-wide one line a 5 s window is unchanged.
-- **Words** go in `ark.flow.*` keys through `ark-words.ts`, in all 45 locales. English comes first; the other 44 are
-  authored in the lane (no paid API) and fall back to the generic line until then.
+- **Words** (built 2026-11-23): `ark.flow` in all 45 locale files, 64 keys (`FLOW_WORDS_EN` in `flows.ts` is the
+  English copy), hand-written in the lane (no paid API), tested for every key and its `{n}`. `stepLineIn(step, words)`
+  renders a language: English (`words` null) keeps its lines with the food named ("Caught a European Rabbit"); a
+  translation names no food ("Hat seine Beute gefangen"), since the food words are the engine's English ambient phrases.
+  Counts are written "spots searched: {n}" so no language needs plural forms.
 
 ## 7. The real costs of searching (engine; AnimalDex branch `flow-costs`, flag `flow_costs`, OFF)
 
@@ -299,6 +302,16 @@ off by default, and nothing runs while off: the schedule tests pass unchanged).*
   `play`) are kept where they are.
 - In the scene a flow sleeps and wakes with the schedule's own hours (the server's activity), never its own.
 - The fed state is the server's condition (`hungry` or not); events come in through `setFlowServer`.
+- **A flock reads one flow** (built 2026-11-23): a member's subject is seeded by its leader's id and is fed or hungry by
+  its leader's condition and awake by its leader's hours (`flowSubjectFor`, `behaviour-schedule.ts`). Before, each
+  member's own hunger or sleep built the shared memo, whichever came first, so a sparrow's stay was rewritten from a
+  flow it was not in and stood in `pause`. The stay's beats also step at most to the flow step's end, so a short peck
+  between searches is never inside one long beat's stride.
+- **The meal's cache act** (`meal-acts.ts`, a cached kill, `?cache=1`): pick up (head down), carry it in its mouth to a
+  spot 3 to 6 body lengths off, drop it beside it, dig (the rig's `dig` clip where it has one, else its graze; nose to
+  the ground, a quick scratching rhythm), push it into the hole and cover it (a slower push), then rest there. The flow
+  pins its kill, carry, cache and rest at the act's own times (`addFlowKill`), so the card reads "Caught", "Carrying …
+  off to store it", "Hiding … for later", "Resting".
 - In-scene pictures: `scripts/ark-flow-scene-shots.mjs` (flows on and off at the same moments, captioned with the
   flow's line, the pose's beat and today's card).
 
