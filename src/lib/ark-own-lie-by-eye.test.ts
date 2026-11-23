@@ -9,7 +9,7 @@ import {OWN_LIE_BY_EYE, POSED_LIE_HELD, POSED_LIE_OVER_PILOT} from "@/ark-scene/
 
 test("own lie by eye: none held standing, none given the posed lie over its own", () => {
     assert.ok(OWN_LIE_BY_EYE.size > 0);
-    for (const slug of OWN_LIE_BY_EYE) {
+    for (const slug of Array.from(OWN_LIE_BY_EYE)) {
         assert.ok(!POSED_LIE_HELD.has(slug), slug);
         assert.ok(!POSED_LIE_OVER_PILOT.has(slug), slug);
         assert.match(slug, /^[a-z0-9-]+$/, slug);
