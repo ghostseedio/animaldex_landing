@@ -58,7 +58,8 @@ for (const name of scenes) {
     for (const mode of modes) {
         // (--distance D: every shot from D m, the key suffixed: a phone's viewing distance against the close-up.)
         const distArg = process.argv.includes("--distance") ? Number(process.argv[process.argv.indexOf("--distance") + 1]) : null;
-        const key = `${name}-${mode}${distArg ? `-d${distArg}` : ""}`;
+        const hoursArg = arg("hours", null);
+        const key = `${name}-${mode}${distArg ? `-d${distArg}` : ""}${hoursArg ? `-h${hoursArg}` : ""}`;
         // (--phone: a phone's portrait screen, as the page is mostly seen.)
         const context = await browser.newContext(process.argv.includes("--phone") ? {viewport: {width: 390, height: 844}, deviceScaleFactor: 2} : {viewport: {width: 1000, height: 640}});
         const page = await context.newPage();
@@ -68,7 +69,7 @@ for (const name of scenes) {
             if (m.type() === "error") errors.push(m.text().slice(0, 300));
             if (m.text().startsWith("[hunt]")) console.log(key, m.text().slice(0, 400));
         });
-        await page.goto(`${base}?scene=${name}&mode=${mode}&quality=high`, {waitUntil: "domcontentloaded", timeout: 120000});
+        await page.goto(`${base}?scene=${name}&mode=${mode}&quality=high${hoursArg ? `&hours=${hoursArg}` : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
         try {
             await page.waitForFunction(() => window.__hunt || window.__huntError, null, {timeout: 300000});
         } catch (error) {

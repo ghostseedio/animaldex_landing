@@ -43,7 +43,12 @@ import {
     LOAD_PIECE,
     LOAD_SEED,
     antKindOf,
+    canopyNest,
+    canopySearchers,
     colonyKeyOf,
+    nestTrailPath,
+    nestTrailPlan,
+    weaverCanopy,
     finderAt,
     pathAt,
     raidNow,
@@ -60,6 +65,7 @@ import {
     type AntFood,
     type AntLoad,
     type AntSink,
+    type CanopyPoint,
     type Colony,
     type Disturb,
     type Path,
@@ -89,6 +95,11 @@ export type AntHost = {
     groundY: (x: number, z: number) => number;
     /** The nearest tree trunk to a point within `r` (the scene's trunk colliders), or null. */
     trunkNear: (x: number, z: number, r: number, skip?: number) => {cx: number; cz: number; r: number; top: number} | null;
+    /**
+     * The drawn trees' branch and leaf places within `r` of a point (the world sampler's `branch` and `leaf`), with their
+     * ids (`<tag>:<host>:<n>`: which tree), and its trunks' bark places (`bark`): weaver ants' crowns. Absent: none.
+     */
+    canopyPoints?: (x: number, z: number, r: number) => Array<{id: string; tag: "branch" | "leaf" | "bark"; x: number; y: number; z: number}>;
     /** Awake now by its activity (`isAwake` on the island's sun). */
     awake: (activity: string | null | undefined, epoch: number) => boolean;
 };
@@ -100,6 +111,34 @@ export type AntMoment = {memberId: string; name: string; speciesId: string; zone
 export type AntWordKey = "antTrailFound" | "antTend" | "antLeaves" | "antSeeds" | "antRaid" | "antBivouac" | "antWeave";
 
 type ColonyState = Colony & {activity: string | null; nestMesh: Group | null; paths: Map<string, {path: Path; ribbon: Mesh | null}>; plan: TrailPlan | null; plantFood: AntFood | null; raid: Raid | null};
+
+/**
+ * A tree's crown places (its branches' and leaves'), the tree's own: the host tree of the bark place nearest its trunk
+ * (else the one with most places round it), by the places' ids (`<tag>:<host>:<n>`; the town's `town:tree:<i>:…`).
+ */
+function canopyOf(host: AntHost, t: {cx: number; cz: number; r: number}): CanopyPoint[] {
+    const all = host.canopyPoints?.(t.cx, t.cz, 5) ?? [];
+    const treeOf = (id: string) => {
+        const parts = (id.startsWith("map:") ? id.slice(4) : id).split(":");
+        return parts[0] === "town" ? parts.slice(0, 3).join(":") : parts[1] ?? "";
+    };
+    let tree: string | null = null;
+    let best = Infinity;
+    for (const p of all) {
+        if (p.tag !== "bark") continue;
+        const d = Math.hypot(p.x - t.cx, p.z - t.cz) - t.r;
+        if (d < best) {
+            best = d;
+            tree = treeOf(p.id);
+        }
+    }
+    if (tree === null || best > 0.5) {
+        const tally = new Map<string, number>();
+        for (const p of all) if (p.tag !== "bark" && Math.hypot(p.x - t.cx, p.z - t.cz) < 2) tally.set(treeOf(p.id), (tally.get(treeOf(p.id)) ?? 0) + 1);
+        tree = Array.from(tally.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    }
+    return all.filter((p) => p.tag !== "bark" && treeOf(p.id) === tree).map((p) => ({x: p.x, y: p.y, z: p.z, leaf: p.tag === "leaf", wood: /^(map:)?(limb|canopy_perch):/.test(p.id)}));
+}
 
 // MARK: Shapes (unit length along +z, up +y)
 
@@ -257,6 +296,7 @@ export class AntColonies {
             const seed = seedOf(k);
             let nest = {x: first.x, y: this.host.groundY(first.x, first.z), z: first.z};
             let trunk: Colony["trunk"] = null;
+            let canopy: Colony["canopy"] = null;
             if (kind.nest === "leafnest" || kind.nest === "trunk" || kind.nest === "twig") {
                 const t = this.host.trunkNear(first.x, first.z, 8);
                 if (t) {
@@ -267,11 +307,16 @@ export class AntColonies {
                     const ground = this.host.groundY(x, z);
                     const h = kind.nest === "leafnest" ? Math.min(Math.max(t.top * 0.5, 1.4), 3.5) : kind.nest === "twig" ? Math.min(t.top * 0.4, 1.8) : 0.35;
                     nest = {x, y: ground + h, z};
+                    // Weaver ants: in the crown of their tree, on its own branches and leaves (`colony.ts` weaverCanopy).
+                    if (kind.nest === "leafnest") {
+                        canopy = weaverCanopy(seed, trunk, this.host.groundY(t.cx, t.cz), canopyOf(this.host, t));
+                        if (canopy) nest = {...canopyNest(canopy, 0)};
+                    }
                 } else if (kind.nest === "leafnest") {
                     nest.y += 0.25;
                 }
             }
-            const colony: ColonyState = {key: k, kind, members: list.map((m) => m.id), name: first.name, speciesId: first.speciesId, zone: first.zone, nest, trunk, seed, hungry: list.every((m) => m.hungry), activity: first.activity ?? null, nestMesh: null, paths: new Map(), plan: null, plantFood: null, raid: null};
+            const colony: ColonyState = {key: k, kind, members: list.map((m) => m.id), name: first.name, speciesId: first.speciesId, zone: first.zone, nest, trunk, canopy, seed, hungry: list.every((m) => m.hungry), activity: first.activity ?? null, nestMesh: null, paths: new Map(), plan: null, plantFood: null, raid: null};
             // A leafcutters' plant: the nearest tree in reach (the world's real vegetation), fed days only (`eats`).
             if (kind.plants === "leaves") {
                 const t = this.host.trunkNear(nest.x, nest.z, kind.reach, 0.8);
@@ -380,6 +425,18 @@ export class AntColonies {
                 if (awake) raiders(c, raid, at, view, budget - this.count, ground, sink, carrying);
                 continue;
             }
+            // Weaver ants: the trails between their leaf nests along the branches and the trunk, always walked by day.
+            if (c.canopy && awake) {
+                for (let i = 1; i < c.canopy.nests.length; i++) {
+                    const key = `nests:${c.canopy.nests[0]}-${c.canopy.nests[i]}`;
+                    let p = c.paths.get(key);
+                    if (!p) {
+                        p = {path: nestTrailPath(c.canopy, c.canopy.nests[0], c.canopy.nests[i]), ribbon: null};
+                        c.paths.set(key, p);
+                    }
+                    trailWorkers(c, nestTrailPlan(key, c.nest), p.path, at, view, rain, feet, sink);
+                }
+            }
             // The trail's ants, the finder laying it.
             if (c.plan && awake) {
                 const p = this.pathOf(c, c.plan.food);
@@ -393,7 +450,10 @@ export class AntColonies {
             const many = Math.min(300, Math.round(40 * (range / 0.35) ** 2));
             const out = !awake ? 6 : c.plan && c.plan.phase !== "fading" ? Math.round(many * 0.25) : kind.form === "solo" || kind.form === "homing" ? Math.round(many * 0.15) : many;
             const harvest = kind.plants === "seeds" && !c.hungry ? {load: LOAD_SEED as AntLoad, foodX: 0, foodZ: 0} : null;
-            searchers(c, at, awake, Math.round(out * (this.tier === "lite" ? 0.4 : 1)), view, ground, sink, harvest);
+            const n = Math.round(out * (this.tier === "lite" ? 0.4 : 1));
+            // (Weaver ants search their crown's branches and leaves, not the ground under it.)
+            if (c.canopy) canopySearchers(c, c.canopy, at, awake, n, view, sink);
+            else searchers(c, at, awake, n, view, ground, sink, harvest);
             if (kind.weave) weaverChains(c, at, view, sink);
         }
         // Rival colonies where their ranges meet.
@@ -567,21 +627,14 @@ export class AntColonies {
     debug() {
         return {
             ...this.stats,
-            colonies: this.colonies.map((c) => ({key: c.key, slug: c.kind.slug, form: c.kind.form, nest: c.nest, members: c.members.length, hungry: c.hungry, plan: c.plan ? {food: c.plan.food.key, kind: c.plan.food.kind, phase: c.plan.phase, strength: c.plan.strength, found: c.plan.found, home: c.plan.home, path: this.samplePath(c, c.plan.food)} : null, plant: c.plantFood ? {key: c.plantFood.key, x: c.plantFood.x, y: c.plantFood.y, z: c.plantFood.z} : null, raid: c.raid})),
+            colonies: this.colonies.map((c) => ({key: c.key, slug: c.kind.slug, form: c.kind.form, nest: c.nest, members: c.members.length, hungry: c.hungry, plan: c.plan ? {food: c.plan.food.key, kind: c.plan.food.kind, phase: c.plan.phase, strength: c.plan.strength, found: c.plan.found, home: c.plan.home, path: this.samplePath(c, c.plan.food)} : null, plant: c.plantFood ? {key: c.plantFood.key, x: c.plantFood.x, y: c.plantFood.y, z: c.plantFood.z} : null, raid: c.raid, canopy: c.canopy ? {ways: c.canopy.ways.length, nests: c.canopy.nests.map((_, k) => canopyNest(c.canopy!, k)), branches: c.canopy.ways.slice(0, 6).map((w) => w.to), between: c.canopy.nests.length > 1 ? samplePathOf(nestTrailPath(c.canopy, c.canopy.nests[0], c.canopy.nests[1])) : null} : null})),
             foods: this.foods.map((f) => ({key: f.key, kind: f.kind, x: f.x, z: f.z, label: f.label}))
         };
     }
 
     /** The trail's path at tenths of its length (the harness frames it). */
     private samplePath(c: ColonyState, food: AntFood): Array<{x: number; y: number; z: number}> {
-        const p = this.pathOf(c, food).path;
-        const o = new Float32Array(9);
-        const out: Array<{x: number; y: number; z: number}> = [];
-        for (let k = 0; k <= 10; k++) {
-            pathAt(p, (p.length * k) / 10, o);
-            out.push({x: o[0], y: o[1], z: o[2]});
-        }
-        return out;
+        return samplePathOf(this.pathOf(c, food).path);
     }
 
     dispose() {
@@ -595,6 +648,17 @@ export class AntColonies {
         this.ribbonMaterialCleared.dispose();
         this.group.removeFromParent();
     }
+}
+
+/** A path at tenths of its length (the harness frames it). */
+function samplePathOf(p: Path): Array<{x: number; y: number; z: number}> {
+    const o = new Float32Array(9);
+    const out: Array<{x: number; y: number; z: number}> = [];
+    for (let k = 0; k <= 10; k++) {
+        pathAt(p, (p.length * k) / 10, o);
+        out.push({x: o[0], y: o[1], z: o[2]});
+    }
+    return out;
 }
 
 /** A flat strip along the path, `width` across, on its surface. */
@@ -746,20 +810,28 @@ function nestMesh(c: Colony): Group {
         }
         case "leafnest": {
             // Weaver ants: leaves pulled together and stitched into a ball, up in a tree.
-            const im = new InstancedMesh(new PlaneGeometry(0.09, 0.05), LEAF, 22);
+            // (And the colony's other leaf nests in the crown, smaller, `colony.ts` weaverCanopy: one colony, many nests.)
+            const balls: Array<{x: number; y: number; z: number; r: number}> = [{x: 0, y: 0, z: 0, r: 0.08}];
+            for (let k = 1; k < (c.canopy?.nests.length ?? 0); k++) {
+                const to = canopyNest(c.canopy!, k);
+                balls.push({x: to.x - c.nest.x, y: to.y - c.nest.y, z: to.z - c.nest.z, r: 0.06});
+            }
+            const im = new InstancedMesh(new PlaneGeometry(0.09, 0.05), LEAF, 22 * balls.length);
             const m = new Group().matrix;
             const q = new Group();
-            for (let i = 0; i < 22; i++) {
-                const a = u01(c.seed, i, 41) * Math.PI * 2;
-                const b = Math.acos(2 * u01(c.seed, i, 42) - 1);
-                const r = 0.08;
-                q.position.set(Math.sin(b) * Math.cos(a) * r, Math.cos(b) * r * 0.8, Math.sin(b) * Math.sin(a) * r);
-                q.lookAt(0, 0, 0);
-                q.rotateZ(u01(c.seed, i, 43) * 3);
-                q.updateMatrix();
-                m.copy(q.matrix);
-                im.setMatrixAt(i, m);
-            }
+            balls.forEach((ball, k) => {
+                for (let i = 0; i < 22; i++) {
+                    const a = u01(c.seed, i + k * 22, 41) * Math.PI * 2;
+                    const b = Math.acos(2 * u01(c.seed, i + k * 22, 42) - 1);
+                    const r = ball.r;
+                    q.position.set(ball.x + Math.sin(b) * Math.cos(a) * r, ball.y + Math.cos(b) * r * 0.8, ball.z + Math.sin(b) * Math.sin(a) * r);
+                    q.lookAt(ball.x, ball.y, ball.z);
+                    q.rotateZ(u01(c.seed, i + k * 22, 43) * 3);
+                    q.updateMatrix();
+                    m.copy(q.matrix);
+                    im.setMatrixAt(i + k * 22, m);
+                }
+            });
             g.add(im);
             break;
         }
