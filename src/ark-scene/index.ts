@@ -240,7 +240,7 @@ import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/react
 import {canEat, intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
-import {townWorldOrigin} from "@/ark-scene/islands";
+import {islandOfAnimal, townWorldOrigin} from "@/ark-scene/islands";
 import {ARK_ISLANDS} from "@/ark-scene/islands"; // p2 (ocean)
 import {arkWorld} from "@/ark-scene/world"; // p2 (ocean)
 import {OCEAN_COLUMN, OCEAN_VIEW_MARGIN, oceanFix, roamsOpenOcean} from "@/ark-scene/open-ocean"; // p2 (ocean)
@@ -9311,7 +9311,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         slot: animal.slot,
         slot_rank: animal.slot_rank,
         sociality: animal.sociality,
-        activity: animal.activity
+        activity: animal.activity,
+        // ARK-LOG-FOOD: the island it was on at the event (the record's place), so its stand-in is drawn there.
+        ...(animal.island ? {island: animal.island} : {})
     });
     const liveMeals = new LiveMeals<Entry>({
         find: (id) => entryById.get(id) ?? null,
@@ -9380,7 +9382,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // 3.3 fix (log): the record's deaths (owner 2026-11-16: "i should see its corpse"): where it died, its body there.
     const deathEntryOf = (death: DeathRecord): Entry | null => {
         const known = entryById.get(death.animal.id) ?? departed.get(death.animal.id);
-        if (known) return known;
+        // ARK-LOG-FOOD: the one drawn now only while it is where it died (the record's place); one that has moved since
+        // (a return to care, a release, a heart back in the zoo) lies at the place of its death, not its home now.
+        const there = !known || !death.animal.island || (islandOfAnimal(known.animal) === death.animal.island && (known.animal.area ?? null) === (death.animal.area ?? null));
+        if (known && there) return known;
         const animal: ArkAnimal = {...ghostAnimalOf(death.animal), area: death.animal.area ?? null, thrive: death.animal.thrive ?? null};
         const place = placeAll([animal], true).get(animal.id);
         return place ? newEntry(animal, place, null) : null;

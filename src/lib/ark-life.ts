@@ -14,7 +14,7 @@
  */
 
 import {isArkLeftKind, type ArkLeftKind} from "@/lib/ark-kept";
-import type {ArkArea, ArkArrivalSource, ArkSnapshot, ArkSociality, ArkThrive, ArkZone} from "@/ark-scene/types";
+import type {ArkArea, ArkArrivalSource, ArkIsland, ArkSnapshot, ArkSociality, ArkThrive, ArkZone} from "@/ark-scene/types";
 import {arkArea, arkArrivalSource} from "@/ark-scene/thrive";
 import {decodeArkLineage, decodeArkThriveField, type ArkLineage} from "@/lib/ark-thrive";
 import {ARK_ZONES} from "@/ark-scene/types";
@@ -70,7 +70,31 @@ export type ArkEventAnimal = {
     /** Captures + thrive: how well kept it is now, and its area (placement only); null from an older server (absent where it is made by hand). */
     thrive?: ArkThrive | null;
     area?: ArkArea | null;
+    /**
+     * Part C: its island, as the server sends it (only while islands is on). On an event with a `place` (ARK-LOG-FOOD),
+     * the island and area it was on WHEN the event happened, not where it lives now; absent: the island from its area.
+     */
+    island?: ArkIsland | null;
 };
+
+/**
+ * ARK-LOG-FOOD: where an event happened (the read's `place`, from `payload.island` / `payload.area`: the engine stamps
+ * every event about an animal with it while islands is on, and every death since 2026-11-20). Animals move between the
+ * islands and the kept areas (release_to_wild, a return to care), so the log says where it was, not where it is now.
+ */
+export type ArkEventPlace = {island: ArkIsland; area: ArkArea | null};
+
+/** The read's `place`, checked; undefined for an older event (it then falls back to the animal's place now). */
+export function decodeArkEventPlace(value: unknown): ArkEventPlace | undefined {
+    const row = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+    if (!row || (row.island !== "wild" && row.island !== "town")) return undefined;
+    return {island: row.island, area: arkArea(row.area) ?? null};
+}
+
+/** The animal as it was at the event: its island and area from the event's place (the rest is the animal as sent). */
+export function arkAnimalAtPlace(animal: ArkEventAnimal | null, place: ArkEventPlace | undefined): ArkEventAnimal | null {
+    return animal && place ? {...animal, island: place.island, area: place.area} : animal;
+}
 
 export type ArkEvent = {
     id: string;
@@ -116,6 +140,8 @@ export type ArkEvent = {
      * off one parent) or `pouch` (from a father's pouch). Absent with it off, or when the read sends no payload.
      */
     way?: string;
+    /** ARK-LOG-FOOD: where it happened (the animal's island and area then); absent on an older event. `animal` already carries it. */
+    place?: ArkEventPlace;
 };
 
 export type ArkEventLives = {heartsLeft: number; returnsDay: number | null; final: boolean; ageReset: boolean; cause: "eaten" | "starved" | "died_old" | null};
@@ -238,7 +264,8 @@ function eventAnimal(value: unknown, aboard: Map<string, ArkSnapshot["animals"][
         sociality: sociality === "solitary" || sociality === "pair" || sociality === "group" ? sociality : null,
         status: status(row.status),
         thrive: decodeArkThriveField(row.thrive),
-        area: arkArea(row.area)
+        area: arkArea(row.area),
+        ...(row.island === "wild" || row.island === "town" ? {island: row.island} : {})
     };
 }
 
@@ -274,13 +301,15 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
         const livesSource = livesRow ? (kind === "revived" ? livesRow : {lives: livesRow}) : payload;
         const lives = kind === "revived" || kind === "eaten" || kind === "death_old" || kind === "starved" ? decodeArkEventLives(kind, livesSource) : null;
         const way = payload.pouch === true || row.pouch === true ? "pouch" : text(row.way ?? payload.way, 24);
+        // ARK-LOG-FOOD: where it happened (the read's `place`, or a payload that carries it); else the animal as it is now.
+        const place = decodeArkEventPlace(row.place ?? payload);
         events.push({
             id: serial !== null ? String(serial) : `${at}-${index}`,
             serial: serial ?? Number.MAX_SAFE_INTEGER,
             kind: kind as ArkEventKind,
             at,
             ark_day: number(row.ark_day),
-            animal: eventAnimal(row.animal, aboard),
+            animal: arkAnimalAtPlace(eventAnimal(row.animal, aboard), place),
             other: eventAnimal(row.other, aboard),
             species: speciesId || speciesName ? {id: speciesId ?? "", name: speciesName ?? ""} : null,
             phrase: text(row.phrase, 160),
@@ -294,9 +323,14 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             source: kind === "arrival" || kind === "fed" ? arkArrivalSource(row.source ?? payload.source) : null,
             ...(encounter ? {encounter} : {}),
             ...(lives ? {lives} : {}),
-            ...(way && (kind === "mated" || kind === "birth") ? {way} : {})
+            ...(way && (kind === "mated" || kind === "birth") ? {way} : {}),
+            ...(place ? {place} : {})
         });
     });
+    // A meal's prey died where its own `eaten` row says (the meal's place is the hunter's).
+    const eatenAt = new Map<string, ArkEventPlace>();
+    for (const event of events) if (event.kind === "eaten" && event.animal && event.place) eatenAt.set(event.animal.id, event.place);
+    if (eatenAt.size) for (const event of events) if (event.kind === "meal" && event.other && eatenAt.has(event.other.id)) event.other = arkAnimalAtPlace(event.other, eatenAt.get(event.other.id));
     return events
         .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.serial - b.serial)
         .map(({serial: _serial, ...event}) => event);
