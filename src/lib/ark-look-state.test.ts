@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
+// (First: the held states put back, so their mechanism stays checked; `ark-look-states-held.ts`.)
+import "@/lib/ark-look-states-held";
 import animalLook from "@/ark-scene/animal-look.json";
 import recipes from "@/ark-scene/recipes.json";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";

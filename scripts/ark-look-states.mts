@@ -161,13 +161,30 @@ for (const s of STATES) {
     }
     entry(slug, s.name).state = {id: row.id, alsoRows: also.length ? also : undefined, quote: row.quote, line: s.line, say: s.say ?? "on", why: s.why, trigger, tone: s.tone, swell: s.swell, individual: s.individual};
 }
+// (sig2, 2026-11-23: each state looked at off and on in the frames, ~/AnimalDex-work/sig2/other/ls*-*.jpg. Only these
+// read at phone distance; the rest go to `held` with why, kept whole so a fix can release them, never drawn.)
+const SHIPPED = new Set(["Veiled Chameleon", "Magnificent Frigatebird", "Grey Crowned Crane", "Red Deer"]);
+const HELD_WHY: Array<[RegExp, string]> = [
+    [/Gecko|Wolf Spider/, "night tone: the animal is a few pixels in the grass in its frames, off and on look the same"],
+    [/Goldfish|Fighting Fish|Guppy|Tetra|Tiger Barb|Angelfish|Yellow Tang|Gourami|Koi/, "its frames show open water and the bed, never the fish: not checked"],
+    [/Anole|Iguana|Garden Lizard|Forest Lizard/, "the dewlap or throat is not told apart off and on at phone distance (the anoles a sliver in the grass)"],
+    [/Bullfrog|Marsh Frog|Plains Toad|Starling|Siamang/, "the sac or puffed throat does not show off and on (the siamang out of frame)"],
+    [/Macaque|Hamster|Chipmunk|Mandrill/, "full cheeks do not read off and on (the hamster and mandrill out of frame)"],
+    [/.*/, "its season state is not told apart in its frames, or the animal is out of frame"]
+];
+const held: Record<string, unknown> = {};
+for (const [slug, s] of Object.entries(species)) {
+    if (SHIPPED.has(s.name)) continue;
+    held[slug] = {...s, why: HELD_WHY.find(([re]) => re.test(s.name))![1]};
+    delete species[slug];
+}
 const skipped: Record<string, string> = {};
 for (const k of SKIPPED) {
     const {row} = find(k.name, k.says);
     skipped[`${k.name}: ${row.behaviour}`] = k.why;
 }
 // (A species' eyes: the spider's glow sits on its own eyes.)
-const sp = species[slugOf("Carolina Wolf Spider")];
+const sp = (species[slugOf("Carolina Wolf Spider")] ?? held[slugOf("Carolina Wolf Spider")]) as {night?: unknown} | undefined;
 if (sp?.night) {
     const eye = lookRows[slugOf("Carolina Wolf Spider")];
     if (!eye || eye[5] <= 0) throw new Error("the wolf spider has no eyes marked");
@@ -177,6 +194,7 @@ if (sp?.night) {
 const out = {
     about: "Look states (lane SIG-OTHER), built by scripts/ark-look-states.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. night: the tone the species takes in the dark, by the island's daylight (colours sRGB; desat + greyer, - richer; gain lighter or darker; glow adds the colour as light). state: a tone and/or a swell by a trigger (season: the Ark year's months, sex the seeded one; blocks: the recipe block it is in now; forage: while it takes food). Regions are ellipsoids of the model's rest pose (the model is one long; mirror folds x). line = the species' own sentence for it, said in the live log when the world shows it (say off: when it does not, the model's own plumage being the season's).",
     species,
+    held,
     skipped
 };
 const nights = Object.values(species).filter((s) => s.night).length;

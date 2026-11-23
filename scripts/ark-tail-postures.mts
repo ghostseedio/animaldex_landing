@@ -25,19 +25,20 @@ const rows = (JSON.parse(fs.readFileSync(cataloguePath, "utf8")) as {rows: Row[]
 const slugOf = (name: string) => name.toLowerCase().replace(/'/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const slugs = new Set(Object.keys((JSON.parse(fs.readFileSync(path.join(root, "src/ark-scene/animal-look.json"), "utf8")) as {species: Record<string, unknown>}).species));
 
-type Spec = {name: string; says: RegExp; when: "always" | "moving" | "social"; pitch: number[]; idle?: number; wag?: {amp: number[]; rate: number}; line?: string};
+type Spec = {name: string; says: RegExp; when: "always" | "moving" | "social"; pitch: number[]; idle?: number; wag?: {amp: number[]; rate: number}; line?: string; held?: string};
 const SPECS: Spec[] = [
     // A dog's wag is a social signal: its tail swings from the base, a little raised, while it greets or plays.
     {name: "Domestic Dog", says: /Tail wagged or raised as a social signal/, when: "social", pitch: [0.35, 0.15, 0.05], idle: 0, wag: {amp: [0.3, 0.4, 0.5], rate: 3.4}},
     // "Raised ringed tail ... while moving": straight up like a flag while it walks, half up at rest.
-    {name: "South American Coati", says: /Raised ringed tail: the tail works like a visible group flag while moving/, when: "moving", pitch: [1.0, 0.35, 0.1], idle: 0.3},
+    // (sig2, 2026-11-23: held after its frames, ~/AnimalDex-work/sig2/other/tails-*.jpg.)
+    {name: "South American Coati", says: /Raised ringed tail: the tail works like a visible group flag while moving/, when: "moving", pitch: [1.0, 0.35, 0.1], idle: 0.3, held: "in its walking frames the raised tail is a faint stub among the ferns: it does not read as a flag at phone distance"},
     {name: "Eastern Chipmunk", says: /Tail held straight up when running/, when: "moving", pitch: [1.1, 0.3, 0.1], idle: 0.2},
     // "Held in an arch": over the back and curving back down toward the tip.
     {name: "Hamadryas Baboon", says: /Tail held in an arch/, when: "always", pitch: [0.9, -0.1, -0.6], idle: 1},
     // "Bent sharply near the base, then hanging down".
     {name: "Olive Baboon", says: /Tail bent sharply near the base, then hanging down/, when: "always", pitch: [1.1, -1.0, -0.15], idle: 1},
     // "Carried in an S or C": up, back, up.
-    {name: "Toque Macaque", says: /Tail as long as the body, carried in an S or C/, when: "always", pitch: [0.7, -0.7, 0.6], idle: 1}
+    {name: "Toque Macaque", says: /Tail as long as the body, carried in an S or C/, when: "always", pitch: [0.7, -0.7, 0.6], idle: 1, held: "its frames show the tail low along the ground: no S or C reads"}
 ];
 const SKIPPED: Array<{name: string; says: RegExp; why: string}> = [
     {name: "Prevost's Squirrel", says: /quick dashes with frequent pauses/, why: "its quote gives the dashes and pauses, not an arched tail"},
@@ -54,11 +55,15 @@ const find = (name: string, says: RegExp) => {
     return {row: hit[0], slug};
 };
 const species: Record<string, unknown> = {};
-for (const {name, says, line, ...spec} of SPECS) {
+const skipped: Record<string, string> = {};
+for (const {name, says, line, held, ...spec} of SPECS) {
     const {row, slug} = find(name, says);
+    if (held) {
+        skipped[`${name}: ${row.behaviour}`] = held;
+        continue;
+    }
     species[slug] = {name, id: row.id, quote: row.quote, line: line ?? row.line, ...spec};
 }
-const skipped: Record<string, string> = {};
 for (const k of SKIPPED) {
     const hit = rows.filter((r) => r.name === k.name && k.says.test(r.quote));
     if (hit.length < 1) throw new Error(`${k.name}: skipped row not found`);

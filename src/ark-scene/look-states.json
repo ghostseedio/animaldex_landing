@@ -1,205 +1,6 @@
 {
  "about": "Look states (lane SIG-OTHER), built by scripts/ark-look-states.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. night: the tone the species takes in the dark, by the island's daylight (colours sRGB; desat + greyer, - richer; gain lighter or darker; glow adds the colour as light). state: a tone and/or a swell by a trigger (season: the Ark year's months, sex the seeded one; blocks: the recipe block it is in now; forage: while it takes food). Regions are ellipsoids of the model's rest pose (the model is one long; mirror folds x). line = the species' own sentence for it, said in the live log when the world shows it (say off: when it does not, the model's own plumage being the season's).",
  "species": {
-  "common-house-gecko": {
-   "name": "Common House Gecko",
-   "night": {
-    "id": "dafecca6-88b1-466b-81ee-605924ab306f",
-    "quote": "Body colour pales at night and darkens in daylight",
-    "line": "{aAnimal} has turned pale for the night",
-    "tone": {
-     "desat": 0.4,
-     "gain": 1.22,
-     "colour": [
-      0.86,
-      0.82,
-      0.74
-     ],
-     "mix": 0.3
-    }
-   }
-  },
-  "common-wall-gecko": {
-   "name": "Common Wall Gecko",
-   "night": {
-    "id": "246f3282-80f3-4083-add4-115e8001d1aa",
-    "quote": "Its skin darkens in daylight and pales at night",
-    "line": "{aAnimal} has paled its skin for the night",
-    "tone": {
-     "desat": 0.4,
-     "gain": 1.22,
-     "colour": [
-      0.86,
-      0.82,
-      0.74
-     ],
-     "mix": 0.3
-    }
-   }
-  },
-  "mediterranean-house-gecko": {
-   "name": "Mediterranean House Gecko",
-   "night": {
-    "id": "5c8bb13f-7496-4912-b0ec-01750b4881ae",
-    "quote": "individuals often look paler at night than by day",
-    "line": "{aAnimal} is looking paler now that it is night",
-    "tone": {
-     "desat": 0.4,
-     "gain": 1.22,
-     "colour": [
-      0.86,
-      0.82,
-      0.74
-     ],
-     "mix": 0.3
-    }
-   }
-  },
-  "tropical-house-gecko": {
-   "name": "Tropical House Gecko",
-   "night": {
-    "id": "9e47faaf-08c2-48b8-8656-67321b743f04",
-    "quote": "It changes shade, turning pale and almost pinkish-white at night and darker with clearer bands by day.",
-    "line": "{aAnimal} has turned pale, almost pinkish-white, for the night",
-    "tone": {
-     "desat": 0.35,
-     "gain": 1.25,
-     "colour": [
-      0.93,
-      0.83,
-      0.79
-     ],
-     "mix": 0.55
-    }
-   }
-  },
-  "crested-gecko": {
-   "name": "Crested Gecko",
-   "night": {
-    "id": "0e3f2070-4f65-4d14-ac89-ee44494fdaf3",
-    "quote": "Colour shifts with activity: animals are usually paler when resting by day and darker and richer when active at night.",
-    "line": "{aAnimal} has turned darker and richer for the active night",
-    "tone": {
-     "desat": -0.35,
-     "gain": 0.8
-    }
-   }
-  },
-  "goldfish": {
-   "name": "Goldfish",
-   "night": {
-    "id": "e08b2d73-6ebf-4d45-af49-82d81917f050",
-    "quote": "At night it hovers low in the water with fins barely moving and colour slightly faded",
-    "line": "{aAnimal} has let its colour fade for the night",
-    "tone": {
-     "desat": 0.32,
-     "gain": 1.06
-    }
-   }
-  },
-  "siamese-fighting-fish": {
-   "name": "Siamese Fighting Fish",
-   "night": {
-    "id": "0dec6f68-b986-4e94-af52-2eb980b1601d",
-    "quote": "often lying on a leaf near the surface or wedged among plants, with colours noticeably paler while it sleeps",
-    "line": "{aAnimal} has paled its colours for the night",
-    "tone": {
-     "desat": 0.5,
-     "gain": 1.2
-    }
-   }
-  },
-  "guppy": {
-   "name": "Guppy",
-   "night": {
-    "id": "c8a92a7d-1ef3-490c-844a-51466ef1d3a7",
-    "quote": "At night it rests near the bottom or among plants with fins lowered and colours dulled.",
-    "line": "{aAnimal} has dulled its colours for the night",
-    "tone": {
-     "desat": 0.45,
-     "gain": 0.9
-    }
-   },
-   "state": {
-    "id": "c8a92a7d-1ef3-490c-844a-51466ef1d3a7",
-    "quote": "Orange, blue and black spots that differ between every male",
-    "line": "{aAnimal} has spots of its own",
-    "say": "on",
-    "why": "a male's own pattern of dark spots, from its own seed",
-    "trigger": {
-     "kind": "season",
-     "months": [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12
-     ],
-     "sex": "male"
-    },
-    "individual": {
-     "kind": "spots",
-     "scale": 6,
-     "dark": 0.2,
-     "light": 0
-    }
-   }
-  },
-  "neon-tetra": {
-   "name": "Neon Tetra",
-   "night": {
-    "id": "0bfd0e8d-5b0a-467f-a050-f86b6524f74e",
-    "quote": "At night the shoal loosens, the fish rest near plants or the bottom, and the blue stripe dims.",
-    "line": "{aAnimal} has dimmed its blue stripe for the night",
-    "tone": {
-     "desat": 0.4,
-     "gain": 0.88
-    }
-   }
-  },
-  "black-skirt-tetra": {
-   "name": "Black Skirt Tetra",
-   "night": {
-    "id": "5e45587f-01e8-4000-9370-988f9813159f",
-    "quote": "At night it hangs almost still near the bottom or among plants, and its colours often pale until the light returns.",
-    "line": "{aAnimal} has paled its colours for the night",
-    "tone": {
-     "desat": 0.45,
-     "gain": 1.15
-    }
-   }
-  },
-  "tiger-barb": {
-   "name": "Tiger Barb",
-   "night": {
-    "id": "bd102bc2-bf8c-4d56-bc85-3e2aa6399d73",
-    "quote": "At night the shoal settles low among plants or near the bottom and hangs almost still, and the colours fade until light returns.",
-    "line": "{aAnimal} has let its colours fade for the night",
-    "tone": {
-     "desat": 0.5,
-     "gain": 1.1
-    }
-   }
-  },
-  "freshwater-angelfish": {
-   "name": "Freshwater Angelfish",
-   "night": {
-    "id": "87f52750-e3a1-4e60-b8ea-41ced1c2d1e4",
-    "quote": "becoming still and drifting close to cover at night, when the barring often pales noticeably",
-    "line": "{aAnimal} has paled its barring for the night",
-    "tone": {
-     "desat": 0.35,
-     "gain": 1.2
-    }
-   }
-  },
   "veiled-chameleon": {
    "name": "Veiled Chameleon",
    "night": {
@@ -252,406 +53,6 @@
     }
    }
   },
-  "yellow-tang": {
-   "name": "Yellow Tang",
-   "night": {
-    "id": "0eea43af-3257-46c5-8e6c-76a2cbe64f94",
-    "quote": "It fades at night, developing a dark lateral stripe, and brightens again at dawn.",
-    "line": "{aAnimal} has faded for the night",
-    "tone": {
-     "desat": 0.4,
-     "gain": 1.15
-    }
-   }
-  },
-  "three-spot-gourami": {
-   "name": "Three-spot Gourami",
-   "night": {
-    "id": "9f0ba562-a8c0-41d7-a8f3-c5afa857dbce",
-    "quote": "Even at night it rises now and then to gulp air, hanging almost motionless among plants between visits to the surface, with its colours paled.",
-    "line": "{aAnimal} has paled its colours for the night",
-    "tone": {
-     "desat": 0.45,
-     "gain": 1.15
-    }
-   }
-  },
-  "carolina-wolf-spider": {
-   "name": "Carolina Wolf Spider",
-   "night": {
-    "id": "a1e6f503-55bb-48ef-8104-378d9e626f5f",
-    "quote": "A reflective layer behind its large eyes makes them shine green in a torch beam, so it can be found at night by eyeshine.",
-    "line": "{aAnimal} has its eyes shining green in the dark",
-    "tone": {
-     "colour": [
-      0.35,
-      1,
-      0.4
-     ],
-     "mix": 0.9,
-     "glow": 1.3,
-     "region": {
-      "c": [
-       0.0519,
-       0.0531,
-       0.0618
-      ],
-      "r": [
-       0.035,
-       0.03,
-       0.035
-      ],
-      "mirror": true
-     }
-    }
-   }
-  },
-  "green-iguana": {
-   "name": "Green Iguana",
-   "state": {
-    "id": "a21ba0e3-3a26-456e-8334-2636e95f526e",
-    "quote": "Dewlap display: the throat fan helps signal, thermoregulate, and communicate.",
-    "line": "{aAnimal} is showing its dewlap",
-    "say": "on",
-    "why": "the dewlap under the chin, in its push-up display",
-    "trigger": {
-     "kind": "blocks",
-     "blocks": [
-      "pushup",
-      "display"
-     ],
-     "sex": "male"
-    },
-    "swell": {
-     "region": {
-      "c": [
-       0,
-       0.075,
-       0.36
-      ],
-      "r": [
-       0.07,
-       0.06,
-       0.09
-      ]
-     },
-     "push": 0.07
-    }
-   }
-  },
-  "green-anole": {
-   "name": "Green Anole",
-   "state": {
-    "id": "111c358a-ff5b-4983-8611-6ae951b71a4f",
-    "quote": "Male Green Anoles extend a prominent pink dewlap (a flap of skin under the throat) during courtship and territorial disputes.",
-    "line": "{aAnimal} is showing its pink dewlap",
-    "say": "on",
-    "why": "a pink dewlap, in its push-up and courtship",
-    "trigger": {
-     "kind": "blocks",
-     "blocks": [
-      "pushup",
-      "display"
-     ],
-     "sex": "male"
-    },
-    "tone": {
-     "colour": [
-      0.96,
-      0.45,
-      0.62
-     ],
-     "mix": 0.75,
-     "region": {
-      "c": [
-       0,
-       0.085,
-       0.385
-      ],
-      "r": [
-       0.05,
-       0.04,
-       0.075
-      ]
-     }
-    },
-    "swell": {
-     "region": {
-      "c": [
-       0,
-       0.085,
-       0.385
-      ],
-      "r": [
-       0.05,
-       0.04,
-       0.075
-      ]
-     },
-     "push": 0.055
-    }
-   }
-  },
-  "brown-anole": {
-   "name": "Brown Anole",
-   "state": {
-    "id": "5d227bfc-0030-4542-a425-8b9a9666f183",
-    "quote": "Males are larger with prominent orange dewlaps",
-    "line": "{aAnimal} is flashing its orange dewlap",
-    "say": "on",
-    "why": "an orange dewlap, in its push-up and courtship",
-    "trigger": {
-     "kind": "blocks",
-     "blocks": [
-      "pushup",
-      "display"
-     ],
-     "sex": "male"
-    },
-    "tone": {
-     "colour": [
-      0.96,
-      0.5,
-      0.1
-     ],
-     "mix": 0.8,
-     "region": {
-      "c": [
-       0,
-       0.085,
-       0.385
-      ],
-      "r": [
-       0.05,
-       0.04,
-       0.075
-      ]
-     }
-    },
-    "swell": {
-     "region": {
-      "c": [
-       0,
-       0.085,
-       0.385
-      ],
-      "r": [
-       0.05,
-       0.04,
-       0.075
-      ]
-     },
-     "push": 0.055
-    }
-   }
-  },
-  "oriental-garden-lizard": {
-   "name": "Oriental Garden Lizard",
-   "state": {
-    "id": "5210be41-ce32-4528-a064-cfda090d3d32",
-    "alsoRows": [
-     "5210be41-ce32-4528-a064-cfda090d3d32"
-    ],
-    "quote": "Push-up-like movements, throat presentation and colour are part of the breeding display.",
-    "line": "{aAnimal} is presenting its red throat in a push-up display",
-    "say": "on",
-    "why": "the throat presented, red, in its push-up",
-    "trigger": {
-     "kind": "blocks",
-     "blocks": [
-      "pushup",
-      "display"
-     ],
-     "sex": "male"
-    },
-    "tone": {
-     "colour": [
-      0.85,
-      0.12,
-      0.08
-     ],
-     "mix": 0.7,
-     "region": {
-      "c": [
-       0,
-       0.04,
-       0.42
-      ],
-      "r": [
-       0.05,
-       0.04,
-       0.08
-      ]
-     }
-    },
-    "swell": {
-     "region": {
-      "c": [
-       0,
-       0.04,
-       0.42
-      ],
-      "r": [
-       0.04,
-       0.035,
-       0.07
-      ]
-     },
-     "push": 0.03
-    }
-   }
-  },
-  "common-green-forest-lizard": {
-   "name": "Common Green Forest Lizard",
-   "state": {
-    "id": "c9129c3a-e17c-42c4-9d4a-54df833d63c3",
-    "quote": "A male perched head-up on a trunk bobs his head and puffs out his throat whenever another male comes near.",
-    "line": "{aAnimal} is puffing its throat at a rival",
-    "say": "on",
-    "why": "the throat puffed at a rival, in its push-up",
-    "trigger": {
-     "kind": "blocks",
-     "blocks": [
-      "pushup",
-      "display"
-     ],
-     "sex": "male"
-    },
-    "swell": {
-     "region": {
-      "c": [
-       0,
-       0.215,
-       0.4
-      ],
-      "r": [
-       0.04,
-       0.04,
-       0.07
-      ]
-     },
-     "push": 0.04
-    }
-   }
-  },
-  "american-bullfrog": {
-   "name": "American Bullfrog",
-   "state": {
-    "id": "398571ec-d21e-4319-a187-e4235111026c",
-    "quote": "Males call by moving air between the lungs and an inflatable vocal sac, which resonates and radiates the sound",
-    "line": "{aAnimal} is calling with its vocal sac swollen",
-    "say": "on",
-    "why": "the vocal sac under the chin, while it calls",
-    "trigger": {
-     "kind": "blocks",
-     "blocks": [
-      "call"
-     ],
-     "sex": "male"
-    },
-    "swell": {
-     "region": {
-      "c": [
-       0,
-       0.09,
-       0.38
-      ],
-      "r": [
-       0.13,
-       0.08,
-       0.12
-      ]
-     },
-     "push": 0.08
-    }
-   }
-  },
-  "marsh-frog": {
-   "name": "Marsh Frog",
-   "state": {
-    "id": "97108390-ef0f-44d7-a16a-0ddb6f6f76da",
-    "quote": "Males inflate a pair of grey vocal sacs at the corners of the mouth",
-    "line": "{aAnimal} is calling with its grey cheek sacs swollen",
-    "say": "on",
-    "why": "the pair of grey vocal sacs at the cheeks, while it calls",
-    "trigger": {
-     "kind": "blocks",
-     "blocks": [
-      "call"
-     ],
-     "sex": "male"
-    },
-    "tone": {
-     "colour": [
-      0.58,
-      0.6,
-      0.61
-     ],
-     "mix": 0.5,
-     "region": {
-      "c": [
-       0.13,
-       0.12,
-       0.34
-      ],
-      "r": [
-       0.07,
-       0.06,
-       0.09
-      ],
-      "mirror": true
-     }
-    },
-    "swell": {
-     "region": {
-      "c": [
-       0.13,
-       0.12,
-       0.34
-      ],
-      "r": [
-       0.07,
-       0.06,
-       0.09
-      ],
-      "mirror": true
-     },
-     "push": 0.06
-    }
-   }
-  },
-  "great-plains-toad": {
-   "name": "Great Plains Toad",
-   "state": {
-    "id": "eb922fdd-8ee6-45ed-b598-6aa2771ec92c",
-    "quote": "Inflated male vocal sac sausage-shaped, held forward",
-    "line": "{aAnimal} is calling with its vocal sac held forward",
-    "say": "on",
-    "why": "the vocal sac held forward, while it calls",
-    "trigger": {
-     "kind": "blocks",
-     "blocks": [
-      "call"
-     ],
-     "sex": "male"
-    },
-    "swell": {
-     "region": {
-      "c": [
-       0,
-       0.1,
-       0.38
-      ],
-      "r": [
-       0.12,
-       0.07,
-       0.1
-      ]
-     },
-     "push": 0.08
-    }
-   }
-  },
   "grey-crowned-crane": {
    "name": "Grey Crowned Crane",
    "state": {
@@ -701,57 +102,6 @@
       ]
      },
      "push": 0.045
-    }
-   }
-  },
-  "siamang": {
-   "name": "Siamang",
-   "state": {
-    "id": "c513ebce-0421-4b92-8d29-a85ecc8e161d",
-    "quote": "Throat sac and long-arm swinging",
-    "line": "{aAnimal} is calling with its throat sac inflated",
-    "say": "on",
-    "why": "the throat sac, in its duet",
-    "trigger": {
-     "kind": "blocks",
-     "blocks": [
-      "call"
-     ]
-    },
-    "tone": {
-     "colour": [
-      0.72,
-      0.56,
-      0.53
-     ],
-     "mix": 0.4,
-     "region": {
-      "c": [
-       0,
-       0.63,
-       0.27
-      ],
-      "r": [
-       0.07,
-       0.07,
-       0.07
-      ]
-     }
-    },
-    "swell": {
-     "region": {
-      "c": [
-       0,
-       0.63,
-       0.27
-      ],
-      "r": [
-       0.07,
-       0.07,
-       0.07
-      ]
-     },
-     "push": 0.07
     }
    }
   },
@@ -809,6 +159,716 @@
     }
    }
   },
+  "red-deer": {
+   "name": "Red Deer",
+   "state": {
+    "id": "9e4c04ec-46ac-4019-b396-7b9e5afb2028",
+    "quote": "In autumn stags develop a thick, shaggy neck mane.",
+    "line": "{aAnimal} has grown a thick, shaggy neck for the autumn",
+    "say": "on",
+    "why": "the stag's thick neck, in autumn",
+    "trigger": {
+     "kind": "season",
+     "months": [
+      9,
+      10,
+      11
+     ],
+     "sex": "male"
+    },
+    "swell": {
+     "region": {
+      "c": [
+       0,
+       0.12,
+       0.22
+      ],
+      "r": [
+       0.1,
+       0.12,
+       0.1
+      ]
+     },
+     "push": 0.05
+    }
+   }
+  }
+ },
+ "held": {
+  "common-house-gecko": {
+   "name": "Common House Gecko",
+   "night": {
+    "id": "dafecca6-88b1-466b-81ee-605924ab306f",
+    "quote": "Body colour pales at night and darkens in daylight",
+    "line": "{aAnimal} has turned pale for the night",
+    "tone": {
+     "desat": 0.4,
+     "gain": 1.22,
+     "colour": [
+      0.86,
+      0.82,
+      0.74
+     ],
+     "mix": 0.3
+    }
+   },
+   "why": "night tone: the animal is a few pixels in the grass in its frames, off and on look the same"
+  },
+  "common-wall-gecko": {
+   "name": "Common Wall Gecko",
+   "night": {
+    "id": "246f3282-80f3-4083-add4-115e8001d1aa",
+    "quote": "Its skin darkens in daylight and pales at night",
+    "line": "{aAnimal} has paled its skin for the night",
+    "tone": {
+     "desat": 0.4,
+     "gain": 1.22,
+     "colour": [
+      0.86,
+      0.82,
+      0.74
+     ],
+     "mix": 0.3
+    }
+   },
+   "why": "night tone: the animal is a few pixels in the grass in its frames, off and on look the same"
+  },
+  "mediterranean-house-gecko": {
+   "name": "Mediterranean House Gecko",
+   "night": {
+    "id": "5c8bb13f-7496-4912-b0ec-01750b4881ae",
+    "quote": "individuals often look paler at night than by day",
+    "line": "{aAnimal} is looking paler now that it is night",
+    "tone": {
+     "desat": 0.4,
+     "gain": 1.22,
+     "colour": [
+      0.86,
+      0.82,
+      0.74
+     ],
+     "mix": 0.3
+    }
+   },
+   "why": "night tone: the animal is a few pixels in the grass in its frames, off and on look the same"
+  },
+  "tropical-house-gecko": {
+   "name": "Tropical House Gecko",
+   "night": {
+    "id": "9e47faaf-08c2-48b8-8656-67321b743f04",
+    "quote": "It changes shade, turning pale and almost pinkish-white at night and darker with clearer bands by day.",
+    "line": "{aAnimal} has turned pale, almost pinkish-white, for the night",
+    "tone": {
+     "desat": 0.35,
+     "gain": 1.25,
+     "colour": [
+      0.93,
+      0.83,
+      0.79
+     ],
+     "mix": 0.55
+    }
+   },
+   "why": "night tone: the animal is a few pixels in the grass in its frames, off and on look the same"
+  },
+  "crested-gecko": {
+   "name": "Crested Gecko",
+   "night": {
+    "id": "0e3f2070-4f65-4d14-ac89-ee44494fdaf3",
+    "quote": "Colour shifts with activity: animals are usually paler when resting by day and darker and richer when active at night.",
+    "line": "{aAnimal} has turned darker and richer for the active night",
+    "tone": {
+     "desat": -0.35,
+     "gain": 0.8
+    }
+   },
+   "why": "night tone: the animal is a few pixels in the grass in its frames, off and on look the same"
+  },
+  "goldfish": {
+   "name": "Goldfish",
+   "night": {
+    "id": "e08b2d73-6ebf-4d45-af49-82d81917f050",
+    "quote": "At night it hovers low in the water with fins barely moving and colour slightly faded",
+    "line": "{aAnimal} has let its colour fade for the night",
+    "tone": {
+     "desat": 0.32,
+     "gain": 1.06
+    }
+   },
+   "why": "its frames show open water and the bed, never the fish: not checked"
+  },
+  "siamese-fighting-fish": {
+   "name": "Siamese Fighting Fish",
+   "night": {
+    "id": "0dec6f68-b986-4e94-af52-2eb980b1601d",
+    "quote": "often lying on a leaf near the surface or wedged among plants, with colours noticeably paler while it sleeps",
+    "line": "{aAnimal} has paled its colours for the night",
+    "tone": {
+     "desat": 0.5,
+     "gain": 1.2
+    }
+   },
+   "why": "its frames show open water and the bed, never the fish: not checked"
+  },
+  "guppy": {
+   "name": "Guppy",
+   "night": {
+    "id": "c8a92a7d-1ef3-490c-844a-51466ef1d3a7",
+    "quote": "At night it rests near the bottom or among plants with fins lowered and colours dulled.",
+    "line": "{aAnimal} has dulled its colours for the night",
+    "tone": {
+     "desat": 0.45,
+     "gain": 0.9
+    }
+   },
+   "state": {
+    "id": "c8a92a7d-1ef3-490c-844a-51466ef1d3a7",
+    "quote": "Orange, blue and black spots that differ between every male",
+    "line": "{aAnimal} has spots of its own",
+    "say": "on",
+    "why": "a male's own pattern of dark spots, from its own seed",
+    "trigger": {
+     "kind": "season",
+     "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+     ],
+     "sex": "male"
+    },
+    "individual": {
+     "kind": "spots",
+     "scale": 6,
+     "dark": 0.2,
+     "light": 0
+    }
+   },
+   "why": "its frames show open water and the bed, never the fish: not checked"
+  },
+  "neon-tetra": {
+   "name": "Neon Tetra",
+   "night": {
+    "id": "0bfd0e8d-5b0a-467f-a050-f86b6524f74e",
+    "quote": "At night the shoal loosens, the fish rest near plants or the bottom, and the blue stripe dims.",
+    "line": "{aAnimal} has dimmed its blue stripe for the night",
+    "tone": {
+     "desat": 0.4,
+     "gain": 0.88
+    }
+   },
+   "why": "its frames show open water and the bed, never the fish: not checked"
+  },
+  "black-skirt-tetra": {
+   "name": "Black Skirt Tetra",
+   "night": {
+    "id": "5e45587f-01e8-4000-9370-988f9813159f",
+    "quote": "At night it hangs almost still near the bottom or among plants, and its colours often pale until the light returns.",
+    "line": "{aAnimal} has paled its colours for the night",
+    "tone": {
+     "desat": 0.45,
+     "gain": 1.15
+    }
+   },
+   "why": "its frames show open water and the bed, never the fish: not checked"
+  },
+  "tiger-barb": {
+   "name": "Tiger Barb",
+   "night": {
+    "id": "bd102bc2-bf8c-4d56-bc85-3e2aa6399d73",
+    "quote": "At night the shoal settles low among plants or near the bottom and hangs almost still, and the colours fade until light returns.",
+    "line": "{aAnimal} has let its colours fade for the night",
+    "tone": {
+     "desat": 0.5,
+     "gain": 1.1
+    }
+   },
+   "why": "its frames show open water and the bed, never the fish: not checked"
+  },
+  "freshwater-angelfish": {
+   "name": "Freshwater Angelfish",
+   "night": {
+    "id": "87f52750-e3a1-4e60-b8ea-41ced1c2d1e4",
+    "quote": "becoming still and drifting close to cover at night, when the barring often pales noticeably",
+    "line": "{aAnimal} has paled its barring for the night",
+    "tone": {
+     "desat": 0.35,
+     "gain": 1.2
+    }
+   },
+   "why": "its frames show open water and the bed, never the fish: not checked"
+  },
+  "yellow-tang": {
+   "name": "Yellow Tang",
+   "night": {
+    "id": "0eea43af-3257-46c5-8e6c-76a2cbe64f94",
+    "quote": "It fades at night, developing a dark lateral stripe, and brightens again at dawn.",
+    "line": "{aAnimal} has faded for the night",
+    "tone": {
+     "desat": 0.4,
+     "gain": 1.15
+    }
+   },
+   "why": "its frames show open water and the bed, never the fish: not checked"
+  },
+  "three-spot-gourami": {
+   "name": "Three-spot Gourami",
+   "night": {
+    "id": "9f0ba562-a8c0-41d7-a8f3-c5afa857dbce",
+    "quote": "Even at night it rises now and then to gulp air, hanging almost motionless among plants between visits to the surface, with its colours paled.",
+    "line": "{aAnimal} has paled its colours for the night",
+    "tone": {
+     "desat": 0.45,
+     "gain": 1.15
+    }
+   },
+   "why": "its frames show open water and the bed, never the fish: not checked"
+  },
+  "carolina-wolf-spider": {
+   "name": "Carolina Wolf Spider",
+   "night": {
+    "id": "a1e6f503-55bb-48ef-8104-378d9e626f5f",
+    "quote": "A reflective layer behind its large eyes makes them shine green in a torch beam, so it can be found at night by eyeshine.",
+    "line": "{aAnimal} has its eyes shining green in the dark",
+    "tone": {
+     "colour": [
+      0.35,
+      1,
+      0.4
+     ],
+     "mix": 0.9,
+     "glow": 1.3,
+     "region": {
+      "c": [
+       0.0519,
+       0.0531,
+       0.0618
+      ],
+      "r": [
+       0.035,
+       0.03,
+       0.035
+      ],
+      "mirror": true
+     }
+    }
+   },
+   "why": "night tone: the animal is a few pixels in the grass in its frames, off and on look the same"
+  },
+  "green-iguana": {
+   "name": "Green Iguana",
+   "state": {
+    "id": "a21ba0e3-3a26-456e-8334-2636e95f526e",
+    "quote": "Dewlap display: the throat fan helps signal, thermoregulate, and communicate.",
+    "line": "{aAnimal} is showing its dewlap",
+    "say": "on",
+    "why": "the dewlap under the chin, in its push-up display",
+    "trigger": {
+     "kind": "blocks",
+     "blocks": [
+      "pushup",
+      "display"
+     ],
+     "sex": "male"
+    },
+    "swell": {
+     "region": {
+      "c": [
+       0,
+       0.075,
+       0.36
+      ],
+      "r": [
+       0.07,
+       0.06,
+       0.09
+      ]
+     },
+     "push": 0.07
+    }
+   },
+   "why": "the dewlap or throat is not told apart off and on at phone distance (the anoles a sliver in the grass)"
+  },
+  "green-anole": {
+   "name": "Green Anole",
+   "state": {
+    "id": "111c358a-ff5b-4983-8611-6ae951b71a4f",
+    "quote": "Male Green Anoles extend a prominent pink dewlap (a flap of skin under the throat) during courtship and territorial disputes.",
+    "line": "{aAnimal} is showing its pink dewlap",
+    "say": "on",
+    "why": "a pink dewlap, in its push-up and courtship",
+    "trigger": {
+     "kind": "blocks",
+     "blocks": [
+      "pushup",
+      "display"
+     ],
+     "sex": "male"
+    },
+    "tone": {
+     "colour": [
+      0.96,
+      0.45,
+      0.62
+     ],
+     "mix": 0.75,
+     "region": {
+      "c": [
+       0,
+       0.085,
+       0.385
+      ],
+      "r": [
+       0.05,
+       0.04,
+       0.075
+      ]
+     }
+    },
+    "swell": {
+     "region": {
+      "c": [
+       0,
+       0.085,
+       0.385
+      ],
+      "r": [
+       0.05,
+       0.04,
+       0.075
+      ]
+     },
+     "push": 0.055
+    }
+   },
+   "why": "the dewlap or throat is not told apart off and on at phone distance (the anoles a sliver in the grass)"
+  },
+  "brown-anole": {
+   "name": "Brown Anole",
+   "state": {
+    "id": "5d227bfc-0030-4542-a425-8b9a9666f183",
+    "quote": "Males are larger with prominent orange dewlaps",
+    "line": "{aAnimal} is flashing its orange dewlap",
+    "say": "on",
+    "why": "an orange dewlap, in its push-up and courtship",
+    "trigger": {
+     "kind": "blocks",
+     "blocks": [
+      "pushup",
+      "display"
+     ],
+     "sex": "male"
+    },
+    "tone": {
+     "colour": [
+      0.96,
+      0.5,
+      0.1
+     ],
+     "mix": 0.8,
+     "region": {
+      "c": [
+       0,
+       0.085,
+       0.385
+      ],
+      "r": [
+       0.05,
+       0.04,
+       0.075
+      ]
+     }
+    },
+    "swell": {
+     "region": {
+      "c": [
+       0,
+       0.085,
+       0.385
+      ],
+      "r": [
+       0.05,
+       0.04,
+       0.075
+      ]
+     },
+     "push": 0.055
+    }
+   },
+   "why": "the dewlap or throat is not told apart off and on at phone distance (the anoles a sliver in the grass)"
+  },
+  "oriental-garden-lizard": {
+   "name": "Oriental Garden Lizard",
+   "state": {
+    "id": "5210be41-ce32-4528-a064-cfda090d3d32",
+    "alsoRows": [
+     "5210be41-ce32-4528-a064-cfda090d3d32"
+    ],
+    "quote": "Push-up-like movements, throat presentation and colour are part of the breeding display.",
+    "line": "{aAnimal} is presenting its red throat in a push-up display",
+    "say": "on",
+    "why": "the throat presented, red, in its push-up",
+    "trigger": {
+     "kind": "blocks",
+     "blocks": [
+      "pushup",
+      "display"
+     ],
+     "sex": "male"
+    },
+    "tone": {
+     "colour": [
+      0.85,
+      0.12,
+      0.08
+     ],
+     "mix": 0.7,
+     "region": {
+      "c": [
+       0,
+       0.04,
+       0.42
+      ],
+      "r": [
+       0.05,
+       0.04,
+       0.08
+      ]
+     }
+    },
+    "swell": {
+     "region": {
+      "c": [
+       0,
+       0.04,
+       0.42
+      ],
+      "r": [
+       0.04,
+       0.035,
+       0.07
+      ]
+     },
+     "push": 0.03
+    }
+   },
+   "why": "the dewlap or throat is not told apart off and on at phone distance (the anoles a sliver in the grass)"
+  },
+  "common-green-forest-lizard": {
+   "name": "Common Green Forest Lizard",
+   "state": {
+    "id": "c9129c3a-e17c-42c4-9d4a-54df833d63c3",
+    "quote": "A male perched head-up on a trunk bobs his head and puffs out his throat whenever another male comes near.",
+    "line": "{aAnimal} is puffing its throat at a rival",
+    "say": "on",
+    "why": "the throat puffed at a rival, in its push-up",
+    "trigger": {
+     "kind": "blocks",
+     "blocks": [
+      "pushup",
+      "display"
+     ],
+     "sex": "male"
+    },
+    "swell": {
+     "region": {
+      "c": [
+       0,
+       0.215,
+       0.4
+      ],
+      "r": [
+       0.04,
+       0.04,
+       0.07
+      ]
+     },
+     "push": 0.04
+    }
+   },
+   "why": "the dewlap or throat is not told apart off and on at phone distance (the anoles a sliver in the grass)"
+  },
+  "american-bullfrog": {
+   "name": "American Bullfrog",
+   "state": {
+    "id": "398571ec-d21e-4319-a187-e4235111026c",
+    "quote": "Males call by moving air between the lungs and an inflatable vocal sac, which resonates and radiates the sound",
+    "line": "{aAnimal} is calling with its vocal sac swollen",
+    "say": "on",
+    "why": "the vocal sac under the chin, while it calls",
+    "trigger": {
+     "kind": "blocks",
+     "blocks": [
+      "call"
+     ],
+     "sex": "male"
+    },
+    "swell": {
+     "region": {
+      "c": [
+       0,
+       0.09,
+       0.38
+      ],
+      "r": [
+       0.13,
+       0.08,
+       0.12
+      ]
+     },
+     "push": 0.08
+    }
+   },
+   "why": "the sac or puffed throat does not show off and on (the siamang out of frame)"
+  },
+  "marsh-frog": {
+   "name": "Marsh Frog",
+   "state": {
+    "id": "97108390-ef0f-44d7-a16a-0ddb6f6f76da",
+    "quote": "Males inflate a pair of grey vocal sacs at the corners of the mouth",
+    "line": "{aAnimal} is calling with its grey cheek sacs swollen",
+    "say": "on",
+    "why": "the pair of grey vocal sacs at the cheeks, while it calls",
+    "trigger": {
+     "kind": "blocks",
+     "blocks": [
+      "call"
+     ],
+     "sex": "male"
+    },
+    "tone": {
+     "colour": [
+      0.58,
+      0.6,
+      0.61
+     ],
+     "mix": 0.5,
+     "region": {
+      "c": [
+       0.13,
+       0.12,
+       0.34
+      ],
+      "r": [
+       0.07,
+       0.06,
+       0.09
+      ],
+      "mirror": true
+     }
+    },
+    "swell": {
+     "region": {
+      "c": [
+       0.13,
+       0.12,
+       0.34
+      ],
+      "r": [
+       0.07,
+       0.06,
+       0.09
+      ],
+      "mirror": true
+     },
+     "push": 0.06
+    }
+   },
+   "why": "the sac or puffed throat does not show off and on (the siamang out of frame)"
+  },
+  "great-plains-toad": {
+   "name": "Great Plains Toad",
+   "state": {
+    "id": "eb922fdd-8ee6-45ed-b598-6aa2771ec92c",
+    "quote": "Inflated male vocal sac sausage-shaped, held forward",
+    "line": "{aAnimal} is calling with its vocal sac held forward",
+    "say": "on",
+    "why": "the vocal sac held forward, while it calls",
+    "trigger": {
+     "kind": "blocks",
+     "blocks": [
+      "call"
+     ],
+     "sex": "male"
+    },
+    "swell": {
+     "region": {
+      "c": [
+       0,
+       0.1,
+       0.38
+      ],
+      "r": [
+       0.12,
+       0.07,
+       0.1
+      ]
+     },
+     "push": 0.08
+    }
+   },
+   "why": "the sac or puffed throat does not show off and on (the siamang out of frame)"
+  },
+  "siamang": {
+   "name": "Siamang",
+   "state": {
+    "id": "c513ebce-0421-4b92-8d29-a85ecc8e161d",
+    "quote": "Throat sac and long-arm swinging",
+    "line": "{aAnimal} is calling with its throat sac inflated",
+    "say": "on",
+    "why": "the throat sac, in its duet",
+    "trigger": {
+     "kind": "blocks",
+     "blocks": [
+      "call"
+     ]
+    },
+    "tone": {
+     "colour": [
+      0.72,
+      0.56,
+      0.53
+     ],
+     "mix": 0.4,
+     "region": {
+      "c": [
+       0,
+       0.63,
+       0.27
+      ],
+      "r": [
+       0.07,
+       0.07,
+       0.07
+      ]
+     }
+    },
+    "swell": {
+     "region": {
+      "c": [
+       0,
+       0.63,
+       0.27
+      ],
+      "r": [
+       0.07,
+       0.07,
+       0.07
+      ]
+     },
+     "push": 0.07
+    }
+   },
+   "why": "the sac or puffed throat does not show off and on (the siamang out of frame)"
+  },
   "european-starling": {
    "name": "European Starling",
    "state": {
@@ -839,7 +899,8 @@
      },
      "push": 0.03
     }
-   }
+   },
+   "why": "the sac or puffed throat does not show off and on (the siamang out of frame)"
   },
   "long-tailed-macaque": {
    "name": "Long-tailed Macaque",
@@ -868,7 +929,8 @@
      },
      "push": 0.035
     }
-   }
+   },
+   "why": "full cheeks do not read off and on (the hamster and mandrill out of frame)"
   },
   "campbells-dwarf-hamster": {
    "name": "Campbell's Dwarf Hamster",
@@ -897,7 +959,8 @@
      },
      "push": 0.07
     }
-   }
+   },
+   "why": "full cheeks do not read off and on (the hamster and mandrill out of frame)"
   },
   "eastern-chipmunk": {
    "name": "Eastern Chipmunk",
@@ -926,7 +989,8 @@
      },
      "push": 0.05
     }
-   }
+   },
+   "why": "full cheeks do not read off and on (the hamster and mandrill out of frame)"
   },
   "mandrill": {
    "name": "Mandrill",
@@ -955,7 +1019,8 @@
      },
      "push": 0.035
     }
-   }
+   },
+   "why": "full cheeks do not read off and on (the hamster and mandrill out of frame)"
   },
   "mallard": {
    "name": "Mallard",
@@ -983,7 +1048,8 @@
      "mix": 0.62,
      "desat": 0.25
     }
-   }
+   },
+   "why": "its season state is not told apart in its frames, or the animal is out of frame"
   },
   "mandarin-duck": {
    "name": "Mandarin Duck",
@@ -1011,7 +1077,8 @@
      "mix": 0.62,
      "desat": 0.25
     }
-   }
+   },
+   "why": "its season state is not told apart in its frames, or the animal is out of frame"
   },
   "black-headed-gull": {
    "name": "Black-headed Gull",
@@ -1051,7 +1118,8 @@
       ]
      }
     }
-   }
+   },
+   "why": "its season state is not told apart in its frames, or the animal is out of frame"
   },
   "great-crested-grebe": {
    "name": "Great Crested Grebe",
@@ -1092,7 +1160,8 @@
       ]
      }
     }
-   }
+   },
+   "why": "its season state is not told apart in its frames, or the animal is out of frame"
   },
   "winter-white-dwarf-hamster": {
    "name": "Winter White Dwarf Hamster",
@@ -1123,7 +1192,8 @@
      ],
      "mix": 0.55
     }
-   }
+   },
+   "why": "full cheeks do not read off and on (the hamster and mandrill out of frame)"
   },
   "southeastern-five-lined-skink": {
    "name": "Southeastern Five-lined Skink",
@@ -1162,7 +1232,8 @@
       ]
      }
     }
-   }
+   },
+   "why": "its season state is not told apart in its frames, or the animal is out of frame"
   },
   "two-spotted-spider-mite": {
    "name": "Two-spotted Spider Mite",
@@ -1189,7 +1260,8 @@
      ],
      "mix": 0.7
     }
-   }
+   },
+   "why": "its season state is not told apart in its frames, or the animal is out of frame"
   },
   "white-tailed-deer": {
    "name": "White-tailed Deer",
@@ -1223,41 +1295,8 @@
      },
      "push": 0.04
     }
-   }
-  },
-  "red-deer": {
-   "name": "Red Deer",
-   "state": {
-    "id": "9e4c04ec-46ac-4019-b396-7b9e5afb2028",
-    "quote": "In autumn stags develop a thick, shaggy neck mane.",
-    "line": "{aAnimal} has grown a thick, shaggy neck for the autumn",
-    "say": "on",
-    "why": "the stag's thick neck, in autumn",
-    "trigger": {
-     "kind": "season",
-     "months": [
-      9,
-      10,
-      11
-     ],
-     "sex": "male"
-    },
-    "swell": {
-     "region": {
-      "c": [
-       0,
-       0.12,
-       0.22
-      ],
-      "r": [
-       0.1,
-       0.12,
-       0.1
-      ]
-     },
-     "push": 0.05
-    }
-   }
+   },
+   "why": "its season state is not told apart in its frames, or the animal is out of frame"
   },
   "common-eastern-firefly": {
    "name": "Common Eastern Firefly",
@@ -1294,7 +1333,8 @@
       ]
      }
     }
-   }
+   },
+   "why": "its season state is not told apart in its frames, or the animal is out of frame"
   },
   "koi": {
    "name": "Koi",
@@ -1327,7 +1367,8 @@
      "dark": 0.22,
      "light": 0.3
     }
-   }
+   },
+   "why": "its frames show open water and the bed, never the fish: not checked"
   },
   "raccoon-dog": {
    "name": "Raccoon Dog",
@@ -1361,7 +1402,8 @@
      },
      "push": 0.02
     }
-   }
+   },
+   "why": "its season state is not told apart in its frames, or the animal is out of frame"
   }
  },
  "skipped": {
