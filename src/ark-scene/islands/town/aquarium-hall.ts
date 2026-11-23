@@ -294,9 +294,28 @@ export type CaveVisit = {cave: TankCave; share: number; phase: "in" | "rest" | "
  */
 export function caveVisit(cave: TankCave, units: {period: number; share: number; offset: number}, clock: number): CaveVisit | null {
     const period = 150 + 150 * units.period;
-    const hidden = period * (0.3 + 0.2 * units.share);
     let tau = (clock + units.offset * period) % period;
     if (tau < 0) tau += period;
+    return visitAt(cave, tau, period * (0.3 + 0.2 * units.share), clock);
+}
+
+/** A cave's turn (s): one of its residents at a time hides in it, for four fifths of a turn. */
+export const CAVE_TURN = 120;
+
+/**
+ * SIG3 (the aquarium's pile): whether a resident is on its cave's turn at a clock (s). A cave holds one body at a time:
+ * each turn its roster (`roster`, the residents whose cave it is, by id) draws one, the same for every viewer; the rest
+ * swim. With each its own cycle, fourteen reef-wall fish and an octopus were in one hollow at once.
+ */
+export function caveTurn(cave: TankCave, roster: readonly string[], id: string, clock: number): CaveVisit | null {
+    if (!roster.length) return null;
+    const n = Math.floor(clock / CAVE_TURN);
+    if (roster[hashText(`${cave.lx.toFixed(2)}|${cave.lz.toFixed(2)}|turn|${n}`) % roster.length] !== id) return null;
+    return visitAt(cave, clock - n * CAVE_TURN, CAVE_TURN * 0.8, clock);
+}
+
+/** Where a visit `tau` s in is (hidden for `hidden` s of it, a short swim in and out at its ends), or null after it. */
+function visitAt(cave: TankCave, tau: number, hidden: number, clock: number): CaveVisit | null {
     if (tau >= hidden) return null;
     const left = clock - tau;
     const back = left + hidden;

@@ -24,7 +24,7 @@ import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townPlan, type Building, type Parcel, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {townHouseholds, type Household, type ZooEnclosure} from "@/ark-scene/islands/town/areas";
 import {APRON, homeDoors} from "@/ark-scene/islands/town/doors";
-import {aquariumHall, caveVisit, fitsSwim, hallLoop, hallTankOf, inAquariumHall, type LoopAt} from "@/ark-scene/islands/town/aquarium-hall";
+import {aquariumHall, caveTurn, caveVisit, fitsSwim, hallLoop, hallTankOf, inAquariumHall, type LoopAt} from "@/ark-scene/islands/town/aquarium-hall";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {bodyAxisExtent} from "@/ark-scene/stats";
 import {fitInWater,speciesDepth, swimRange, bandCycle, breathAt, waterMotion, type DepthBand, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
@@ -226,7 +226,10 @@ const depths = new Map<string, SpeciesDepth>();
  * at its band's depth in the tank's own column (`fitInWater` with the tank's surface), up for air on a breath.
  * `height`: its drawn body height (m), `length` its drawn length (m), `plan` its body plan.
  */
-export function tankPose(tank: Tank, animal: {id: string; model_slug: string; zone: string}, length: number, height: number, plan: string | null, clock: number): TankPose {
+/** The tanks' residents (the scene's, from its placements; `tank` its tank's id): who takes turns in a cave (`caveTurn`). */
+export type TankResident = {id: string; tank: string; model_slug: string; zone: string; length: number};
+
+export function tankPose(tank: Tank, animal: {id: string; model_slug: string; zone: string}, length: number, height: number, plan: string | null, clock: number, roster?: readonly TankResident[]): TankPose {
     const id = animal.id;
     const depthKey = `${animal.model_slug}|${animal.zone}|${plan ?? ""}`;
     let depth = depths.get(depthKey);
@@ -236,7 +239,7 @@ export function tankPose(tank: Tank, animal: {id: string; model_slug: string; zo
     if (motion === "walk" && FISHLIKE.has(plan ?? "")) motion = "swim";
     if (tank.swim) {
         // p2 (aqua): a hall tank: its racetrack loop and cave visits; anyone else keeps to its swim room (off the rockwork).
-        const hall = hallPose(tank, animal, length, height, plan, depth, motion, clock);
+        const hall = hallPose(tank, animal, length, height, plan, depth, motion, clock, roster);
         if (hall) return hall;
         tank = swimRoomOf(tank);
     }
@@ -366,6 +369,38 @@ function pickCave(tank: Tank, id: string, length: number, width: number, height:
     return best;
 }
 
+const caveKey = (cave: TankCave) => `${cave.lx.toFixed(2)},${cave.lz.toFixed(2)}`;
+
+const caveRosters = new WeakMap<readonly TankResident[], Map<string, Map<string, string[]>>>();
+/**
+ * SIG3: a tank's caves' rosters (by `caveKey`): its residents that hide (a fish, an eel, an octopus, a flatfish, on its
+ * swim or in its hole) by the cave each picks, ids in order. (Each body's height from its model, as drawn; remembered
+ * per roster and tank.)
+ */
+function caveRosterOf(tank: Tank, roster: readonly TankResident[]): Map<string, string[]> {
+    let byTank = caveRosters.get(roster);
+    if (!byTank) caveRosters.set(roster, (byTank = new Map()));
+    let byCave = byTank.get(tank.id);
+    if (byCave) return byCave;
+    byCave = new Map();
+    for (const r of roster.filter((x) => x.tank === tank.id).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))) {
+        const found = modelBase(r.model_slug);
+        const plan = found?.plan ?? null;
+        if (!HIDERS.has(plan ?? "")) continue;
+        let motion = waterMotion(tankDepth(r.model_slug, r.zone, plan));
+        if (motion === "walk" && FISHLIKE.has(plan ?? "")) motion = "swim";
+        if (motion !== "swim" && motion !== "hole") continue;
+        const {length, width} = tankBody(r.model_slug, plan, r.length);
+        const height = found ? found.size.y * (r.length / Math.max(bodyAxisExtent(r.model_slug, plan ?? found.plan, found.size), 0.05)) : r.length * 0.3;
+        const cave = caveOf(tank, r.id, length, width, height);
+        if (!cave) continue;
+        const key = caveKey(cave);
+        byCave.set(key, [...(byCave.get(key) ?? []), r.id]);
+    }
+    byTank.set(tank.id, byCave);
+    return byCave;
+}
+
 const smooth = (t: number) => t * t * (3 - 2 * t);
 const turnTo = (a: number, b: number, t: number) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
 
@@ -374,7 +409,7 @@ const turnTo = (a: number, b: number, t: number) => a + Math.atan2(Math.sin(b - 
  * band's depth; one that fits a cave leaves it for its cave for two fifths of each few minutes, swims in head first,
  * turns to face out, and swims back to where its loop has got to. A hole-dweller stays in its cave's mouth.
  */
-function hallPose(tank: Tank, animal: {id: string; model_slug: string; zone: string}, display: number, height: number, plan: string | null, depth: SpeciesDepth, motion: TankMotion, clock: number): TankPose | null {
+function hallPose(tank: Tank, animal: {id: string; model_slug: string; zone: string}, display: number, height: number, plan: string | null, depth: SpeciesDepth, motion: TankMotion, clock: number, roster?: readonly TankResident[]): TankPose | null {
     const id = animal.id;
     const {length, width} = tankBody(animal.model_slug, plan, display);
     const c = Math.cos(tank.rot);
@@ -400,6 +435,10 @@ function hallPose(tank: Tank, animal: {id: string; model_slug: string; zone: str
         mz = cave.lz + oz * out;
         outYaw = cave.mouth;
     }
+    // SIG3: with the tank's residents known, its cave by turns (one body in it at a time); a hole-dweller out of its
+    // turn swims the tank like the rest.
+    const turns = cave && roster ? caveRosterOf(tank, roster).get(caveKey(cave)) ?? [] : null;
+    if (turns && motion === "hole") motion = "swim";
     if (motion === "hole") {
         if (!cave) return null;
         // In its cave's mouth, its head out, turning slowly.
@@ -414,7 +453,7 @@ function hallPose(tank: Tank, animal: {id: string; model_slug: string; zone: str
     const swimSpec = (at: number): WaterSpec => ({motion: "swim", floorY: tank.floor, depth: range.from + (range.to - range.from) * bandCycle(seed, at), aboveFloor: Boolean(range.aboveFloor), breath: at === clock ? breath : 0, surface: tank.top});
     const room = tank.swim!;
     if (!hallLoop(room, length, width, u, pace, clock, loopA)) return null;
-    const visit = cave ? caveVisit(cave, {period: unit(id, "cave-period"), share: unit(id, "cave-share"), offset: unit(id, "cave-offset")}, clock) : null;
+    const visit = cave ? (turns ? caveTurn(cave, turns, id, clock) : caveVisit(cave, {period: unit(id, "cave-period"), share: unit(id, "cave-share"), offset: unit(id, "cave-offset")}, clock)) : null;
     if (!visit || !cave) {
         const p = world(loopA.lx, loopA.lz);
         const spec = swimSpec(clock);

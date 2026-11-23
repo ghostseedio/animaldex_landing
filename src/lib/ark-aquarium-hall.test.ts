@@ -172,6 +172,42 @@ test("a cave visit: leaves its loop, rests in its cave about two fifths of a few
     assert.ok(hidden / 3000 > 0.3 && hidden / 3000 < 0.5, `${hidden / 3000}`);
 });
 
+// SIG3 (the aquarium's pile): fourteen reef-wall residents, the lionfish, the moray and an octopus among them, were all in one
+// hollow at once, each on its own cycle (or, a hole-dweller, in it always).
+test("a cave holds one body at a time: its residents take turns, and each of them is in it sometimes", () => {
+    const placed = placeTownAnimals(residents());
+    const roster: Array<{id: string; tank: string; model_slug: string; zone: string; length: number}> = [];
+    const byId = new Map(residents().map((a) => [a.id, a]));
+    placed.town.forEach((info, id) => {
+        const a = byId.get(id);
+        if (a && info.tank?.swim) roster.push({id, tank: info.tank.id, model_slug: a.model_slug, zone: a.zone, length: arkBody(a).display});
+    });
+    assert.ok(roster.length > 40, `${roster.length} in the hall's tanks`);
+    const tanks = new Map<string, Tank>();
+    placed.town.forEach((info) => info.tank?.swim && tanks.set(info.tank.id, info.tank));
+    let most = 0;
+    const hid = new Set<string>();
+    const hiders = new Set<string>();
+    for (let k = 0; k < 400; k++) {
+        const clock = DAY + k * 37.3;
+        const inCave = new Map<string, number>();
+        for (const r of roster) {
+            const t = tanks.get(r.tank)!;
+            const plan = modelBase(r.model_slug)?.plan ?? null;
+            const p = tankPose(t, {id: r.id, model_slug: r.model_slug, zone: r.zone}, r.length, r.length * 0.3, plan, clock, roster);
+            const cave = (t.caves ?? []).find((c) => Math.hypot(c.x - p.x, c.z - p.z) < 0.02);
+            if (!cave) continue;
+            hiders.add(r.id);
+            hid.add(r.id);
+            const key = `${t.id}|${cave.lx}|${cave.lz}`;
+            inCave.set(key, (inCave.get(key) ?? 0) + 1);
+        }
+        for (const n of inCave.values()) most = Math.max(most, n);
+    }
+    assert.equal(most, 1, "one body resting in a cave at a time");
+    assert.ok(hid.size >= 10, `${hid.size} residents rested in a cave over the samples`);
+});
+
 test("the town's validator: nobody in the hall's glass, its walls or out of its water", () => {
     const check = validateTownAnimals(residents(), {schedule: false});
     assert.equal(check.counts.out_of_tank, 0, JSON.stringify(check.problems.filter((p) => p.problems.includes("out_of_tank")).slice(0, 5)));
