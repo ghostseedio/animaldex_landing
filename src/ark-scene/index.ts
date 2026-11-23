@@ -4687,7 +4687,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 diet: e.sched.profile.diet,
                 intel,
                 asleep: e.state.asleep,
-                acting: Boolean(e.act || e.moment || e.visitor) || !scheduled(e),
+                // (SIG3: a recipe's act too: it holds the animal to the place its recipe chose, an edge, an anvil, a
+                // burrow; a shy tortoise wallowing at the water's edge backed off the camera down the bank, onto the bed.)
+                acting: Boolean(e.act || e.moment || e.visitor || (sp as RecipePose | null | undefined)?.act) || !scheduled(e),
                 // A predator running down its prey in a meal's chase (`acts.ts`): nearby prey scatter from it.
                 chasing: Boolean(e.act?.role === "hunter" && (e.act.speed ?? 0) > Math.max(e.length, 0.3) * 1.2),
                 parentId: young.parent,
