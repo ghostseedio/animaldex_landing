@@ -53,7 +53,7 @@ async function main() {
                 else by.set(k, [a]);
             }
             const out: Pair[] = [];
-            for (const list of by.values()) {
+            for (const list of Array.from(by.values())) {
                 if (list.length < 2) continue;
                 const sheet = sheetOf(atlas, list[0].model_slug, "wild");
                 if (!sheet || sheet.move === "sessile" || displayLength(list[0].model_slug, null) < 0.08) continue;
