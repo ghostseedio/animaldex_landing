@@ -31,7 +31,8 @@
  * (`head-look.ts`).
  *
  * "Dim" greys an animal toward the haze ("My animals" shows the viewer's
- * own in full colour and the rest dimmed).
+ * own in full colour and the rest dimmed). A negative dim lifts it instead:
+ * the chosen animal under the sea (ARK-CONTACT, the owner's Cunner at night).
  */
 
 import {Color, MeshStandardMaterial, Vector2, Vector3, Vector4, type Texture} from "three";
@@ -540,7 +541,14 @@ ${LOOK_LIGHT}`)
 #include <opaque_fragment>
 {
     float grey = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
-    gl_FragColor.rgb = mix(gl_FragColor.rgb, mix(vec3(grey), arkDimTint, 0.5) * 0.75, vArkDim * 0.82);
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, mix(vec3(grey), arkDimTint, 0.5) * 0.75, max(vArkDim, 0.0) * 0.82);
+    // A lift (a negative dim): the chosen animal under the sea, read in the dark water: a little of its own colour
+    // lit, and a soft cool rim where its body turns away. No outline.
+    float arkLift = max(-vArkDim, 0.0);
+    if (arkLift > 0.0) {
+        float edge = pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 2.0);
+        gl_FragColor.rgb += arkLift * (diffuseColor.rgb * 0.45 + vec3(0.32, 0.42, 0.5) * edge);
+    }
 }
 ${options.reflect ? REFLECT_FRAGMENT : ""}`);
         // Each animal its own tint and mottling (`ark-variation.ts`, liveliness).
