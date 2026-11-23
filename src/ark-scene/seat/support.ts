@@ -363,3 +363,120 @@ export function posedHull(hull: Hull, pose: RigPose | null, out: Float32Array): 
     }
     return n;
 }
+
+// MARK: Lying
+
+/** How many of a mesh's vertices a full look at its posed body skins (every one of most: a thin tip is often lowest). */
+const LIE_SCAN = 6000;
+/** How many vertices a mesh keeps as ever lowest in a slice (the ones skinned at every seat after). */
+const LIE_KEEP = 512;
+const LIE_ALONG = 12;
+const lieScan: Hull = {vertices: new Uint32Array(LIE_SCAN), rest: new Float32Array(3 * LIE_SCAN), joints: new Uint16Array(4 * LIE_SCAN), weights: new Float32Array(4 * LIE_SCAN)};
+const lieOut = new Float32Array(3 * LIE_SCAN);
+const lieLowY = new Float32Array(LIE_ALONG * 3);
+const lieLowAt = new Int32Array(LIE_ALONG * 3);
+const lies = new WeakMap<BufferGeometry, {solves: number; keep: Set<number>; hull: Hull | null}>();
+
+/** The lowest of each slice of `n` posed points in `lieOut` (along the body; left, middle and right) into `lieLowAt`. */
+function lowestPerSlice(n: number): void {
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
+    for (let i = 0; i < n; i++) {
+        minX = Math.min(minX, lieOut[i * 3]);
+        maxX = Math.max(maxX, lieOut[i * 3]);
+        minZ = Math.min(minZ, lieOut[i * 3 + 2]);
+        maxZ = Math.max(maxZ, lieOut[i * 3 + 2]);
+    }
+    lieLowY.fill(Infinity);
+    lieLowAt.fill(-1);
+    for (let i = 0; i < n; i++) {
+        const a = Math.min(Math.floor(((lieOut[i * 3 + 2] - minZ) / Math.max(maxZ - minZ, 1e-9)) * LIE_ALONG), LIE_ALONG - 1);
+        const c = a * 3 + Math.min(Math.floor(((lieOut[i * 3] - minX) / Math.max(maxX - minX, 1e-9)) * 3), 2);
+        if (lieOut[i * 3 + 1] < lieLowY[c]) {
+            lieLowY[c] = lieOut[i * 3 + 1];
+            lieLowAt[c] = i;
+        }
+    }
+}
+
+/**
+ * Sleeper lane (2026-11-24): a rig lying down (a cow's, an alpaca's, a duck's sleep, posed live) rests on vertices no
+ * rest-pose hull holds: its folded knees and hocks, its belly as the pose lays it, a tucked foot's tip. Seated by the
+ * rest hull's points alone, the lowest of those sat 4 to 7 cm over the posed body's real lowest, and the body was
+ * lowered that much into the ground. The lowest of each slice of the posed body (along it; left, middle and right)
+ * written into `out` (model space, x y z each); returns how many, 0 for a still mesh.
+ *
+ * Which vertices: on a mesh's first 8 seats lying, and every 64th after, up to 6000 of them skinned as posed then (a
+ * shared scratch, nothing kept), and each slice's lowest added to the mesh's kept few (at most 512); at every seat,
+ * those few skinned as posed now. A sparser sample missed a duck's tucked foot (4 cm in the ground).
+ */
+export function lyingPoints(geometry: BufferGeometry, pose: RigPose | null, out: Float32Array): number {
+    if (!pose || pose.weight < 0.5 || (!pose.live && !pose.baked)) return 0;
+    let lie = lies.get(geometry);
+    if (!lie) {
+        const position = geometry.getAttribute("position") as BufferAttribute | undefined;
+        if (!position || !geometry.getAttribute("arkJoints") || !geometry.getAttribute("arkWeights") || position.count < 3) return 0;
+        lies.set(geometry, (lie = {solves: 0, keep: new Set(), hull: null}));
+    }
+    lie.solves++;
+    if (lie.solves <= 8 || lie.solves % 64 === 0) {
+        const position = geometry.getAttribute("position") as BufferAttribute;
+        const j = geometry.getAttribute("arkJoints") as BufferAttribute;
+        const w = geometry.getAttribute("arkWeights") as BufferAttribute;
+        const stride = Math.max(1, Math.ceil(position.count / LIE_SCAN));
+        let c = 0;
+        for (let v = 0; v < position.count && c < LIE_SCAN; v += stride, c++) {
+            lieScan.vertices[c] = v;
+            lieScan.rest[c * 3] = position.getX(v);
+            lieScan.rest[c * 3 + 1] = position.getY(v);
+            lieScan.rest[c * 3 + 2] = position.getZ(v);
+            for (let k = 0; k < 4; k++) {
+                lieScan.joints![c * 4 + k] = j.getComponent(v, k);
+                lieScan.weights![c * 4 + k] = w.getComponent(v, k);
+            }
+        }
+        lowestPerSlice(posedHull({vertices: lieScan.vertices.subarray(0, c), rest: lieScan.rest, joints: lieScan.joints, weights: lieScan.weights}, pose, lieOut));
+        const size = lie.keep.size;
+        const picked = Array.from(lieLowAt).filter((i) => i >= 0).map((i) => lieScan.vertices[i]);
+        for (const v of picked) lie.keep.add(v);
+        const full = lie.keep.size > LIE_KEEP;
+        if (full) lie.keep = new Set(picked);
+        if (full || lie.keep.size !== size || !lie.hull) lie.hull = hullFrom(geometry, Array.from(lie.keep));
+    }
+    if (!lie.hull) return 0;
+    lowestPerSlice(posedHull(lie.hull, pose, lieOut));
+    let m = 0;
+    for (let c = 0; c < LIE_ALONG * 3 && (m + 1) * 3 <= out.length; c++) {
+        const i = lieLowAt[c];
+        if (i < 0) continue;
+        out[m * 3] = lieOut[i * 3];
+        out[m * 3 + 1] = lieOut[i * 3 + 1];
+        out[m * 3 + 2] = lieOut[i * 3 + 2];
+        m++;
+    }
+    return m;
+}
+
+/** A hull of the given vertices (their rest positions, a rig's bones and weights). */
+function hullFrom(geometry: BufferGeometry, list: readonly number[]): Hull {
+    const position = geometry.getAttribute("position") as BufferAttribute;
+    const j = geometry.getAttribute("arkJoints") as BufferAttribute | undefined;
+    const w = geometry.getAttribute("arkWeights") as BufferAttribute | undefined;
+    const vertices = Uint32Array.from(list);
+    const rest = new Float32Array(vertices.length * 3);
+    const joints = j && w ? new Uint16Array(vertices.length * 4) : null;
+    const weights = j && w ? new Float32Array(vertices.length * 4) : null;
+    vertices.forEach((v, i) => {
+        rest[i * 3] = position.getX(v);
+        rest[i * 3 + 1] = position.getY(v);
+        rest[i * 3 + 2] = position.getZ(v);
+        if (joints && weights && j && w)
+            for (let k = 0; k < 4; k++) {
+                joints[i * 4 + k] = j.getComponent(v, k);
+                weights[i * 4 + k] = w.getComponent(v, k);
+            }
+    });
+    return {vertices, rest, joints, weights};
+}
