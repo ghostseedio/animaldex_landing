@@ -100,6 +100,14 @@ for (const a of additions) {
         continue;
     }
     if (recipesOf(row).some((r) => r.id === a.recipe)) {
+        // (A mammal's own nest the generator found itself still needs the flag: the props do not draw it.)
+        if (a.nest) {
+            const f = row.split("|");
+            while (f.length < 8) f.push("");
+            if (!f[4]) f[4] = a.nest;
+            if (!f[7].includes("o")) f[7] += "o";
+            table.species[a.slug] = f.join("|");
+        }
         already.push(`${a.slug} ${a.recipe}`);
         continue;
     }

@@ -27,12 +27,21 @@ const scenes = arg("scenes", "sleep-ring-tailed-lemur,stone-long-tailed-macaque"
 const width = Number(arg("width", "1280"));
 const height = Number(arg("height", "720"));
 mkdirSync(out, {recursive: true});
-const site = path.join(root, ".ark-golden", "sig2-mammals");
+// (A folder to each run: two runs at once do not write each other's bundle.)
+const site = path.join(root, ".ark-golden", `sig2-mammals-${process.pid}`);
 mkdirSync(site, {recursive: true});
-await build({entryPoints: [path.join(root, "src/ark-scene/sig2-mammals-entry.ts")], outfile: path.join(site, "scene.js"), bundle: true, format: "iife", platform: "browser", target: ["es2020"], minify: true, tsconfig: path.join(root, "tsconfig.json"), define: {"process.env.NODE_ENV": JSON.stringify("development")}, logLevel: "warning"});
-writeFileSync(path.join(site, "index.html"), `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Ark sig2 mammals</title>
+// `--before <ref>`: the same scenes with the sleep layer's table as it was at a git ref (the kinds' own sleeping together before the signature rows).
+const before = arg("before", null);
+const beforePlugins = [];
+if (before) {
+    const old = path.join(site, "sleep.before.json");
+    writeFileSync(old, execFileSync("git", ["-C", root, "show", `${before}:src/ark-scene/sleep.json`], {maxBuffer: 1 << 26}));
+    beforePlugins.push({name: "sleep-before", setup: (b) => b.onResolve({filter: /\/sleep\.json$/}, () => ({path: old}))});
+}
+await build({entryPoints: [path.join(root, "src/ark-scene/sig2-mammals-entry.ts")], outfile: path.join(site, before ? "scene.before.js" : "scene.js"), bundle: true, format: "iife", platform: "browser", target: ["es2020"], minify: true, tsconfig: path.join(root, "tsconfig.json"), define: {"process.env.NODE_ENV": JSON.stringify("development")}, plugins: beforePlugins, logLevel: "warning"});
+writeFileSync(path.join(site, before ? "index.before.html" : "index.html"), `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Ark sig2 mammals</title>
 <style>html,body{margin:0;height:100%;background:#0b1020;overflow:hidden}#ark{position:fixed;inset:0}#note{position:fixed;left:10px;top:8px;z-index:9;font:600 13px/1.35 ui-sans-serif,system-ui;color:#fff;text-shadow:0 1px 3px #000;white-space:pre}</style>
-</head><body><div id="ark"></div><div id="note"></div><script src="./scene.js"></script></body></html>`);
+</head><body><div id="ark"></div><div id="note"></div><script src="./${before ? "scene.before.js" : "scene.js"}"></script></body></html>`);
 const server = createServer((request, response) => {
     const url = new URL(request.url, "http://localhost");
     const folder = url.pathname.startsWith("/ark/") ? path.join(root, "public") : site;
@@ -42,7 +51,7 @@ const server = createServer((request, response) => {
     response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(readFileSync(file));
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-const base = `http://127.0.0.1:${server.address().port}/index.html`;
+const base = `http://127.0.0.1:${server.address().port}/${before ? "index.before.html" : "index.html"}`;
 const {chromium} = createRequire(path.join(root, "node_modules", "x.js"))("playwright-core");
 let browser;
 try {
@@ -83,7 +92,7 @@ for (const name of scenes) {
     }
     const head = await page.evaluate(() => ({social: window.__sig2.social, ownNest: window.__sig2.ownNest, scene: window.__sig2.scene, moment: window.__sig2.moment, nest: window.__sig2.nest ?? null}));
     console.log(name, JSON.stringify({social: head.social, ownNest: head.ownNest, moment: head.moment?.note ?? null, nest: head.nest}));
-    const dir = path.join(out, name);
+    const dir = path.join(out, before ? `${name}-before` : name);
     rmSync(dir, {recursive: true, force: true});
     mkdirSync(dir, {recursive: true});
     const labels = [];
@@ -97,13 +106,13 @@ for (const name of scenes) {
     if (head.scene.kind === "sleep") {
         const t0 = head.scene.date + head.scene.hours * 3600;
         // Three moments, each from two sides: asleep settled, a while on, a longer while on.
-        for (const [s, label] of [[900, "a quarter hour in"], [2400, "forty minutes in"], [5400, "an hour and a half in"]]) {
-            for (const [azimuth, polar, side] of [[0.7, 1.05, "from the front-left"], [2.6, 0.75, "from above behind"]]) {
+        for (const [s, label] of [[1200, "twenty minutes in"], [3600, "an hour in"]]) {
+            for (const [azimuth, polar, side] of [[0.7, 1.15, "side, low"], [2.4, 0.95, "behind, higher"], [4.2, 0.7, "other side, from above"]]) {
                 const text = await page.evaluate(async ([epoch, azimuth, polar]) => window.__sig2.sleeping(epoch, 2.4, polar, azimuth), [t0 + s, azimuth, polar]);
                 await shoot(`${label}, ${side}`, text);
             }
         }
-        strip(dir, name, i, 3);
+        strip(dir, before ? `${name}-before` : name, i, 3);
     } else if (head.moment) {
         const {start, seconds} = head.moment;
         const n = 12;
@@ -113,7 +122,7 @@ for (const name of scenes) {
             const text = await page.evaluate(async ([epoch, follow, dist]) => window.__sig2.look(epoch, dist, follow), [epoch, follow, follow ? 2.4 : 3.4]);
             await shoot(`+${(epoch - start).toFixed(1)} s`, text);
         }
-        strip(dir, name, i, 4);
+        strip(dir, before ? `${name}-before` : name, i, 4);
     } else {
         console.log(name, "no episode of that recipe in the window");
     }
@@ -126,3 +135,4 @@ for (const name of scenes) {
 writeFileSync(path.join(out, "summary.json"), JSON.stringify(summary, null, 1));
 await browser.close();
 server.close();
+rmSync(site, {recursive: true, force: true});

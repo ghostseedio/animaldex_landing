@@ -45,19 +45,20 @@ type Scene = {
 
 const day = (month: number, d = 20) => Date.UTC(2026, month - 1, d, 0) / 1000;
 const SCENES: Record<string, Scene> = {
-    // MARK: Sleeping together (the sleep layer: huddle, pile, cluster)
-    "sleep-ring-tailed-lemur": {zone: "rainforest", hours: 2, date: day(11), slug: "ring-tailed-lemur", name: "Ring-tailed Lemur", n: 5, activity: "diurnal", kind: "sleep"},
-    "sleep-tufted-capuchin": {zone: "rainforest", hours: 2, date: day(11), slug: "tufted-capuchin", name: "Tufted Capuchin", n: 5, activity: "diurnal", kind: "sleep"},
-    "sleep-barbary-macaque": {zone: "mountain", hours: 2, date: day(11), slug: "barbary-macaque", name: "Barbary Macaque", n: 5, activity: "diurnal", kind: "sleep"},
+    // MARK: Sleeping together (the sleep layer: huddle, pile, cluster). (Each is shown asleep at noon, as a night animal: the sleep
+    // is the same whichever hour a kind keeps, and a night's own light is too dark to see by.)
+    "sleep-ring-tailed-lemur": {zone: "rainforest", hours: 13, date: day(11), slug: "ring-tailed-lemur", name: "Ring-tailed Lemur", n: 5, activity: "nocturnal", kind: "sleep"},
+    "sleep-tufted-capuchin": {zone: "rainforest", hours: 13, date: day(11), slug: "tufted-capuchin", name: "Tufted Capuchin", n: 5, activity: "nocturnal", kind: "sleep"},
+    "sleep-barbary-macaque": {zone: "mountains", hours: 13, date: day(11), slug: "barbary-macaque", name: "Barbary Macaque", n: 5, activity: "nocturnal", kind: "sleep"},
     "sleep-sugar-glider": {zone: "woodland", hours: 13, date: day(11), slug: "sugar-glider", name: "Sugar Glider", n: 5, activity: "nocturnal", kind: "sleep"},
-    "sleep-zebu": {zone: "farm_garden", hours: 2, date: day(11), slug: "zebu", name: "Zebu", n: 5, activity: "diurnal", kind: "sleep"},
-    "sleep-collared-peccary": {zone: "desert", hours: 2, date: day(11), slug: "collared-peccary", name: "Collared Peccary", n: 5, activity: "diurnal", kind: "sleep"},
-    "sleep-guinea-pig": {zone: "farm_garden", hours: 2, date: day(11), slug: "guinea-pig", name: "Guinea Pig", n: 5, activity: "diurnal", kind: "sleep"},
-    "sleep-capybara": {zone: "wetland", hours: 12, date: day(11), slug: "capybara", name: "Capybara", n: 5, activity: "crepuscular", kind: "sleep"},
-    "sleep-domestic-sheep": {zone: "farm_garden", hours: 2, date: day(11), slug: "domestic-sheep", name: "Domestic Sheep", n: 6, activity: "diurnal", kind: "sleep"},
-    "sleep-kuhls-pipistrelle-bat": {zone: "woodland", hours: 12, date: day(11), slug: "kuhls-pipistrelle-bat", name: "Kuhl's Pipistrelle Bat", n: 6, activity: "nocturnal", kind: "sleep"},
+    "sleep-zebu": {zone: "farm_garden", hours: 13, date: day(11), slug: "zebu", name: "Zebu", n: 5, activity: "nocturnal", kind: "sleep"},
+    "sleep-collared-peccary": {zone: "desert", hours: 13, date: day(11), slug: "collared-peccary", name: "Collared Peccary", n: 5, activity: "nocturnal", kind: "sleep"},
+    "sleep-guinea-pig": {zone: "farm_garden", hours: 13, date: day(11), slug: "guinea-pig", name: "Guinea Pig", n: 5, activity: "nocturnal", kind: "sleep"},
+    "sleep-capybara": {zone: "wetland", hours: 13, date: day(11), slug: "capybara", name: "Capybara", n: 5, activity: "nocturnal", kind: "sleep"},
+    "sleep-domestic-sheep": {zone: "farm_garden", hours: 13, date: day(11), slug: "domestic-sheep", name: "Domestic Sheep", n: 6, activity: "nocturnal", kind: "sleep"},
+    "sleep-kuhls-pipistrelle-bat": {zone: "woodland", hours: 13, date: day(11), slug: "kuhls-pipistrelle-bat", name: "Kuhl's Pipistrelle Bat", n: 6, activity: "nocturnal", kind: "sleep"},
     // (A control: a kind with no sleeping together.)
-    "sleep-control-red-deer": {zone: "grassland", hours: 2, date: day(11), slug: "red-deer", name: "Red Deer", n: 5, activity: "diurnal", kind: "sleep"},
+    "sleep-control-red-deer": {zone: "grassland", hours: 13, date: day(11), slug: "red-deer", name: "Red Deer", n: 5, activity: "nocturnal", kind: "sleep"},
     // MARK: Recipe episodes
     "stone-long-tailed-macaque": {zone: "rainforest", hours: 10, date: day(11), slug: "long-tailed-macaque", name: "Long-tailed Macaque", n: 4, activity: "diurnal", kind: "recipe", recipe: "stone_hammer", block: "pound", within: 24},
     "stone-tufted-capuchin": {zone: "rainforest", hours: 10, date: day(11), slug: "tufted-capuchin", name: "Tufted Capuchin", n: 4, activity: "diurnal", kind: "recipe", recipe: "stone_hammer", block: "pound", within: 24},
