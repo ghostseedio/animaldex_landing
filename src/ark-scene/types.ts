@@ -721,6 +721,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * null when it is not in the scene.
      */
     animalStatus?: (id: string) => ArkAnimalStatus | null;
+    /** Behaviour flows (pilot): the reader's `ark.flow` words for the card's flow lines (null: English). */
+    setFlowWords?: (words: Record<string, string> | null) => void;
     /**
      * Lane `ark-sd-align`: an animal's day in the Ark against its kind's System Dynamics (`rhythm-status.ts`): its last
      * 24 hours' line, its share of each SD mode's kind, its tempo, its "in rhythm" score and why it is off. Worked out a

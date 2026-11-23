@@ -14,7 +14,8 @@
  */
 
 import table from "@/ark-scene/flows/flow-params.json";
-import {flowStepAt, flowSteps, forgetFlows, stepLine, type FlowServer, type FlowStep, type FlowSubject} from "@/ark-scene/flows/flows";
+import type {ArkActivityKey} from "@/lib/ark-animal-status";
+import {flowStepAt, flowSteps, forgetFlows, stepCardIn, stepCard, stepLine, stepLineIn, type FlowServer, type FlowStep, type FlowSubject, type FlowWords} from "@/ark-scene/flows/flows";
 import type {FlowParams} from "@/ark-scene/flows/params";
 
 type Beat = "walk" | "run" | "fly" | "glide" | "swim" | "enter_water" | "exit_water" | "climb" | "pause" | "shake" | "bite" | "chew" | "step" | "scan" | "peck" | "drink" | "preen" | "rest" | "sleep" | "play" | "stalk";
@@ -93,6 +94,62 @@ export function flowNow(id: string, epoch: number): {kind: string; line: string;
     const subject = subjects.get(id);
     const step = subject ? flowStepAt(subject, epoch) : null;
     return step ? {kind: step.kind, line: stepLine(step), server: Boolean(step.server)} : null;
+}
+
+let readerWords: FlowWords | null = null;
+/** The reader's `ark.flow` words (null: English, its lines naming the food). The page's card sets them. */
+export function setFlowWords(words: FlowWords | null): void {
+    readerWords = words;
+}
+
+/**
+ * The card's now and its log from its flow (the card reads the flow's own step, never the schedule's doing): its line
+ * now in the reader's words, and its earlier lines over `back` seconds, newest first (a line held across steps is one).
+ */
+export function flowStatus(id: string, epoch: number, back: number): {line: string; since: number; log: Array<{at: number; text: string}>} | null {
+    const subject = subjects.get(id);
+    if (!subject) return null;
+    const steps = flowSteps(subject, epoch - back, epoch + 0.001);
+    if (!steps.length) return null;
+    const head = (step: FlowStep) => (readerWords ? stepCardIn(step, readerWords) : stepCard(step)).line;
+    const runs: Array<{line: string; from: number; step: FlowStep}> = [];
+    for (const step of steps) {
+        const line = head(step);
+        if (!runs.length || runs[runs.length - 1].line !== line) runs.push({line, from: step.from, step});
+        else runs[runs.length - 1].step = step;
+    }
+    const now = runs[runs.length - 1];
+    const nowStep = flowStepAt(subject, epoch) ?? now.step;
+    return {
+        line: stepLineIn(nowStep, readerWords),
+        since: now.from,
+        log: runs.slice(0, -1).reverse().map((run) => ({at: run.from, text: run.line}))
+    };
+}
+
+/** Its flow's step at `epoch` as one of the card's activities (the live log's words for it), when it has a flow. */
+export function flowActivity(id: string, epoch: number): ArkActivityKey | null {
+    const subject = subjects.get(id);
+    const step = subject ? flowStepAt(subject, epoch) : null;
+    if (!step) return null;
+    const bout = step.bout?.kind;
+    switch (step.kind) {
+        case "sleep": case "settle": return "sleeping";
+        case "search": case "movePatch": case "found": return bout === "flowers" ? "flowers" : bout === "nest" ? "nest" : "food";
+        case "eat": return bout === "graze" ? "grazing" : bout === "browse" ? "browsing" : bout === "flowers" ? "flowers" : step.server ? "eating" : "food";
+        case "stalk": case "attempt": case "nearMiss": return "hunting";
+        case "catch": case "carry": return "eating";
+        case "cache": return "caching";
+        case "rest": case "digest": case "wake": case "keptWait": return "resting";
+        case "groom": return "grooming";
+        case "toWater": return "toWater";
+        case "drink": return "drinking";
+        case "wary": return "wary";
+        case "keptEat": return "feeding";
+        case "display": case "court": case "mate": case "dance": return "courting";
+        case "build": return "nest";
+    }
+    return null;
 }
 
 /** A slot its flow spends at least this share of still is a stay: the schedule's route for it is dropped. */

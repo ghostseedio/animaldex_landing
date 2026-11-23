@@ -260,8 +260,11 @@ function buildTick(subject: FlowSubject, tick: number): FlowStep[] {
         const cacheMeal = cacheMeals.find((m) => m >= t && m - t < 300);
         if (cacheMeal !== undefined) {
             t = push("movePatch", t, cacheMeal, "moving");
-            t = push("found", t, t + 15, "still", {detail: "cache", food: p.foods[0], server: true});
-            t = push("eat", t, t + around(random, p.handle), "still", {food: p.foods[0]});
+            // (What it dug up is named only when the server said what it cached; its background food is not what it cached.)
+            const cached = server.caches?.filter((c) => c.at <= cacheMeal && c.food).pop()?.food;
+            const dug = cached ? {eat: cached, the: null} : undefined;
+            t = push("found", t, t + 15, "still", {detail: "cache", food: dug, server: true});
+            t = push("eat", t, t + around(random, p.handle), "still", {food: dug});
             ate = true;
             continue;
         }
@@ -474,7 +477,7 @@ function soloLine(step: FlowStep): string {
         case "nearMiss": return step.detail === "dropped" ? fill("Missed: dropped {food}", f) : step.detail === "web" ? capital(fill("Missed: {food} broke free", f, true)) : capital(fill("Missed: {food} got away", f, true));
         case "catch": return fill("Caught {food}", f);
         case "found": return step.detail === "cache" ? fill("Dug up its cache: {food}", f) : fill("Found {food}", f);
-        case "eat": return f?.eat === "nectar" ? "Drinking nectar" : f?.eat === "pollen" ? "Gathering pollen" : fill("Eating {food}", f);
+        case "eat": return f?.eat === "nectar" ? "Drinking nectar" : f?.eat === "pollen" ? "Gathering pollen" : f ? fill("Eating {food}", f) : "Eating";
         case "carry": return fill("Carrying {food} off to store it", f);
         case "cache": return fill(CACHE[step.detail ?? "hide"] ?? CACHE.hide, f);
         case "dance": return "Dancing to show the others the way";

@@ -281,6 +281,10 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     // The "whose photo" line only once the photo itself has loaded: the server's photo can be refused at the signing
     // route (an original, a failed read), and a line about a photo that is not there would be wrong.
     const [loadedPhoto, setLoadedPhoto] = useState<string | null>(null);
+    // (Behaviour flows, pilot: the card's flow lines in the reader's words; English names the food.)
+    useEffect(() => {
+        scene()?.setFlowWords?.(locale.startsWith("en") ? null : words.flow ?? null);
+    }, [scene, locale, words.flow]);
     const status = useAnimalStatus(scene, animal.id);
     const [dayOpen, setDayOpen] = useState<string | null>(null);
     const dayShown = dayOpen === animal.id;
@@ -326,7 +330,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     }, [stepCycle]);
     // What it is doing now, in a word or two (no "Now:"): the schedule's activity; until the scene has it, asleep or nothing.
     const activityKey = status?.activity ?? (asleep ? "sleeping" : null);
-    const activity = activityKey ? words.activity[activityKey] ?? ARK_ACTIVITY_ENGLISH[activityKey] : null;
+    const activity = status?.line ?? (activityKey ? words.activity[activityKey] ?? ARK_ACTIVITY_ENGLISH[activityKey] : null);
     // Condition as a sign, not a chip (owner 2026-11-20): a star for a thriving one (good or prime), its band in the tooltip.
     const thriving = facts.thrive === "prime" || facts.thrive === "good" ? arkThriveWords(facts.thrive, words.life) : null;
     const hasLife = Boolean(life) || animal.origin !== undefined;

@@ -276,7 +276,7 @@ async function main() {
                 const tt = trip as unknown as {start: number; arrive: number; end: number; slot: number};
                 leg = `[${flowWindow(id, tt.arrive, tt.end, 8)}] ${trip.doing ?? "-"}${trip.shadow ? " shadow" : ""} slot ${tt.slot} ${Math.round(tt.start - t)}..${Math.round(tt.arrive - t)}..${Math.round(tt.end - t)} ${leg} stay[${trip.stay.map((b) => b.beat).slice(0, 6).join(",")}]`;
             }
-            return `${now ? `flow: ${now.line}${now.server ? " (server)" : ""}` : "flow: (off)"}   pose: ${e?.sched?.pose?.beat ?? "-"}${e?.sched?.pose?.moving ? " moving" : ""}   card: ${handle.animalStatus?.(id)?.activity ?? "-"}${params.has("legs") ? `   trip: ${leg}` : ""}`;
+            return `${now ? `flow: ${now.line}${now.server ? " (server)" : ""}` : "flow: (off)"}   pose: ${e?.sched?.pose?.beat ?? "-"}${e?.sched?.pose?.moving ? " moving" : ""}   card: ${(handle.animalStatus?.(id)?.line ?? handle.animalStatus?.(id)?.activity ?? "-")}${params.has("legs") ? `   trip: ${leg}` : ""}`;
         },
         /** 3.3 fix (log): a death line's tap, from the island's overview: where the camera goes, after its flight. */
         tapDeath: async (key: string) => {
@@ -296,7 +296,7 @@ async function main() {
         dormant: async (on: boolean) => {
             handle.setDormant?.(on ? [speciesId(0)] : []);
             await frames(6);
-            return debug.entries().map((e) => `${e.animal.model_slug} ${e.act ? `${String(e.act.meal)}${e.act.hidden ? " hidden" : ""}` : "about"} card:${handle.animalStatus?.(e.animal.id)?.activity ?? "-"}`);
+            return debug.entries().map((e) => `${e.animal.model_slug} ${e.act ? `${String(e.act.meal)}${e.act.hidden ? " hidden" : ""}` : "about"} card:${handle.animalStatus?.(e.animal.id)?.line ?? handle.animalStatus?.(e.animal.id)?.activity ?? "-"}`);
         },
         /** The webs' mesh: where its first web is, how many threads, and the clock's place in the webs' cycle. */
         webs: () => {
@@ -393,7 +393,7 @@ async function main() {
                 .entries()
                 .filter((e) => e.act)
                 .map((e) => `${e.animal.id.slice(-3)} ${e.animal.model_slug} ${String(e.act!.meal ?? "-")} ${String(e.act!.state ?? "")}${e.act!.hidden ? " hidden" : ""}${e.act!.lying ? ` lying ${Number(e.act!.lying).toFixed(2)}` : ""}`);
-            const status = (id: string) => handle.animalStatus?.(id)?.activity ?? "-";
+            const status = (id: string) => (handle.animalStatus?.(id)?.line ?? handle.animalStatus?.(id)?.activity ?? "-");
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
             return `+${s.toFixed(1)} s   card a: ${status(a)}   card b: ${status(b)}   dung marks: ${api.dung().length}\n${acts.concat(said).join("\n")}${scene.kind === "lure" ? `\n${JSON.stringify(debug.lures?.())}` : ""}${scene.kind === "hatch" ? `\n${JSON.stringify(debug.drops?.())}` : ""}${scene.kind === "mob" ? `\n${JSON.stringify(debug.mobbing?.())} rigs ${JSON.stringify(scene.cast[0] ? Array.from({length: scene.cast[0].n}, (_, i) => (debug as unknown as {rigState: (id: string) => unknown}).rigState(castId(0, i))).concat((debug as unknown as {rigState: (id: string) => unknown}).rigState(foe)) : [])}` : ""}`;
         },
@@ -567,7 +567,7 @@ async function main() {
             const lines = ids.map((id, i) => {
                 const e = debug.entries().find((x) => x.animal.id === id) as unknown as {sched?: {pose?: {beat?: string; doing?: string; act?: {recipe?: string; block?: string} | null}}} | undefined;
                 const p = at[i];
-                return `${i}${i === 0 ? "L" : " "} ${(e?.sched?.pose?.act?.recipe ?? "-").padEnd(14)} ${(e?.sched?.pose?.act?.block ?? "-").padEnd(6)} ${(e?.sched?.pose?.beat ?? "-").padEnd(6)} card:${handle.animalStatus?.(id)?.activity ?? "-"} ${p ? `d=${Math.hypot(p.x - cx, p.z - cz).toFixed(1)} y=${(p.y - handle.heightAt(p.x, p.z)).toFixed(1)} at ${p.x.toFixed(1)},${p.z.toFixed(1)}` : "-"}`;
+                return `${i}${i === 0 ? "L" : " "} ${(e?.sched?.pose?.act?.recipe ?? "-").padEnd(14)} ${(e?.sched?.pose?.act?.block ?? "-").padEnd(6)} ${(e?.sched?.pose?.beat ?? "-").padEnd(6)} card:${(handle.animalStatus?.(id)?.line ?? handle.animalStatus?.(id)?.activity ?? "-")} ${p ? `d=${Math.hypot(p.x - cx, p.z - cz).toFixed(1)} y=${(p.y - handle.heightAt(p.x, p.z)).toFixed(1)} at ${p.x.toFixed(1)},${p.z.toFixed(1)}` : "-"}`;
             });
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
             return `+${s.toFixed(0)} s spread ${spread.toFixed(1)} m centre ${cx.toFixed(1)},${cz.toFixed(1)}\n${lines.concat(said).join("\n")}`;

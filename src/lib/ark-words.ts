@@ -471,6 +471,8 @@ export type ArkWords = {
     grew?: Partial<import("@/lib/ark-stat-gains").ArkGrewWords>;
     /** What an animal is doing, in plain words, and the live log's lines of the schedule's moments (decision 240). */
     activity: ArkActivityWords;
+    /** Behaviour flows' card lines (`ark.flow`; `flows.ts` FLOW_WORDS_EN), for the pilot's scene switch. */
+    flow?: Record<string, string>;
     /** The live hunt marker (lane ark-kills-real); optional: an older bundle lacks it. */
     hunt?: ArkHuntWords;
     sound: ArkSoundWords;

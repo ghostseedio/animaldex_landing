@@ -117,7 +117,9 @@ test("flows: parameters come from the stored text", () => {
     assert.equal(P["house-sparrow"].repro.provision, true);
     assert.equal(P["western-honey-bee"].dance, true);
     assert.equal(P["western-honey-bee"].repro.system, "none");
-    assert.deepEqual(foodWordsOf("Seeds, crumbs, insects, grain, and opportunistic scraps").map((f) => f.eat), ["seeds", "crumbs", "an insect", "grain", "scraps"]);
+    assert.deepEqual(foodWordsOf("Seeds, crumbs, insects, grain, and opportunistic scraps").map((f) => f.eat), ["seeds", "crumbs", "grain", "scraps"]);
+    // (No fake events: an animal in the background food is never named; its eating is said as foraging.)
+    assert.deepEqual(foodWordsOf("Insects, worms and small prey"), []);
 });
 
 test("flows: no fake events: with nothing from the server, only neutral steps and its engine background food", () => {
@@ -137,7 +139,7 @@ test("flows: no fake events: with nothing from the server, only neutral steps an
         }
     }
     // A fox's everyday food is its engine background food (insects, fruit), never a rodent of the diet sentence.
-    assert.deepEqual(P["red-fox"].foods.map((f) => f.eat), ["an insect", "fruit"]);
+    assert.deepEqual(P["red-fox"].foods.map((f) => f.eat), ["fruit"]);
     assert.deepEqual(P["domestic-cat"].foods, []);
 });
 

@@ -67,6 +67,9 @@ const COUNT: Record<string, string> = {
 /** Mass foods (said as they are). */
 const MASS = new Set(["seeds", "crumbs", "grain", "grains", "scraps", "grass", "grasses", "heather", "herbs", "leaves", "shoots", "bark", "fruit", "carrion", "nectar", "pollen", "sagebrush leaves", "algae", "plankton", "honey", "meat-based food"]);
 
+/** The background foods a line may name: plants, seeds, fruit, nectar, algae, people's food. Never an animal. */
+const NAMEABLE = new Set(["an acorn", "a nut", "a fruit", "a berry", "seeds", "crumbs", "grain", "grains", "scraps", "grass", "heather", "herbs", "leaves", "shoots", "bark", "fruit", "nectar", "pollen", "sagebrush leaves", "algae", "honey"]);
+
 function article(noun: string): string {
     return /^[aeiou]/i.test(noun) ? `an ${noun}` : `a ${noun}`;
 }
@@ -88,6 +91,10 @@ export function foodWordsOf(phrase: string | null | undefined): FoodWord[] {
             if (COUNT[last]) word = {eat: article(COUNT[last]), the: `the ${COUNT[last]}`};
             else if (MASS.has(last)) word = {eat: last === "grasses" ? "grass" : last, the: null};
         }
+        // (No fake events, owner 2026-11-23: background food is the engine's, but an animal in it ("an insect", "a worm")
+        // would name a catch the engine never made. Only plant and other non-animal foods are named; an animal food is
+        // said as foraging.)
+        if (word && !NAMEABLE.has(word.eat)) word = null;
         if (word && !seen.has(word.eat)) {
             seen.add(word.eat);
             out.push(word);

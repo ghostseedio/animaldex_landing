@@ -41,6 +41,7 @@
  * circle the porch light at night.
  */
 
+import {flowActivity, flowsOn, flowStatus, setFlowWords} from "@/ark-scene/flows/scene-adapter";
 import {
     ACESFilmicToneMapping,
     Color,
@@ -2547,6 +2548,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return known.own;
     };
     const barsSubjectOf = (entry: Entry): ScheduleSubject | null => subjectOf(entry, entry.sched ?? statusSchedOf(entry));
+    /** The flows' card log looks back this far (s). */
+    const FLOW_STATUS_BACK = 1200;
     const statusOf = (entry: Entry): ArkAnimalStatus => {
         const epoch = worldMs() / 1000;
         const animal = entry.animal;
@@ -2564,12 +2567,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (A kill of its, or a step's meal for it, `fed` with source step: each fills it from that moment.)
         const fed = bars ? scheduleFed(bars, epoch, notes.filter((note) => note.kind === "meal" || note.kind === "stepFed").map((note) => note.at / 1000)) : null;
         const energy = bars ? energyOf(bars, epoch) : null;
+        // (Behaviour flows, pilot, behind their switch: the card reads its flow's own step and its log the flow's lines.)
+        const flow = flowsOn() && subject && !huntingNow ? flowStatus(animal.id, epoch, FLOW_STATUS_BACK) : null;
+        const scheduleLog = flow ? flow.log.map((line): ArkStatusLogEntry => ({id: `flow:${animal.id}:${Math.round(line.at)}`, source: "schedule", at: line.at * 1000, day: null, kind: "activity", text: line.text})) : plan?.log ?? [];
         return {
             id: animal.id,
             activity,
-            since: plan?.since ?? null,
+            ...(flow ? {line: flow.line} : {}),
+            since: flow ? flow.since : plan?.since ?? null,
             goal: plan?.goal ?? null,
-            log: arkStatusLog(plan?.log ?? [], record),
+            log: arkStatusLog(scheduleLog, record),
             bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), fed, energy, bornDay: animal.born_ark_day ?? null, lifespanDays: animal.lifespan_days ?? null, lifespanEstimate: animal.lifespan_estimate === true})
         };
     };
@@ -2849,7 +2856,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const sentence = moment.recipe && moment.count <= 1 ? signatureLineOf(a.model_slug, moment.recipe) : null;
             // (A sentence about several of the kind only for a pair's moment: one animal setting out alone is not "they".)
             const ownLine = sentence && (!sentence.startsWith("{animals}") || moment.kind === "courting" || moment.kind === "contest") ? sentence : null;
-            moments.push({id: moment.id, kind: moment.kind, activity: moment.activity, animalId: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, count: moment.count, at: moment.at, ...(ownLine ? {line: ownLine} : {})});
+            // (Behaviour flows, pilot: an animal doing something says its flow's own step, as its card does.)
+            const flowSays = flowsOn() && (moment.kind === "doing" || moment.kind === "group") ? flowActivity(a.id, moment.at + 1) : null;
+            moments.push({id: moment.id, kind: moment.kind, activity: flowSays ?? moment.activity, animalId: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, count: moment.count, at: moment.at, ...(ownLine ? {line: ownLine} : {})});
         }
         return {window: Math.max(done, after ?? done), moments};
     };
@@ -11603,6 +11612,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const entry = findEntry(id);
             return entry ? restOf(entry) : null;
         },
+        setFlowWords: (words) => setFlowWords(words),
         animalStatus: (id) => {
             const entry = findEntry(id);
             if (!entry) return null;

@@ -5,28 +5,7 @@
    "slug": "black-and-yellow-garden-spider",
    "guild": "web",
    "mode": "web",
-   "foods": [
-    {
-     "eat": "a grasshopper",
-     "the": "the grasshopper"
-    },
-    {
-     "eat": "a bee",
-     "the": "the bee"
-    },
-    {
-     "eat": "a wasp",
-     "the": "the wasp"
-    },
-    {
-     "eat": "a fly",
-     "the": "the fly"
-    },
-    {
-     "eat": "a moth",
-     "the": "the moth"
-    }
-   ],
+   "foods": [],
    "search": 390,
    "patience": 4680,
    "handle": 78,
@@ -117,10 +96,6 @@
      "the": "the acorn"
     },
     {
-     "eat": "an insect",
-     "the": "the insect"
-    },
-    {
      "eat": "fruit",
      "the": null
     }
@@ -175,10 +150,6 @@
     {
      "eat": "sagebrush leaves",
      "the": null
-    },
-    {
-     "eat": "a beetle",
-     "the": "the beetle"
     }
    ],
    "search": 32,
@@ -224,12 +195,7 @@
    "slug": "grey-heron",
    "guild": "sitwait",
    "mode": "sitwait",
-   "foods": [
-    {
-     "eat": "an insect",
-     "the": "the insect"
-    }
-   ],
+   "foods": [],
    "search": 140,
    "patience": 3500,
    "handle": 29,
@@ -275,10 +241,6 @@
     {
      "eat": "seeds",
      "the": null
-    },
-    {
-     "eat": "an insect",
-     "the": "the insect"
     }
    ],
    "search": 9,
@@ -324,12 +286,7 @@
    "slug": "orb-weaver-spider",
    "guild": "web",
    "mode": "web",
-   "foods": [
-    {
-     "eat": "a fly",
-     "the": "the fly"
-    }
-   ],
+   "foods": [],
    "search": 400,
    "patience": 4800,
    "handle": 80,
@@ -428,10 +385,6 @@
    "guild": "stalker",
    "mode": "listen",
    "foods": [
-    {
-     "eat": "an insect",
-     "the": "the insect"
-    },
     {
      "eat": "fruit",
      "the": null
