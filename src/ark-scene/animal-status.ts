@@ -358,6 +358,13 @@ export function scheduleFed(subject: ScheduleSubject, epoch: number, meals: read
 
 /** The live log's schedule moments come in windows of this many seconds of the shared clock: one line each at most. */
 export const MOMENT_WINDOW_SECONDS = 5;
+/**
+ * The same kind of line is not said again this soon (owner, 2026-11-23: "a bunch of the same logs e.g. '[animal] is
+ * heading home' ... less robotic"): at dusk most animals' slots turn homeward together, so without this one line kind
+ * fills the log. World seconds, by kind; a kind not listed waits `MOMENT_REPEAT_DEFAULT`.
+ */
+export const MOMENT_REPEAT_SECONDS: Partial<Record<ScheduleMomentKind, number>> = {home: 180, toWater: 120, doing: 45, group: 90, flock: 90, breathing: 90, calling: 60};
+export const MOMENT_REPEAT_DEFAULT = 30;
 
 export type ScheduleMomentKind = "hunting" | "nest" | "eggs" | "courting" | "contest" | "fishing" | "playing" | "toWater" | "home" | "flock" | "breathing" | "calling" | "bathing" | "feeding" | "group" | "doing";
 
@@ -376,9 +383,9 @@ export type MomentSubject = ScheduleSubject & {
  * and the striking nearly always; the everyday (`doing`: an animal setting about something else, "A Red Deer is
  * drinking") now and then, so the log keeps a steady flow without crowding.
  */
-export const MOMENT_WEIGHTS: Record<ScheduleMomentKind, number> = {hunting: 1, nest: 1, eggs: 0.6, courting: 1, contest: 1, fishing: 0.8, playing: 1, toWater: 1, home: 1, flock: 0.8, breathing: 0.5, calling: 0.4, bathing: 0.7, feeding: 1, group: 0.7, doing: 0.3};
+export const MOMENT_WEIGHTS: Record<ScheduleMomentKind, number> = {hunting: 1, nest: 1, eggs: 0.6, courting: 1, contest: 1, fishing: 0.8, playing: 1, toWater: 0.3, home: 0.2, flock: 0.8, breathing: 0.5, calling: 0.4, bathing: 0.7, feeding: 1, group: 0.7, doing: 0.3};
 /** Which moment a window says when several are let through: the striking first, then the notable, then the everyday. */
-const MOMENT_TIER: Record<ScheduleMomentKind, number> = {hunting: 0, nest: 0, eggs: 0, courting: 0, contest: 0, playing: 0, toWater: 0, home: 0, flock: 0, feeding: 0, fishing: 1, bathing: 1, breathing: 1, calling: 1, group: 1, doing: 2};
+const MOMENT_TIER: Record<ScheduleMomentKind, number> = {hunting: 0, nest: 0, eggs: 0, courting: 0, contest: 0, playing: 0, toWater: 1, home: 1, flock: 0, feeding: 0, fishing: 1, bathing: 1, breathing: 1, calling: 1, group: 1, doing: 2};
 /** The everyday activities a moment may say of one animal (`doing`) or of a group by its leader (`group`). */
 // (The schedule's stalk, "waiting for prey" or "on the prowl", is everyday too: visual only, nothing is caught. The live
 // log's "is hunting" is the server's encounter hunt alone, a due predator setting out on its forays: `pickMoment`'s starts.)
