@@ -188,7 +188,13 @@ export function predatorAt(s: MealScript, u: number): MealPose {
             const w = smooth((u - k.pickTo) / (k.walkTo - k.pickTo));
             return pose(lerp(s.feed.x, k.at.x, w), lerp(s.feed.z, k.at.z, w), k.at.yaw, "walk", 0, Math.hypot(k.at.x - s.feed.x, k.at.z - s.feed.z) / Math.max(k.walkTo - k.pickTo, 0.1), "caching");
         }
-        return pose(k.at.x, k.at.z, k.at.yaw, "eat", 0.16 + 0.05 * Math.sin((u - k.walkTo) * 5), 0, "caching");
+        // Digging and covering: nose to the ground and the front low (the rig's dig clip where it has one, its forepaws
+        // scraping), a quick scratching rhythm while it digs and a slower push of earth back over it while it covers.
+        const v = u - k.walkTo;
+        const covering = u >= k.digTo;
+        const into = smooth(Math.min(v / 0.8, 1));
+        const scratch = covering ? 0.04 * Math.sin(v * 4) : 0.06 * Math.abs(Math.sin(v * 9));
+        return pose(k.at.x, k.at.z, k.at.yaw, "dig", (0.36 + scratch) * into, 0, "caching");
     }
     if (u < s.feedTo) {
         const v = u - s.feedFrom;
@@ -272,7 +278,12 @@ export function preyAt(s: MealScript, u: number, atCatch: ActPose, carcassEnd: n
             const up = s.c.mouth ? Math.min(s.c.mouth.up, s.c.predator.height * 0.6) : s.c.predator.height * 0.45;
             return {x: pred.x + Math.sin(pred.yaw) * (reach + q.length * 0.1), z: pred.z + Math.cos(pred.yaw) * (reach + q.length * 0.1), base: pred.base + up - q.height * 0.5, yaw: pred.yaw + Math.PI / 2, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: "lie", speed: 0, lying: 0.9};
         }
-        // Laid at the hole in front of it, then into it and covered: sunk and gone by the cover's end.
+        // Dropped beside it while it digs (the hole in front of its nose), then pushed into the hole and covered: sunk and
+        // gone by the cover's end.
+        if (u < k.digTo) {
+            const aside = s.c.predator.length * 0.25 + q.length * 0.6;
+            return {...lying(1), x: k.at.x + Math.cos(k.at.yaw) * aside * s.side, z: k.at.z - Math.sin(k.at.yaw) * aside * s.side, base: s.c.ground(k.at.x + Math.cos(k.at.yaw) * aside * s.side, k.at.z - Math.sin(k.at.yaw) * aside * s.side), yaw: k.at.yaw + s.side * 1.2, lying: s.side};
+        }
         const hole = {x: k.at.x + Math.sin(k.at.yaw) * (s.c.predator.length * 0.5 + q.length * 0.4), z: k.at.z + Math.cos(k.at.yaw) * (s.c.predator.length * 0.5 + q.length * 0.4)};
         const sink = smooth((u - k.digTo) / Math.max(k.coverTo - k.digTo, 0.1));
         return {x: hole.x, z: hole.z, base: s.c.ground(hole.x, hole.z) - q.height * 1.2 * sink, yaw: k.at.yaw + s.side * 1.2, pitch: 0, roll: 0, scale: 1, dim: 0.4 * sink, hidden: u >= k.coverTo, state: "lie", speed: 0, lying: s.side};

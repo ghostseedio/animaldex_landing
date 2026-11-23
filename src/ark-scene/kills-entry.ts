@@ -111,7 +111,7 @@ async function main() {
     const api = {
         info: () => debug.meals(),
         /** The world at `s` seconds after the meal's step, from `distance` (or following an animal: `follow`). */
-        shot: async (s: number, distance: number, follow?: string, polar?: number) => {
+        shot: async (s: number, distance: number, follow?: string, polar?: number, side?: boolean) => {
             // (Up to the moment in small steps, so the rigs' one-shots, lying down and getting up, play as they would.)
             await setAt(t0 + s - 2.5);
             for (let i = 1; i <= 25; i++) {
@@ -121,8 +121,12 @@ async function main() {
             }
             // (`?jaw=1`: on the prey itself, wherever it is drawn: the swallow's view.)
             const preyAct = params.has("jaw") ? debug.entries().find((e) => e.animal.id === preyId && e.act && !e.act.hidden)?.act ?? null : null;
-            const who = preyAct ? {x: Number(preyAct.x), z: Number(preyAct.z), y: Number(preyAct.base)} : follow ? handle.locate(follow) : null;
-            handle.setView(view(distance, polar ?? 1.12, 0.7, who ? {x: who.x, z: who.z} : centre, who ? Math.max(who.y - Math.max(ground, 0), 0) + 0.4 : 0.4));
+            // (Following an animal in an act: where the act draws it, not where its schedule last put it.)
+            const followAct = follow ? debug.entries().find((e) => e.animal.id === follow && e.act && !e.act.hidden)?.act ?? null : null;
+            const who = preyAct ? {x: Number(preyAct.x), z: Number(preyAct.z), y: Number(preyAct.base)} : followAct ? {x: Number(followAct.x), z: Number(followAct.z), y: Number(followAct.base)} : follow ? handle.locate(follow) : null;
+            // (`side`: square on to the followed animal's flank, to read its head and legs.)
+            const azimuth = side && followAct ? Number(followAct.yaw) - Math.PI / 2 : 0.7;
+            handle.setView(view(distance, polar ?? 1.12, azimuth, who ? {x: who.x, z: who.z} : centre, who ? Math.max(who.y - Math.max(ground, 0), 0) + 0.4 : 0.4));
             await frames(3);
             const acts = debug
                 .entries()
@@ -131,7 +135,10 @@ async function main() {
             const status = (id: string) => handle.animalStatus?.(id)?.activity ?? "-";
             const hunt = handle.liveHunt?.();
             const flow = flowNow(predatorId, fake!.date / 1000);
-            return `+${s.toFixed(1)} s   flow: ${flow ? flow.line : "-"}   predator card: ${status(predatorId)}   marker: ${hunt ? `${hunt.phase} ${hunt.name}` : "none"}   traces: ${debug.traces().length}\n${acts.join("\n")}`;
+            const dbg = window as unknown as {__arkDebug: {rigState?: (id: string) => {clip: string | null} | null; rigClips?: (slug: string) => string[]}};
+            const clipNow = dbg.__arkDebug.rigState?.(predatorId)?.clip ?? "-";
+            if (params.has("clips")) console.log("[kills] rig clips", JSON.stringify(dbg.__arkDebug.rigClips?.(pair.predator.slug) ?? []));
+            return `+${s.toFixed(1)} s   clip: ${clipNow}   flow: ${flow ? flow.line : "-"}   predator card: ${status(predatorId)}   marker: ${hunt ? `${hunt.phase} ${hunt.name}` : "none"}   traces: ${debug.traces().length}\n${acts.join("\n")}`;
         },
         handle
     };

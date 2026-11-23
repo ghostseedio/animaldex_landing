@@ -50,7 +50,7 @@ const ID = "0000feed-0000-4000-8000-000000000000";
 /** Each scene: framing distance (m), and the flow moments to find: [label, kinds, from s, to s]. */
 const PLANS = {
     flowdeer: {distance: 7, polar: 0.95, finds: [["eating (background food)", ["eat"], 0, 1500], ["searching", ["search", "movePatch"], 0, 1500], ["eating, later", ["eat"], 900, 3000]]},
-    flowsparrow: {distance: 2.2, polar: 0.9, finds: [["eating (background food)", ["eat"], 0, 1500], ["searching", ["search"], 0, 1500], ["resting", ["rest", "digest", "groom"], 0, 2400]]},
+    flowsparrow: {distance: 1.6, polar: 1.3, azimuth: 3.8, finds: [["eating (background food)", ["eat"], 0, 1500], ["searching", ["search"], 0, 1500], ["resting", ["rest", "digest", "groom"], 0, 2400]]},
     flowjay: {distance: 2, polar: 1.0, finds: [["eating (background food)", ["eat"], 0, 1500], ["searching", ["search"], 0, 1500]]},
     flowfox: {distance: 4, polar: 1.0, finds: [["the server's kill", ["catch"], 1100, 1300, 1], ["eating its kill", ["eat"], 1200, 1800], ["listening for prey", ["search"], 0, 1150]]}
 };
@@ -65,7 +65,7 @@ for (const name of scenes) {
         const errors = [];
         page.on("pageerror", (e) => errors.push(e.message));
         page.on("console", (m) => m.text().startsWith("[behaviours]") && console.log(name, m.text().slice(0, 400)));
-        await page.goto(`${base}?scene=${name}&quality=high&flows=${flows}`, {waitUntil: "domcontentloaded", timeout: 120000});
+        await page.goto(`${base}?scene=${name}&quality=high&flows=${flows}&legs=1`, {waitUntil: "domcontentloaded", timeout: 120000});
         await page.waitForFunction(() => window.__behaviours || window.__behavioursError, null, {timeout: 300000});
         const failed = await page.evaluate(() => window.__behavioursError ?? null);
         if (failed) {
@@ -81,10 +81,10 @@ for (const name of scenes) {
                 console.log(name, label, "not found");
                 continue;
             }
-            await page.evaluate(async ([s2, d, id, polar]) => {
+            await page.evaluate(async ([s2, d, id, polar, azimuth]) => {
                 await window.__behaviours.shot(s2, d, id);
-                await window.__behaviours.closeOn(id, d, polar);
-            }, [s, plan.distance, ID, plan.polar ?? 1.1]);
+                await window.__behaviours.closeOn(id, d, polar, azimuth);
+            }, [s, plan.distance, ID, plan.polar ?? 1.1, plan.azimuth ?? 0.7]);
             // (A flock: each member's line, the flock foraging together.)
             const ids = name === "flowsparrow" ? [0, 1, 2].map((i) => ID.slice(0, -1) + i) : [ID];
             const caption = (await page.evaluate((list) => list.map((id) => window.__behaviours.flowCaption(id)), ids)).map((line, i) => (ids.length > 1 ? `#${i} ` : "") + line).join("\n");

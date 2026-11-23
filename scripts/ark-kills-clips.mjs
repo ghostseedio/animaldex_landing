@@ -83,7 +83,7 @@ for (const pair of pairs) {
         if (m.text().startsWith("[kills]")) console.log(pair, m.text().slice(0, 600));
     });
     // (fox-cache: the fox pair with its catch cached (SIG-EVENTS food_cache); the fox pairs with the behaviour flows on.)
-    await page.goto(`${base}?pair=${pair.replace("-cache", "")}${pair === "fox-cache" ? "&cache=1" : ""}${pair.startsWith("fox") ? "&flows=1" : ""}&quality=high${process.argv.includes("--where") ? "&where=1" : ""}${pair === "python" ? "&jaw=1" : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
+    await page.goto(`${base}?pair=${pair.replace("-cache", "")}${pair === "fox-cache" ? "&cache=1" : ""}${pair.startsWith("fox") ? "&flows=1&clips=1" : ""}&quality=high${process.argv.includes("--where") ? "&where=1" : ""}${pair === "python" ? "&jaw=1" : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
     page.on("pageerror", (e) => console.log(pair, "page error:", e.message.slice(0, 300)));
     try {
         await page.waitForFunction(() => window.__kills, null, {timeout: 300000});
@@ -113,7 +113,7 @@ for (const pair of pairs) {
         [Math.max(c - 0.15, 0), "the catch"],
         [c + 0.6, "down: lying on its side (no fade)"],
         [c + 2, "the meal begins"],
-        ...(info.cache ? [[(c + info.cache[0]) / 2, "picking up its catch"], [(info.cache[0] + info.cache[1]) / 2, "carrying it off in its mouth"], [(info.cache[1] + info.cache[2]) / 2, "digging the cache"], [(info.cache[2] + info.cache[3]) / 2, "covering it over"]] : [0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((k) => [c + f * k, `the meal ${Math.round(k * 100)}%`])),
+        ...(info.cache ? [[(c + info.cache[0]) / 2, "picking up its catch"], [(info.cache[0] + info.cache[1]) / 2, "carrying it off in its mouth"], [info.cache[1] + (info.cache[2] - info.cache[1]) * 0.3, "digging the cache"], [info.cache[1] + (info.cache[2] - info.cache[1]) * 0.75, "digging the cache, deeper"], [(info.cache[2] + info.cache[3]) / 2, "covering it over"]] : [0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((k) => [c + f * k, `the meal ${Math.round(k * 100)}%`])),
         [info.feedTo + 0.5, "the meal over"],
         ...(info.drink ? [[(info.drink[0] + info.drink[1]) / 2, "a drink at the water"]] : []),
         [info.rest[0] + 3, "resting nearby"],
@@ -128,12 +128,15 @@ for (const pair of pairs) {
     const labels = [];
     for (let i = 0; i < shots.length; i++) {
         const [s, label] = shots[i];
-        const follow = /water|resting|on its way|chase|waypoint|carrying|digging|covering/.test(label) ? (label.includes("scavenger") ? info.visits.find((v) => label.includes(v.id.slice(-2)))?.id : "0000feed-0000-4000-8000-000000000000") : undefined;
-        const note = await page.evaluate(async ([s, d, follow, label]) => {
-            const text = await window.__kills.shot(s, d, follow);
+        // (The fox pairs keep the fox in frame in every shot: the cache is dug metres from the kill.)
+        const follow = pair.startsWith("fox") && !label.includes("scavenger") ? "0000feed-0000-4000-8000-000000000000" : /water|resting|on its way|chase|waypoint|carrying|digging|covering/.test(label) ? (label.includes("scavenger") ? info.visits.find((v) => label.includes(v.id.slice(-2)))?.id : "0000feed-0000-4000-8000-000000000000") : undefined;
+        // (The fox's pick-up, dig and cover from the side and close: nose to the ground, forepaws working.)
+        const close = pair.startsWith("fox") && /picking|digging|covering/.test(label);
+        const note = await page.evaluate(async ([s, d, follow, label, close]) => {
+            const text = await window.__kills.shot(s, d, follow, close ? 1.3 : undefined, close);
             document.getElementById("note").textContent = `${label}\n${text}`;
             return text;
-        }, [s, follow ? DISTANCE[pair] * 1.6 : DISTANCE[pair], follow, label]);
+        }, [s, close ? DISTANCE[pair] : follow ? DISTANCE[pair] * 1.6 : DISTANCE[pair], follow, label, close]);
         labels.push(`${String(i).padStart(2, "0")} ${label}: ${note.replace(/\n/g, " | ")}`);
         await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 85});
     }

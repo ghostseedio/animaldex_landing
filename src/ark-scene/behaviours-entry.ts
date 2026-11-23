@@ -11,7 +11,7 @@ import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {disturbedNow} from "@/ark-scene/defence-moves";
 import {actWindow} from "@/ark-scene/behaviour-group";
-import {flowDebug, flowNow, setFlowServer} from "@/ark-scene/flows/scene-adapter";
+import {flowDebug, flowWindow, flowNow, setFlowServer} from "@/ark-scene/flows/scene-adapter";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -259,7 +259,24 @@ async function main() {
         flowCaption: (id: string) => {
             const e = debug.entries().find((x) => x.animal.id === id) as unknown as {sched?: {pose?: {beat?: string; moving?: boolean}}} | undefined;
             const now = flowNow(id, fake!.date / 1000);
-            return `${now ? `flow: ${now.line}${now.server ? " (server)" : ""}` : "flow: (off)"}   pose: ${e?.sched?.pose?.beat ?? "-"}${e?.sched?.pose?.moving ? " moving" : ""}   card: ${handle.animalStatus?.(id)?.activity ?? "-"}`;
+            // (`?legs=1`: the trip's doing and the leg it is on, to trace a pose back to its leg.)
+            const trip = (e as unknown as {sched?: {trip?: {doing?: string; start: number; arrive: number; shadow?: unknown; legs: Array<{mode: string; beat: string; seconds: number}>; stay: Array<{at: number; beat: string}>}}})?.sched?.trip;
+            let leg = "-";
+            if (params.has("legs") && trip) {
+                const t = fake!.date / 1000;
+                let at = trip.start;
+                leg = "stay";
+                for (const l of trip.legs) {
+                    if (t < at + l.seconds) {
+                        leg = `${l.mode}/${l.beat}`;
+                        break;
+                    }
+                    at += l.seconds;
+                }
+                const tt = trip as unknown as {start: number; arrive: number; end: number; slot: number};
+                leg = `[${flowWindow(id, tt.arrive, tt.end, 8)}] ${trip.doing ?? "-"}${trip.shadow ? " shadow" : ""} slot ${tt.slot} ${Math.round(tt.start - t)}..${Math.round(tt.arrive - t)}..${Math.round(tt.end - t)} ${leg} stay[${trip.stay.map((b) => b.beat).slice(0, 6).join(",")}]`;
+            }
+            return `${now ? `flow: ${now.line}${now.server ? " (server)" : ""}` : "flow: (off)"}   pose: ${e?.sched?.pose?.beat ?? "-"}${e?.sched?.pose?.moving ? " moving" : ""}   card: ${handle.animalStatus?.(id)?.activity ?? "-"}${params.has("legs") ? `   trip: ${leg}` : ""}`;
         },
         /** 3.3 fix (log): a death line's tap, from the island's overview: where the camera goes, after its flight. */
         tapDeath: async (key: string) => {
@@ -343,12 +360,12 @@ async function main() {
             return `${id.slice(-3)} chosen, ${distance === null ? "the page's own close-up" : `${distance} m back`}, lift ${lift ? "on" : "off"}, length ${at ? at.length.toFixed(3) : "?"} m`;
         },
         /** The view on an animal where it is now, in the air too (after a `shot`, the clock standing). */
-        closeOn: async (id: string, distance: number, polar = 1.35) => {
+        closeOn: async (id: string, distance: number, polar = 1.35, azimuth = 0.7) => {
             const act = debug.entries().find((e) => e.animal.id === id)?.act as {x: number; z: number; base: number} | null | undefined;
             const at = act ? {x: act.x, y: act.base + 0.15, z: act.z} : handle.locate(id);
             const rig = debug as unknown as {controls: {minDistance: number}};
             rig.controls.minDistance = Math.min(rig.controls.minDistance, distance);
-            if (at) handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance, polar, azimuth: 0.7});
+            if (at) handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance, polar, azimuth});
             await frames(3);
         },
         /** The world at an absolute time (s), looking at a point from close by. */

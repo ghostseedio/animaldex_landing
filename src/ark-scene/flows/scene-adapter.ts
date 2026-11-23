@@ -42,14 +42,16 @@ export function setFlowServer(id: string, server: Partial<FlowServer>): void {
     forgetFlows();
 }
 
-export function flowSubjectOf(animal: {id: string; condition?: string | null; group?: {leader: {id: string}} | null}, slug: string, hoursAt: (epoch: number) => number, awake?: (epoch: number) => boolean): FlowSubject | null {
+export function flowSubjectOf(animal: {id: string; condition?: string | null; group?: {leader: {id: string; condition?: string | null}} | null}, slug: string, hoursAt: (epoch: number) => number, awake?: (epoch: number) => boolean): FlowSubject | null {
     const params = flowParamsFor(slug);
     if (!params) return null;
     const extra = servers.get(animal.id) ?? {};
-    const hungry = animal.condition === "hungry";
-    // A flock's member forages with its flock: its flow is its leader's (seeded by the leader's id), so they land, eat,
-    // rest and go up together; its own server events still pin its own steps (its version keeps them apart).
+    // A flock's member forages with its flock: its flow is its leader's (seeded by the leader's id, fed or hungry by its
+    // leader's condition, awake by its leader's hours: the caller's `awake`), so they land, eat, rest and go up together,
+    // and every member reads the one flow (a member's own hunger or sleep gave the shared memo whichever came first);
+    // its own server events still pin its own steps (its version keeps them apart).
     const leader = params.flock && animal.group ? animal.group.leader.id : null;
+    const hungry = (leader ? animal.group!.leader.condition : animal.condition) === "hungry";
     const own = leader && Object.keys(extra).length ? {version: `${animal.id}:${String(extra.version ?? "")}`} : {};
     const subject: FlowSubject = {id: leader ?? animal.id, params, hoursAt, awake, server: {fedOn: () => !hungry, ...extra, ...own}};
     subjects.set(animal.id, subject);
@@ -72,6 +74,18 @@ const subjects = new Map<string, FlowSubject>();
 /** For the harness: whether the switch is on and which ids have flows. */
 export function flowDebug(): {on: boolean; ids: string[]} {
     return {on: flowsOn(), ids: Array.from(subjects.keys()).slice(0, 12)};
+}
+
+/** Debug: its flow's steps over [from, to) every `every` s, as `kind/pose`, and whose flow it reads. */
+export function flowWindow(id: string, from: number, to: number, every = 5): string {
+    const subject = subjects.get(id);
+    if (!subject) return "(no subject)";
+    const out: string[] = [];
+    for (let t = from; t < to; t += every) {
+        const step = flowStepAt(subject, t);
+        out.push(step ? `${step.kind}/${step.pose}` : "-");
+    }
+    return `${subject.id.slice(-3)} v${String(subject.server.version ?? "")} awake ${subject.awake ? subject.awake(from) : "?"} fed ${subject.server.fedOn ? subject.server.fedOn(from) : "?"}: ${out.join(" ")}`;
 }
 
 /** Its flow step now, as the scene plays it, and the card's line for it (null: no flow for it, or flows off). */
@@ -182,7 +196,8 @@ export function flowTrip<T extends AdaptTrip>(trip: T, subject: FlowSubject | nu
             // (One beat a stance while it holds: merged with the one before it when they are the same.)
             const prev = out[out.length - 1];
             if (!(prev && prev.beat === beat && prev.x === at.x && prev.z === at.z && beat !== "bite" && beat !== "chew" && beat !== "peck")) out.push({at: t, beat, x: at.x, z: at.z, yaw: at.yaw});
-            t += cadence(beat);
+            // (Never past its step's end: a flock's short peck between searches fell inside one long beat's stride.)
+            t = Math.min(t + cadence(beat), step ? Math.max(step.to - trip.arrive, t + 0.3) : Infinity);
         }
     }
 }

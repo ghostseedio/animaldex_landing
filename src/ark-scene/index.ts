@@ -408,7 +408,7 @@ const FLYERS = ARK_FLYERS;
 /** A catch lying on its side (rad): over onto its flank, not quite flat. */
 const LYING_ROLL = 1.42;
 /** A meal act's states the rig plays from its own clips (`rig-player.ts` RECIPE_CLIPS): feeding, a glance up, lying up. */
-const MEAL_CLIP_STATES = new Set(["eat", "scan", "rest", "bask"]);
+const MEAL_CLIP_STATES = new Set(["eat", "scan", "rest", "bask", "dig"]);
 
 /** The island's hour offset from UTC: everyone sees the same time of day (graphics pass; `src/lib/ark-clock.ts`). */
 const ISLAND_OFFSET_HOURS = 0;
@@ -5790,7 +5790,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const reacted = Boolean(reacting && want === reacting.name);
         // (A meal's act, `meal-acts.ts`: head down feeding, a glance up, lying up to rest, on the rig's own clips.)
         const mealState = !recipeAct && entry.act?.meal && entry.act.state && MEAL_CLIP_STATES.has(entry.act.state) ? entry.act.state : null;
-        const recipeRaw = !state.flying && !reacted && (recipeAct || mealState) ? recipeClip(sleepState(recipeAct?.state ?? mealState), (name) => Boolean(clip(name))) : null;
+        // (A cache dug where the rig has no dig clip: its graze, head down, the act's pitch putting the nose to the ground.)
+        const mealClip = mealState === "dig" && !recipeClip("dig", (name) => Boolean(clip(name))) ? "eat" : mealState;
+        const recipeRaw = !state.flying && !reacted && (recipeAct || mealClip) ? recipeClip(sleepState(recipeAct?.state ?? mealClip), (name) => Boolean(clip(name))) : null;
         // A rig with a sit (a pilot cat's or dog's) rests sitting up rather than lying, about half of them (by its own phase).
         const fromRecipe = recipeRaw?.name === "lie" && clip("sit") && entry.phase < 0.5 ? {...recipeRaw, name: "sit"} : recipeRaw;
         let byRecipe = false;
