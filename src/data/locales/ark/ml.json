@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}-നെ {aPredator} തിന്നു",
             "caught": "{aPredator} {aPrey}-നെ പിടിച്ചു",
+            "webCaught": "{aPredator} തന്റെ വലയിൽ {aPrey}-നെ പിടിച്ചു",
             "dormant": "{animals} ശീതകാല ഉറക്കത്തിലായി",
             "woke": "{animals} വീണ്ടും ഉണർന്നു",
             "escaped": "{aPrey} {aPredator}-ൽ നിന്ന് രക്ഷപ്പെട്ടു",

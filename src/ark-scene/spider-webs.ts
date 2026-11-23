@@ -80,7 +80,23 @@ const GENERA: Record<string, WebHabit> = {
     Eratigena: SHEET(0.2, "Eratigena atrica: sheet and funnel in house corners, sheds, wall feet (Roberts 1995)"),
     Tegenaria: SHEET(0.18, "Tegenaria: sheet and funnel (Roberts 1995)"),
     Agelenopsis: SHEET(0.25, "Agelenopsis: grass spider, sheet and funnel in grass (Bugguide)"),
-    Agelena: SHEET(0.25, "Agelena: sheet and funnel in low plants (Roberts 1995)")
+    Agelena: SHEET(0.25, "Agelena: sheet and funnel in low plants (Roberts 1995)"),
+    // ARK-WEBS 2026-11-23: the web spiders aboard the first list missed (no web was drawn for them). Each from the
+    // species' own stored text (its field guide row, as `data/ark/hunt-acts.json` quotes it) and its family's habit.
+    // Gasteracantha cancriformis: "insects trapped in orb webs" (stored diet text); an araneid orb, renewed as its family.
+    Gasteracantha: ORB(0.2, 4, null, "Gasteracantha cancriformis: orb web (stored diet text); renewed as Araneidae (Foelix 2011)"),
+    // Macracantha arcuata: "the spiny orb-weaver subfamily of the orb-web family Araneidae" (stored text).
+    Macracantha: ORB(0.2, 4, null, "Macracantha arcuata: Gasteracanthinae orb (stored text); renewed as Araneidae (Foelix 2011)"),
+    // Caerostris darwini: "Orb web hung in open air over water, not among foliage" (stored text); the largest orbs known,
+    // up to 2.8 m2 (Kuntner & Agnarsson 2010, J. Arachnol. 38: 346-356): a radius near a metre.
+    Caerostris: ORB(0.9, null, null, "Caerostris darwini: giant orb over water, up to 2.8 m2 (Kuntner & Agnarsson 2010)"),
+    // Long-jawed orb weavers: "Orb web with open hub in many species" (stored text).
+    Tetragnatha: ORB(0.15, 19.5, null, "Tetragnatha: open-hub orb (stored text), spun at dusk (Roberts 1995)"),
+    Leucauge: ORB(0.15, 4, null, "Leucauge: open-hub orb (stored text)"),
+    // Thwaitesia (mirror spider), a comb-footed spider (stored text): a theridiid's small tangle among leaves.
+    Thwaitesia: TANGLE(0.1, false, "Thwaitesia: comb-footed (Theridiidae) tangle (stored text; Benjamin & Zschokke 2003)"),
+    // Eresus (ladybird spider): "the sheet of woolly, sticky silk around the burrow mouth" (stored text).
+    Eresus: SHEET(0.12, "Eresus: sheet of woolly sticky silk round its burrow's mouth (stored text)")
 };
 
 /** By species, where it differs from its genus. */
@@ -95,7 +111,9 @@ const FAMILIES: Record<string, WebHabit> = {
     Nephilidae: GENERA.Nephila,
     Theridiidae: GENERA.Parasteatoda,
     Pholcidae: GENERA.Pholcus,
-    Agelenidae: GENERA.Eratigena
+    Agelenidae: GENERA.Eratigena,
+    Tetragnathidae: {...GENERA.Tetragnatha, source: "Tetragnathidae: open-hub orb (stored text)"},
+    Eresidae: GENERA.Eresus
 };
 
 /** The slug's words when no name says (an "-orb-weaver" is an araneid). */

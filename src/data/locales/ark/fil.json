@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "Kinain ng {aPredator} ang {animal}",
             "caught": "Nahuli ng {aPredator} ang {aPrey}",
+            "webCaught": "Nahuli ng {aPredator} ang {aPrey} sa sapot nito",
             "dormant": "Nagsimula na ang tulog-taglamig ng {animals}",
             "woke": "Gising na ulit ang {animals}",
             "escaped": "Nakatakas ang {aPrey} mula sa {aPredator}",

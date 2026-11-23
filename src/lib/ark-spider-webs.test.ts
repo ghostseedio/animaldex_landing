@@ -16,6 +16,19 @@ const ABOARD: Array<[string, string, string | null]> = [
     ["false-widow-spider", "Steatoda grossa", "tangle"],
     ["brown-widow-spider", "Latrodectus geometricus", "tangle"],
     ["giant-house-spider", "Eratigena atrica", "sheet"],
+    // ARK-WEBS 2026-11-23: aboard (or in the catalogue's web-act list) and given no web before.
+    ["spinybacked-orbweaver", "Gasteracantha cancriformis", "orb"],
+    ["longhorned-orbweaver", "Macracantha arcuata", "orb"],
+    ["darwin-s-bark-spider", "Caerostris darwini", "orb"],
+    ["long-jawed-orb-weaver", "Tetragnathidae", "orb"],
+    ["mirror-spider", "Thwaitesia argentiopunctata", "tangle"],
+    ["happy-face-spider", "Theridion grallator", "tangle"],
+    ["ladybird-spider", "Eresus sandaliatus", "sheet"],
+    ["triangulate-combfoot", "Steatoda triangulosa", "tangle"],
+    ["barn-funnel-weaver", "Tegenaria domestica", "sheet"],
+    // No capture web: a bolas spider's single sticky drop; a trapdoor spider's burrow.
+    ["bolas-spider", "Mastophora hutchinsoni", null],
+    ["trapdoor-spider", "Cteniza sauvagesi", null],
     // Hunters and harvestmen: no capture web.
     ["carolina-wolf-spider", "Hogna carolinensis", null],
     ["tiger-wolf-spider", "Tigrosa helluo", null],

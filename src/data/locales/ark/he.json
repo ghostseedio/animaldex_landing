@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} נטרף על ידי {aPredator}",
             "caught": "{aPredator} תפס {aPrey}",
+            "webCaught": "{aPredator} לכד את {aPrey} ברשת שלו",
             "dormant": "{animals}: שנת החורף התחילה",
             "woke": "{animals}: שנת החורף נגמרה",
             "escaped": "{aPrey} ברח מפני {aPredator}",

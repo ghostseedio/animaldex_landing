@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}: pojeo ga je {aPredator}",
             "caught": "{aPredator} je ulovio: {aPrey}",
+            "webCaught": "{aPredator} je uhvatio u mrežu: {aPrey}",
             "dormant": "{animals}: počeo je zimski san",
             "woke": "{animals}: zimski san je završio",
             "escaped": "{aPrey}: bijeg je uspio, lovio ga je {aPredator}",

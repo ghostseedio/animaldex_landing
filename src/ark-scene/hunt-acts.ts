@@ -31,6 +31,7 @@
  */
 import table from "@/ark-scene/hunt-acts.json";
 import type {ActBody, ChaseKind, FleeStyle, Puff} from "@/ark-scene/acts";
+import {catchAt, catchTimes, type CatchGeometry, type CatchTimes} from "@/ark-scene/web-catch";
 
 export const HUNT_ACTS = ["pounce", "leap", "jump", "dash", "lunge", "tongue", "web", "wade", "lurk", "drop", "hover", "plunge", "talon", "hawk", "peck", "dive", "stoop"] as const;
 export type HuntAct = (typeof HUNT_ACTS)[number];
@@ -76,10 +77,11 @@ export function huntChoice(c: HuntCtx): HuntChoice | null {
 
 /**
  * The acts played on the live page (decision 456): only those whose catch frames read in the harness's pictures
- * (scripts/ark-hunt-clips.mjs; 2026-11-21: the cat's pounce, the jumping spider's jump). Every other act is the generic
+ * (scripts/ark-hunt-clips.mjs; 2026-11-21: the cat's pounce, the jumping spider's jump; ARK-WEBS 2026-11-23: the web's
+ * catch, played only on a web as drawn: `index.ts` buildMealStage drops it to the generic chase where none is hung). Every other act is the generic
  * chase, as before #33, until its frames read; the harness plays them all (`setAllHuntActs`).
  */
-export const LIVE_HUNT_ACTS: ReadonlySet<HuntAct> = new Set<HuntAct>(["pounce", "jump"]);
+export const LIVE_HUNT_ACTS: ReadonlySet<HuntAct> = new Set<HuntAct>(["pounce", "jump", "web"]);
 let liveActs: ReadonlySet<HuntAct> | null = LIVE_HUNT_ACTS;
 
 /** The harness and the tests: every act (true), or only the live ones (false). */
@@ -134,9 +136,11 @@ function actChoice(c: HuntCtx): HuntChoice | null {
 
 // MARK: The sampled run
 
-export type HuntSample = {x: number; z: number; y: number; yaw: number; v: number; state: string; pitch: number; roll?: number; hidden?: boolean; dim?: number; scale?: number};
+export type HuntSample = {x: number; z: number; y: number; yaw: number; v: number; state: string; pitch: number; roll?: number; hidden?: boolean; dim?: number; scale?: number; /** On a web: its back's and head's ways (the web's face, the silk). */ surface?: WebFace};
+export type WebFace = {nx: number; ny: number; nz: number; tx: number; ty: number; tz: number};
 
-export type HuntRun = {kind: ChaseKind; pred: HuntSample[]; prey: HuntSample[]; /** The catch (or the miss), s into the run. */ tc: number; seconds: number; puffs: Puff[]; /** When the hunter commits (the frame's focus). */ launch: number};
+export type HuntRun = {kind: ChaseKind; pred: HuntSample[]; prey: HuntSample[]; /** The catch (or the miss), s into the run. */ tc: number; seconds: number; puffs: Puff[]; /** When the hunter commits (the frame's focus). */ launch: number; /** A web's catch: its geometry and moments, for the web's shake and the silk bundle (`spider-webs-draw.ts`). */ web?: WebRun};
+export type WebRun = {g: CatchGeometry; times: CatchTimes; seed: string; miss: boolean};
 
 export type HuntInput = {
     act: HuntAct;
@@ -156,6 +160,8 @@ export type HuntInput = {
     ground: (x: number, z: number) => number;
     /** m/s: the hunter's sprint, the prey's flee, the hunter's stalk, a raptor's dive. */
     paces: {sprint: number; flee: number; stalk: number; dive: number};
+    /** The spider's web as drawn (`spider-webs-draw.ts` catchGeometry): the `web` act is played on it. */
+    web?: CatchGeometry | null;
 };
 
 const DT = 1 / 60;
@@ -580,6 +586,37 @@ function runSit(i: HuntInput, mode: "dash" | "lunge" | "tongue" | "web"): HuntRu
         return {x, z, y: preyY(i, x, z) + (flies ? clamp(since * 1.5, 0, 1.4) : 0), yaw: away, state: since <= 0 ? "scan" : flies ? "fly" : since < 1.6 ? "run" : "scan", pitch: 0};
     };
     return finish(i, "glide", end, tc, tS, pred, prey, {turnP: 9, turnQ: 9, air: false, airQ: i.flee === "fly" || web, puffs, startYaw: P.yaw});
+}
+
+// MARK: Web (on the drawn web)
+
+/**
+ * A catch on the spider's own web as drawn (`web-catch.ts`): the insect flies in and is held, struggling, the web
+ * shaking; the spider runs out over the silk, bites, wraps it into a white bundle and carries it back to its hub, where
+ * the meal's script has it feed. A miss: the insect breaks free as the spider comes, and flies off.
+ */
+function runWeb(i: HuntInput, g: CatchGeometry): HuntRun {
+    const seed = `${i.seed}#web`;
+    const times = catchTimes(g, seed, 0);
+    const tc = i.miss ? times.bite : times.home;
+    const end = i.miss ? times.bite + 3.5 : tc;
+    const n = Math.ceil(end / DT);
+    const P: HuntSample[] = [];
+    const Q: HuntSample[] = [];
+    const yawOf = (x: number, z: number) => (Math.hypot(x, z) > 1e-4 ? heading(x, z) : 0);
+    for (let k = 0; k <= n; k++) {
+        const f = catchAt(g, times, seed, k * DT, i.miss);
+        const sp = f.spider;
+        P.push({x: sp.x, y: sp.y, z: sp.z, yaw: yawOf(sp.tx, sp.tz), v: 0, state: sp.state === "run" ? "run" : sp.state === "rest" ? "freeze" : "strike", pitch: 0, surface: {nx: sp.nx, ny: sp.ny, nz: sp.nz, tx: sp.tx, ty: sp.ty, tz: sp.tz}});
+        const q = f.prey;
+        // (Held: it struggles, rolled to and fro; being wrapped, turned over and over and smaller in the silk.)
+        Q.push({x: q.x, y: q.y - i.prey.height * 0.4, z: q.z, yaw: i.prey.yaw + q.spin, v: 0, state: q.flying ? "fly" : "run", pitch: 0, roll: Math.sin(k * DT * 13) * 0.35 * q.struggle, hidden: q.hidden, scale: f.bundle ? 1 - 0.4 * f.bundle.size : 1, dim: 0});
+    }
+    for (const list of [P, Q]) {
+        for (let k = 1; k < list.length; k++) list[k].v = Math.hypot(list[k].x - list[k - 1].x, list[k].y - list[k - 1].y, list[k].z - list[k - 1].z) / DT;
+        if (list.length > 1) list[0].v = list[1].v;
+    }
+    return {kind: "glide", pred: P, prey: Q, tc, seconds: n * DT, puffs: [], launch: times.run, web: {g, times, seed, miss: i.miss}};
 }
 
 // MARK: Wade
@@ -1078,8 +1115,9 @@ export function huntRun(i: HuntInput): HuntRun | null {
         case "dash":
         case "lunge":
         case "tongue":
-        case "web":
             return runSit(i, i.act);
+        case "web":
+            return i.web ? runWeb(i, i.web) : runSit(i, i.act);
         case "wade":
             return runWade(i);
         case "peck":

@@ -292,10 +292,12 @@ test("the live page plays only the acts whose frames read (decision 456): the ot
     const ctx = (slug: string, plan: string, pl: number, ql: number): HuntCtx => ({slug, plan, predatorLength: pl, preyLength: ql, predatorWater: false, preyWater: false, predatorAerial: false, preyAerial: false, flee: "run" as HuntCtx["flee"]});
     try {
         setAllHuntActs(false);
-        assert.deepEqual(Array.from(LIVE_HUNT_ACTS).sort(), ["jump", "pounce"]);
+        assert.deepEqual(Array.from(LIVE_HUNT_ACTS).sort(), ["jump", "pounce", "web"]);
         assert.equal(huntChoice(ctx("domestic-cat", "mammal", 0.5, 0.08))?.act, "pounce");
         assert.equal(huntChoice(ctx("jumping-spider", "arthropod", 0.01, 0.007))?.act, "jump");
-        assert.equal(huntChoice(ctx("orb-weaver-spider", "arthropod", 0.02, 0.007)), null);
+        // (ARK-WEBS: the web's catch is live, played on the web as drawn; index.ts drops it where none is hung.)
+        assert.equal(huntChoice(ctx("orb-weaver-spider", "arthropod", 0.02, 0.007))?.act, "web");
+        assert.equal(huntChoice(ctx("chinese-mantis", "arthropod", 0.08, 0.02)), null);
         assert.equal(huntChoice(ctx("common-kestrel", "bird", 0.35, 0.1)), null);
     } finally {
         setAllHuntActs(true);

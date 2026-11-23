@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "Con {animal} đã bị {aPredator} ăn",
             "caught": "{aPredator} đã bắt được {aPrey}",
+            "webCaught": "{aPredator} đã bắt được {aPrey} bằng mạng nhện",
             "dormant": "{animals} đã bắt đầu ngủ đông",
             "woke": "{animals} đã thức dậy trở lại",
             "escaped": "{aPrey} đã thoát khỏi {aPredator}",

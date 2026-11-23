@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{aPredator} söi: {animal}",
             "caught": "{aPredator} sai saaliin: {aPrey}",
+            "webCaught": "{aPredator} sai verkkoonsa saaliin: {aPrey}",
             "dormant": "{animals}: talviuni alkoi",
             "woke": "{animals}: talviuni päättyi",
             "escaped": "{aPrey} pääsi pakoon, saalistaja: {aPredator}",

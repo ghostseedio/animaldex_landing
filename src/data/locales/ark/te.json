@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} ను {aPredator} తినేసింది",
             "caught": "{aPredator} {aPrey}ను పట్టుకుంది",
+            "webCaught": "{aPredator} తన గూటిలో {aPrey}ను పట్టుకుంది",
             "dormant": "{animals} శీతాకాల నిద్రలోకి వెళ్లాయి",
             "woke": "{animals} మళ్లీ మేల్కొన్నాయి",
             "escaped": "{aPrey} {aPredator} నుండి తప్పించుకుంది",

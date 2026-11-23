@@ -16,12 +16,13 @@
  */
 
 import {worldColliders, type Collider} from "@/ark-scene/collide";
-import {BufferAttribute, BufferGeometry, Color, DoubleSide, Matrix4, Mesh, ShaderMaterial, Sphere, Vector2, Vector3, type BatchedMesh, type InstancedMesh, type Material, type Object3D} from "three";
+import {BufferAttribute, BufferGeometry, Color, DoubleSide, InstancedMesh, Matrix4, Mesh, MeshLambertMaterial, Quaternion, ShaderMaterial, Sphere, SphereGeometry, Vector2, Vector3, type BatchedMesh, type Material, type Object3D} from "three";
 import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_SUN} from "@/ark-scene/glsl";
 import {dewOf} from "@/ark-scene/props/conditions";
 import {threadOrder} from "@/ark-scene/props/web-spin";
 import {atHub, silkTrip, webHabit, webStage, type WebHabit} from "@/ark-scene/spider-webs";
 import {hashString} from "@/ark-scene/world";
+import {type CatchFrame, type CatchGeometry} from "@/ark-scene/web-catch";
 
 /** How far from its home a spider hangs its web at most (m): where there is something to hang it on. */
 export const WEB_SITE_WITHIN = 3;
@@ -35,6 +36,8 @@ export const DRAWN_WITHIN = 24;
 export const FADE_FROM = 9;
 /** Webs drawn at once (the nearest). */
 export const MAX_WEBS = 16;
+/** The silk bundles drawn at once (the record's catches only: the owner, 2026-11-23, "no fake events"). */
+const MAX_BUGS = 8;
 /** Fitting's share of a frame (ms). */
 const FIT_BUDGET_MS = 1.5;
 
@@ -653,6 +656,12 @@ export function spiderOnWeb(web: FittedWeb, hours: number, seconds: number, buil
 /** Names never to hang a web on: the weather, the sky, the animals' marks, water. */
 const NEVER = /sky|cloud|rain|snow|mist|halo|label|dust|trace|mark|icon|ring|shadow|speck|dot|water|sea|wave|glow|light|webs/i;
 const TO_LOCAL = new Matrix4();
+const MAT = new Matrix4();
+const Q = new Quaternion();
+const S = new Vector3();
+const P = new Vector3();
+const UP = new Vector3(0, 1, 0);
+const COL = new Color();
 const M = new Matrix4();
 const W = new Matrix4();
 const A = new Vector3();
@@ -978,6 +987,9 @@ export function* casterSteps(list: Float32Array, centre: V3, reach: number, budg
 const VERTEX = /* glsl */ `
 uniform float uBuilt[${MAX_WEBS}];
 uniform float uFade[${MAX_WEBS}];
+uniform float uShake[${MAX_WEBS}];
+uniform vec3 uShakeDir[${MAX_WEBS}];
+uniform float uTime;
 uniform vec2 uRes;
 uniform float uPx;
 uniform vec3 uSun;
@@ -996,11 +1008,16 @@ void main() {
     int slot = int(aSlot + 0.5);
     float built = 1.0;
     float fade = 0.0;
+    float shake = 0.0;
+    vec3 shakeDir = vec3(0.0);
     for (int i = 0; i < ${MAX_WEBS}; i++) {
-        if (i == slot) { built = uBuilt[i]; fade = uFade[i]; }
+        if (i == slot) { built = uBuilt[i]; fade = uFade[i]; shake = uShake[i]; shakeDir = uShakeDir[i]; }
     }
-    vec4 ca = projectionMatrix * viewMatrix * vec4(position, 1.0);
-    vec4 cb = projectionMatrix * viewMatrix * vec4(aB, 1.0);
+    // A catch struggling in it: the web trembles along its face (a few millimetres, each thread at its own phase).
+    vec3 pa = position + shakeDir * shake * 0.006 * sin(uTime * 38.0 + dot(position, vec3(41.0, 57.0, 73.0)));
+    vec3 pb = aB + shakeDir * shake * 0.006 * sin(uTime * 38.0 + dot(aB, vec3(41.0, 57.0, 73.0)));
+    vec4 ca = projectionMatrix * viewMatrix * vec4(pa, 1.0);
+    vec4 cb = projectionMatrix * viewMatrix * vec4(pb, 1.0);
     vec4 c = mix(ca, cb, aCorner.x);
     if (aOrder > built + 1e-4 || fade <= 0.0 || ca.w <= 0.0 || cb.w <= 0.0) {
         gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
@@ -1012,9 +1029,9 @@ void main() {
     dir = length(dir) > 1e-5 ? normalize(dir) : vec2(1.0, 0.0);
     c.xy += vec2(-dir.y, dir.x) * aCorner.y * uPx / uRes * c.w;
     gl_Position = c;
-    vec3 wp = mix(position, aB, aCorner.x);
+    vec3 wp = mix(pa, pb, aCorner.x);
     vec3 v = normalize(cameraPosition - wp);
-    vec3 t = normalize(aB - position + 1e-6);
+    vec3 t = normalize(pb - pa + 1e-6);
     // A fibre's highlight: where the sun's half-vector is square to it; and the glow of silk against the sun.
     vec3 h = normalize(uSun + v);
     float th = dot(t, h);
@@ -1053,6 +1070,31 @@ void main() {
 `;
 
 type Spider = {id: string; habit: WebHabit; home: V3; web: FittedWeb | null; tries: number; triedAt: number; job: Generator<void, FittedWeb | null> | null};
+
+/** The record's catch being drawn at a web (`act`), with its frame now. */
+type Catching = {frame: CatchFrame; until: number; length: number};
+
+/** Where on a fitted web a catch happens (seeded): a point of its capture area, its hub, its face, the spider's rest. */
+export function catchGeometry(web: FittedWeb, seed: string): CatchGeometry {
+    const u = unit(`catch:${seed}`);
+    const v = unit(`catch-r:${seed}`);
+    if (web.habit.kind === "orb") {
+        const a = u * Math.PI * 2;
+        const r = web.radius * (0.45 + 0.4 * v);
+        const at = add(add(web.hub, web.right, Math.cos(a) * r), web.up, Math.sin(a) * r);
+        return {hub: web.hub, at, normal: web.normal, rest: {x: 0, y: -1, z: 0}};
+    }
+    if (web.habit.kind === "tangle") {
+        // Hung under its top knot; the insect held lower in the tangle (a gumfoot line takes a walker up: Benjamin & Zschokke 2003).
+        const top = web.ends.reduce((best, k) => (k.y > best.y ? k : best), web.ends[0] ?? web.hub);
+        const low = web.ends.length ? web.ends[Math.floor(u * web.ends.length) % web.ends.length] : web.hub;
+        const at = add(top, sub(low, top), 0.55 + 0.35 * v);
+        return {hub: top, at, normal: norm({x: web.normal.x, y: web.normal.y, z: web.normal.z}), rest: {x: Math.cos(u * 6.28), y: 0, z: Math.sin(u * 6.28)}};
+    }
+    const end = web.ends.length ? web.ends[Math.floor(u * web.ends.length) % web.ends.length] : add(web.hub, web.up, web.radius);
+    const at = add(web.hub, sub(end, web.hub), 0.5 + 0.35 * v);
+    return {hub: web.hub, at, normal: {x: 0, y: 1, z: 0}, rest: norm(web.up)};
+}
 
 export type WebsStats = {spiders: number; fitted: number; drawn: number; threads: number; fitMs: number; fitMaxMs: number};
 
@@ -1096,12 +1138,21 @@ export class SpiderWebs {
     }
     private lastPick = -Infinity;
     private readonly res = new Vector2(1, 1);
+    /** The record's catches being drawn now, by spider (while its act plays). */
+    private readonly catching = new Map<string, Catching>();
+    private readonly lastRecord = new Map<string, Catching>();
+    /** The insects and the silk bundles of the catches (one instanced draw). */
+    readonly bugs: InstancedMesh;
+    private reduced = false;
 
     constructor(private readonly root: Object3D, private readonly ground: (x: number, z: number, near?: number) => number) {
         this.material = new ShaderMaterial({
             uniforms: {
                 uBuilt: {value: new Array(MAX_WEBS).fill(1)},
                 uFade: {value: new Array(MAX_WEBS).fill(0)},
+                uShake: {value: new Array(MAX_WEBS).fill(0)},
+                uShakeDir: {value: Array.from({length: MAX_WEBS}, () => new Vector3(0, 0, 1))},
+                uTime: {value: 0},
                 uRes: {value: this.res},
                 uPx: {value: 0.6},
                 uSun: {value: new Vector3(0, 1, 0)},
@@ -1125,6 +1176,11 @@ export class SpiderWebs {
         this.mesh.frustumCulled = false;
         this.mesh.visible = false;
         this.mesh.renderOrder = 2;
+        this.bugs = new InstancedMesh(new SphereGeometry(0.5, 8, 6), new MeshLambertMaterial({color: 0xffffff}), MAX_BUGS);
+        this.bugs.name = "spider-web-catches";
+        this.bugs.frustumCulled = false;
+        this.bugs.count = 0;
+        this.mesh.add(this.bugs);
     }
 
     /** A spider aboard (its slug and stored scientific name decide whether it spins a web); its home on its island. */
@@ -1139,6 +1195,31 @@ export class SpiderWebs {
     forget(id: string): void {
         if (this.fitting?.id === id) this.fitting = null;
         this.spiders.delete(id);
+        this.catching.delete(id);
+        this.lastRecord.delete(id);
+    }
+
+    /**
+     * The record's catch at this spider's web (`hunt-acts.ts` runWeb, a meal of the server's): where on its web, or null
+     * when its web is not hung (the act is then the generic chase).
+     */
+    catchGeometry(id: string, seed: string): CatchGeometry | null {
+        const web = this.spiders.get(id)?.web;
+        return web ? catchGeometry(web, seed) : null;
+    }
+
+    /** The record's act this frame (from the act's pose): the web's shake and the bundle, drawn as its act says. */
+    act(id: string, frame: CatchFrame, seconds: number, preyLength: number): void {
+        const c = {frame, until: seconds + 0.25, length: preyLength};
+        this.catching.set(id, c);
+        this.lastRecord.set(id, c);
+    }
+
+    /** The record's meal going on at its hub after the catch (the meal's script): the bundle stays at its mouth. */
+    feeding(id: string, seconds: number): void {
+        const last = this.lastRecord.get(id);
+        if (!last?.frame.bundle || last.frame.phase === "done") return;
+        this.catching.set(id, {...last, frame: {...last.frame, shake: 0, phase: "feed", bundle: {...last.frame.bundle, size: 1}}, until: seconds + 0.25});
     }
 
     /** Where its spider is drawn now: on its web, once its web is fitted. */
@@ -1222,13 +1303,56 @@ export class SpiderWebs {
             built[i] = reducedMotion ? 1 : webStage(s.habit, s.id, hours).built;
         });
         for (let i = this.slots.length; i < MAX_WEBS; i++) fade[i] = 0;
+        this.reduced = reducedMotion;
+        this.catches(seconds);
         this.res.set(view.width / 2, view.height / 2);
         uniforms.uPx.value = 0.5 * view.pixelRatio;
+        uniforms.uTime.value = seconds % 1000;
         (uniforms.uSun.value as Vector3).copy(ARK_SUN.value);
         uniforms.uDay.value = Math.min(Math.max(ARK_DAYLIGHT.value, 0), 1);
         uniforms.uDew.value = dewOf(hours, ARK_ENV.wind.value, ARK_ENV.rain.value, ARK_ENV.wetness.value);
         (uniforms.uGlint.value as Color).copy(ARK_GLINT.value);
         this.mesh.visible = true;
+    }
+
+    /**
+     * The catches this frame: only the record's, while its act plays (the owner, 2026-11-23: "no fake events": a web
+     * holds an insect only when a real one, an animal aboard, was caught by the engine). Every web stirs a little in the
+     * wind; one with a catch struggling in it shakes.
+     */
+    private catches(seconds: number): void {
+        for (const [id, c] of Array.from(this.catching.entries())) if (c.until < seconds) this.catching.delete(id);
+        const wind = Math.min(Math.max(ARK_ENV.wind.value, 0), 1) * 0.15;
+        const shake = this.material.uniforms.uShake.value as number[];
+        const dirs = this.material.uniforms.uShakeDir.value as Vector3[];
+        this.slots.forEach((s, i) => {
+            const c = this.catching.get(s.id);
+            shake[i] = Math.max(c ? c.frame.shake : 0, this.reduced ? 0 : wind);
+            dirs[i].set(s.web!.normal.x, s.web!.normal.y, s.web!.normal.z);
+        });
+        let n = 0;
+        const put = (p: V3, sx: number, sy: number, sz: number, yaw: number, colour: number) => {
+            if (n >= MAX_BUGS) return;
+            Q.setFromAxisAngle(UP, yaw);
+            S.set(sx, sy, sz);
+            P.set(p.x, p.y, p.z);
+            MAT.compose(P, Q, S);
+            this.bugs.setMatrixAt(n, MAT);
+            this.bugs.setColorAt(n, COL.setHex(colour));
+            n++;
+        };
+        for (const c of Array.from(this.catching.values())) {
+            const f = c.frame;
+            // (The insect itself is the caught animal, drawn by the scene from its act.) The silk bundle, growing white round it as it is wrapped.
+            if (f.bundle && f.bundle.size > 0.02) {
+                // (A wrapped bundle is the prey's own size, a little shorter for its legs folded in: Foelix 2011 fig. 5.15.)
+                const L = c.length * 0.75;
+                put(f.bundle, L * 0.6 * f.bundle.size, L * 0.6 * f.bundle.size, L * f.bundle.size, f.prey.spin, 0xf4f2ea);
+            }
+        }
+        this.bugs.count = n;
+        this.bugs.instanceMatrix.needsUpdate = true;
+        if (this.bugs.instanceColor) this.bugs.instanceColor.needsUpdate = true;
     }
 
     private rebuild(): void {
@@ -1329,6 +1453,9 @@ export class SpiderWebs {
     dispose(): void {
         this.mesh.geometry.dispose();
         this.material.dispose();
+        this.bugs.geometry.dispose();
+        (this.bugs.material as Material).dispose();
+        this.bugs.dispose();
         this.mesh.removeFromParent();
         this.spiders.clear();
         this.slots = [];

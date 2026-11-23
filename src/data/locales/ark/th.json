@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} ถูก{aPredator}กิน",
             "caught": "{aPredator} จับ {aPrey} ได้",
+            "webCaught": "{aPredator} จับ {aPrey} ได้ด้วยใย",
             "dormant": "{animals} เริ่มจำศีลแล้ว",
             "woke": "{animals} ตื่นขึ้นมาอีกครั้งแล้ว",
             "escaped": "{aPrey} หนีรอดจาก {aPredator} ได้",

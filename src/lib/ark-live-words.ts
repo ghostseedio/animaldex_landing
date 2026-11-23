@@ -49,6 +49,8 @@ export type ArkLiveWords = {
     escaped?: string;
     /** A meal that ends a hunt seen setting out: "A Lion caught a Plains Zebra". */
     caught?: string;
+    /** ARK-WEBS: a meal the engine says was caught in the hunter's web: "A Common House Spider caught a House Fly in its web". */
+    webCaught?: string;
     /** Release to the Wild (AnimalDex P1-8): "{aAnimal} was released into the wild" (`release-lines.ts`). */
     released?: string;
     revived: string;
@@ -125,6 +127,7 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     withHearts: "{line} · {hearts}",
     eatenBy: "{animal} was eaten by {aPredator}",
     caught: "{aPredator} caught {aPrey}",
+    webCaught: "{aPredator} caught {aPrey} in its web",
     dormant: "{animals} have gone into their winter sleep",
     woke: "{animals} are awake again",
     escaped: "{aPrey} got away from {aPredator}",

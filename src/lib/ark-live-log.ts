@@ -80,6 +80,8 @@ export type ArkLiveItem = {
     way?: ArkLiveWay;
     /** A meal that ends a hunt seen setting out (`src/ark-scene/live/hunt-outcome.ts`): said as "caught". */
     hunted?: boolean;
+    /** ARK-WEBS: a meal the server says was caught in the hunter's web (`encounter.web`): said as "caught ... in its web". */
+    web?: boolean;
     /** A kind's dormant season beginning or ending (`src/ark-scene/live/dormancy-lines.ts`): said with its own words. */
     say?: "dormant" | "woke" | "escaped" | "deforested" | "dated" | "moved_in" | "released";
     /** A species' own sentence for what it is seen doing (`src/ark-scene/live/signature-lines.ts`): said as it is. */
@@ -151,7 +153,7 @@ export function arkLiveServerItems(events: readonly ArkEvent[]): ArkLiveItem[] {
             case "meal": {
                 if (!animal || !event.other) break;
                 const hearts = eatenLives.get(event.other.id);
-                items.push({id: event.id, kind: "meal", source: "server", key: `meal:${speciesOf(animal)}:${speciesOf(event.other)}${hearts !== undefined ? `:h${event.other.id}` : ""}`, animal: animal.name, other: event.other.name, count: 1, eggs: null, ...(hearts !== undefined ? {hearts} : {}), focus: focusOn(animal)});
+                items.push({id: event.id, kind: "meal", source: "server", key: `meal:${speciesOf(animal)}:${speciesOf(event.other)}${hearts !== undefined ? `:h${event.other.id}` : ""}`, animal: animal.name, other: event.other.name, count: 1, eggs: null, ...(hearts !== undefined ? {hearts} : {}), ...(event.encounter?.web ? {web: true} : {}), focus: focusOn(animal)});
                 break;
             }
             case "death_old":

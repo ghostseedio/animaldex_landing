@@ -15,6 +15,7 @@ import {fillArkWords} from "@/lib/ark-words";
 /** A record meal within this long (ms) of its predator's hunting line is that hunt's outcome (a foray lasts up to ~70 min). */
 export const HUNT_OUTCOME_WINDOW = 90 * 60_000;
 const CAUGHT_ENGLISH = "{aPredator} caught {aPrey}";
+const WEB_CAUGHT_ENGLISH = "{aPredator} caught {aPrey} in its web";
 
 export class HuntOutcomes {
     /** Predators seen setting out to hunt: animal id -> when (ms). */
@@ -45,9 +46,14 @@ export function withoutEndedHunts(lines: ArkLiveLine[], ended: readonly string[]
     return ended.length ? lines.filter((l) => !(l.kind === "hunting" && l.focus.animalId !== null && ended.includes(l.focus.animalId))) : lines;
 }
 
-/** "A Lion caught a Plains Zebra", or null when the line is not a single caught meal (hearts lines keep their own words). */
-export function caughtText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count"> & Partial<Pick<ArkLiveItem, "hunted" | "hearts">>, words: ArkLiveText): string | null {
-    if (!line.hunted || line.kind !== "meal" || line.count > 1 || typeof line.hearts === "number" || !line.other) return null;
-    const text = fillArkWords(words.live.caught ?? CAUGHT_ENGLISH, {aPredator: arkWithArticle(line.animal, words), aPrey: arkWithArticle(line.other, words)});
+/**
+ * "A Lion caught a Plains Zebra", or null when the line is not a single caught meal (hearts lines keep their own words).
+ * ARK-WEBS: a meal the server says was caught in a web (`web`, from its `encounter.web`) is said so, hunted or not:
+ * "A Common House Spider caught a House Fly in its web".
+ */
+export function caughtText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count"> & Partial<Pick<ArkLiveItem, "hunted" | "hearts" | "web">>, words: ArkLiveText): string | null {
+    if (!(line.hunted || line.web) || line.kind !== "meal" || line.count > 1 || typeof line.hearts === "number" || !line.other) return null;
+    const template = line.web ? words.live.webCaught ?? WEB_CAUGHT_ENGLISH : words.live.caught ?? CAUGHT_ENGLISH;
+    const text = fillArkWords(template, {aPredator: arkWithArticle(line.animal, words), aPrey: arkWithArticle(line.other, words)});
     return text ? text[0].toLocaleUpperCase() + text.slice(1) : text;
 }

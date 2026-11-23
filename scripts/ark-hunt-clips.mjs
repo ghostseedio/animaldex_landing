@@ -23,7 +23,7 @@ const arg = (name, fallback) => {
     return at > 0 && process.argv[at + 1] && !process.argv[at + 1].startsWith("--") ? process.argv[at + 1] : fallback;
 };
 const out = path.resolve(arg("out", path.join(root, ".ark-golden", "hunt-shots")));
-const ALL = ["cat", "fox", "tiger", "jumper", "gecko", "wolf", "mantis", "toad", "web", "heron", "blackbird", "croc", "owl", "kestrel", "osprey", "kingfisher", "kite", "skimmer", "swallow"];
+const ALL = ["cat", "fox", "tiger", "jumper", "gecko", "wolf", "mantis", "toad", "web", "orb", "cobweb", "heron", "blackbird", "croc", "owl", "kestrel", "osprey", "kingfisher", "kite", "skimmer", "swallow"];
 const wanted = arg("scenes", "all");
 const scenes = wanted === "all" ? ALL : wanted.split(",").map((s) => s.replace(/^hunt-/, "")).filter(Boolean);
 const modes = arg("modes", "catch,miss").split(",");
@@ -57,7 +57,8 @@ const summary = {};
 for (const name of scenes) {
     for (const mode of modes) {
         const key = `${name}-${mode}`;
-        const context = await browser.newContext({viewport: {width: 1000, height: 640}});
+        // (--phone: a phone's portrait screen, as the page is mostly seen.)
+        const context = await browser.newContext(process.argv.includes("--phone") ? {viewport: {width: 390, height: 844}, deviceScaleFactor: 2} : {viewport: {width: 1000, height: 640}});
         const page = await context.newPage();
         const errors = [];
         page.on("pageerror", (e) => errors.push(e.message));
@@ -88,7 +89,9 @@ for (const name of scenes) {
             continue;
         }
         // The moments: the approach, the wait, the strike's run-up, the strike, what follows.
-        const times = [0.3, tc * 0.25, tc * 0.5, tc * 0.7, tc - 1.2, tc - 0.7, tc - 0.4, tc - 0.2, tc - 0.08, tc, tc + 0.4, tc + (mode === "miss" ? 1.6 : 1.0)].map((t) => Math.max(Math.round(t * 100) / 100, 0.1));
+        // (A web's catch: the insect in, held and struggling, the run out, the bite, the wrap, the carry home, the feed.)
+        const webTimes = info.act === "web" && mode === "catch" ? [0.5, 1.3, 2.2, tc - 4.6, tc - 3.9, tc - 3.3, tc - 2.6, tc - 1.9, tc - 0.9, tc, tc + 4, tc + 12] : null;
+        const times = webTimes ?? [0.3, tc * 0.25, tc * 0.5, tc * 0.7, tc - 1.2, tc - 0.7, tc - 0.4, tc - 0.2, tc - 0.08, tc, tc + 0.4, tc + (mode === "miss" ? 1.6 : 1.0)].map((t) => Math.max(Math.round(t * 100) / 100, 0.1));
         const uniq = [...new Set(times)].sort((a, b) => a - b);
         const dir = path.join(out, key);
         rmSync(dir, {recursive: true, force: true});

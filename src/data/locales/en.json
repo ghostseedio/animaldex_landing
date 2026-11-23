@@ -4631,6 +4631,7 @@
       "withHearts": "{line} · {hearts}",
       "eatenBy": "{animal} was eaten by {aPredator}",
       "caught": "{aPredator} caught {aPrey}",
+      "webCaught": "{aPredator} caught {aPrey} in its web",
       "dormant": "{animals} have gone into their winter sleep",
       "woke": "{animals} are awake again",
       "escaped": "{aPrey} got away from {aPredator}",

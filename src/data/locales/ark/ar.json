@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "أكل {aPredator} {animal}",
             "caught": "اصطاد {aPredator} {aPrey}",
+            "webCaught": "اصطاد {aPredator} {aPrey} في شبكته",
             "dormant": "{animals}: بدأ السبات الشتوي",
             "woke": "{animals}: انتهى السبات الشتوي",
             "escaped": "هرب {aPrey} من {aPredator}",
