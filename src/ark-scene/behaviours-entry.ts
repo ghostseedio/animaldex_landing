@@ -832,7 +832,8 @@ async function main() {
             }
             const pose = drawn.sched?.pose;
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`)));
-            return `${id.slice(-3)} length ${drawn.length.toFixed(2)} beat ${pose?.beat ?? "-"} act ${pose?.act?.recipe ?? "-"}/${pose?.act?.block ?? "-"}/${pose?.act?.state ?? "-"} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
+            const lift = `y-ground ${(at.y - at.ground).toFixed(3)} mid-ground ${drawn.middle ? (drawn.middle.y - at.ground).toFixed(3) : "-"}`;
+            return `${id.slice(-3)} length ${drawn.length.toFixed(2)} ${lift} beat ${pose?.beat ?? "-"} act ${pose?.act?.recipe ?? "-"}/${pose?.act?.block ?? "-"}/${pose?.act?.state ?? "-"} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
         },
         /** Reptile signatures: the first of the cast with a sit-and-wait bout in the next four minutes (`micro-ambush.ts`), and its bouts. */
         microBouts: () => {

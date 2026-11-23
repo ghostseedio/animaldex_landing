@@ -6681,16 +6681,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             // The muzzles of the grazers biting and the bodies of the walkers nearest the camera, for the grass to bend at (`grass-press.ts`).
             const biting = (c: (typeof candidates)[number]) => c.entry.sched!.pose?.beat === "bite" || c.entry.sched!.pose?.beat === "chew";
+            // (SIG3: and an animal digging where it stands, the soil it works cleared round it: a leopard tortoise at its nest
+            // pit, held still, sank from sight into the tall grass.)
+            const digging = (c: (typeof candidates)[number]) => c.entry.sched!.pose?.act?.state === "dig";
             setGrassPress(
                 // (Where a meal pressed the grass flat, `meal-traces.ts`: nearest the camera first, like the rest.)
                 // 3.3 fix (breeding taps): and round a clutch a laid line's tap drew, first.
                 (liveClutch?.spot ? [liveClutch.spot] : []).concat(pressedByMeals(cameraPosition)).concat(candidates
-                    .filter((c) => c.visible && c.distance < 40 && c.entry.sched && !c.entry.sched.pose?.aloft && !c.pose.afloat && (biting(c) || c.entry.sched.pose?.moving))
+                    .filter((c) => c.visible && c.distance < 40 && c.entry.sched && !c.entry.sched.pose?.aloft && !c.pose.afloat && (biting(c) || c.entry.sched.pose?.moving || digging(c)))
                     .sort((a, b) => a.distance - b.distance)
                     .map((c) =>
                         biting(c)
                             ? {x: c.pose.x + Math.sin(c.pose.yaw) * c.entry.length * 0.5, y: c.pose.base, z: c.pose.z + Math.cos(c.pose.yaw) * c.entry.length * 0.5, radius: Math.max(c.entry.length * 0.18, 0.08)}
-                            : {x: c.pose.x, y: c.pose.base, z: c.pose.z, radius: Math.max(c.entry.length * 0.35, 0.1)}
+                            : {x: c.pose.x, y: c.pose.base, z: c.pose.z, radius: Math.max(c.entry.length * (digging(c) ? 0.75 : 0.35), 0.1)}
                     ))
             );
             stepRecipeScene(candidates, now, epochNow);

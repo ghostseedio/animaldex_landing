@@ -145,7 +145,8 @@
    "recipe": "dig_burrow~nest",
    "behaviour": "female digs nest",
    "field": "young",
-   "quote": "Females dig nests and lay clutches of eggs in soil"
+   "quote": "Females dig nests and lay clutches of eggs in soil",
+   "line": "{aAnimal} is digging a nest in the soil for its eggs"
   },
   {
    "slug": "russian-tortoise",

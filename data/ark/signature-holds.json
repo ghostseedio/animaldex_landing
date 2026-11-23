@@ -152,11 +152,6 @@
    "reason": "the crab is not visible in the dig frames"
   },
   {
-   "slug": "leopard-tortoise",
-   "recipe": "dig_burrow~nest",
-   "reason": "SIG3 tranche 2 (the variant's marks now drawn): the first dig shows its pit, but the episode stops after that one dig (no laying, no filling in) and the tortoise sinks into the grass after it"
-  },
-  {
    "slug": "aldabra-giant-tortoise",
    "recipe": "wallow~turtle",
    "reason": "the 'bury' block stands it on dry grass, no mud or water: not a wallow (the Galapagos episode has no act at all) SIG3 tranche 2: the variant's hollow mark now draws, but still on dry grass by the river, no mud or water under it"
