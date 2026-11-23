@@ -905,7 +905,8 @@ async function main() {
                 return `${id.slice(-3)}${d?.place?.micro ? " (micro)" : ""} ${act ? `${act.recipe}/${act.block}/${act.state} pitch ${(act.pitch ?? 0).toFixed(2)} roll ${(act.roll ?? 0).toFixed(2)}${act.carry ? " carrying" : ""}${act.mark ? " marking" : ""}` : `its day (${d?.sched?.pose?.beat ?? (d?.toLight ? `to the light ${d.toLight.toFixed(2)}` : "-")})`} len ${(d?.length ?? 0).toFixed(3)}`;
             };
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
-            const gap = mids.length > 1 ? ` apart ${Math.hypot(mids[0].x - mids[1].x, mids[0].z - mids[1].z).toFixed(2)} m` : "";
+            const toOther = mids.length > 1 ? Math.atan2(mids[1].x - mids[0].x, mids[1].z - mids[0].z) : 0;
+            const gap = mids.length > 1 ? ` apart ${Math.hypot(mids[0].x - mids[1].x, mids[0].z - mids[1].z).toFixed(2)} m yaw ${at.map((p) => (p ? p.yaw.toFixed(2) : "-")).join("/")} a->b ${toOther.toFixed(2)}` : "";
             return `${ids.map((id, i) => say(drawn[i], id)).join(" | ")}${gap} ${said.join(" / ")}`;
         },
         handle

@@ -1333,7 +1333,7 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
                 return {x, y: ground(x, z), z};
             }
             // (The stand-off no further back than where it started: rivals already close do not back away to come again.)
-            const gap = step.to === "meet" ? both * 0.42 : Math.min(both * 2.4, d / 2);
+            const gap = step.to === "meet" ? both * 0.5 : Math.min(both * 2.4, d / 2);
             const x = midX - ux * gap;
             const z = midZ - uz * gap;
             return {x, y: ground(x, z), z};

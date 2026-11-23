@@ -107,11 +107,6 @@
    "reason": "at night the insect at the light is a tiny purple shape, not readable as a hornet (the glowing bar across the harness's first frame is the lamp post's lit shaft by the camera; lamp posts are not built in islands mode, so it is harness only)"
   },
   {
-   "slug": "american-bullfrog",
-   "recipe": "wrestle",
-   "reason": "the two bullfrogs are drawn through each other while wrestling SIG3 tranche 4: the pair fight 0.12 m apart (0.14-0.15 m frogs), both facing the same way, one's head in the other's rump; a wider meet (0.55 of a length from the middle, tried) only parts them: they still do not face each other, so it is not a wrestle."
-  },
-  {
    "slug": "chinese-mantis",
    "recipe": "sit_snap",
    "reason": "the micro animal is not in the frame (leaves or an empty wall): the toad's sit_snap reads, these could not be checked"
