@@ -24,12 +24,12 @@
   {
    "slug": "long-tailed-macaque",
    "recipe": "stone_hammer",
-   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4: with the row put back, 0 stone_hammer trips in 24 Ark hours for 4 animals (no rock goal where they live)."
+   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4: with the row put back, 0 stone_hammer trips in 24 Ark hours for 4 animals (no rock goal where they live). SIG3 tranche 4, why 0 trips (row put back, 4 animals, 1,080 slots, ~145 forage slots each): the recipe's goal is a rock top for an anvil (goal 'rock', `rock_top` points within 1.4x its forage radius of where it forages); its rainforest home at (-24, 91) has none within 25 m (18 within 60 m). Nothing else is needed by the engine (the stone is carried in the template), but nothing on the map is a nut or a shell either. Real data that would add it: rock_top anvils in its range (the map's rocks near the macaques' home, or their home on a rocky shore or mangrove edge, where this species does pound shellfish), and a food item for the stone to open."
   },
   {
    "slug": "tufted-capuchin",
    "recipe": "stone_hammer",
-   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4: with the row put back, 0 stone_hammer trips in 24 Ark hours for 4 animals (no rock goal where they live)."
+   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4: with the row put back, 0 stone_hammer trips in 24 Ark hours for 4 animals (no rock goal where they live). SIG3 tranche 4, why 0 trips (row put back, 4 animals, 1,080 slots, ~50 forage slots each): the same rock-top anvil goal; its home at (-32, 17) has 0 rock tops within 10 m, 10 within 25 m, and no trip found one within its forage radius (x1.4). Real data that would add it: rock_top anvils (map rocks) within a few metres of the capuchins' home range, and a nut (palm nut) food source for the stone to open; neither is faked."
   },
   {
    "slug": "javan-ferret-badger",

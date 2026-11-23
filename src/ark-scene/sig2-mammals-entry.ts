@@ -129,6 +129,19 @@ async function main() {
         date: scene.date,
         activity: scene.activity
     };
+    // (SIG3: a stone tool's needs where they live: rock tops (its anvil) near each one's home, and the slots it forages in.)
+    if (scene.recipe === "stone_hammer") {
+        const s = ctx.world.sampler;
+        const rocks = ctx.animals.map((a) => {
+            const near = (r: number) => s.attachPoints("rock_top", {x: a.animal.home.x, z: a.animal.home.z, r}).length;
+            const slots = trips(ctx, a, scene.date, scene.within ?? 24);
+            return {id: a.id.slice(-3), length: a.animal.length, home: [Math.round(a.animal.home.x), Math.round(a.animal.home.z)], move: a.profile.move, rock10: near(10), rock25: near(25), rock60: near(60), forage: slots.filter((t) => t.doing === "forage").length, slots: slots.length, recipes: Array.from(new Set(slots.map((t) => t.recipe).filter(Boolean)))};
+        });
+        const all = s.attachPoints("rock_top");
+        const zones: Record<string, number> = {};
+        for (const p of all) zones[p.zone] = (zones[p.zone] ?? 0) + 1;
+        console.log("[sig2] stone", JSON.stringify({rocks, rockTopsByZone: zones, stones: speciesRecipes(scene.slug).recipes.map((r) => r.id)}));
+    }
     const at = async (epoch: number, ticks = 3) => {
         const ms = epoch * 1000;
         if (!fake) {
