@@ -112,7 +112,8 @@ export class ArkLiveLogView {
 
     constructor(host: HTMLElement, private options: ArkLiveLogViewOptions) {
         this.labels = options.labels;
-        this.collapsed = options.collapsed;
+        // Owner 2026-11-23: the live log is always open; it no longer folds (any stored or passed fold is ignored).
+        this.collapsed = false;
         const id = `ark-live-log-${++ArkLiveLogView.serial}`;
         const root = document.createElement("div");
         root.dataset.arkLive = "log";
@@ -165,10 +166,10 @@ export class ArkLiveLogView {
         chevron.innerHTML = CHEVRON;
         Object.assign(chevron.style, {display: "inline-flex", opacity: "0.75", transition: options.reducedMotion ? "none" : "transform 200ms ease"});
         chip.append(dot, chipLabel, chevron);
-        chip.addEventListener("click", () => {
-            this.setCollapsed(!this.collapsed);
-            this.options.onCollapsed?.(this.collapsed);
-        });
+        // (Always open: the chip is the log's title only, not a button that folds it.)
+        chip.disabled = true;
+        chip.style.cursor = "default";
+        chevron.style.display = "none";
         root.append(list, chip);
         host.appendChild(root);
         this.host = host;
@@ -188,14 +189,13 @@ export class ArkLiveLogView {
     private applyLabels() {
         this.chipLabel.textContent = this.labels.title;
         this.list.setAttribute("aria-label", this.labels.logLabel);
-        const label = this.collapsed ? this.labels.show : this.labels.hide;
-        this.chip.setAttribute("aria-label", `${this.labels.title}: ${label}`);
-        this.chip.title = label;
+        this.chip.setAttribute("aria-label", this.labels.title);
+        this.chip.removeAttribute("title");
     }
 
     private applyCollapsed(chevron = this.chevron()) {
         this.list.style.display = this.collapsed ? "none" : "flex";
-        this.chip.setAttribute("aria-expanded", this.collapsed ? "false" : "true");
+        this.chip.removeAttribute("aria-expanded");
         if (chevron) chevron.style.transform = this.collapsed ? "rotate(0deg)" : "rotate(180deg)";
         this.applyLabels();
     }
@@ -212,8 +212,8 @@ export class ArkLiveLogView {
         }
     }
 
-    setCollapsed(collapsed: boolean) {
-        this.collapsed = collapsed;
+    setCollapsed(_collapsed: boolean) {
+        this.collapsed = false;
         this.applyCollapsed();
     }
 
