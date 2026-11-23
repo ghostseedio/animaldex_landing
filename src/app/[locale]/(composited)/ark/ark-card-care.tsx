@@ -13,6 +13,8 @@ import {fillArkWords} from "@/lib/ark-words";
  */
 /** The server's switch read as off once on this page: no more asks until the page is opened again. */
 let switchedOff = false;
+/** Only a real Ark animal id is asked about (fixtures and placeholders have none: no request, no 400 in the console). */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function ArkCardCare({animalId, words: given, locale}: {animalId: string; words?: Partial<ArkCareWords> | null; locale: string}) {
     const words = arkCareWords(given);
@@ -41,7 +43,7 @@ export default function ArkCardCare({animalId, words: given, locale}: {animalId:
         setCare(null);
         setPicked(null);
         setNote(null);
-        if (!switchedOff) void read(ctl.signal);
+        if (!switchedOff && UUID.test(animalId)) void read(ctl.signal);
         return () => ctl.abort();
     }, [read]);
 
