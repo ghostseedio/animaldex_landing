@@ -113,6 +113,7 @@ body lengths apart, the tree sleepers each on their own branch. A roost's row or
 |---|---|
 | guinea-pig, collared-peccary | 0.55-0.99 on the ground, as the shipped sheep (0.53-0.94) |
 | ring-tailed-lemur, tufted-capuchin, coppery-titi-monkey, stump-tailed-macaque, bolivian-squirrel-monkey | 0.2-0.5 on one limb (one awake member further off) |
+| russian-tortoise, sulcata-tortoise (dig_burrow) | nose down, forelegs working, a dug patch and dust left on the ground (`~/AnimalDex-work/sig3/dig-*/rt_dig-strip.jpg`); SIG2 had searched for `dig_burrow~tortoise`, a template that does not exist |
 
 Still held, with the new why in `signature-holds.json`: long-tailed macaque (single file along the limb, standing),
 common marmoset (drawn half inside the trunk), Barbary macaque (unchanged blob), sugar glider (its text names no
