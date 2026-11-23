@@ -832,7 +832,11 @@ async function main() {
             }
             const pose = drawn.sched?.pose;
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`)));
-            const lift = `y-ground ${(at.y - at.ground).toFixed(3)} mid-ground ${drawn.middle ? (drawn.middle.y - at.ground).toFixed(3) : "-"}`;
+            const terrain = worldSampler().heightAt(at.x, at.z);
+            const actPitch = (drawn.sched?.pose?.act as {pitch?: number} | null | undefined)?.pitch;
+            const sp = drawn.sched?.pose as {x?: number; y?: number; z?: number} | undefined;
+            const water = (worldSampler() as unknown as {waterSurface?: (x: number, z: number) => number}).waterSurface?.(at.x, at.z);
+            const lift = `y-terrain ${(at.y - terrain).toFixed(3)} pitch ${actPitch === undefined ? "-" : actPitch.toFixed(2)} at ${at.x.toFixed(2)},${at.y.toFixed(2)},${at.z.toFixed(2)} pose ${sp?.x?.toFixed(2)},${sp?.y?.toFixed(2)},${sp?.z?.toFixed(2)} terrain ${terrain.toFixed(2)} water ${typeof water === "number" ? water.toFixed(2) : "-"} path ${(drawn as unknown as {posePath?: string}).posePath ?? "-"} seat ${JSON.stringify((drawn as unknown as {seat?: {x: number; y: number; z: number; pushes: number; fell: boolean; on: string}}).seat ? (({x, y, z, pushes, fell, on}) => ({x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), pushes, fell, on}))((drawn as unknown as {seat: {x: number; y: number; z: number; pushes: number; fell: boolean; on: string}}).seat) : null)} coll ${JSON.stringify((drawn as unknown as {push?: unknown; collide?: unknown}).push ?? null)}`;
             return `${id.slice(-3)} length ${drawn.length.toFixed(2)} ${lift} beat ${pose?.beat ?? "-"} act ${pose?.act?.recipe ?? "-"}/${pose?.act?.block ?? "-"}/${pose?.act?.state ?? "-"} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
         },
         /** Reptile signatures: the first of the cast with a sit-and-wait bout in the next four minutes (`micro-ambush.ts`), and its bouts. */
@@ -905,7 +909,8 @@ async function main() {
                 return `${id.slice(-3)}${d?.place?.micro ? " (micro)" : ""} ${act ? `${act.recipe}/${act.block}/${act.state} pitch ${(act.pitch ?? 0).toFixed(2)} roll ${(act.roll ?? 0).toFixed(2)}${act.carry ? " carrying" : ""}${act.mark ? " marking" : ""}` : `its day (${d?.sched?.pose?.beat ?? (d?.toLight ? `to the light ${d.toLight.toFixed(2)}` : "-")})`} len ${(d?.length ?? 0).toFixed(3)}`;
             };
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
-            const gap = mids.length > 1 ? ` apart ${Math.hypot(mids[0].x - mids[1].x, mids[0].z - mids[1].z).toFixed(2)} m` : "";
+            const toOther = mids.length > 1 ? Math.atan2(mids[1].x - mids[0].x, mids[1].z - mids[0].z) : 0;
+            const gap = mids.length > 1 ? ` apart ${Math.hypot(mids[0].x - mids[1].x, mids[0].z - mids[1].z).toFixed(2)} m yaw ${at.map((p) => (p ? p.yaw.toFixed(2) : "-")).join("/")} a->b ${toOther.toFixed(2)}` : "";
             return `${ids.map((id, i) => say(drawn[i], id)).join(" | ")}${gap} ${said.join(" / ")}`;
         },
         handle

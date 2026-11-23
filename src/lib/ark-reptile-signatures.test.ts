@@ -30,7 +30,7 @@ const PLAN_OF = (slug: string) => {
 const recipesOf = (slug: string) => (ROWS[slug] ?? "").split("|")[0].split(",").map((r) => r.slice(0, r.lastIndexOf(".")));
 
 test("the variants: every block they use the engine has, each named for a plain recipe the card knows", () => {
-    assert.equal(REPTILE_TEMPLATES.length, 6);
+    assert.equal(REPTILE_TEMPLATES.length, 7);
     for (const t of REPTILE_TEMPLATES) {
         assert.ok(TEMPLATES[t.id] === t, `${t.id} is in the table`);
         assert.ok(t.id.includes("~"), `${t.id} is a variant`);

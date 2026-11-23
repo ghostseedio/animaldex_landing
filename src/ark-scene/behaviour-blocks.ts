@@ -49,7 +49,8 @@ export type BlockDef = {
     /** Near-only: particles (at the start of the step unless `fxAt` says the end), a mark left on the ground. */
     fx?: "splash" | "dirt" | "dust" | "mud" | "chips" | "bubbles" | "sand" | "spray" | "shake";
     fxAt?: "start" | "end" | "during";
-    mark?: "hole" | "mound" | "hollow" | "pit";
+    /** (`mud`: a wallow's, set by the recipe, `behaviour-recipes.ts` marksOf; no block names it.) */
+    mark?: "hole" | "mound" | "hollow" | "pit" | "mud";
 };
 
 const B = (def: BlockDef) => def;
@@ -95,6 +96,8 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         B({id: "sweep", label: "sweep the bill side to side", motion: "hold", states: ["sweep"], beat: "peck", pitch: 0.55, sway: 0.12, rate: 0.9, fx: "spray", fxAt: "during"}),
         B({id: "upend", label: "up-end (head under, tail up)", motion: "hold", states: ["upend"], beat: "bite", pitch: 1.3, wet: true, fx: "spray", fxAt: "start"}),
         B({id: "probe", label: "probe the ground with the bill", motion: "hold", states: ["probe"], beat: "peck", pitch: 0.6, heave: -0.06, rate: 1.3, fx: "dirt", fxAt: "during"}),
+        // SIG3: a lizard's nose in the leaf litter, its long body level on the ground (the bill's steep tip stood a skink on its nose, off the ground).
+        B({id: "nose_litter", label: "nose through the leaf litter", motion: "hold", states: ["probe"], beat: "peck", pitch: 0.12, heave: -0.02, rate: 1.3, fx: "dirt", fxAt: "during"}),
         B({id: "pull", label: "pull (a worm from the ground)", motion: "hold", states: ["pull"], beat: "bite", pitch: 0.2, surge: -0.18, rate: 0.8}),
         B({id: "peck", label: "peck", motion: "hold", states: ["peck"], beat: "peck", pitch: 0.45, heave: -0.04, rate: 2}),
         B({id: "drum", label: "drum or hammer on wood", motion: "hold", states: ["drum"], beat: "peck", surge: 0.08, rate: 9, fx: "chips", fxAt: "during"}),

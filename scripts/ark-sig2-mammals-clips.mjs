@@ -116,10 +116,11 @@ for (const name of scenes) {
     } else if (head.moment) {
         const {start, seconds} = head.moment;
         const n = 12;
-        const follow = head.scene.recipe !== "nest_build";
+        const follow = arg("follow", "") ? arg("follow", "") === "1" : head.scene.recipe !== "nest_build";
+        const view = {dist: Number(arg("dist", follow ? "2.4" : "3.4")), polar: Number(arg("polar", "1.2")), azimuth: Number(arg("azimuth", "0.9"))};
         for (let k = 0; k < n; k++) {
             const epoch = start + (k / (n - 1)) * seconds;
-            const text = await page.evaluate(async ([epoch, follow, dist]) => window.__sig2.look(epoch, dist, follow), [epoch, follow, follow ? 2.4 : 3.4]);
+            const text = await page.evaluate(async ([epoch, follow, v]) => window.__sig2.look(epoch, v.dist, follow, v.polar, v.azimuth), [epoch, follow, view]);
             await shoot(`+${(epoch - start).toFixed(1)} s`, text);
         }
         strip(dir, before ? `${name}-before` : name, i, 4);

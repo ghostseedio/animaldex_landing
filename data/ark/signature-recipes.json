@@ -1821,7 +1821,8 @@
    "recipe": "wrestle",
    "behaviour": "holds and defends the same calling spot at the pond edge",
    "field": "evidence",
-   "quote": "Males call from a held position in the shallows at the pond edge, returning to and defending the same area through the breeding season."
+   "quote": "Males call from a held position in the shallows at the pond edge, returning to and defending the same area through the breeding season.",
+   "line": "{aAnimal} is wrestling a rival off its patch of the pond"
   },
   {
    "slug": "american-toad",

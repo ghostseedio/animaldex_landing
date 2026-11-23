@@ -11,6 +11,7 @@
  *   dig_burrow~nest      a female tortoise's nest pit in the soil: dig, lay, fill in
  *   wallow~turtle        a tortoise's settling into mud or damp litter (it cannot roll in it)
  *   probe_feed~turtle    a hawksbill's beak into a reef's crevices
+ *   probe_feed~lizard    a skink's nose through the leaf litter, its body flat (SIG3)
  *   beach_nest~bank      a crocodilian's or a stream lizard's nest hole in a sandy bank (any hour, on foot)
  *   incubate_sit~reptile a reptile's guarding of its nest (no props' nest is drawn for a reptile: its mound is its own)
  *
@@ -74,10 +75,24 @@ export const REPTILE_TEMPLATES: Template[] = [
         replaces: ["groom", "rest", "drink", "hide"],
         doing: "rest",
         hours: "day",
+        // (SIG3: on the water's edge itself, the damp bank: it walked 1.2 m up off it onto the dry grass to settle.)
+        steps: [{b: "bury", s: [30, 55]}]
+    }),
+    // A skink foraging through the leaf litter: a few steps, its nose in the litter, on a little, again (its body flat).
+    T({
+        id: "probe_feed~lizard",
+        label: "noses through the leaf litter for food, its body flat on the ground",
+        kind: "stay",
+        goal: "ground",
+        replaces: ["forage", "graze", "wander"],
+        doing: "forage",
         steps: [
-            {b: "walk", to: "ground", near: "here", r: 1.2},
-            {b: "bury", s: [30, 55]}
-        ]
+            {b: "walk", to: "ground", near: "here", r: 1.5},
+            {b: "nose_litter", s: [2, 4]},
+            {b: "walk", to: "ground", near: "here", r: 0.8},
+            {b: "nose_litter", s: [1.5, 3]}
+        ],
+        loop: 0
     }),
     // A hawksbill at the reef: down to it, its narrow beak into a crevice, on to the next.
     T({

@@ -27,6 +27,8 @@ type Raw = (typeof fixture)["animals"][number];
 type Activity = "diurnal" | "nocturnal" | "crepuscular" | "any";
 type Scene = {
     zone: string;
+    /** A pinned Ark day (the seasons' month: a species whose stored months are not the snapshot's). */
+    arkDay?: number;
     /** The pinned hour of the day (the scene's own clock). */
     hours: number;
     /** The day the clock starts (UTC ms). */
@@ -70,7 +72,7 @@ const SCENES: Record<string, Scene> = {
     "stone-tufted-capuchin": {zone: "rainforest", hours: 10, date: day(11), slug: "tufted-capuchin", name: "Tufted Capuchin", n: 4, activity: "diurnal", kind: "recipe", recipe: "stone_hammer", block: "pound", within: 24},
     "worm-javan-ferret-badger": {zone: "rainforest", hours: 22, date: day(11), slug: "javan-ferret-badger", name: "Javan Ferret-Badger", n: 3, activity: "nocturnal", kind: "recipe", recipe: "worm_dig", block: "pull", within: 24},
     "nest-eastern-gray-squirrel": {zone: "woodland", hours: 10, date: Date.UTC(2026, 6, 4) / 1000, slug: "eastern-gray-squirrel", name: "Eastern Gray Squirrel", n: 3, activity: "diurnal", kind: "recipe", recipe: "nest_build", block: "place", within: 24},
-    "nest-red-squirrel": {zone: "woodland", hours: 10, date: Date.UTC(2026, 8, 4) / 1000, slug: "red-squirrel", name: "Red Squirrel", n: 3, activity: "diurnal", kind: "recipe", recipe: "nest_build", block: "place", within: 24},
+    "nest-red-squirrel": {zone: "woodland", hours: 10, date: Date.UTC(2026, 8, 4) / 1000, slug: "red-squirrel", name: "Red Squirrel", arkDay: 8.5 * (365 / 12), n: 3, activity: "diurnal", kind: "recipe", recipe: "nest_build", block: "place", within: 24},
     "nest-desert-cottontail": {zone: "desert", hours: 10, date: Date.UTC(2026, 2, 5) / 1000, slug: "desert-cottontail", name: "Desert Cottontail", n: 3, activity: "crepuscular", kind: "recipe", recipe: "nest_build", block: "place", within: 24},
     "nest-malaysian-field-rat": {zone: "grassland", hours: 22, date: day(11), slug: "malaysian-field-rat", name: "Malaysian Field Rat", n: 3, activity: "nocturnal", kind: "recipe", recipe: "nest_build", block: "place", within: 24},
     "nest-red-river-hog": {zone: "rainforest", hours: 22, date: day(11), slug: "red-river-hog", name: "Red River Hog", n: 3, activity: "nocturnal", kind: "recipe", recipe: "nest_build", block: "place", within: 24}
@@ -103,6 +105,7 @@ async function main() {
     const params = new URLSearchParams(location.search);
     const name = params.get("scene") ?? "sleep-ring-tailed-lemur";
     const scene = SCENES[name];
+    if (scene?.arkDay !== undefined) (globalThis as {__arkPropsArkDay?: number}).__arkPropsArkDay = scene.arkDay;
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
     const template = fixture.animals[0];
     const animals: Raw[] = [];
@@ -126,6 +129,19 @@ async function main() {
         date: scene.date,
         activity: scene.activity
     };
+    // (SIG3: a stone tool's needs where they live: rock tops (its anvil) near each one's home, and the slots it forages in.)
+    if (scene.recipe === "stone_hammer") {
+        const s = ctx.world.sampler;
+        const rocks = ctx.animals.map((a) => {
+            const near = (r: number) => s.attachPoints("rock_top", {x: a.animal.home.x, z: a.animal.home.z, r}).length;
+            const slots = trips(ctx, a, scene.date, scene.within ?? 24);
+            return {id: a.id.slice(-3), length: a.animal.length, home: [Math.round(a.animal.home.x), Math.round(a.animal.home.z)], move: a.profile.move, rock10: near(10), rock25: near(25), rock60: near(60), forage: slots.filter((t) => t.doing === "forage").length, slots: slots.length, recipes: Array.from(new Set(slots.map((t) => t.recipe).filter(Boolean)))};
+        });
+        const all = s.attachPoints("rock_top");
+        const zones: Record<string, number> = {};
+        for (const p of all) zones[p.zone] = (zones[p.zone] ?? 0) + 1;
+        console.log("[sig2] stone", JSON.stringify({rocks, rockTopsByZone: zones, stones: speciesRecipes(scene.slug).recipes.map((r) => r.id)}));
+    }
     const at = async (epoch: number, ticks = 3) => {
         const ms = epoch * 1000;
         if (!fake) {
@@ -160,20 +176,37 @@ async function main() {
 
     if (scene.kind === "recipe") {
         // The first episode of the recipe whose block has a key worth framing: found with the engine's own functions.
+        const tally: {trips: number; episodes: number; shapes: Record<string, number>; path?: string; short?: string; whole?: number; lost?: number} = {trips: 0, episodes: 0, shapes: {}};
         search: for (const a of ctx.animals) {
             for (const trip of trips(ctx, a, scene.date + (scene.recipe === "nest_build" ? 0 : 0), scene.within ?? 24)) {
                 if (trip.recipe !== scene.recipe) continue;
                 const ep: Episode | null = tripEpisode(ctx.world, trip);
+                tally.trips++;
                 if (!ep) continue;
+                tally.episodes++;
+                const shape = ep.keys.map((k) => k.block.id).join(">");
+                tally.shapes[shape] = (tally.shapes[shape] ?? 0) + 1;
+                // (SIG3: where each key of a whole trip lands: height over the ground, metres from the nest, and when.)
+                const whole = ep.keys.some((k) => k.block.id === "place");
+                if (scene.recipe === "nest_build" && whole) tally.whole = (tally.whole ?? 0) + 1;
+                if (scene.recipe === "nest_build" && !whole && ep.keys.some((k) => k.block.id === "pick_up")) tally.lost = (tally.lost ?? 0) + 1;
+                const lostOne = !whole && ep.keys.some((k) => k.block.id === "pick_up");
+                if (scene.recipe === "nest_build" && (whole ? !tally.path : lostOne || !tally.short)) {
+                    const nest = recipeNest(ctx.world, a.profile, a.animal, trip.start);
+                    const h = (k: Episode["keys"][number]) => (k.to.y - ctx.world.sampler.heightAt(k.to.x, k.to.z)).toFixed(1);
+                    const d = (k: Episode["keys"][number]) => (nest ? Math.hypot(k.to.x - nest.x, k.to.y - nest.y, k.to.z - nest.z) : NaN).toFixed(1);
+                    const around = nest ? (["branch", "leaf"] as const).map((tag) => `${tag} ${ctx.world.sampler.attachPoints(tag, {x: nest.x, z: nest.z, r: 3}).filter((p) => Math.abs(p.y - nest.y) < 2.5).length}`).join(", ") : "no nest";
+                    tally[whole ? "path" : "short"] = `${a.id.slice(-3)} nest h${nest ? (nest.y - ctx.world.sampler.heightAt(nest.x, nest.z)).toFixed(1) : "-"} (${around}) slot ${(trip.end - trip.start).toFixed(0)}s, ep ${(ep.keys[0].t0 - trip.start).toFixed(0)}..${(trip.end - trip.start).toFixed(0)}s, arrive ${(trip.arrive - trip.start).toFixed(0)}s: ` + ep.keys.map((k) => `${k.block.id}[h${h(k)} n${d(k)} ${(k.t1 - ep.keys[0].t0).toFixed(0)}s${k.carry?.item ? " " + k.carry.item : ""}]`).join(" ");
+                }
                 const key = ep.keys.find((k) => k.block.id === scene.block && (scene.block !== "pull" || k.catch?.ok));
-                if (!key) continue;
+                if (!key || moment) continue;
                 const first = ep.keys[0];
                 const toNest = scene.recipe === "nest_build" ? ep.keys.find((k) => k.carry?.item === "material" && k.block.motion === "travel") : null;
                 const start = (toNest ?? key).t0 - 6;
                 const last = ep.keys[ep.keys.length - 1];
                 const aim = scene.recipe === "nest_build" ? {x: key.to.x, y: key.to.y, z: key.to.z} : {x: key.from.x, y: key.from.y, z: key.from.z};
                 moment = {start, seconds: Math.min(Math.max(last.t1 - start, 12), 34), step: 0.5, view: {target: aim, distance: scene.recipe === "nest_build" ? 3.2 : 2.4, polar: 1.15, azimuth: 0.9}, note: `${a.id.slice(-3)} ${scene.recipe}: ${ep.keys.map((k) => k.block.id).join(" ")}; first ${first.block.id} ${first.t0.toFixed(0)}, ${scene.block} at ${key.t0.toFixed(0)}`, id: a.id, aim};
-                break search;
+                if (scene.recipe !== "nest_build") break search;
             }
         }
         if (scene.recipe === "nest_build") {
@@ -182,7 +215,7 @@ async function main() {
             api.nest = {site, stage: nestStageAt(scene.slug, scene.date + 86400 * 3)};
         }
         // (The moment's view: from the animal itself, a little back, side on.)
-        console.log("[sig2] moment", moment ? moment.note : "none");
+        console.log("[sig2] moment", moment ? moment.note : "none", JSON.stringify(tally));
     }
     api.moment = moment;
     /** One picture of the recipe moment: the world at `epoch`, the camera on the actor (or its nest) from `distance`. */
