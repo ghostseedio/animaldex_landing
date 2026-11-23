@@ -6683,7 +6683,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const biting = (c: (typeof candidates)[number]) => c.entry.sched!.pose?.beat === "bite" || c.entry.sched!.pose?.beat === "chew";
             // (SIG3: and an animal digging where it stands, the soil it works cleared round it: a leopard tortoise at its nest
             // pit, held still, sank from sight into the tall grass.)
-            const digging = (c: (typeof candidates)[number]) => c.entry.sched!.pose?.act?.state === "dig";
+            const digging = (c: (typeof candidates)[number]) => (c.entry.sched!.pose as RecipePose | null | undefined)?.act?.state === "dig";
             setGrassPress(
                 // (Where a meal pressed the grass flat, `meal-traces.ts`: nearest the camera first, like the rest.)
                 // 3.3 fix (breeding taps): and round a clutch a laid line's tap drew, first.

@@ -820,7 +820,7 @@ export function onSchedule(place: {micro?: unknown; burrow?: unknown; hamlet?: u
 }
 
 /** A spot on the schedule's terms (`behaviour-schedule.ts` Spot). */
-export type ScheduleSpot = {x: number; y: number; z: number; nx: number; ny: number; nz: number; point: string | null};
+export type ScheduleSpot = {x: number; y: number; z: number; nx: number; ny: number; nz: number; point: string | null; /** A limb's way along it (unit), when the place is on one. */ along?: [number, number, number]};
 
 /**
  * Where the schedule takes it to sleep: the roost its text names
@@ -861,7 +861,7 @@ function workRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: ArkZone): Sc
     const dry = wetDen && place.map?.who && typeof (place as {x?: number}).x === "number" ? coastalDen(place.map, (place as {x: number}).x, (place as {z: number}).z, (place as {ground?: number}).ground ?? 0) : null;
     if (dry) return dry;
     if (roost) {
-        if (roost.kind === "attach" && roost.attach) return {x: roost.attach.x, y: roost.attach.y, z: roost.attach.z, nx: roost.attach.normal[0], ny: roost.attach.normal[1], nz: roost.attach.normal[2], point: `map:${roost.attach.id}`, along: roost.attach.tangent};
+        if (roost.kind === "attach" && roost.attach) return {x: roost.attach.x, y: roost.attach.y, z: roost.attach.z, nx: roost.attach.normal[0], ny: roost.attach.normal[1], nz: roost.attach.normal[2], point: `map:${roost.attach.id}`, along: [roost.attach.tangent[0], roost.attach.tangent[1], roost.attach.tangent[2]]};
         if (roost.kind === "canopy" && roost.canopy) {
             const at = canopyPoint(roost.canopy.zone ?? zone, roost.canopy);
             return {x: at.x, y: at.y, z: at.z, nx: at.nx, ny: at.ny, nz: at.nz, point: `map:canopy`};
