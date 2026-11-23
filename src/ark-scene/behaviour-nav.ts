@@ -641,6 +641,57 @@ export class NavGrid {
         return this.sampler.heightAt(x, z);
     }
 
+    /** Each swim cell's connected water (at least the depth), per depth. */
+    private readonly waters = new Map<number, Int32Array>();
+
+    /**
+     * Which connected water a point is in, for a swimmer that needs water this deep (cells joined as the swim search
+     * joins them: the 8 round each): -1 in none. A point on a dry cell is in its wet neighbours' water (the lowest number
+     * of them). Two points in different waters (the upper river above the falls and the plunge pool below it) are never
+     * joined by a swim.
+     */
+    waterRegion(x: number, z: number, minDepth = 0.3): number {
+        let ids = this.waters.get(minDepth);
+        if (!ids) {
+            ids = new Int32Array(this.size * this.size).fill(-1);
+            const stack: number[] = [];
+            let next = 0;
+            for (let k0 = 0; k0 < this.size * this.size; k0++) {
+                if (ids[k0] >= 0 || !(this.depth[k0] >= minDepth)) continue;
+                ids[k0] = next;
+                stack.push(k0);
+                while (stack.length) {
+                    const k = stack.pop()!;
+                    const i = k % this.size;
+                    const j = (k - i) / this.size;
+                    for (const [di, dj] of STEPS) {
+                        const ni = i + di;
+                        const nj = j + dj;
+                        if (ni < 0 || nj < 0 || ni >= this.size || nj >= this.size) continue;
+                        const nk = nj * this.size + ni;
+                        if (ids[nk] >= 0 || !(this.depth[nk] >= minDepth)) continue;
+                        ids[nk] = next;
+                        stack.push(nk);
+                    }
+                }
+                next++;
+            }
+            this.waters.set(minDepth, ids);
+        }
+        const [ci, cj] = this.cellOf(x, z);
+        const own = ids[cj * this.size + ci];
+        if (own >= 0) return own;
+        let best = -1;
+        for (const [di, dj] of STEPS) {
+            const i = ci + di;
+            const j = cj + dj;
+            if (i < 0 || j < 0 || i >= this.size || j >= this.size) continue;
+            const id = ids[j * this.size + i];
+            if (id >= 0 && (best < 0 || id < best)) best = id;
+        }
+        return best;
+    }
+
     /** Each walk cell's connected stretch of ground (no steeper than the slope), per slope and body class. */
     private readonly regions = new Map<string, Int32Array>();
 

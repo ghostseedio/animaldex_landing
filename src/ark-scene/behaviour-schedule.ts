@@ -1682,10 +1682,13 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             const b = bearing + (k * Math.PI) / 4;
             const cell = world.nav.nearest(animal.home.x + Math.cos(b) * away, animal.home.z + Math.sin(b) * away, "swim", 0.6);
             if (!cell) continue;
-            fallback ??= cell;
+            // (The fallback too only in its home's own water: 2026-11-24, an Amazon river dolphin homed in the upper river's
+            // pool at the falls' lip found no open water a breath away there, took the first cell found, in the river below
+            // the falls, and swam to it straight down through the cliff. `NavGrid.waterRegion`: water no swim joins.)
+            if (!homeWater || world.nav.waterRegion(cell.x, cell.z, 0.3) === world.nav.waterRegion(homeWater.x, homeWater.z, 0.3)) fallback ??= cell;
             if (!world.nav.walkable(cell.x, cell.z) && Math.hypot(cell.x - animal.home.x, cell.z - animal.home.z) >= 0.6 * away && swimsTo(cell)) near = cell;
         }
-        const spot = near ?? fallback ?? animal.home;
+        const spot = near ?? fallback ?? homeWater ?? animal.home;
         return {doing: "breathe", to: {x: spot.x, y: surfaceAt(world, spot.x, spot.z), z: spot.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
     }
     const personality = animalPersonality(animal.id);
