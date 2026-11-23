@@ -307,8 +307,8 @@ export const FOOT_MOST = 4;
 /**
  * How far a rock standing on a steep slope is set down into it when it is drawn (m; ark-world, decision 447: "some boulders
  * on steep faces look stuck to the wall"): a boulder as round as an egg on a 45 degree face is a ball stuck to a wall. Over a
- * slope of tan 0.5 (27 degrees) it begins to sink, and by tan 1.2 (50 degrees) it is half buried (`height` is the shape's
- * height at scale 1), as a rock that has come to rest there is. Only the drawing moves: its place, its lists, its attach
+ * slope of tan 0.4 (22 degrees) it begins to sink, and by tan 0.75 (37 degrees, the angle of repose) it is two thirds
+ * buried (`height` is the shape's height at scale 1), as a rock that has come to rest there is. Only the drawing moves: its place, its lists, its attach
  * points and its colliders are the world's, unchanged. The ground is the drawn one (`drawnGround`).
  */
 export function steepSink(x: number, z: number, scale: number, height: number): number {
@@ -321,9 +321,18 @@ export function steepSink(x: number, z: number, scale: number, height: number): 
         const a = (k / 8) * Math.PI * 2;
         down = Math.max(down, (here - drawnGround(x + Math.cos(a) * d, z + Math.sin(a) * d)) / d);
     }
-    const t = Math.min(Math.max((down - 0.5) / 0.7, 0), 1);
-    return height * scale * 0.5 * t * t * (3 - 2 * t);
+    // (ark-world round 2, the owner again: "waterfall boulders stuck to the walls". Half buried at 50 degrees still left a
+    // boulder's downhill half hanging off a 45-50 degree face: the falls' walls are mostly that steep. A loose rock does not
+    // rest past its angle of repose, about 35 degrees; there it is set two thirds down, so what shows is a hump of rock
+    // bedded in the face, and it begins to sink from 22 degrees.)
+    const t = Math.min(Math.max((down - STEEP_FROM) / (STEEP_FULL - STEEP_FROM), 0), 1);
+    return height * scale * STEEP_MOST * t * t * (3 - 2 * t);
 }
+
+/** steepSink's slope (rise over run) where a rock begins to sink, where it is sunk its most, and that most (share of its height). */
+export const STEEP_FROM = 0.4;
+export const STEEP_FULL = 0.75;
+export const STEEP_MOST = 0.66;
 
 export type RockAttach = {tag: string; spot: string; position: {x: number; y: number; z: number}; normal: {x: number; y: number; z: number}; size: [number, number]};
 

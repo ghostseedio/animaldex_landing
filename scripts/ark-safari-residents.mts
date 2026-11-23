@@ -5,9 +5,10 @@
  * stored phrase that decided it), which safari habitat it would live in if the zoo holds it in the savanna paddocks
  * (herbivores) or the reptile house (crocodilians). The predators go by binomial in `safari.ts`. Rule, no lists:
  *
- * - herbivores: a quadruped (the hoofed and the heavy mammals; the flightless birds keep the zoo's paddocks, theirs now
- *   alone), body size ≥ 45, diet not meat or fish; by zone: grassland → plains, desert → desert, rainforest or
- *   woodland → forest (edge), wetland or river_lake → wetland (the hippo pool);
+ * - herbivores: a quadruped (the hoofed and the heavy mammals) or a big flightless bird (the ratites: ostrich, emu, rhea,
+ *   cassowary; ark-world round 2, the owner: "ostriches stay stuck in zoo paddocks instead of the safari"; real safari
+ *   parks run them with the plains herd), body size ≥ 45, diet not meat or fish; by zone: grassland → plains, desert →
+ *   desert, rainforest or woodland → forest (edge), wetland or river_lake → wetland (the hippo pool);
  * - the river: a "lizard" body plan (the crocodilians' rig) of wetland or river_lake, size ≥ 55, eating fish or meat.
  *
  *   npx tsx scripts/ark-safari-residents.mts            writes src/ark-scene/islands/town/safari-residents.json
@@ -24,7 +25,7 @@ const habitats: Record<string, string> = {};
 const why: Record<string, string> = {};
 for (const p of profiles) {
     let habitat: string | null = null;
-    if (p.plan === "quadruped" && p.size >= 45 && p.diet !== "meat" && p.diet !== "fish") habitat = ZONE[p.zone] ?? null;
+    if ((p.plan === "quadruped" || p.plan === "flightless_bird") && p.size >= 45 && p.diet !== "meat" && p.diet !== "fish") habitat = ZONE[p.zone] ?? null;
     else if (p.plan === "lizard" && p.size >= 55 && (p.zone === "wetland" || p.zone === "river_lake") && (p.diet === "fish" || p.diet === "meat")) habitat = "river";
     if (!habitat) continue;
     habitats[p.slug] = habitat;

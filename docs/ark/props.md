@@ -174,3 +174,15 @@ The owner, 2026-11-20: "better modeling and animations and graphics on bushes to
 - **Wild island**: a boulder or stone on a steep slope is drawn set into it, half buried at 50 degrees (`rock-assets.ts` `steepSink`; crags by 60 %); the savanna's termite mounds are smooth and fluted (`props/shapes.ts`).
 - **Harness**: `scripts/ark-world-shots.mjs` shoots named views in the town's own frame (`town: true`, `x`, `z`, `dy`), follows an instanced mesh (`follow`), takes the real Ark as `--population-file`, and downloads no model (the animals stay specks).
 - **Not reproduced**: the board's "aquarium tunnel has 91 overlapping fish". On the 2026-11-20 real Ark the tunnel holds 14 residents and averages 0.2 overlapping body pairs over 24 times of day (worst 1); the reef wall's 116 are fish in the same cave, inside rock.
+
+### Round 2 (ark-world, batch 15b, 2026-11-23)
+
+The owner's second list, each found in `scripts/ark-world-shots.mjs` shots first (before/after in `~/AnimalDex-work/ark-world/r2/`):
+
+- **Bushes**: a bush's leaves are their own surface kind (`kit.ts` `LEAF_SURFACE`, 11): the solid material draws 10 cm leaf clusters, a finer grain and a coarse mottle on them, fading with distance (`render/buildings.ts`). The kind is read from the vertex colour's fractions, which hold over a face only while its corners share one colour, so a leaf face is one colour (the mean of its corners'). Before, the bushes were smooth green clay beside the trees' leaf cards.
+- **Wheels**: smooth-shaded revolutions (`wheels.ts` `spinRound`: each ring's normal is its profile's), 24 sides on the trucks (20 on the spare): round at any distance, about 4,000 triangles a truck.
+- **Safari**: the gate arch stands on the gate road's long straight leg 24 m in (it stood on the bend, off the road); the earth patches are drawn in the paving (decal) with the earth texture in the red-brown of savanna soil, not as solid blocks; ostriches, emus and rheas (plains) and cassowaries (forest) live in the safari: big flightless birds pass the same rule as the big four-legged (`scripts/ark-safari-residents.mts`).
+- **Zoo dome waterfall**: moving water, the wild island's falls shader (`islands/falls-water.ts`, moved out of `wild/render/falls.ts`) on the old arc (`render/dome-falls.ts`, one draw, ~1,200 triangles, only while the dome is open); the still strands, sheet and spray lumps are gone from the solids (their random draws kept, so nothing else in the dome moved).
+- **Countryside see-into homes**: a garden room's slots along the house wall with no display in use take the conservatory's furniture (`render/pet-homes.ts` `roomFurniture`): a two-seat wicker sofa, an armchair with a lamp table, a tall plant. Drawing only: the slots are out of the pets' floor already.
+- **Waterfall boulders**: steep-slope sinking starts at 40 degrees (was 50) and reaches two thirds of the height by 75 (`rock-assets.ts` `STEEP_FROM`, `STEEP_FULL`, `STEEP_MOST`).
+- **Not reproduced again**: fish crossing the aquarium tunnel (0 poses under the walkway roof or outside the glass on the real Ark).

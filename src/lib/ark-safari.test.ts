@@ -3,7 +3,7 @@
  * island for a commercial safari, then move animals to it, make it nice and detailed so it matches the rest").
  *
  * - The resident table is the rule over the stored profiles (`scripts/ark-safari-residents.mts`), not a list.
- * - Who moves: large herbivores from the savanna paddocks, the lions, tigers and hyenas, the crocodilians; each to a
+ * - Who moves: large herbivores (and the big flightless birds) from the savanna paddocks, the lions, tigers and hyenas, the crocodilians; each to a
  *   habitat that fits its stored zone; predators each kind alone, never with prey.
  * - Every moved resident's body stays inside its area through an Ark day, on the drawn ground (not sunk, not floating).
  * - The trucks keep to the loop by day and stand in the depot at night.
@@ -41,17 +41,20 @@ test("the safari's resident table is the rule over the stored profiles, nothing 
     const zone: Record<string, string> = {grassland: "plains", desert: "desert", rainforest: "forest", woodland: "forest", wetland: "wetland", river_lake: "wetland"};
     for (const p of PROFILES) {
         let h: string | null = null;
-        if (p.plan === "quadruped" && p.size >= 45 && p.diet !== "meat" && p.diet !== "fish") h = zone[p.zone] ?? null;
+        if ((p.plan === "quadruped" || p.plan === "flightless_bird") && p.size >= 45 && p.diet !== "meat" && p.diet !== "fish") h = zone[p.zone] ?? null;
         else if (p.plan === "lizard" && p.size >= 55 && (p.zone === "wetland" || p.zone === "river_lake") && (p.diet === "fish" || p.diet === "meat")) h = "river";
         if (h) want[p.slug] = h;
     }
     assert.deepEqual((residents as {habitats: Record<string, string>}).habitats, want);
-    // Real kinds land where they belong; the flightless birds and the smaller kinds stay in the zoo.
+    // Real kinds land where they belong (ark-world round 2: the ratites with the plains herd, the cassowary at the forest
+    // edge); the smaller kinds stay in the zoo.
     assert.equal(want["giraffe"], "plains");
     assert.equal(want["common-hippopotamus"], "wetland");
     assert.equal(want["dromedary-camel"], "desert");
     assert.equal(want["malayan-tapir"], "forest");
-    assert.equal(want["ostrich"], undefined);
+    assert.equal(want["ostrich"], "plains");
+    assert.equal(want["emu"], "plains");
+    assert.equal(want["southern-cassowary"], "forest");
     assert.equal(want["meerkat"], undefined);
 });
 
@@ -68,7 +71,7 @@ const KINDS: Array<[string, string | null]> = [
     ["blue-wildebeest", "Connochaetes taurinus"], ["common-eland", "Taurotragus oryx"], ["asian-elephant", "Elephas maximus"], ["south-american-tapir", "Tapirus terrestris"], ["malayan-tapir", "Tapirus indicus"],
     ["scimitar-horned-oryx", "Oryx dammah"], ["dromedary-camel", "Camelus dromedarius"], ["common-hippopotamus", "Hippopotamus amphibius"], ["pygmy-hippopotamus", "Choeropsis liberiensis"],
     ["nile-crocodile", "Crocodylus niloticus"], ["african-lion", "Panthera leo"], ["bengal-tiger", "Panthera tigris tigris"], ["spotted-hyena", "Crocuta crocuta"],
-    // Staying in the zoo: the flightless birds, the wolves, the bears, a small mammal.
+    // The ratites (ark-world round 2: to the safari), then staying in the zoo: the wolves, the bears, a small mammal.
     ["ostrich", "Struthio camelus"], ["southern-cassowary", "Casuarius casuarius"], ["eurasian-wolf", "Canis lupus"], ["brown-bear", "Ursus arctos"], ["meerkat", "Suricata suricatta"]
 ];
 
@@ -86,7 +89,8 @@ test("who moves to the safari: by the rule; each to a habitat fitting its stored
     for (const a of all) {
         const habitat = safariHabitatOf(a);
         const p = BY_SLUG.get(a.model_slug)!;
-        if (["ostrich", "southern-cassowary", "eurasian-wolf", "brown-bear", "meerkat"].includes(a.model_slug)) assert.equal(habitat, null, `${a.model_slug} stays in the zoo`);
+        if (["eurasian-wolf", "brown-bear", "meerkat"].includes(a.model_slug)) assert.equal(habitat, null, `${a.model_slug} stays in the zoo`);
+        if (a.model_slug === "ostrich") assert.equal(habitat, "plains", "the ostriches run with the plains herd");
         if (!habitat) continue;
         const area = SAFARI_AREAS.find((x) => x.habitat === habitat)!;
         if (area.predator) assert.ok(p.diet === "meat", `${a.model_slug} in a predator's area`);

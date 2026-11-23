@@ -15,6 +15,7 @@
 import {hashText, inBox, rng, toLocal, type Box, type Pt} from "@/ark-scene/islands/town/geom";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {cactus, fern, ledge, log, patch, Plot, termiteMound, tuft} from "@/ark-scene/islands/town/render/zoo-habitat";
+import {SURF, surfaceTag} from "@/ark-scene/islands/town/render/surface-tags";
 import {SAFARI_KOPJES, SAFARI_TERMITES, safariArea, safariWaterNorm, type SafariHabitat} from "@/ark-scene/islands/town/safari";
 
 type RGB = [number, number, number];
@@ -29,6 +30,7 @@ const GREEN_GRASS = tone("#7c9a46");
 const REED = tone("#6f8a3e");
 const EARTH = tone("#a8946c");
 const MUD = tone("#6e5c44");
+const BARE_EARTH = tone("#b07a46");
 
 /**
  * A kopje: a tor of granite, nine or ten blocks piled in three tiers inside `r` of its middle (the footprint the spots keep
@@ -79,7 +81,7 @@ export function kopje(geo: Geo, plot: Plot, lx: number, lz: number, r: number, h
 }
 
 /** A safari area's dressing; null where `e` is not a safari area. */
-export function dressSafari(e: {id: string; slot: {at: Box; seed: number; safari?: SafariHabitat}}, spots: readonly Pt[], solid: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null): Plot | null {
+export function dressSafari(e: {id: string; slot: {at: Box; seed: number; safari?: SafariHabitat}}, spots: readonly Pt[], solid: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null, decal: Geo | null = null): Plot | null {
     const habitat = e.slot.safari;
     const area = safariArea(e.id);
     if (!habitat || !area) return null;
@@ -172,8 +174,17 @@ export function dressSafari(e: {id: string; slot: {at: Box; seed: number; safari
         const lz = (r() - 0.5) * (2 * D - 6);
         if (nearWater(lx, lz) < 1.5) continue;
         const radius = 1.4 + r() * 2.2;
-        const colour = habitat === "desert" ? SANDSTONE : habitat === "wetland" || habitat === "river" ? MUD : EARTH;
-        patch(solid, plot, lx, lz, radius, colour, hashText(`${e.id}:patch:${i}`), 0.03);
+        // (On the decal the earth texture greys a colour: the plains' bare ground is the warm red-brown of savanna soil.)
+        const colour = habitat === "desert" ? SANDSTONE : habitat === "wetland" || habitat === "river" ? MUD : decal ? BARE_EARTH : EARTH;
+        // (ark-world round 2, the owner: "blocky earth patches": in the solid they were flat untextured discs of one
+        // colour on the textured grass, pale cut-outs. With the town's decal they are textured ground, the waterholes'
+        // earth (`render/surfaces.ts`), so they read as worn bare soil; the walk surface below is unchanged.)
+        if (decal) {
+            const before = decal.tag;
+            decal.tag = surfaceTag(SURF.earth, false, 0.45);
+            patch(decal, plot, lx, lz, radius, colour, hashText(`${e.id}:patch:${i}`), 0.03);
+            decal.tag = before;
+        } else patch(solid, plot, lx, lz, radius, colour, hashText(`${e.id}:patch:${i}`), 0.03);
         if (cover) patch(cover, plot, lx, lz, radius, colour, hashText(`${e.id}:patch:${i}`), 0.03, true);
     }
     const area2 = (2 * W) * (2 * D);
