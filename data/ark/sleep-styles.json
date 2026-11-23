@@ -52,6 +52,31 @@
    }
   },
   {
+   "slug": "abyssinian-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "abyssinian-ground-hornbill",
    "posture": "tuck",
    "alts": [],
@@ -778,6 +803,29 @@
    }
   },
   {
+   "slug": "albino-ball-python",
+   "posture": "curl",
+   "alts": [],
+   "social": "apart",
+   "eyes": false,
+   "mammal": false,
+   "breath": 0.3,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "a snake: no eyelids (a clear scale over the eye)"
+    },
+    "breath": {
+     "rule": "a reptile: slow"
+    }
+   }
+  },
+  {
    "slug": "aldabra-giant-tortoise",
    "posture": "flat",
    "alts": [],
@@ -1450,6 +1498,31 @@
    }
   },
   {
+   "slug": "american-curl-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "american-dipper",
    "posture": "tuck",
    "alts": [],
@@ -1727,6 +1800,31 @@
     },
     "breath": {
      "rule": "a bird: a little quicker"
+    }
+   }
+  },
+  {
+   "slug": "american-shorthair-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
     }
    }
   },
@@ -2262,6 +2360,33 @@
     },
     "breath": {
      "rule": "a bird: a little quicker"
+    }
+   }
+  },
+  {
+   "slug": "appaloosa",
+   "posture": "stand",
+   "alts": [
+    "sternal",
+    "side"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "field": "sleep",
+     "phrase": "Polyphasic rest with short standing sleep bouts and occasional lying rest."
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
     }
    }
   },
@@ -4349,6 +4474,29 @@
    }
   },
   {
+   "slug": "bantam-chicken",
+   "posture": "tuck",
+   "alts": [],
+   "social": "apart",
+   "eyes": true,
+   "mammal": false,
+   "breath": 1.25,
+   "src": {
+    "posture": {
+     "recipe": "posture tuck"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Aves: eyelids"
+    },
+    "breath": {
+     "rule": "a bird: a little quicker"
+    }
+   }
+  },
+  {
    "slug": "banteng",
    "posture": "sternal",
    "alts": [],
@@ -5478,6 +5626,31 @@
    "src": {
     "posture": {
      "rule": "order Carnivora: curls up"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
+   "slug": "birman-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
     },
     "social": {
      "rule": "no shared sleeping place in its text: each sleeps a little apart"
@@ -9488,6 +9661,31 @@
     },
     "breath": {
      "rule": "Arachnida: no breath to draw"
+    }
+   }
+  },
+  {
+   "slug": "burmese-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
     }
    }
   },
@@ -14810,6 +15008,31 @@
    }
   },
   {
+   "slug": "cornish-rex-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "corsac-fox",
    "posture": "curl",
    "alts": [],
@@ -16609,6 +16832,31 @@
    }
   },
   {
+   "slug": "devon-rex-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "dexter-cattle",
    "posture": "sternal",
    "alts": [],
@@ -16933,6 +17181,156 @@
    }
   },
   {
+   "slug": "domestic-cat-bicolor",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
+   "slug": "domestic-cat-black",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
+   "slug": "domestic-cat-brown-tabby",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
+   "slug": "domestic-cat-calico",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
+   "slug": "domestic-cat-dilute-calico",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
+   "slug": "domestic-cat-tortoiseshell",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "domestic-chicken",
    "posture": "tuck",
    "alts": [],
@@ -17111,6 +17509,31 @@
     "posture": {
      "field": "sleep",
      "phrase": "Polyphasic rest with short standing sleep bouts and occasional lying rest."
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
+   "slug": "domestic-longhair-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
     },
     "social": {
      "rule": "no shared sleeping place in its text: each sleeps a little apart"
@@ -18386,6 +18809,29 @@
   },
   {
    "slug": "eastern-tiger-swallowtail",
+   "posture": "still",
+   "alts": [],
+   "social": "apart",
+   "eyes": false,
+   "mammal": false,
+   "breath": 0,
+   "src": {
+    "posture": {
+     "rule": "plan flying_insect: keeps still"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "Insecta: no eyelids"
+    },
+    "breath": {
+     "rule": "Insecta: no breath to draw"
+    }
+   }
+  },
+  {
+   "slug": "eastern-tiger-swallowtail-caterpillar",
    "posture": "still",
    "alts": [],
    "social": "apart",
@@ -20482,6 +20928,31 @@
    }
   },
   {
+   "slug": "exotic-shorthair-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "eyelash-viper",
    "posture": "curl",
    "alts": [],
@@ -22221,6 +22692,30 @@
     },
     "breath": {
      "rule": "gills: no chest to rise"
+    }
+   }
+  },
+  {
+   "slug": "garut-sheep",
+   "posture": "sternal",
+   "alts": [],
+   "social": "huddle",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "rule": "family Bovidae: lies on its chest, the legs folded under"
+    },
+    "social": {
+     "field": "evidence",
+     "phrase": "In cold weather or when feeling threatened, sheep will huddle closely together, often forming a tight mass."
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
     }
    }
   },
@@ -31859,6 +32354,29 @@
    }
   },
   {
+   "slug": "leghorn-chicken",
+   "posture": "tuck",
+   "alts": [],
+   "social": "apart",
+   "eyes": true,
+   "mammal": false,
+   "breath": 1.25,
+   "src": {
+    "posture": {
+     "recipe": "posture tuck"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Aves: eyelids"
+    },
+    "breath": {
+     "rule": "a bird: a little quicker"
+    }
+   }
+  },
+  {
    "slug": "leicester-longwool-sheep",
    "posture": "sternal",
    "alts": [],
@@ -33369,6 +33887,29 @@
    }
   },
   {
+   "slug": "lutino-green-iguana",
+   "posture": "flat",
+   "alts": [],
+   "social": "apart",
+   "eyes": true,
+   "mammal": false,
+   "breath": 0.3,
+   "src": {
+    "posture": {
+     "rule": "plan lizard: lies still, the belly down"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "a lizard: eyelids"
+    },
+    "breath": {
+     "rule": "a reptile: slow"
+    }
+   }
+  },
+  {
    "slug": "luzon-garden-spider",
    "posture": "still",
    "alts": [],
@@ -34381,6 +34922,31 @@
    "src": {
     "posture": {
      "rule": "plan primate: sits hunched, the head down"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
+   "slug": "manx-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
     },
     "social": {
      "rule": "no shared sleeping place in its text: each sleeps a little apart"
@@ -35550,6 +36116,32 @@
     },
     "breath": {
      "rule": "Cephalopoda: no breath to draw"
+    }
+   }
+  },
+  {
+   "slug": "mini-lop",
+   "posture": "side",
+   "alts": [
+    "curl"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "field": "sleep",
+     "phrase": "It dozes in short spells through the day and night, often with eyes open, and sleeps deeply only where it feels safe, stretched on its side."
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
     }
    }
   },
@@ -37901,6 +38493,31 @@
    }
   },
   {
+   "slug": "norwegian-forest-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "nubian-goat",
    "posture": "sternal",
    "alts": [],
@@ -39010,6 +39627,31 @@
     },
     "breath": {
      "rule": "a bird: a little quicker"
+    }
+   }
+  },
+  {
+   "slug": "oriental-shorthair-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
     }
    }
   },
@@ -41052,6 +41694,29 @@
   },
   {
    "slug": "pied-butcherbird",
+   "posture": "tuck",
+   "alts": [],
+   "social": "apart",
+   "eyes": true,
+   "mammal": false,
+   "breath": 1.25,
+   "src": {
+    "posture": {
+     "recipe": "posture tuck"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Aves: eyelids"
+    },
+    "breath": {
+     "rule": "a bird: a little quicker"
+    }
+   }
+  },
+  {
+   "slug": "pied-cockatiel",
    "posture": "tuck",
    "alts": [],
    "social": "apart",
@@ -45346,6 +46011,29 @@
    }
   },
   {
+   "slug": "rhode-island-red",
+   "posture": "tuck",
+   "alts": [],
+   "social": "apart",
+   "eyes": true,
+   "mammal": false,
+   "breath": 1.25,
+   "src": {
+    "posture": {
+     "recipe": "posture tuck"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Aves: eyelids"
+    },
+    "breath": {
+     "rule": "a bird: a little quicker"
+    }
+   }
+  },
+  {
    "slug": "ribbon-eel",
    "posture": "still",
    "alts": [],
@@ -46479,6 +47167,31 @@
    }
   },
   {
+   "slug": "russian-blue-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "russian-desman",
    "posture": "curl",
    "alts": [],
@@ -47201,6 +47914,31 @@
    }
   },
   {
+   "slug": "savannah-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "savannah-monitor",
    "posture": "flat",
    "alts": [],
@@ -47778,6 +48516,31 @@
    }
   },
   {
+   "slug": "selkirk-rex-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "semaphore-crab",
    "posture": "still",
    "alts": [],
@@ -47983,6 +48746,33 @@
     },
     "breath": {
      "rule": "a bird: a little quicker"
+    }
+   }
+  },
+  {
+   "slug": "shetland-pony",
+   "posture": "stand",
+   "alts": [
+    "sternal",
+    "side"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "field": "sleep",
+     "phrase": "Polyphasic rest with short standing sleep bouts and occasional lying rest."
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
     }
    }
   },
@@ -48404,6 +49194,31 @@
    }
   },
   {
+   "slug": "siberian-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "siberian-crane",
    "posture": "one_leg",
    "alts": [],
@@ -48584,6 +49399,29 @@
     },
     "breath": {
      "rule": "a mammal"
+    }
+   }
+  },
+  {
+   "slug": "silkie-chicken",
+   "posture": "tuck",
+   "alts": [],
+   "social": "apart",
+   "eyes": true,
+   "mammal": false,
+   "breath": 1.25,
+   "src": {
+    "posture": {
+     "recipe": "posture tuck"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Aves: eyelids"
+    },
+    "breath": {
+     "rule": "a bird: a little quicker"
     }
    }
   },
@@ -54164,6 +55002,31 @@
    }
   },
   {
+   "slug": "tonkinese-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
+    }
+   }
+  },
+  {
    "slug": "tooth-billed-pigeon",
    "posture": "tuck",
    "alts": [],
@@ -54783,6 +55646,31 @@
     },
     "breath": {
      "rule": "a bird: a little quicker"
+    }
+   }
+  },
+  {
+   "slug": "turkish-van-cat",
+   "posture": "curl",
+   "alts": [
+    "sternal"
+   ],
+   "social": "apart",
+   "eyes": true,
+   "mammal": true,
+   "breath": 1,
+   "src": {
+    "posture": {
+     "recipe": "posture curl"
+    },
+    "social": {
+     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+    },
+    "eyes": {
+     "rule": "class Mammalia: eyelids"
+    },
+    "breath": {
+     "rule": "a mammal"
     }
    }
   },

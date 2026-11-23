@@ -811,7 +811,7 @@
 "eastern-slow-worm":"walk|burrow|d||ground_cover|solitary|insects|021325b341a3e1f2|015f6|da|6|8|4|||",
 "eastern-spiny-lizard":"walk|burrow|d||burrow|solitary|insects|021325b341a5e1f2|015fd||14|46|24|0.074|0.942|3.564",
 "eastern-tiger-swallowtail":"fly|cling,walk|d||tree|solitary|nectar|02112575e1f2h5|37|dl|7|34|12|0.043|0.134|",
-"eastern-tiger-swallowtail-caterpillar":"slither|climb|d||tree|solitary|nectar|021325c3e1f2|3|da|10|12|31|0.577|0.577|",
+"eastern-tiger-swallowtail-caterpillar":"slither|climb|d||tree|solitary|browser|021325c3e1f2|3|da|10|12|31|0.577|0.577|",
 "eastern-yellowjacket":"fly|cling,walk|d||leaf|colony|nectar|02112575e1f2g5|e|dl|3|25|20|0.302|0.95|",
 "eciton-army-ant":"walk||d||crevice|colony|insects|021325e1f2g5|6|a|2|16|22|0.526|0.824|1.648",
 "eclectus-parrot":"fly|perch,walk|d||tree|solitary|fruit|021125755441d1e1f2h3|037|dm|18|50|31|0.642|0.802|",

@@ -31,6 +31,7 @@ import {enclosuresIn, zooLayout} from "@/ark-scene/islands/town/areas";
 import {ZOO_SPREAD, zooAnnex, zooEnclosureOf, zooHomeOf, zooResidents} from "@/ark-scene/islands/town/zoo-homes";
 import {waterOf} from "@/ark-scene/islands/town/tanks";
 import table from "@/ark-scene/islands/town/zoo-homes.json";
+import mapBody from "@/ark-scene/map/body.json";
 
 type Profile = {slug: string; zone: string; plan: string; diet: string; size: number; activity: string; water: string | null; social: string};
 const PROFILES = (JSON.parse(readFileSync(path.join(process.cwd(), "data/ark/behaviour-profiles.json"), "utf8")) as {profiles: Profile[]}).profiles;
@@ -42,6 +43,9 @@ test("the zoo's homes table is the rule over the stored profiles and the food li
     const BIRDS = new Set(["flying_bird", "walking_bird", "flightless_bird"]);
     const MAMMALS = new Set(["quadruped", "primate", "bat"]);
     const REPTILES = new Set(["lizard", "legless", "turtle", "amphibian"]);
+    // (The reptile house: reptiles and amphibians by the map's body class; a species with no class keeps the plan's rule.)
+    const classOf = new Map(Object.entries(mapBody as Record<string, unknown>).filter((e): e is [string, string[]] => Array.isArray(e[1])).flatMap(([c, slugs]) => slugs.map((s) => [s, c] as [string, string])));
+    const reptileHouse = (slug: string) => [undefined, "r", "a"].includes(classOf.get(slug));
     const hunts = (p: Profile, plans: Set<string>) => (PREY.get(p.slug) ?? []).some((q) => plans.has(q.plan));
     const band = (size: number) => Math.floor(Math.log(Math.max(size, 1)) / Math.log(1.25));
     const want: Record<string, Record<string, string>> = {};
@@ -58,7 +62,7 @@ test("the zoo's homes table is the rule over the stored profiles and the food li
             if (hunts(p, MAMMALS)) own.small_mammals = `carnivores:${b}`;
             else if (p.plan === "quadruped" && p.diet === "grazer" && p.size >= 28) own.small_mammals = "walkabout";
         }
-        if (REPTILES.has(p.plan)) {
+        if (REPTILES.has(p.plan) && reptileHouse(p.slug)) {
             if (p.plan === "turtle" && (p.diet === "grazer" || p.diet === "browser") && p.size >= 30) own.reptile_house = "tortoises";
             else if (hunts(p, REPTILES)) own.reptile_house = b >= 17 ? "large_reptiles" : p.water ? "turtles" : "snakes";
             else if (p.plan === "legless") own.reptile_house = "snakes";
@@ -93,6 +97,9 @@ test("the zoo's homes table is the rule over the stored profiles and the food li
     assert.equal(waterOf("leopoldi-stingray", "river_lake"), "fresh");
     assert.equal(waterOf("red-swamp-crayfish", "wetland"), "fresh");
     assert.equal(waterOf("blacktip-reef-shark", "coral_reef"), "salt");
+    // Not in with the snakes: a caterpillar, an earthworm, an eel (shape, not class).
+    for (const slug of ["eastern-tiger-swallowtail-caterpillar", "common-earthworm", "european-eel"]) assert.equal(t.homes[slug]?.reptile_house, undefined, slug);
+    assert.equal(t.homes["ball-python"]?.reptile_house, "snakes");
 });
 
 /** A zoo resident in a server enclosure (the fields placement reads). */
