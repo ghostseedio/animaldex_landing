@@ -22,7 +22,7 @@ import {
     type Colony
 } from "@/ark-scene/ants/colony";
 import {antItems, antText} from "@/ark-scene/live/ant-lines";
-import type {ArkLiveText, ArkSeenAct} from "@/lib/ark-live-log";
+import {ArkSeenMemory, type ArkLiveText, type ArkSeenAct} from "@/lib/ark-live-log";
 import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 import en from "@/data/locales/en.json";
 import de from "@/data/locales/ark/de.json";
@@ -169,7 +169,7 @@ test("live log: the colony's line in the reader's words, once per episode; every
     const german = {live: (de as {ark: {live: unknown}}).ark.live} as unknown as ArkLiveText;
     assert.equal(antText("antRaid", "Eciton-Wanderameise", null, german, "de"), "Eciton-Wanderameise: Raubzug in breiter Front");
     const act: ArkSeenAct = {id: "a", name: "Ghost Ant", speciesId: "s", zone: "farm_garden", recipe: "ant_colony", episode: "ants:x:death:1", block: "colony", fish: false, words: {key: "antTrailFound", other: "Field Cricket"}};
-    const memory = new Set<string>();
+    const memory = new ArkSeenMemory();
     assert.equal(antItems([act], memory, words, "en").length, 1);
     assert.equal(antItems([act], memory, words, "en").length, 0);
     for (const key of ["antTrailFound", "antTend", "antLeaves", "antSeeds", "antRaid", "antBivouac", "antWeave"] as const) assert.ok(ARK_LIVE_ENGLISH[key]);
