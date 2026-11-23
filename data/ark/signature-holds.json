@@ -39,12 +39,12 @@
   {
    "slug": "eastern-gray-squirrel",
    "recipe": "nest_build",
-   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb) SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4 (rows put back, 24 Ark hours): 315 episodes, every one 'scan, climb': it climbs down from the drey's limb 15 m up for material and its slot runs out before the pick-up, the climb back up taking the rest (no carry, no place, no nest ever reads)."
+   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb) SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4 (rows put back, 24 Ark hours): 315 episodes, every one 'scan, climb': it climbs down from the drey's limb 15 m up for material and its slot runs out before the pick-up, the climb back up taking the rest (no carry, no place, no nest ever reads). SIG3 tranche 4 fix tried (patch kept, not shipped: ~/AnimalDex-work/sig3/t4/squirrel-drey-engine.patch): twigs from the drey's own crown, the climb's turning not charged on the bark, a carry set out on only with time to bring it back. Carries then complete (58% of its trips, none lost), but its drey (limb:decor74:14, 1.6 m up) has no twig point out along its limb, and an episode's climb is a straight line: the strip shows it crossing 1.6 m of open air between limbs with the twig. Needs the episode's climb keys to follow the tree (tree-climb.ts treeClimb, as the schedule's own climbs do)."
   },
   {
    "slug": "red-squirrel",
    "recipe": "nest_build",
-   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb) SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4: with the row put back, no nest_build trip at all in its harness month; and its drey sits 20 m up a branch, as the grey squirrel's (whose episodes end at the climb down for material)."
+   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb) SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4: with the row put back, no nest_build trip at all in its harness month; and its drey sits 20 m up a branch, as the grey squirrel's (whose episodes end at the climb down for material). SIG3 tranche 4: its 0 trips were its season: its stored nesting months (Sep-Nov) are not the harness's Ark month (January); pinned to Ark September it builds. With the same patch, carries along its drey's limb only: 506 of 1142 trips carry a twig to the drey, none lost, none through the air; but the drey sits inside a dense fir crown and no camera (5 tried) shows the squirrel there: unreadable."
   },
   {
    "slug": "desert-cottontail",
