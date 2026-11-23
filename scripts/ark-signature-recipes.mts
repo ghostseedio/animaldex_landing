@@ -16,6 +16,12 @@
  * `nest_build` row may carry its own `"nest": "kind:material+material"` (the generator only reads birds' nests), set only
  * where the row has none.
  *
+ * Wave 2 (small bodies: arthropods; `recipe-small.ts`): a held row is released by a variant template written for its
+ * body (`variant_of` keeps the wave-1 recipe), or by a plan the original template is checked on (`also` in `data/ark/signature-templates-small.json`). An
+ * addition may carry `line` (the species' own sentence for what the recipe shows: written to
+ * `src/ark-scene/signature-lines.json`, the log's table; the test of that table holds it to its rules) and `replaces`
+ * (a generic recipe the species' own displaces: a jumping spider's dance for the generic display) or `held` (why a row stays out).
+ *
  *   npx tsx scripts/ark-signature-recipes.mts [--dry]
  */
 import fs from "node:fs";
@@ -30,7 +36,7 @@ const table = JSON.parse(fs.readFileSync(tablePath, "utf8")) as {species: Record
 const full = JSON.parse(fs.readFileSync(path.join(root, "data/ark/behaviour-recipes.json"), "utf8")) as {species: Array<{slug: string; plan: string}>};
 // (Every `data/ark/signature-recipes*.json`: the first wave's, and a lane's own: its `additions`, and its `templates`, the
 // plans and the weight of a template the table has no users of yet, or the plans a reviewed variant is drawn for.)
-type Addition = {slug: string; name: string; recipe: string; field?: string; quote?: string; nest?: string; line?: string};
+type Addition = {slug: string; name: string; recipe: string; field?: string; quote?: string; nest?: string; line?: string; replaces?: string; held?: string};
 const files = fs.readdirSync(path.join(root, "data/ark")).filter((f) => /^signature-recipes.*\.json$/.test(f)).sort();
 const additions: Addition[] = [];
 const seeded: Record<string, {plans: string[]; weight: number}> = {};
@@ -49,6 +55,8 @@ const sleepPath = path.join(root, "src/ark-scene/sleep.json");
 const sleepTable = JSON.parse(fs.readFileSync(sleepPath, "utf8")) as {species: Record<string, string>};
 const sleepStylesPath = path.join(root, "data/ark/sleep-styles.json");
 const sleepStyles = JSON.parse(fs.readFileSync(sleepStylesPath, "utf8")) as {species: Array<{slug: string; social: string; src: Record<string, unknown>}>};
+const linesPath = path.join(root, "src/ark-scene/signature-lines.json");
+const lines = JSON.parse(fs.readFileSync(linesPath, "utf8")) as {species: Record<string, Record<string, string>>};
 
 const planOf = new Map(full.species.map((s) => [s.slug, s.plan]));
 const recipesOf = (row: string) => row.split("|")[0].split(",").filter(Boolean).map((r) => ({id: r.slice(0, r.lastIndexOf(".")), weight: Number(r.slice(r.lastIndexOf(".") + 1))}));
@@ -76,12 +84,22 @@ for (const [id, seed] of Object.entries(NEW)) {
     for (const plan of seed.plans) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
     if (!weights.has(id)) weights.set(id, new Map([[seed.weight, 1]]));
 }
+// Wave 2, the small bodies (`src/ark-scene/recipe-small.ts`): its templates' plans and weights, and the plans a wave-1
+// template is also checked on (the behaviours harness's frames), in `data/ark/signature-templates-small.json`.
+{
+    const seeds = JSON.parse(fs.readFileSync(path.join(root, "data/ark/signature-templates-small.json"), "utf8")) as {templates: Record<string, {plans: string[]; weight: number}>; also: Record<string, string[]>};
+    for (const [id, seed] of Object.entries(seeds.templates)) {
+        for (const plan of seed.plans) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
+        if (!weights.has(id)) weights.set(id, new Map([[seed.weight, 1]]));
+    }
+    for (const [id, extra] of Object.entries(seeds.also)) for (const plan of extra) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
+}
 const usual = (id: string) => [...(weights.get(id) ?? new Map([[3, 1]]))].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
 // (A nest needs the row's nest field, which only the generator writes.)
 const NEEDS_GENERATOR = new Set(["nest_build"]);
 // The ways of hunting: a species that already has one keeps it (a second would halve the hunts its own text put first;
 // an osprey's talon grab is its plunge).
-const HUNTS = new Set(["perch_plunge", "air_plunge", "talon_grab", "wade_spear", "bill_sweep", "pouch_scoop", "surface_dive", "chase_fish", "river_fish", "pounce", "hawk_insects", "aerial_hawk", "hover_drop", "bat_hawk", "bat_trawl"]);
+const HUNTS = new Set(["perch_plunge", "air_plunge", "talon_grab", "wade_spear", "bill_sweep", "pouch_scoop", "surface_dive", "chase_fish", "river_fish", "pounce", "hawk_insects", "aerial_hawk", "hover_drop", "bat_hawk", "bat_trawl", "night_hawk", "edge_ambush", "sit_snap"]);
 
 let added = 0;
 let superseded = 0;
@@ -102,6 +120,15 @@ for (const a of additions) {
         skipped.push(`${a.slug} ${a.recipe}: no row`);
         continue;
     }
+    // (A row held back for a reason of its own: kept in the data with it, never drawn.)
+    if (a.held) {
+        skipped.push(`${a.slug} ${a.recipe}: ${a.held}`);
+        continue;
+    }
+    // (A sentence is kept only for a recipe the species has: the table's test.)
+    const say = () => {
+        if (a.line) (lines.species[a.slug] ??= {})[a.recipe] = a.line;
+    };
     if (a.recipe.startsWith("sleep:")) {
         // How it sleeps with its kind: only where its sleep row has none (a way the generator found stays).
         const social = a.recipe.slice("sleep:".length);
@@ -135,6 +162,7 @@ for (const a of additions) {
             if (!f[7].includes("o")) f[7] += "o";
             table.species[a.slug] = f.join("|");
         }
+        say();
         already.push(`${a.slug} ${a.recipe}`);
         continue;
     }
@@ -150,6 +178,8 @@ for (const a of additions) {
         continue;
     }
     const fields = row.split("|");
+    // (Its own displaces the generic one it stands in for.)
+    if (a.replaces) fields[0] = fields[0].split(",").filter((r) => r.slice(0, r.lastIndexOf(".")) !== a.replaces).join(",");
     fields[0] = [fields[0], `${a.recipe}.${usual(a.recipe)}`].filter(Boolean).join(",");
     // (A nest of its own, where the generator found none: kind:material+material; flag `o`: the props do not draw it, the recipe does.
     // A nest guard's site, sig2 reptiles: the generic nest field for a species whose row has none, so the schedule can place a nest for it.)
@@ -159,19 +189,13 @@ for (const a of additions) {
     if (fields[7]) fields[7] = fields[7].replace("d", "");
     if (a.nest && a.recipe === "nest_build" && !fields[7].includes("o")) fields[7] += "o";
     table.species[a.slug] = fields.join("|");
+    say();
     added++;
 }
 // Wave 2, birds: the recipes (and the nests and flags the rows' sentences give), the roosts' sleep, the log lines.
 const birdReport = applyBirdRecipes(table, birds.rows);
-const linesPath = path.join(root, "src/ark-scene/signature-lines.json");
-const lines = JSON.parse(fs.readFileSync(linesPath, "utf8")) as {species: Record<string, Record<string, string>>};
 const birdSleep = applyBirdSleep(sleepTable, sleepStyles as unknown as {species: Array<Record<string, unknown>>}, birds.rows);
 const birdLines = applyBirdLines(lines, birds.rows);
-// (A row that brings its own log sentence, wave 2 on: the catalogue's `line` for that behaviour.)
-for (const a of additions as Array<{slug: string; recipe: string; line?: string}>) {
-    if (!a.line || a.recipe.startsWith("sleep:")) continue;
-    (lines.species[a.slug] ??= {})[a.recipe] = a.line;
-}
 if (!dry) {
     fs.writeFileSync(tablePath, `${JSON.stringify(table)}\n`);
     fs.writeFileSync(sleepPath, `${JSON.stringify(sleepTable)}\n`);

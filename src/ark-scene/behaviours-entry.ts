@@ -18,15 +18,20 @@ import {worldSampler} from "@/ark-scene/world-sampler";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {ambushBouts} from "@/ark-scene/micro-ambush";
 import {surfacePoint} from "@/ark-scene/micro";
+import {SMALL_SCENES, smallMoments} from "@/ark-scene/behaviours-small";
+import {TEMPLATES} from "@/ark-scene/recipe-templates";
+import {speciesRecipes} from "@/ark-scene/behaviour-recipes";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
 
 type Raw = (typeof fixture)["animals"][number];
-type Cast = {slug: string; name: string; n: number; young?: number};
+type Cast = {slug: string; name: string; n: number; young?: number; /** sig2-small: the slot it is placed at (a place on the island: a flower for a moth), else 90. */ slot?: number; /** sig2-small: the species' own activity (the profile's), else diurnal as the harness always had it. */ activity?: string};
 type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group" | "recipe" | "micro"; /** (recipe) the recipe's episode to find, and the row to give the first cast when its table has not got it yet ("recipe.weight[,...]"). */ recipe?: string; inject?: string; /** (recipe, micro) how far in body lengths, the camera's azimuth off its side and its polar angle. */ lengths?: number; azimuth?: number; polar?: number; /** (recipe) the first of the cast to frame. */ pick?: number};
 
 const SCENES: Record<string, Scene> = {
+    // Signature behaviours, wave 2, the small bodies (`behaviours-small.ts`).
+    ...SMALL_SCENES,
     // A foal born in the open: licked, up on wobbly legs, suckling.
     birth: {zone: "grassland", hours: 9, kind: "birth", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 3, young: 1}]},
     // Cubs born in the den: tucked at her belly.
@@ -184,7 +189,7 @@ async function main() {
         for (let i = 0; i < c.n + (c.young ?? 0); i++) {
             const young = i >= c.n;
             if (young) youngIds.push(castId(k, i));
-            animals.push({...template, id: castId(k, i), species_profile_id: speciesId(k), name: c.name, scientific_name: c.name, model_slug: c.slug, zone: scene.zone, activity: "diurnal", sociality: "group", slot: 90 + k, slot_rank: i, origin: young ? "born" : "arrived", born_ark_day: young ? day : 0} as Raw);
+            animals.push({...template, id: castId(k, i), species_profile_id: speciesId(k), name: c.name, scientific_name: c.name, model_slug: c.slug, zone: scene.zone, activity: c.activity ?? "diurnal", sociality: "group", slot: c.slot ?? 90 + k, slot_rank: i, origin: young ? "born" : "arrived", born_ark_day: young ? day : 0} as Raw);
         }
     });
     // (Reptile signatures: the cast's row given the recipe (only that one, every season open) while the table lacks it.)
@@ -198,6 +203,9 @@ async function main() {
             rows[c.slug] = fields.join("|");
         }
     }
+    // sig2-small: a recipe scene's Ark day pinned to the middle of the cast species' first mating month (June where none is stored),
+    // so a season-bound recipe (a dance, a wrestle) is in season: the Ark's months come from its day (`behaviour-recipes.ts` seasonMonthAt).
+    if (scene.kind === "recipe") (globalThis as {__arkPropsArkDay?: number}).__arkPropsArkDay = ((speciesRecipes(scene.cast[0].slug).mating[0] ?? 6) - 0.5) * (365 / 12);
     const decoded = decodeArkSnapshot({...fixture, animals});
     if (!decoded) throw new Error("fixture did not decode");
     let snapshot = decoded;
@@ -669,6 +677,40 @@ async function main() {
             }
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`)));
             return `${id.slice(-3)} length ${e.trueLength.toFixed(3)} on ${wall ? "a wall" : "a surface"} act ${e.recipeAct?.block ?? "-"}/${e.recipeAct?.state ?? "-"} insect ${e.recipeAct?.quarry?.phase ?? "-"} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
+        },
+        /** sig2-small: which recipe the scene is for and how it is framed. */
+        smInfo: () => ({recipe: (scene as {recipe?: string}).recipe ?? "", lengths: (scene as {lengths?: number}).lengths ?? 5, polar: (scene as {polar?: number}).polar ?? 1.0, ids: scene.cast.map((_, k) => castId(k, 0))}),
+        /** sig2-small: the first cast species' moments of a recipe in the day from the event (`behaviours-small.ts`), and the scene's own pace on them. */
+        recipeMoments: (recipe: string) => smallMoments(debug.entries().filter((e) => e.animal.model_slug === scene.cast[0].slug) as never, recipe, TEMPLATES[recipe], t0, scene.hours),
+        /** sig2-small: the world run up to an absolute time (a tenth of a second a frame), then the animals (`ids`) framed together from `lengths` of the first one's body, side on. */
+        smShot: async (ids: string[], epoch: number, lengths: number, azimuth: number | null = null, polar = 1.4) => {
+            await setAt(epoch - 1.5);
+            for (let i = 0; i < 15; i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            type ActNow = {recipe?: string; block?: string; state?: string; pitch?: number; roll?: number; carry?: unknown; mark?: unknown};
+            type Drawn = {length: number; middle: {x: number; y: number; z: number} | null; recipeAct?: ActNow | null; toLight?: number; place?: {micro?: unknown}; sched?: {pose?: {beat?: string; act?: ActNow | null}}};
+            const drawn = ids.map((id) => debug.entries().find((e) => e.animal.id === id) as unknown as Drawn);
+            const at = ids.map((id) => handle.locate(id));
+            const mids = drawn.map((d, i) => (d?.middle ? d.middle : at[i] ? {x: at[i]!.x, y: at[i]!.y + (d?.length ?? 0.1) * 0.3, z: at[i]!.z} : null)).filter(Boolean) as Array<{x: number; y: number; z: number}>;
+            if (mids.length) {
+                const target = {x: mids.reduce((n, m) => n + m.x, 0) / mids.length, y: mids.reduce((n, m) => n + m.y, 0) / mids.length, z: mids.reduce((n, m) => n + m.z, 0) / mids.length};
+                const apart = mids.length > 1 ? Math.hypot(mids[0].x - mids[1].x, mids[0].z - mids[1].z) : 0;
+                const controls = (debug as unknown as {controls: {minDistance: number}}).controls;
+                for (let i = 0; i < 3; i++) {
+                    controls.minDistance = 0.05;
+                    handle.setView({target, distance: Math.max(lengths * (drawn[0]?.length ?? 0.1), apart * 1.7, 0.1), polar, azimuth: (at[0] ? at[0].yaw : 0) + (azimuth ?? Math.PI / 2)});
+                    await frames(1);
+                }
+            }
+            const say = (d: Drawn | undefined, id: string) => {
+                const act = d?.recipeAct ?? d?.sched?.pose?.act ?? null;
+                return `${id.slice(-3)}${d?.place?.micro ? " (micro)" : ""} ${act ? `${act.recipe}/${act.block}/${act.state} pitch ${(act.pitch ?? 0).toFixed(2)} roll ${(act.roll ?? 0).toFixed(2)}${act.carry ? " carrying" : ""}${act.mark ? " marking" : ""}` : `its day (${d?.sched?.pose?.beat ?? (d?.toLight ? `to the light ${d.toLight.toFixed(2)}` : "-")})`} len ${(d?.length ?? 0).toFixed(3)}`;
+            };
+            const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
+            return `${ids.map((id, i) => say(drawn[i], id)).join(" | ")} ${said.join(" / ")}`;
         },
         handle
     };

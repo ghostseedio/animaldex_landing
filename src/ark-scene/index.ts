@@ -281,6 +281,7 @@ import {ForestScene} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): l
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
 import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
 import {AMBUSH_RECIPE, ambushHours, ambushNow, inAmbushHours, type AmbushNow} from "@/ark-scene/micro-ambush";
+import {flowerSpot, microActAt, playsInPlace, soilSpot} from "@/ark-scene/micro-acts"; // sig2-small: a small animal's recipe played in place
 // 3.3 batch (B): the birds' own moves (mobbing dive)
 import {Mobbing, mobFoeFits, type MobHost} from "@/ark-scene/mobbing";
 // Group life (lane SIG-GROUP): species that live in groups by their own text though their profile says otherwise.
@@ -746,6 +747,29 @@ const LAST_OF_KIND = new Color("#ffb347");
 function easeOutBack(t: number): number {
     const c = 1.4;
     return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2;
+}
+
+/**
+ * sig2-small: a surface's frame tipped by an act's pitch (nose down positive, about the sideways axis) and rolled about its
+ * heading, for a small animal on a wall, a leaf or a flower, whose body is set by that frame alone (a pose's pitch and roll are
+ * for the ground's).
+ */
+function tiltSurface(s: SurfacePoint, pitch: number, roll: number): SurfacePoint {
+    if (!pitch && !roll) return s;
+    const bx = s.ny * s.tz - s.nz * s.ty;
+    const by = s.nz * s.tx - s.nx * s.tz;
+    const bz = s.nx * s.ty - s.ny * s.tx;
+    const cp = Math.cos(pitch);
+    const sp = Math.sin(pitch);
+    const tx = s.tx * cp - s.nx * sp;
+    const ty = s.ty * cp - s.ny * sp;
+    const tz = s.tz * cp - s.nz * sp;
+    const px = s.nx * cp + s.tx * sp;
+    const py = s.ny * cp + s.ty * sp;
+    const pz = s.nz * cp + s.tz * sp;
+    const cr = Math.cos(roll);
+    const sr = Math.sin(roll);
+    return {...s, tx, ty, tz, nx: px * cr + bx * sr, ny: py * cr + by * sr, nz: pz * cr + bz * sr};
 }
 
 function easeInOut(t: number): number {
@@ -3924,6 +3948,84 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         return {x: point.x, z: point.z, base: point.y, yaw: Math.atan2(point.tx, point.tz), pitch: 0, roll: 0, afloat: true, surface: point};
     };
+    /**
+     * sig2-small (the small bodies, `micro-acts.ts`): a micro animal's recipe played where it stands. Its crawl stopped at the
+     * spot it was at when the act began (the crawl's clock held there; a rig's crawl paused), its attitude, bob and lift from
+     * the act, a pair's facing each other; after the act it eases back into the crawl over `RELEASE` seconds.
+     */
+    const RELEASE = 2.5;
+    const microPartners = new Map<string, {until: number; hit: {id: string; key: string; role: "a" | "b"; otherMale: boolean} | null}>();
+    const microMarks = new Map<string, RecipeMark>();
+    const microLast = new Map<string, {t0: number; t1: number}>();
+    const microPartnerOf = (entry: Entry, epoch: number) => {
+        const id = entry.animal.id;
+        const known = microPartners.get(id);
+        if (known && epoch < known.until) return known.hit;
+        // (The other of its cluster's pair: rank 0 and 1, 2 and 3, of the same kind about the same spot.)
+        const lead = entry.place.leader ?? id;
+        const want = (entry.place.rank ?? 0) ^ 1;
+        let hit: {id: string; key: string; role: "a" | "b"; otherMale: boolean} | null = null;
+        for (const e of allEntries()) {
+            if (e === entry || e.animal.model_slug !== entry.animal.model_slug || (e.place.leader ?? e.animal.id) !== lead || (e.place.rank ?? 0) !== want) continue;
+            const [a, b] = [id, e.animal.id].sort();
+            hit = {id: e.animal.id, key: `${a}#${b}`, role: id === a ? "a" : "b", otherMale: sexLook(e.animal.id, e.animal.model_slug).sex === "male"};
+            break;
+        }
+        if (microPartners.size > 600) microPartners.clear();
+        microPartners.set(id, {until: epoch + 30, hit});
+        return hit;
+    };
+    const microPlay = (entry: Entry, time: number): Pose | null => {
+        const slug = entry.animal.model_slug;
+        const micro = entry.place.micro!;
+        const epoch = worldMs() / 1000;
+        const pair = microPartnerOf(entry, epoch);
+        const input = {id: entry.animal.id, slug, epoch, hours: hoursNow(), length: entry.trueLength, soil: soilSpot(micro.spot), flower: flowerSpot(micro.attach?.tag), resting: entry.rest > 0.5, pair};
+        const now = microActAt(input);
+        if (now) microLast.set(input.id, {t0: now.t0, t1: now.t1});
+        // Just after an act: the crawl comes back from where it stood.
+        const last = now ? null : microLast.get(input.id);
+        if (last && epoch >= last.t1 + RELEASE) microLast.delete(input.id);
+        const act = now ?? (last && epoch < last.t1 + RELEASE ? last : null);
+        if (!act) return null;
+        const frozen = microPose(entry, time - (epoch - act.t0));
+        if (now && entry.crawl) entry.crawl.pause = Math.max(entry.crawl.pause, 0.3);
+        let at = frozen;
+        if (!now) {
+            const live = microPose(entry, time);
+            const k = easeInOut(Math.min(Math.max((epoch - act.t1) / RELEASE, 0), 1));
+            const mix = (a: number, b: number) => a + (b - a) * k;
+            at = {...live, x: mix(frozen.x, live.x), z: mix(frozen.z, live.z), base: mix(frozen.base, live.base), surface: live.surface && frozen.surface ? {...live.surface, x: mix(frozen.surface.x, live.surface.x), y: mix(frozen.surface.y, live.surface.y), z: mix(frozen.surface.z, live.surface.z)} : live.surface};
+            entry.recipeAct = null;
+            return at;
+        }
+        entry.recipeAct = {...now.act, fx: now.act.fx ? {...now.act.fx, at: {x: frozen.x, y: frozen.base, z: frozen.z}} : null};
+        // Facing its partner (a pair's recipe), on its surface: the heading turned about the normal.
+        let surface = frozen.surface;
+        let yaw = frozen.yaw;
+        const other = pair && now.pair ? findEntry(pair.id) : null;
+        if (other && surface) {
+            const dx = other.place.x - frozen.x;
+            const dz = other.place.z - frozen.z;
+            const length = Math.hypot(dx, dz);
+            if (length > 1e-4) {
+                const d = {x: dx / length, y: 0, z: dz / length};
+                const dot = d.x * surface.nx + d.y * surface.ny + d.z * surface.nz;
+                const t = {x: d.x - dot * surface.nx, y: d.y - dot * surface.ny, z: d.z - dot * surface.nz};
+                const tl = Math.hypot(t.x, t.y, t.z) || 1;
+                surface = {...surface, tx: t.x / tl, ty: t.y / tl, tz: t.z / tl};
+                yaw = Math.atan2(d.x, d.z);
+            }
+        }
+        if (now.mark) {
+            const id = `${now.act.episode}#hole`;
+            if (!microMarks.has(id)) {
+                if (microMarks.size > 200) microMarks.clear();
+                microMarks.set(id, {id, kind: "hole", x: frozen.x, y: frozen.base, z: frozen.z, size: Math.max(entry.trueLength * 0.9, 0.02), from: now.t0, to: now.t0 + 20 * 60});
+            }
+        }
+        return {...frozen, base: frozen.base + now.heave, yaw, pitch: frozen.pitch + now.pitch, roll: frozen.roll + now.roll, surface: surface ? tiltSurface(surface, now.pitch, now.roll) : surface};
+    };
     const nearestCloud = (x: number, z: number) => PLANKTON.reduce((best, cloud) => (Math.hypot(cloud.x - x, cloud.z - z) < Math.hypot(best.x - x, best.z - z) ? cloud : best), PLANKTON[0]);
 
     /**
@@ -5220,6 +5322,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.recipeAct = laying.act;
                 return {x: laying.x, z: laying.z, base: laying.y, yaw: laying.yaw, pitch: laying.pitch, roll: 0, afloat: true};
             }
+            // sig2-small: a recipe of its row played in place (`micro-acts.ts`): a jumping spider's dance, a cricket digging, a hawkmoth at its flower.
+            const played = scheduleOn && !reducedMotion && playsInPlace(entry.animal.model_slug) ? microPlay(entry, time) : null;
+            if (played) return played;
             // Lane SIG2-REPTILES: a small gecko or lizard that hunts by sit-and-wait (`micro-ambush.ts`), in its hours: still on its spot, a dash and a snap now and then.
             const ambush = scheduleOn && !reducedMotion ? microAmbushOf(entry) : null;
             entry.recipeAct = ambush?.act ?? null;
@@ -5560,7 +5665,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const airLeg = Boolean(pose && pose.moving && (pose.beat === "fly" || pose.beat === "glide"));
         // (Lane L2: a small flyer off its microhabitat's surface, a moth round the porch light or a starling in its
         // murmuration, flies on its rig too: it has no schedule pose to say so. On its leaf, bark or wall it is not flying.)
-        const microAloft = Boolean(place.micro && flies && !entry.visitor && ((entry.toLight ?? 0) > 0.5 || (entry.recipeAct?.flock && where.base - Math.max(heightAt(where.x, where.z), 0) > Math.max(entry.length * 1.5, 0.12))));
+        const microAloft = Boolean(place.micro && flies && !entry.visitor && ((entry.toLight ?? 0) > 0.5 || (entry.recipeAct?.flock && where.base - Math.max(heightAt(where.x, where.z), 0) > Math.max(entry.length * 1.5, 0.12)) || entry.recipeAct?.recipe === "flower_hover")); // sig2-small: and hanging at a flower
         const inAir = (pose ? pose.aloft || airLeg : entry.air > 0.001) || microAloft;
         // (MA1: its air leg's stage on the schedule: a run to take off, the climb, level flight, the glide-in, a ski.)
         const stage = (pose && airLeg ? pose.air?.stage : null) ?? null;
@@ -6049,6 +6154,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const ownLine = signatureLineOf(a.model_slug, AMBUSH_RECIPE);
                 if (ownLine) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: AMBUSH_RECIPE, episode: sat.episode, block: sat.block, fish: false, line: ownLine});
             }
+            // sig2-small: a small animal's recipe played in place (`micro-acts.ts`): in the species' own sentence in the log.
+            if (c.entry.place.micro && c.entry.recipeAct && c.entry.recipeAct.recipe !== "dip_lay" && c.entry.recipeAct.recipe !== AMBUSH_RECIPE && c.visible && c.distance < 60) {
+                const a = c.entry.animal;
+                const acted = c.entry.recipeAct;
+                const ownLine = signatureLineOf(a.model_slug, acted.recipe);
+                if (ownLine) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: acted.recipe, episode: acted.episode, block: acted.block, fish: false, line: ownLine});
+            }
+            // sig2-small: a hornet drawn round the lamp after dark (the micro moths' way: `toLight`), in its species' own sentence.
+            if (c.entry.place.micro && (c.entry.toLight ?? 0) > 0.6 && c.visible && c.distance < 60) {
+                const a = c.entry.animal;
+                const ownLine = signatureLineOf(a.model_slug, "night_hawk");
+                if (ownLine) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: "night_hawk", episode: `night_hawk:${a.id}:${Math.floor(epoch / 1800)}`, block: "hunt", fish: false, line: ownLine});
+            }
             if (!own?.pose || c.distance > 90) continue;
             const act = (own.pose as RecipePose).act;
             if (act && c.visible) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act});
@@ -6115,11 +6233,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             marks.push(...near.marks);
             if (near.nest) nests.push(near.nest);
         }
+        // sig2-small: the holes a small digger's act leaves (`micro-acts.ts`), fading over their time like a schedule digger's.
+        microMarks.forEach((m, id) => {
+            if (epoch >= m.to) microMarks.delete(id);
+            else if (Math.hypot(m.x - camera.position.x, m.z - camera.position.z) < 50) marks.push(m);
+        });
         // Molehills round the moles' burrows (underground animals: off the schedule, not in the list).
         for (const entry of allEntries()) {
             if (!entry.place.burrow || !speciesRecipes(entry.animal.model_slug).has.has("molehills")) continue;
             if (Math.hypot(entry.place.x - camera.position.x, entry.place.z - camera.position.z) > 50) continue;
-            marks.push(...molehillsOf(entry.animal.id, entry.animal.model_slug, {x: entry.place.x, y: entry.place.ground, z: entry.place.z}, epoch, heightAt));
+            marks.push(...molehillsOf(entry.animal.id, entry.animal.model_slug, {x: entry.place.x, y: entry.place.ground, z: entry.place.z}, epoch, heightAt, Math.min(Math.max(entry.trueLength / 0.15, 0.12), 1))); // (sig2-small: a mole cricket's mounds are its own size)
         }
         if (recipeNear.size > 300) recipeNear.clear();
         recipeScene.droplets = !reducedMotion && !liteOn(); // p3 (shake): no shaken drops on the low tier

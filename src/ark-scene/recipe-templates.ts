@@ -13,6 +13,7 @@
 
 import {GROUP_TEMPLATES} from "@/ark-scene/behaviour-group-templates";
 import {REPTILE_TEMPLATES} from "@/ark-scene/recipe-templates-reptiles";
+import {SMALL_TEMPLATES} from "@/ark-scene/recipe-small";
 
 /**
  * Where a step goes:
@@ -66,7 +67,7 @@ export type TemplateStep = {
     role?: "a" | "b";
 };
 
-export type Goal = "perch_water" | "perch" | "lookout" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "air" | "here";
+export type Goal = "perch_water" | "perch" | "lookout" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "air" | "here" | "flower";
 
 export type Template = {
     id: string;
@@ -1091,7 +1092,9 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
                 {b: "scan", s: [1, 2]},
                 {b: "dig", s: [4, 8]}
             ]
-        })
+        }),
+        // Wave 2, the small bodies (`recipe-small.ts`).
+        ...SMALL_TEMPLATES.map(T)
     ].map((t) => [t.id, t])
 );
 
