@@ -595,6 +595,8 @@ type Entry = {
     rig?: RigState | null;
     /** Chosen for a rig this frame (within the caps). */
     rigOn?: boolean;
+    /** Whether the scene means its rig to be drawn (1) or faded out (0: asleep on a rig with no sleep clip, a visitor, in the air on a rig that does not fly), set once its rig is in; for the visual CI's wait (`rigState`). */
+    rigTarget?: 0 | 1;
     /**
      * Its behaviour schedule (`behaviour-schedule.ts`): its profile, its home, the trip it is on and where that puts it
      * now. Null for animals the schedule doesn't move (small animals at their microhabitats, burrowers, the visitor).
@@ -5730,6 +5732,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const rigFor = (entry: Entry, model: SpeciesModel, where: Pose, modelScale: number, dt: number): RigModel | null => {
         const slug = entry.animal.model_slug;
         entry.sleepClipped = false;
+        entry.rigTarget = undefined;
         const rig = rigs.get(slug);
         const turned = (d: number) => ((Math.round(d) % 360) + 360) % 360;
         if (!rig || model.placeholder || turned(rig.facingDeg) !== turned(model.facing)) {
@@ -5751,6 +5754,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // rig only stood there playing its idle.
         const sleepsOff = Boolean(entry.sleepNow?.down) && !entry.act && grounded && !sleepClipOf(rig, entry.sleepNow!.posture);
         const target = entry.rigOn && !entry.visitor && (grounded || flies) && !sleepsOff ? 1 : 0;
+        entry.rigTarget = target;
         const peeking = (entry.peek ?? -1) >= 0;
         if (!peeking) state.weight = Math.min(Math.max(state.weight + Math.min(Math.max(target - state.weight, -dt / RIG_BLEND_SECONDS), dt / RIG_BLEND_SECONDS), 0), 1);
         rigHere.set(where.x, where.base, where.z);

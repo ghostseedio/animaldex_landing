@@ -72,7 +72,7 @@ const GOLDEN_SEA_EPOCH = 1_794_391_200;
 const CALM_SHOT = {seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41, cloud: 0.35};
 
 /** What the scene's development hook (`__arkDebug`) gives of its rigs and animals (`rigState`). */
-type RigDebug = {rigs: {busy: boolean; available: (slug: string) => boolean; get: (slug: string) => unknown}; entries: () => Array<{animal: {id: string; model_slug: string}; rigOn?: boolean; rig?: {weight: number} | null}>};
+type RigDebug = {rigs: {busy: boolean; available: (slug: string) => boolean; get: (slug: string) => unknown}; entries: () => Array<{animal: {id: string; model_slug: string}; rigOn?: boolean; rigTarget?: 0 | 1; rig?: {weight: number} | null}>};
 
 type Debug = {scene: Scene; camera: PerspectiveCamera; controls: {minDistance: number}; lighting?: {sun?: {position: Vector3; target: {position: Vector3}}}};
 
@@ -613,7 +613,7 @@ async function mountGolden(el: HTMLElement) {
         rigState: () => {
             const debug = (window as unknown as {__arkDebug?: RigDebug}).__arkDebug;
             if (!debug) return {busy: false, wanted: []};
-            const wanted = debug.entries().filter((entry) => entry.rigOn).map((entry) => ({id: entry.animal.id, slug: entry.animal.model_slug, available: debug.rigs.available(entry.animal.model_slug), loaded: Boolean(debug.rigs.get(entry.animal.model_slug)), weight: Math.round((entry.rig?.weight ?? 0) * 1000) / 1000}));
+            const wanted = debug.entries().filter((entry) => entry.rigOn && entry.rigTarget !== 0).map((entry) => ({id: entry.animal.id, slug: entry.animal.model_slug, available: debug.rigs.available(entry.animal.model_slug), loaded: Boolean(debug.rigs.get(entry.animal.model_slug)), weight: Math.round((entry.rig?.weight ?? 0) * 1000) / 1000}));
             return {busy: debug.rigs.busy, wanted: wanted.sort((a, b) => a.id.localeCompare(b.id))};
         },
         /** The visual CI (scripts/ark-visual.mts): forget transient state when its clock freezes. */
