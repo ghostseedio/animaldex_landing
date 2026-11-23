@@ -164,7 +164,7 @@ export class AntColonies {
     private blobCount = 0;
     private readonly materials: Material[] = [];
     private readonly ribbonMaterialScent = new MeshStandardMaterial({color: 0x2c2418, roughness: 1, transparent: true, opacity: 0.15, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2});
-    private readonly ribbonMaterialCleared = new MeshStandardMaterial({color: 0x8c7556, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2});
+    private readonly ribbonMaterialCleared = new MeshStandardMaterial({color: 0x6f5a40, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2});
     private stats = {drawn: 0, colonies: 0, trails: 0, ms: 0};
 
     constructor(private readonly host: AntHost) {
@@ -316,7 +316,7 @@ export class AntColonies {
             }
             if (kind.form === "column") {
                 c.raid = raidNow(c, this.foods, at, ground);
-                this.moveBivouac(c, c.raid.bivouac);
+                this.moveBivouac(c, c.raid.moving > 0.5 ? c.raid.next : c.raid.bivouac);
             }
             if (!close || near > kind.reach + reachView + 1) continue;
             if (kind.form === "column") {
@@ -569,7 +569,8 @@ function ribbonGeometry(path: Path, width: number): BufferGeometry {
     const index: number[] = [];
     for (let i = 0; i < n - 1; i++) {
         const a = i * 2;
-        index.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+        // (Facing the path's normal: up on the ground, out on a trunk.)
+        index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
     }
     const g = new BufferGeometry();
     g.setAttribute("position", new BufferAttribute(pos, 3));
@@ -579,11 +580,30 @@ function ribbonGeometry(path: Path, width: number): BufferGeometry {
 }
 
 const SOIL = new MeshStandardMaterial({color: 0x8a6a48, roughness: 1});
+const LOOSE = new MeshStandardMaterial({color: 0x7d6347, roughness: 1, flatShading: true});
+/** The bivouac's size (m across is twice this). */
+export const BIVOUAC_RADIUS = 0.12;
+
+/** A low dome of loose soil, lumpy (seeded), `r` across and `h` high. */
+function soilDome(r: number, h: number, seed: number): BufferGeometry {
+    const g = new SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+    const p = g.getAttribute("position");
+    for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i);
+        const y = p.getY(i);
+        const z = p.getZ(i);
+        const a = Math.atan2(z, x);
+        const bump = 1 + 0.06 * Math.sin(a * 5 + (seed % 7)) + 0.05 * Math.sin(a * 11 + y * 9) + 0.08 * (u01(seed, i) - 0.5);
+        p.setXYZ(i, x * r * bump, y * h * (y > 0.02 ? bump : 1), z * r * bump);
+    }
+    g.computeVertexNormals();
+    return g;
+}
 const DARK = new MeshStandardMaterial({color: 0x120c08, roughness: 1});
 const BARE = new MeshStandardMaterial({color: 0xa48a66, roughness: 1, transparent: true, opacity: 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1});
 const LEAF = new MeshStandardMaterial({color: 0x4c7a2a, roughness: 0.8, side: DoubleSide});
 const HUSK = new MeshStandardMaterial({color: 0xd8c39a, roughness: 1});
-const BIVOUAC = new MeshStandardMaterial({color: 0x5a2e16, roughness: 0.9});
+const BIVOUAC = new MeshStandardMaterial({color: 0x3e1f10, roughness: 0.9});
 
 /** The nest by its kind (the kind's own text, `ant-kinds.json` cite.nest); at the colony's nest point. */
 function nestMesh(c: Colony): Group {
@@ -616,16 +636,14 @@ function nestMesh(c: Colony): Group {
             break;
         case "dome": {
             // Fire ants: a dome of loose soil with no opening on top.
-            const m = new Mesh(new SphereGeometry(0.16, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2), SOIL);
-            m.scale.set(1, 0.55, 1);
-            g.add(m);
+            g.add(new Mesh(soilDome(0.16, 0.09, c.seed), LOOSE));
+            crumbs(0.17, 60);
             break;
         }
         case "mound": {
             // Leafcutters: a broad mound of loose soil, several entrances.
-            const m = new Mesh(new SphereGeometry(0.55, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), SOIL);
-            m.scale.set(1, 0.3, 1);
-            g.add(m);
+            g.add(new Mesh(soilDome(0.55, 0.16, c.seed), LOOSE));
+            crumbs(0.6, 120);
             for (let i = 0; i < 5; i++) {
                 const a = (i / 5) * Math.PI * 2 + u01(c.seed, i) * 0.6;
                 const r = 0.15 + 0.3 * u01(c.seed, i, 2);
@@ -687,10 +705,9 @@ function nestMesh(c: Colony): Group {
             hole(len * 0.9);
             break;
         case "bivouac": {
-            // Army ants: the bivouac is a hanging mass of the workers' own bodies.
-            const m = new Mesh(new IcosahedronGeometry(0.12, 2), BIVOUAC);
-            m.scale.set(1, 0.7, 1);
-            m.position.y = 0.06;
+            // Army ants: the bivouac is a mass of the workers' own bodies (the ants on it are drawn by `raiders`); a dark
+            // core under them.
+            const m = new Mesh(soilDome(BIVOUAC_RADIUS * 0.92, BIVOUAC_RADIUS * 0.8, c.seed), BIVOUAC);
             g.add(m);
             break;
         }

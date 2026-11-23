@@ -662,6 +662,36 @@ export function raiders(colony: Colony, raid: Raid, epoch: number, view: View, b
             }
         }
     }
+    // The bivouac itself: a mass of workers clinging over it (each at a seeded place on its dome, stirring).
+    {
+        const bx = raid.moving > 0.5 ? raid.next.x : raid.bivouac.x;
+        const bz = raid.moving > 0.5 ? raid.next.z : raid.bivouac.z;
+        const R = 0.12;
+        if ((bx - view.x) ** 2 + (bz - view.z) ** 2 < (view.r + R) ** 2) {
+            const n = Math.min(900, Math.round((2 * Math.PI * R * R) / (kind.length * kind.length * 0.9)));
+            const base = groundY(bx, bz);
+            for (let i = 0; i < n; i++) {
+                const a = u01(colony.seed, i, 31) * Math.PI * 2;
+                const c = Math.sqrt(u01(colony.seed, i, 32));
+                const nx = Math.cos(a) * c;
+                const nz = Math.sin(a) * c;
+                const ny = Math.sqrt(Math.max(0, 1 - c * c));
+                const turn = u01(colony.seed, i, 33) * Math.PI * 2 + Math.sin(epoch * 0.7 + i) * 0.3;
+                // A tangent on the dome at that point, turned by the ant's own heading.
+                const t1x = -Math.sin(a);
+                const t1z = Math.cos(a);
+                const t2x = -ny * Math.cos(a);
+                const t2y = c;
+                const t2z = -ny * Math.sin(a);
+                const tx = t1x * Math.cos(turn) + t2x * Math.sin(turn);
+                const ty = t2y * Math.sin(turn);
+                const tz = t1z * Math.cos(turn) + t2z * Math.sin(turn);
+                if (drawn >= budget) return drawn;
+                drawn++;
+                if (!sink(bx + nx * R, base + ny * R * 0.8, bz + nz * R, tx, ty, tz, nx, ny, nz, kind.length * (0.6 + 0.8 * u01(colony.seed, i, 34)), LOAD_NONE, kind.front, kind.back)) return drawn;
+            }
+        }
+    }
     // The emigration: the column to the next bivouac, workers carrying brood (their own larvae and pupae).
     if (raid.moving > 0) {
         const dx = raid.next.x - raid.bivouac.x;
