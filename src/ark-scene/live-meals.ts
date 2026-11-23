@@ -21,6 +21,7 @@ import {mealScript, predatorAt, preyAt, scavengeVisit, scavengerAt, type MealCat
 import {pickScavengers, scavengeSeconds, type MealPlan, type ScavengerCandidate, type TraceKind} from "@/ark-scene/meals";
 import type {ArkAct} from "@/lib/ark-life";
 import {arkActStartOf} from "@/lib/ark-act-hold";
+import {addFlowKill, flowsOn} from "@/ark-scene/flows/scene-adapter";
 
 export type MealAct = Extract<ArkAct, {kind: "meal"}>;
 
@@ -220,6 +221,14 @@ export class LiveMeals<E> {
         const q = made.stage.prey(catchAt);
         if (!p) return null;
         const script = mealScript(made.plan, {...made.catch, kind: made.kind, predator: {x: p.x, z: p.z, base: p.base, yaw: p.yaw, length: made.predatorLength, height: made.predatorHeight}, prey: {x: q.x, z: q.z, base: q.base, yaw: q.yaw, length: made.preyLength, height: made.preyHeight}});
+        // (Behaviour flows, behind their switch: the predator's flow tells this catch at the moment it is acted, its eating
+        // or its carrying and caching as long as the act's own phases. `flows/scene-adapter.ts`.)
+        if (flowsOn()) {
+            const catchStep = 4;
+            const rest = Math.max(script.ends - script.feedTo, 0);
+            const acted = script.cache ? {carry: Math.max(script.cache.walkTo - catchStep, 1), cache: script.cache.coverTo - script.cache.walkTo, rest} : {eat: Math.max(script.feedTo - catchStep, 1), rest};
+            addFlowKill(m.act.predator.id, {at: m.t0 + catchAt, prey: m.act.prey.name, acted}, Boolean(script.cache));
+        }
         // The scavengers: who is near and awake when the predator leaves what is left (their schedules' places then).
         const leftAt = m.t0 + catchAt + script.leaves;
         const visits: Built["visits"] = [];
@@ -378,7 +387,7 @@ export class LiveMeals<E> {
     }
 
     /** Development (the kills harness): each meal's times (s after its step) and who comes to it. */
-    debug(): Array<{key: string; t0: number; catchAt: number; hunt: string | null; style: string; feedTo: number; drink: [number, number] | null; rest: [number, number]; carcassEnd: number; visits: Array<{id: string; start: number; arrive: number; leave: number}>; carcass: {x: number; z: number} | null; plan: MealPlan | null}> {
+    debug(): Array<{key: string; t0: number; catchAt: number; hunt: string | null; style: string; feedTo: number; drink: [number, number] | null; rest: [number, number]; carcassEnd: number; visits: Array<{id: string; start: number; arrive: number; leave: number}>; carcass: {x: number; z: number} | null; plan: MealPlan | null; cache: [number, number, number, number] | null}> {
         return this.meals.map((m) => {
             const b = m.built;
             const at = b?.catchAt ?? 0;
@@ -394,7 +403,8 @@ export class LiveMeals<E> {
                 carcassEnd: at + (b?.carcassEnd ?? 0),
                 visits: b?.visits.map((v) => ({id: v.id, start: at + v.start, arrive: at + v.arrive, leave: at + v.leave})) ?? [],
                 carcass: b ? {x: b.script.carcass.x, z: b.script.carcass.z} : null,
-                plan: b?.script.plan ?? null
+                plan: b?.script.plan ?? null,
+                cache: b?.script.cache ? [at + b.script.cache.pickTo, at + b.script.cache.walkTo, at + b.script.cache.digTo, at + b.script.cache.coverTo] : null
             };
         });
     }

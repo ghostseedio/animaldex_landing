@@ -53,6 +53,7 @@ import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FL
 import {shakeTotal, waterShakeOf} from "@/ark-scene/water-shake";
 import {commuteCentre, flockTightness, groupIntent, pairSide} from "@/ark-scene/behaviour-group";
 import {coatOf, drawnRecipe, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, pairMeetings, recipeRoostTags, sexLook, sitterIntent, type DrawnRecipe, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
+import {flowParamsFor, flowsOn, flowStillShare, flowSubjectOf, flowTrip, FLOW_STILL_SHARE} from "@/ark-scene/flows/scene-adapter";
 
 export const SLOT_SECONDS = 80;
 /** The raised perches a group sleeps along in a row or a cluster (sleep lane). */
@@ -1252,7 +1253,15 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
  * more than the four slots before it, and every caller works it out the same way.
  */
 function intent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
-    return remember(memoOf(world, hoursAt, animal).intents, slot, () => workIntent(world, profile, animal, activity, slot, hoursAt));
+    return remember(memoOf(world, hoursAt, animal).intents, slot, () => {
+        const worked = workIntent(world, profile, animal, activity, slot, hoursAt);
+        // (Behaviour flows, behind their switch: a slot its flow spends mostly still (eating, resting, a catch, a drink) it
+        // stays where it is: no route. Its moving steps keep the schedule's own route. `flows/scene-adapter.ts`.)
+        if (!flowsOn() || !worked.to || worked.follow || worked.doing === "sleep" || worked.doing === "to_roost") return worked;
+        const start = slotStart(animal, slot);
+        const still = flowStillShare(flowSubjectFor(profile, animal, activity, hoursAt), start, start + SLOT_SECONDS);
+        return still >= FLOW_STILL_SHARE ? {...worked, to: null, stay: []} : worked;
+    });
 }
 
 function workIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
@@ -2022,16 +2031,26 @@ function finishOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     if (i.follow && animal.group) return shadowOf(world, animal, slot, hoursAt).finish;
     const settled = settle(world, profile, animal, slot, i, activity, hoursAt);
     if (settled) return settled.finish;
-    if (depth < 6) return finishOf(world, profile, animal, activity, slot - 1, hoursAt, depth + 1);
+    // (With behaviour flows a still stretch is goal-less slots in a row, a long graze: looked back further.)
+    if (depth < (flowsOn() ? 48 : 6)) return finishOf(world, profile, animal, activity, slot - 1, hoursAt, depth + 1);
     return homeAt(world, profile, animal);
 }
 
 /** The trip an animal is on at a world time (pure: the same for every viewer). */
+/** Its behaviour flow's subject (pilot, `flows/scene-adapter.ts`): a flock's member wakes by its leader's hours and sleep. */
+function flowSubjectFor(profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, hoursAt: HoursAt) {
+    const flock = animal.group && flowParamsFor(profile.slug)?.flock ? animal.group : null;
+    const awake = flock ? (e: number) => awakeAt(flock.profile, flock.activity, hoursAt(e), flock.leader.sleep) : (e: number) => awakeAt(profile, activity, hoursAt(e), animal.sleep);
+    return flowSubjectOf(animal, profile.slug, hoursAt, awake);
+}
+
 export function tripAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null, previous?: Trip | null): Trip {
     const slot = slotOf(animal, epochSeconds);
     return remember(memoOf(world, hoursAt, animal).trips, slot, () => {
         const now = intent(world, profile, animal, activity, slot, hoursAt);
-        return tripFor(world, profile, animal, activity, slot, hoursAt, now, previous && previous.slot === slot - 1 ? previous.finish : null);
+        const trip = tripFor(world, profile, animal, activity, slot, hoursAt, now, previous && previous.slot === slot - 1 ? previous.finish : null);
+        // (Behaviour flows, pilot, behind their switch: what it does where it stands, from its flow. `flows/scene-adapter.ts`.)
+        return flowsOn() ? flowTrip(trip, flowSubjectFor(profile, animal, activity, hoursAt)) : trip;
     });
 }
 

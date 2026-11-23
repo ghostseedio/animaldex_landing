@@ -21,6 +21,15 @@ import {fillArkWords, type ArkWords} from "@/lib/ark-words";
  * Counts and species only: never who brought an animal, never a problem or a chat.
  */
 
+/** English for the credits line's lead-in, until a locale has `seo.dataCredits`. */
+const ARK_DATA_CREDITS = "Behaviour timings use AnimalDex's own species data first; gaps are filled from:";
+/** The credited datasets (docs/ark/behaviour-flows.md 4.4): names and authors stay as published. */
+const ARK_DATASETS = [
+    {name: "AnAge (HAGR)", who: "Tacutu et al. 2018", licence: "CC BY 3.0", doi: "https://doi.org/10.1093/nar/gkx1042"},
+    {name: "PanTHERIA", who: "Jones et al. 2009", licence: "CC BY 4.0", doi: "https://doi.org/10.1890/08-1494.1"},
+    {name: "EltonTraits 1.0", who: "Wilman et al. 2014", licence: "CC BY 4.0", doi: "https://doi.org/10.1890/13-1917.1"}
+];
+
 type Props = {
     snapshot: ArkSnapshot | null;
     words: ArkWords;
@@ -76,6 +85,16 @@ export default function ArkAbout({snapshot, words, locale, speciesPages}: Props)
                         <p className="mt-2 text-base leading-relaxed text-ink-200">{seo.lifeBody}</p>
                         <p className="mt-3 text-base leading-relaxed text-ink-200">{seo.lifeRules}</p>
                         <p className="mt-3 text-[13px] leading-relaxed text-ink-400">{seo.lifeNote}</p>
+                        {/* The datasets the behaviour timings' gaps come from, credited (owner, 2026-11-23: "yes use them with credit"). */}
+                        <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
+                            {seo.dataCredits ?? ARK_DATA_CREDITS}{" "}
+                            {ARK_DATASETS.map((d, i) => (
+                                <span key={d.name}>
+                                    {i ? " · " : ""}
+                                    <a href={d.doi} target="_blank" rel="noreferrer noopener" className="underline-offset-2 hover:underline">{d.name}</a> ({d.who}, {d.licence})
+                                </span>
+                            ))}
+                        </p>
                     </div>
                 </div>
 

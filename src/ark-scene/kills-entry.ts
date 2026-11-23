@@ -10,6 +10,7 @@ import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import type {ArkAct, ArkEventAnimal} from "@/lib/ark-life";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
+import {flowNow} from "@/ark-scene/flows/scene-adapter";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -25,6 +26,8 @@ const PAIRS: Record<string, Pair> = {
     heron: {zone: "river_lake", hours: 9, date: Date.UTC(2026, 10, 20, 9) / 1000, predator: {slug: "grey-heron", name: "Grey Heron", n: 1, activity: "any"}, prey: {slug: "rainbow-trout", name: "Rainbow Trout", n: 1}, others: []},
     // A raptor on a small mammal, a raven about.
     hawk: {zone: "grassland", hours: 10, date: Date.UTC(2026, 10, 20, 10) / 1000, predator: {slug: "red-tailed-hawk", name: "Red-tailed Hawk", n: 1, activity: "any"}, prey: {slug: "european-rabbit", name: "European Rabbit", n: 1}, others: [{slug: "common-raven", name: "Common Raven", n: 1, activity: "diurnal"}]},
+    // Behaviour flows (docs/ark/behaviour-flows.md): a fox on a rabbit, eaten (`?pair=fox`) or cached (`&cache=1`, SIG-EVENTS food_cache).
+    fox: {zone: "grassland", hours: 16, date: Date.UTC(2026, 10, 20, 16) / 1000, predator: {slug: "red-fox", name: "Red Fox", n: 1, activity: "any"}, prey: {slug: "european-rabbit", name: "European Rabbit", n: 1}, others: []},
     // A snake on a rodent.
     python: {zone: "grassland", hours: 11, date: Date.UTC(2026, 10, 20, 11) / 1000, predator: {slug: "african-rock-python", name: "African Rock Python", n: 1, activity: "any"}, prey: {slug: "brown-rat", name: "Brown Rat", n: 1}, others: []}
 };
@@ -54,6 +57,7 @@ async function main() {
     const name = params.get("pair") ?? "lion";
     const pair = PAIRS[name];
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
+    if (params.get("flows") === "1") (globalThis as {__arkFlows?: boolean}).__arkFlows = true;
     const template = fixture.animals[0];
     const casts = [pair.predator, pair.prey, ...pair.others];
     const animals: Raw[] = [];
@@ -94,7 +98,8 @@ async function main() {
     const hx = quarry.x + (hunter.x - quarry.x) * k;
     const hz = quarry.z + (hunter.z - quarry.z) * k;
     const record = (c: Cast, id: string, k2: number): ArkEventAnimal => ({id, species_profile_id: speciesId(k2), name: c.name, model_slug: c.slug, zone: pair.zone as ArkEventAnimal["zone"], arrived_at: "2026-11-12T00:00:00Z", origin: "arrived", generation: 0, slot: 90 + k2, slot_rank: 0, activity: (c.activity ?? "diurnal") as ArkEventAnimal["activity"], sociality: null, status: null});
-    const act: Extract<ArkAct, {kind: "meal"}> = {kind: "meal", at: new Date(t0 * 1000).toISOString(), predator: record(pair.predator, predatorId, 0), prey: record(pair.prey, preyId, 1), phrase: null, extinct: false, encounter: {t: t0, predator: {x: hx, z: hz}, prey: {x: quarry.x, z: quarry.z, r: 0.5}}};
+    const act: Extract<ArkAct, {kind: "meal"}> = {kind: "meal", at: new Date(t0 * 1000).toISOString(), predator: record(pair.predator, predatorId, 0), prey: record(pair.prey, preyId, 1), phrase: null, extinct: false, encounter: {t: t0, predator: {x: hx, z: hz}, prey: {x: quarry.x, z: quarry.z, r: 0.5}}, ...(params.get("cache") === "1" ? {cached: true} : {})};
+    // (The flow narrates the same kill when the scene builds its act: `live-meals.ts` addFlowKill.)
     handle.setMeals?.([act]);
     await setAt(t0 + 0.05);
     await frames(4);
@@ -106,7 +111,7 @@ async function main() {
     const api = {
         info: () => debug.meals(),
         /** The world at `s` seconds after the meal's step, from `distance` (or following an animal: `follow`). */
-        shot: async (s: number, distance: number, follow?: string, polar?: number) => {
+        shot: async (s: number, distance: number, follow?: string, polar?: number, side?: boolean) => {
             // (Up to the moment in small steps, so the rigs' one-shots, lying down and getting up, play as they would.)
             await setAt(t0 + s - 2.5);
             for (let i = 1; i <= 25; i++) {
@@ -116,8 +121,12 @@ async function main() {
             }
             // (`?jaw=1`: on the prey itself, wherever it is drawn: the swallow's view.)
             const preyAct = params.has("jaw") ? debug.entries().find((e) => e.animal.id === preyId && e.act && !e.act.hidden)?.act ?? null : null;
-            const who = preyAct ? {x: Number(preyAct.x), z: Number(preyAct.z), y: Number(preyAct.base)} : follow ? handle.locate(follow) : null;
-            handle.setView(view(distance, polar ?? 1.12, 0.7, who ? {x: who.x, z: who.z} : centre, who ? Math.max(who.y - Math.max(ground, 0), 0) + 0.4 : 0.4));
+            // (Following an animal in an act: where the act draws it, not where its schedule last put it.)
+            const followAct = follow ? debug.entries().find((e) => e.animal.id === follow && e.act && !e.act.hidden)?.act ?? null : null;
+            const who = preyAct ? {x: Number(preyAct.x), z: Number(preyAct.z), y: Number(preyAct.base)} : followAct ? {x: Number(followAct.x), z: Number(followAct.z), y: Number(followAct.base)} : follow ? handle.locate(follow) : null;
+            // (`side`: square on to the followed animal's flank, to read its head and legs.)
+            const azimuth = side && followAct ? Number(followAct.yaw) - Math.PI / 2 : 0.7;
+            handle.setView(view(distance, polar ?? 1.12, azimuth, who ? {x: who.x, z: who.z} : centre, who ? Math.max(who.y - Math.max(ground, 0), 0) + 0.4 : 0.4));
             await frames(3);
             const acts = debug
                 .entries()
@@ -125,7 +134,11 @@ async function main() {
                 .map((e) => `${e.animal.model_slug} ${String(e.act!.meal ?? "-")} ${String(e.act!.state ?? "")}${e.act!.hidden ? " hidden" : ""}${e.act!.lying ? ` lying ${Number(e.act!.lying).toFixed(2)}` : ""}${params.has("where") ? ` at ${Number(e.act!.x).toFixed(2)},${Number(e.act!.z).toFixed(2)} y ${Number(e.act!.base).toFixed(2)} s ${Number(e.act!.scale).toFixed(2)} drawn ${(e as unknown as {middle: {x: number; z: number} | null}).middle ? `${(e as unknown as {middle: {x: number; z: number}}).middle.x.toFixed(2)},${(e as unknown as {middle: {x: number; z: number}}).middle.z.toFixed(2)}` : "-"} ${JSON.stringify({level: (e as unknown as {level: string}).level, held: (e as unknown as {held: boolean}).held, den: (e as unknown as {denIn?: number}).denIn, micro: Boolean((e as unknown as {place: {micro?: unknown; burrow?: unknown}}).place.micro), burrow: Boolean((e as unknown as {place: {burrow?: unknown}}).place.burrow), ghost: (e as unknown as {ghost?: boolean}).ghost, model: Boolean((window as unknown as {__arkDebug: {library: {get: (s: string) => unknown; has: (s: string) => boolean}}}).__arkDebug.library.get(e.animal.model_slug)), has: (window as unknown as {__arkDebug: {library: {has: (s: string) => boolean}}}).__arkDebug.library.has(e.animal.model_slug), mid: (e as unknown as {middle: unknown}).middle, air: (e as unknown as {air: number}).air, len: (e as unknown as {length: number}).length})}` : ""}`);
             const status = (id: string) => handle.animalStatus?.(id)?.activity ?? "-";
             const hunt = handle.liveHunt?.();
-            return `+${s.toFixed(1)} s   predator card: ${status(predatorId)}   marker: ${hunt ? `${hunt.phase} ${hunt.name}` : "none"}   traces: ${debug.traces().length}\n${acts.join("\n")}`;
+            const flow = flowNow(predatorId, fake!.date / 1000);
+            const dbg = window as unknown as {__arkDebug: {rigState?: (id: string) => {clip: string | null} | null; rigClips?: (slug: string) => string[]}};
+            const clipNow = dbg.__arkDebug.rigState?.(predatorId)?.clip ?? "-";
+            if (params.has("clips")) console.log("[kills] rig clips", JSON.stringify(dbg.__arkDebug.rigClips?.(pair.predator.slug) ?? []));
+            return `+${s.toFixed(1)} s   clip: ${clipNow}   flow: ${flow ? flow.line : "-"}   predator card: ${status(predatorId)}   marker: ${hunt ? `${hunt.phase} ${hunt.name}` : "none"}   traces: ${debug.traces().length}\n${acts.join("\n")}`;
         },
         handle
     };

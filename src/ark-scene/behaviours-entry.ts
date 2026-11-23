@@ -21,13 +21,14 @@ import {surfacePoint} from "@/ark-scene/micro";
 import {SMALL_SCENES, smallMoments} from "@/ark-scene/behaviours-small";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
 import {speciesRecipes} from "@/ark-scene/behaviour-recipes";
+import {flowDebug, flowWindow, flowNow, setFlowServer} from "@/ark-scene/flows/scene-adapter";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number; /** sig2-small: the slot it is placed at (a place on the island: a flower for a moth), else 90. */ slot?: number; /** sig2-small: the species' own activity (the profile's), else diurnal as the harness always had it. */ activity?: string};
-type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group" | "recipe" | "micro" | "flight" | "tails" | "state"; /** (recipe) the recipe's episode to find, and the row to give the first cast when its table has not got it yet ("recipe.weight[,...]"). */ recipe?: string; inject?: string; /** (recipe, micro) how far in body lengths, the camera's azimuth off its side and its polar angle. */ lengths?: number; azimuth?: number; polar?: number; /** (recipe) the first of the cast to frame. */ pick?: number};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group" | "recipe" | "micro" | "flight" | "tails" | "state" | "flow"; /** (recipe) the recipe's episode to find, and the row to give the first cast when its table has not got it yet ("recipe.weight[,...]"). */ recipe?: string; inject?: string; /** (recipe, micro) how far in body lengths, the camera's azimuth off its side and its polar angle. */ lengths?: number; azimuth?: number; polar?: number; /** (recipe) the first of the cast to frame. */ pick?: number};
 
 const SCENES: Record<string, Scene> = {
     // Signature behaviours, wave 2, the small bodies (`behaviours-small.ts`).
@@ -163,6 +164,12 @@ const SCENES: Record<string, Scene> = {
     lsindividual: {zone: "river_lake", hours: 12, kind: "state", cast: [{slug: "koi", name: "Koi", n: 4}, {slug: "guppy", name: "Guppy", n: 4}]},
     lsseasonwater: {zone: "river_lake", hours: 12, kind: "state", cast: [{slug: "mallard", name: "Mallard", n: 8}, {slug: "mandarin-duck", name: "Mandarin Duck", n: 1}, {slug: "black-headed-gull", name: "Black-headed Gull", n: 1}, {slug: "great-crested-grebe", name: "Great Crested Grebe", n: 1}]},
     lsseasonland: {zone: "woodland", hours: 12, kind: "state", cast: [{slug: "winter-white-dwarf-hamster", name: "Winter White Dwarf Hamster", n: 1}, {slug: "southeastern-five-lined-skink", name: "Southeastern Five-lined Skink", n: 1}, {slug: "two-spotted-spider-mite", name: "Two-spotted Spider Mite", n: 1}, {slug: "white-tailed-deer", name: "White-tailed Deer", n: 1}, {slug: "red-deer", name: "Red Deer", n: 1}, {slug: "raccoon-dog", name: "Raccoon Dog", n: 1}]},
+    // Behaviour flows (docs/ark/behaviour-flows.md 8; `?flows=1` switches them on): pilot kinds eating their engine
+    // background food where the schedule stands them, and a fox's kill from a sample server event.
+    flowdeer: {zone: "grassland", hours: 16.4, kind: "flow", cast: [{slug: "red-deer", name: "Red Deer", n: 3}]},
+    flowsparrow: {zone: "farm_garden", hours: 10, kind: "flow", cast: [{slug: "house-sparrow", name: "House Sparrow", n: 3}]},
+    flowjay: {zone: "woodland", hours: 10, kind: "flow", cast: [{slug: "eurasian-jay", name: "Eurasian Jay", n: 2}]},
+    flowfox: {zone: "grassland", hours: 16.4, kind: "flow", cast: [{slug: "red-fox", name: "Red Fox", n: 2}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]},
     // Decision 434: the dung users at a herd's fresh marks (`dung.ts` dungVisitPose).
@@ -197,6 +204,7 @@ async function main() {
         if (params.get("slug")) scene.cast = [{slug: params.get("slug")!, name: params.get("slug")!, n: Number(params.get("n") ?? 3)}];
     }
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
+    if (params.get("flows") === "1") (globalThis as {__arkFlows?: boolean}).__arkFlows = true;
     if (params.get("grass") === "0") (globalThis as {__arkNoGrass?: boolean}).__arkNoGrass = true;
     const template = fixture.animals[0];
     const day = fixture.voyage.ark_day;
@@ -310,7 +318,41 @@ async function main() {
     handle.setView(view(12, at0));
     let closeView: ArkCameraView | null = null;
     const pinned = new Set<string>();
+    // (Behaviour flows: a sample server kill for the fox scene's first fox, 20 minutes in.)
+    if (scene.kind === "flow" && scene.cast[0].slug === "red-fox") setFlowServer(a, {kills: [{at: t0 + 1200, prey: "Bank Vole"}], version: "harness-kill"});
     const api = {
+        /** Behaviour flows: the first second in [from, to] (s after t0, every `every` s) the animal's flow step is one of `kinds`. */
+        flowFind: (id: string, kinds: string[], from: number, to: number, every = 4) => {
+            for (let s = from; s <= to; s += every) {
+                const now = flowNow(id, t0 + s + 2.1);
+                if (now && kinds.includes(now.kind)) return s;
+            }
+            console.log("[behaviours] flowFind none", JSON.stringify(flowDebug()), JSON.stringify(flowNow(id, t0 + from + 2.1)));
+            return null;
+        },
+        /** Behaviour flows: what the animal's flow says now, and the beat its pose plays (the scene's own, after a `shot`). */
+        flowCaption: (id: string) => {
+            const e = debug.entries().find((x) => x.animal.id === id) as unknown as {sched?: {pose?: {beat?: string; moving?: boolean}}} | undefined;
+            const now = flowNow(id, fake!.date / 1000);
+            // (`?legs=1`: the trip's doing and the leg it is on, to trace a pose back to its leg.)
+            const trip = (e as unknown as {sched?: {trip?: {doing?: string; start: number; arrive: number; shadow?: unknown; legs: Array<{mode: string; beat: string; seconds: number}>; stay: Array<{at: number; beat: string}>}}})?.sched?.trip;
+            let leg = "-";
+            if (params.has("legs") && trip) {
+                const t = fake!.date / 1000;
+                let at = trip.start;
+                leg = "stay";
+                for (const l of trip.legs) {
+                    if (t < at + l.seconds) {
+                        leg = `${l.mode}/${l.beat}`;
+                        break;
+                    }
+                    at += l.seconds;
+                }
+                const tt = trip as unknown as {start: number; arrive: number; end: number; slot: number};
+                leg = `[${flowWindow(id, tt.arrive, tt.end, 8)}] ${trip.doing ?? "-"}${trip.shadow ? " shadow" : ""} slot ${tt.slot} ${Math.round(tt.start - t)}..${Math.round(tt.arrive - t)}..${Math.round(tt.end - t)} ${leg} stay[${trip.stay.map((b) => b.beat).slice(0, 6).join(",")}]`;
+            }
+            return `${now ? `flow: ${now.line}${now.server ? " (server)" : ""}` : "flow: (off)"}   pose: ${e?.sched?.pose?.beat ?? "-"}${e?.sched?.pose?.moving ? " moving" : ""}   card: ${(handle.animalStatus?.(id)?.line ?? handle.animalStatus?.(id)?.activity ?? "-")}${params.has("legs") ? `   trip: ${leg}` : ""}`;
+        },
         /** 3.3 fix (log): a death line's tap, from the island's overview: where the camera goes, after its flight. */
         tapDeath: async (key: string) => {
             handle.setView(view(150, at0, 0.9));
@@ -329,7 +371,7 @@ async function main() {
         dormant: async (on: boolean) => {
             handle.setDormant?.(on ? [speciesId(0)] : []);
             await frames(6);
-            return debug.entries().map((e) => `${e.animal.model_slug} ${e.act ? `${String(e.act.meal)}${e.act.hidden ? " hidden" : ""}` : "about"} card:${handle.animalStatus?.(e.animal.id)?.activity ?? "-"}`);
+            return debug.entries().map((e) => `${e.animal.model_slug} ${e.act ? `${String(e.act.meal)}${e.act.hidden ? " hidden" : ""}` : "about"} card:${handle.animalStatus?.(e.animal.id)?.line ?? handle.animalStatus?.(e.animal.id)?.activity ?? "-"}`);
         },
         /** The webs' mesh: where its first web is, how many threads, and the clock's place in the webs' cycle. */
         webs: () => {
@@ -393,12 +435,12 @@ async function main() {
             return `${id.slice(-3)} chosen, ${distance === null ? "the page's own close-up" : `${distance} m back`}, lift ${lift ? "on" : "off"}, length ${at ? at.length.toFixed(3) : "?"} m`;
         },
         /** The view on an animal where it is now, in the air too (after a `shot`, the clock standing). */
-        closeOn: async (id: string, distance: number, polar = 1.35) => {
+        closeOn: async (id: string, distance: number, polar = 1.35, azimuth = 0.7) => {
             const act = debug.entries().find((e) => e.animal.id === id)?.act as {x: number; z: number; base: number} | null | undefined;
             const at = act ? {x: act.x, y: act.base + 0.15, z: act.z} : handle.locate(id);
             const rig = debug as unknown as {controls: {minDistance: number}};
             rig.controls.minDistance = Math.min(rig.controls.minDistance, distance);
-            if (at) handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance, polar, azimuth: 0.7});
+            if (at) handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance, polar, azimuth});
             await frames(3);
         },
         /** The world at an absolute time (s), looking at a point from close by. */
@@ -426,7 +468,7 @@ async function main() {
                 .entries()
                 .filter((e) => e.act)
                 .map((e) => `${e.animal.id.slice(-3)} ${e.animal.model_slug} ${String(e.act!.meal ?? "-")} ${String(e.act!.state ?? "")}${e.act!.hidden ? " hidden" : ""}${e.act!.lying ? ` lying ${Number(e.act!.lying).toFixed(2)}` : ""}`);
-            const status = (id: string) => handle.animalStatus?.(id)?.activity ?? "-";
+            const status = (id: string) => (handle.animalStatus?.(id)?.line ?? handle.animalStatus?.(id)?.activity ?? "-");
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
             return `+${s.toFixed(1)} s   card a: ${status(a)}   card b: ${status(b)}   dung marks: ${api.dung().length}\n${acts.concat(said).join("\n")}${scene.kind === "lure" ? `\n${JSON.stringify(debug.lures?.())}` : ""}${scene.kind === "hatch" ? `\n${JSON.stringify(debug.drops?.())}` : ""}${scene.kind === "mob" ? `\n${JSON.stringify(debug.mobbing?.())} rigs ${JSON.stringify(scene.cast[0] ? Array.from({length: scene.cast[0].n}, (_, i) => (debug as unknown as {rigState: (id: string) => unknown}).rigState(castId(0, i))).concat((debug as unknown as {rigState: (id: string) => unknown}).rigState(foe)) : [])}` : ""}`;
         },
@@ -734,7 +776,7 @@ async function main() {
             const lines = ids.map((id, i) => {
                 const e = debug.entries().find((x) => x.animal.id === id) as unknown as {sched?: {pose?: {beat?: string; doing?: string; act?: {recipe?: string; block?: string} | null}}} | undefined;
                 const p = at[i];
-                return `${i}${i === 0 ? "L" : " "} ${(e?.sched?.pose?.act?.recipe ?? "-").padEnd(14)} ${(e?.sched?.pose?.act?.block ?? "-").padEnd(6)} ${(e?.sched?.pose?.beat ?? "-").padEnd(6)} card:${handle.animalStatus?.(id)?.activity ?? "-"} ${p ? `d=${Math.hypot(p.x - cx, p.z - cz).toFixed(1)} y=${(p.y - handle.heightAt(p.x, p.z)).toFixed(1)} at ${p.x.toFixed(1)},${p.z.toFixed(1)}` : "-"}`;
+                return `${i}${i === 0 ? "L" : " "} ${(e?.sched?.pose?.act?.recipe ?? "-").padEnd(14)} ${(e?.sched?.pose?.act?.block ?? "-").padEnd(6)} ${(e?.sched?.pose?.beat ?? "-").padEnd(6)} card:${(handle.animalStatus?.(id)?.line ?? handle.animalStatus?.(id)?.activity ?? "-")} ${p ? `d=${Math.hypot(p.x - cx, p.z - cz).toFixed(1)} y=${(p.y - handle.heightAt(p.x, p.z)).toFixed(1)} at ${p.x.toFixed(1)},${p.z.toFixed(1)}` : "-"}`;
             });
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
             return `+${s.toFixed(0)} s spread ${spread.toFixed(1)} m centre ${cx.toFixed(1)},${cz.toFixed(1)}\n${lines.concat(said).join("\n")}`;

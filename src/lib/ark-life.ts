@@ -355,7 +355,7 @@ export type ArkAct =
     /** An egg-layer laid a clutch (A9): a nest or clutch appears beside it. `eggs` when the server counts them. */
     | {kind: "laid"; at: string; animal: ArkEventAnimal; eggs: number | null; nest: string; parents: string[]}
     /** `encounter`: under encounter hunting, where the hunter found its prey (the chase runs between those places). */
-    | {kind: "meal"; at: string; predator: ArkEventAnimal; prey: ArkEventAnimal; phrase: string | null; extinct: boolean; encounter?: ArkMealEncounter; /** ARK-WEBS: caught in its web (`ArkEvent.web`). */ web?: true}
+    | {kind: "meal"; at: string; predator: ArkEventAnimal; prey: ArkEventAnimal; phrase: string | null; extinct: boolean; encounter?: ArkMealEncounter; /** ARK-WEBS: caught in its web (`ArkEvent.web`). */ web?: true; /** SIG-EVENTS: the engine saved this catch as a cache (`signature` food_cache by the predator just after it): carried off and buried, not eaten. */ cached?: boolean}
     /** Old age, or (`starved`) long hunger: acted out quietly, it lies still and fades, never a chase. */
     | {kind: "death"; at: string; animal: ArkEventAnimal; cause: "old" | "starved"; extinct: boolean}
     | {kind: "extinction"; at: string; species: string};

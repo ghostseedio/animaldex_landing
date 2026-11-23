@@ -41,6 +41,7 @@
  * circle the porch light at night.
  */
 
+import {flowActivity, flowsOn, flowStatus, setFlowWords} from "@/ark-scene/flows/scene-adapter";
 import {
     ACESFilmicToneMapping,
     Color,
@@ -419,7 +420,7 @@ const FLYERS = ARK_FLYERS;
 /** A catch lying on its side (rad): over onto its flank, not quite flat. */
 const LYING_ROLL = 1.42;
 /** A meal act's states the rig plays from its own clips (`rig-player.ts` RECIPE_CLIPS): feeding, a glance up, lying up. */
-const MEAL_CLIP_STATES = new Set(["eat", "scan", "rest", "bask"]);
+const MEAL_CLIP_STATES = new Set(["eat", "scan", "rest", "bask", "dig"]);
 
 /** The island's hour offset from UTC: everyone sees the same time of day (graphics pass; `src/lib/ark-clock.ts`). */
 const ISLAND_OFFSET_HOURS = 0;
@@ -2668,6 +2669,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return known.own;
     };
     const barsSubjectOf = (entry: Entry): ScheduleSubject | null => subjectOf(entry, entry.sched ?? statusSchedOf(entry));
+    /** The flows' card log looks back this far (s). */
+    const FLOW_STATUS_BACK = 1200;
     const statusOf = (entry: Entry): ArkAnimalStatus => {
         const epoch = worldMs() / 1000;
         const animal = entry.animal;
@@ -2685,12 +2688,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (A kill of its, or a step's meal for it, `fed` with source step: each fills it from that moment.)
         const fed = bars ? scheduleFed(bars, epoch, notes.filter((note) => note.kind === "meal" || note.kind === "stepFed").map((note) => note.at / 1000)) : null;
         const energy = bars ? energyOf(bars, epoch) : null;
+        // (Behaviour flows, pilot, behind their switch: the card reads its flow's own step and its log the flow's lines.)
+        const flow = flowsOn() && subject && !huntingNow ? flowStatus(animal.id, epoch, FLOW_STATUS_BACK) : null;
+        const scheduleLog = flow ? flow.log.map((line): ArkStatusLogEntry => ({id: `flow:${animal.id}:${Math.round(line.at)}`, source: "schedule", at: line.at * 1000, day: null, kind: "activity", text: line.text})) : plan?.log ?? [];
         return {
             id: animal.id,
             activity,
-            since: plan?.since ?? null,
+            ...(flow ? {line: flow.line} : {}),
+            since: flow ? flow.since : plan?.since ?? null,
             goal: plan?.goal ?? null,
-            log: arkStatusLog(plan?.log ?? [], record),
+            log: arkStatusLog(scheduleLog, record),
             bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), fed, energy, bornDay: animal.born_ark_day ?? null, lifespanDays: animal.lifespan_days ?? null, lifespanEstimate: animal.lifespan_estimate === true})
         };
     };
@@ -3002,7 +3009,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const sentence = moment.recipe && moment.count <= 1 ? signatureLineOf(a.model_slug, moment.recipe) : null;
             // (A sentence about several of the kind only for a pair's moment: one animal setting out alone is not "they".)
             const ownLine = sentence && (!sentence.startsWith("{animals}") || moment.kind === "courting" || moment.kind === "contest") ? sentence : null;
-            moments.push({id: moment.id, kind: moment.kind, activity: moment.activity, animalId: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, count: moment.count, at: moment.at, ...(ownLine ? {line: ownLine} : {})});
+            // (Behaviour flows, pilot: an animal doing something says its flow's own step, as its card does.)
+            const flowSays = flowsOn() && (moment.kind === "doing" || moment.kind === "group") ? flowActivity(a.id, moment.at + 1) : null;
+            moments.push({id: moment.id, kind: moment.kind, activity: flowSays ?? moment.activity, animalId: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, count: moment.count, at: moment.at, ...(ownLine ? {line: ownLine} : {})});
         }
         return {window: Math.max(done, after ?? done), moments};
     };
@@ -6061,7 +6070,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const reacted = Boolean(reacting && want === reacting.name);
         // (A meal's act, `meal-acts.ts`: head down feeding, a glance up, lying up to rest, on the rig's own clips.)
         const mealState = !recipeAct && entry.act?.meal && entry.act.state && MEAL_CLIP_STATES.has(entry.act.state) ? entry.act.state : null;
-        const recipeRaw = !state.flying && !reacted && (recipeAct || mealState) ? recipeClip(sleepState(recipeAct?.state ?? mealState), (name) => Boolean(clip(name))) : null;
+        // (A cache dug where the rig has no dig clip: its graze, head down, the act's pitch putting the nose to the ground.)
+        const mealClip = mealState === "dig" && !recipeClip("dig", (name) => Boolean(clip(name))) ? "eat" : mealState;
+        const recipeRaw = !state.flying && !reacted && (recipeAct || mealClip) ? recipeClip(sleepState(recipeAct?.state ?? mealClip), (name) => Boolean(clip(name))) : null;
         // A rig with a sit (a pilot cat's or dog's) rests sitting up rather than lying, about half of them (by its own phase).
         const fromRecipe = recipeRaw?.name === "lie" && clip("sit") && entry.phase < 0.5 ? {...recipeRaw, name: "sit"} : recipeRaw;
         let byRecipe = false;
@@ -9651,7 +9662,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const withMeal = kind !== "cutaway";
         const stage = mealStage(kind, bodies.predator, bodies.prey, {seed, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter), meal: withMeal, hunt: hunt?.act ?? null, web: webAt});
         if (!withMeal) return {kind, stage, bodies, script: null, plan: null, catchInfo: null};
-        const plan = mealPlan(mealSideOf(predator, predatorWater), mealSideOf(prey, preyWater), seed);
+        const plan0 = mealPlan(mealSideOf(predator, predatorWater), mealSideOf(prey, preyWater), seed);
+        // (SIG-EVENTS: a catch the engine saved as a cache is carried off and buried, on land, not eaten: `meal-acts.ts`.)
+        const plan = act.cached && !predatorWater && kind !== "swoop" && kind !== "slither" && kind !== "dart" ? {...plan0, cache: true, scavengers: 0, drinkSeconds: 0} : plan0;
         const at = stage.catchAt ?? stage.seconds;
         const p = stage.predator(at)!;
         const q = stage.prey(at);
@@ -11994,6 +12007,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const entry = findEntry(id);
             return entry ? restOf(entry) : null;
         },
+        setFlowWords: (words) => setFlowWords(words),
         animalStatus: (id) => {
             const entry = findEntry(id);
             if (!entry) return null;

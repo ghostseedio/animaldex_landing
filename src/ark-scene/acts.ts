@@ -74,7 +74,7 @@ export type ActPose = {
     /** Lying on its side after the catch (`meal-acts.ts`): the side (sign) and how far down (0–1), for the drawn roll. */
     lying?: number;
     /** What the card says it is doing while drawn so (`ark.activity.*`): a meal's eating, on its way to water, drinking, resting, a scavenger. */
-    meal?: "hunting" | "eating" | "toWater" | "drinking" | "resting" | "scavenging" | "birthing" | "sleeping";
+    meal?: "hunting" | "eating" | "caching" | "toWater" | "drinking" | "resting" | "scavenging" | "birthing" | "sleeping";
     /** On a spider's web (`hunt-acts.ts` runWeb): its back's and head's ways, so it is drawn along the silk. */
     surface?: {nx: number; ny: number; nz: number; tx: number; ty: number; tz: number};
     /** A web's catch (the hunter's pose only): the run and the seconds into it, for the web's shake and the silk bundle. */

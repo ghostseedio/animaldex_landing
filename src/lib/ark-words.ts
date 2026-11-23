@@ -300,6 +300,11 @@ export type ArkSeoWords = {
     lifeBody: string;
     lifeRules: string;
     lifeNote: string;
+    /**
+     * Behaviour flows (docs/ark/behaviour-flows.md 4.4; owner 2026-11-23 "yes use them with credit"): the words before
+     * the credited datasets' names. Optional: English fills (`ARK_DATA_CREDITS`) until its locale has it.
+     */
+    dataCredits?: string;
     listTitle: string;
     listIntro: string;
     listAboard: string;
@@ -466,6 +471,8 @@ export type ArkWords = {
     grew?: Partial<import("@/lib/ark-stat-gains").ArkGrewWords>;
     /** What an animal is doing, in plain words, and the live log's lines of the schedule's moments (decision 240). */
     activity: ArkActivityWords;
+    /** Behaviour flows' card lines (`ark.flow`; `flows.ts` FLOW_WORDS_EN), for the pilot's scene switch. */
+    flow?: Record<string, string>;
     /** The live hunt marker (lane ark-kills-real); optional: an older bundle lacks it. */
     hunt?: ArkHuntWords;
     sound: ArkSoundWords;

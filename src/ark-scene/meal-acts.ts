@@ -71,6 +71,11 @@ export type MealScript = {
     leaves: number;
     ends: number;
     bouts: ReturnType<typeof feedBouts>;
+    /**
+     * A cached catch (SIG-EVENTS food_cache): picked up where it fell (to `pickTo`), carried in the mouth to its cache spot
+     * (`walkTo`), a hole dug (`digTo`), the catch put in and covered (`coverTo`); then the rest from there. Null: eaten.
+     */
+    cache: {at: {x: number; z: number; base: number; yaw: number}; pickTo: number; walkTo: number; digTo: number; coverTo: number} | null;
 };
 
 const smooth = (t: number) => {
@@ -126,10 +131,21 @@ export function mealScript(plan: MealPlan, c: MealCatch): MealScript {
     const mouth = p.length * 0.45 + q.length * (plan.style === "swallow" ? 0.1 : 0.3);
     const lies = carry > 0 ? {x: feed.x + Math.sin(feed.yaw) * mouth, z: feed.z + Math.cos(feed.yaw) * mouth} : {x: q.x, z: q.z};
     const carcass = {x: lies.x, z: lies.z, base: c.predatorSwims && c.preyInWater ? q.base : c.ground(lies.x, lies.z), yaw: carry > 0 ? feed.yaw + side * 1.2 : q.yaw};
-    const feedFrom = carry;
-    const feedTo = carry + plan.feedSeconds;
-    let t = feedTo;
     const walk = Math.max(c.walk, 0.2);
+    // A cached catch: picked up, carried a few body lengths off (never back the way it came), dug in and covered.
+    let cache: MealScript["cache"] = null;
+    if (plan.cache) {
+        const bearing = feed.yaw + side * (0.6 + 0.8 * random());
+        const spot = clearSpot(feed, bearing, Math.max(p.length * 6, 3), c.clear);
+        const d = Math.hypot(spot.x - feed.x, spot.z - feed.z);
+        const pickTo = carry + 1.6;
+        const walkTo = pickTo + Math.min(Math.max(d / walk, 2), 25);
+        const digTo = walkTo + 7 + 4 * random();
+        cache = {at: {x: spot.x, z: spot.z, base: c.ground(spot.x, spot.z), yaw: d > 0.1 ? heading(spot.x - feed.x, spot.z - feed.z) : feed.yaw}, pickTo, walkTo, digTo, coverTo: digTo + 4 + 2 * random()};
+    }
+    const feedFrom = carry;
+    const feedTo = cache ? cache.coverTo : carry + plan.feedSeconds;
+    let t = feedTo;
     // A drink, when water is near (it walks there).
     let drink: MealScript["drink"] = null;
     if (plan.drinkSeconds > 0 && c.water && !c.predatorSwims && !c.web && Math.hypot(c.water.x - feed.x, c.water.z - feed.z) <= DRINK_REACH) {
@@ -138,20 +154,20 @@ export function mealScript(plan: MealPlan, c: MealCatch): MealScript {
         drink = {at: {x: c.water.x, z: c.water.z, yaw: d > 0.1 ? heading(c.water.x - feed.x, c.water.z - feed.z) : feed.yaw}, walkFrom: t, from: t + walkFor, to: t + walkFor + plan.drinkSeconds};
         t = drink.to;
     }
-    // The rest: a few body lengths off to one side (back from the water when it drank), lying up.
-    const from = drink ? drink.at : feed;
+    // The rest: a few body lengths off to one side (back from the water when it drank, or from its cache), lying up.
+    const from = drink ? drink.at : cache ? cache.at : feed;
     const bearing = drink ? drink.at.yaw + Math.PI + side * 0.6 : feed.yaw + side * (1.7 + 0.6 * random());
     const at = plan.restSeconds > 0 && !c.predatorSwims && !c.web ? clearSpot(from, bearing, Math.max(p.length * 2.5, 1.5), c.clear) : {x: from.x, z: from.z};
     const restWalk = Math.hypot(at.x - from.x, at.z - from.z) / walk;
     const restYaw = restWalk > 0.05 ? heading(at.x - from.x, at.z - from.z) + side * 0.8 : from.yaw;
     const rest = {at: {x: at.x, z: at.z, yaw: restYaw}, walkFrom: t, from: t + Math.min(restWalk, 20), to: t + Math.min(restWalk, 20) + plan.restSeconds};
-    return {plan, c, feed, carcass, side, carry, feedFrom, feedTo, drink, rest, leaves: feedTo, ends: rest.to, bouts: feedBouts(plan.seed, plan.feedSeconds)};
+    return {plan, c, feed, carcass, side, carry, feedFrom, feedTo, drink, rest, leaves: feedTo, ends: rest.to, bouts: feedBouts(plan.seed, plan.feedSeconds), cache};
 }
 
 /** What the card says it is doing in each phase (`ark.activity.*`). */
 // (On its walk to the water it is heading there, "drinking" only at the edge, head down: owner, 2026-11-16, a line said
 // "is drinking" of an animal nowhere near the water.)
-export type MealDoing = "eating" | "toWater" | "drinking" | "resting";
+export type MealDoing = "eating" | "caching" | "toWater" | "drinking" | "resting";
 
 export type MealPose = ActPose & {doing: MealDoing};
 
@@ -168,6 +184,22 @@ export function predatorAt(s: MealScript, u: number): MealPose {
         const y = lerp(p.base, s.feed.base, k) + lift;
         if (c.kind !== "swoop") return pose(lerp(p.x, s.feed.x, k), lerp(p.z, s.feed.z, k), s.feed.yaw, "eat", 0.03, Math.hypot(s.feed.x - p.x, s.feed.z - p.z) / Math.max(s.carry, 0.1), "eating");
         return pose(lerp(p.x, s.feed.x, k), lerp(p.z, s.feed.z, k), s.feed.yaw, k < 0.85 ? "fly" : "land", -0.2 * Math.sin(Math.PI * k), Math.hypot(s.feed.x - p.x, s.feed.z - p.z) / Math.max(s.carry, 0.1), "eating", y);
+    }
+    if (s.cache && u < s.cache.coverTo) {
+        const k = s.cache;
+        // Head down to pick it up; carrying it, head up; digging and covering, head down with a bob.
+        if (u < k.pickTo) return pose(s.feed.x, s.feed.z, s.feed.yaw, "eat", 0.14 * smooth((u - s.carry) / 0.6), 0, "caching");
+        if (u < k.walkTo) {
+            const w = smooth((u - k.pickTo) / (k.walkTo - k.pickTo));
+            return pose(lerp(s.feed.x, k.at.x, w), lerp(s.feed.z, k.at.z, w), k.at.yaw, "walk", 0, Math.hypot(k.at.x - s.feed.x, k.at.z - s.feed.z) / Math.max(k.walkTo - k.pickTo, 0.1), "caching");
+        }
+        // Digging and covering: nose to the ground and the front low (the rig's dig clip where it has one, its forepaws
+        // scraping), a quick scratching rhythm while it digs and a slower push of earth back over it while it covers.
+        const v = u - k.walkTo;
+        const covering = u >= k.digTo;
+        const into = smooth(Math.min(v / 0.8, 1));
+        const scratch = covering ? 0.04 * Math.sin(v * 4) : 0.06 * Math.abs(Math.sin(v * 9));
+        return pose(k.at.x, k.at.z, k.at.yaw, "dig", (0.36 + scratch) * into, 0, "caching");
     }
     if (u < s.feedTo) {
         const v = u - s.feedFrom;
@@ -242,6 +274,26 @@ export function preyAt(s: MealScript, u: number, atCatch: ActPose, carcassEnd: n
         // Under its feet as it goes.
         const pred = predatorAt(s, u);
         return {...atCatch, x: pred.x, z: pred.z, base: pred.base - q.height * 0.4, yaw: pred.yaw, dim: 0, scale: 1, hidden: false, state: "lie", speed: 0};
+    }
+    if (s.cache) {
+        const k = s.cache;
+        if (u < k.pickTo) return lying(1);
+        if (u < k.walkTo) {
+            // In its mouth, held up off the ground, carried along with it.
+            const pred = predatorAt(s, u);
+            const reach = s.c.mouth ? s.c.mouth.forward : s.c.predator.length * 0.5;
+            const up = s.c.mouth ? Math.min(s.c.mouth.up, s.c.predator.height * 0.6) : s.c.predator.height * 0.45;
+            return {x: pred.x + Math.sin(pred.yaw) * (reach + q.length * 0.1), z: pred.z + Math.cos(pred.yaw) * (reach + q.length * 0.1), base: pred.base + up - q.height * 0.5, yaw: pred.yaw + Math.PI / 2, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: "lie", speed: 0, lying: 0.9};
+        }
+        // Dropped beside it while it digs (the hole in front of its nose), then pushed into the hole and covered: sunk and
+        // gone by the cover's end.
+        if (u < k.digTo) {
+            const aside = s.c.predator.length * 0.25 + q.length * 0.6;
+            return {...lying(1), x: k.at.x + Math.cos(k.at.yaw) * aside * s.side, z: k.at.z - Math.sin(k.at.yaw) * aside * s.side, base: s.c.ground(k.at.x + Math.cos(k.at.yaw) * aside * s.side, k.at.z - Math.sin(k.at.yaw) * aside * s.side), yaw: k.at.yaw + s.side * 1.2, lying: s.side};
+        }
+        const hole = {x: k.at.x + Math.sin(k.at.yaw) * (s.c.predator.length * 0.5 + q.length * 0.4), z: k.at.z + Math.cos(k.at.yaw) * (s.c.predator.length * 0.5 + q.length * 0.4)};
+        const sink = smooth((u - k.digTo) / Math.max(k.coverTo - k.digTo, 0.1));
+        return {x: hole.x, z: hole.z, base: s.c.ground(hole.x, hole.z) - q.height * 1.2 * sink, yaw: k.at.yaw + s.side * 1.2, pitch: 0, roll: 0, scale: 1, dim: 0.4 * sink, hidden: u >= k.coverTo, state: "lie", speed: 0, lying: s.side};
     }
     if (s.plan.style === "swallow") {
         const v = u - s.feedFrom;
@@ -336,7 +388,7 @@ export function scavengerAt(v: ScavengeVisit, u: number): ActPose {
 // MARK: On the stage
 
 /** The doing a hunter's pose says (the card), from the chase into the meal. */
-const DOING_KEY: Record<MealDoing, NonNullable<ActPose["meal"]>> = {eating: "eating", toWater: "toWater", drinking: "drinking", resting: "resting"};
+const DOING_KEY: Record<MealDoing, NonNullable<ActPose["meal"]>> = {eating: "eating", caching: "caching", toWater: "toWater", drinking: "drinking", resting: "resting"};
 
 /**
  * The chase and the meal as one stage: the chase (`acts.ts` mealStage with `meal: true`) up to the catch, then the

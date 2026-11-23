@@ -71,6 +71,8 @@ export type MealPlan = {
     scavengers: number;
     /** How it holds itself to feed and to rest (`mealPosture`). */
     posture: MealPosture;
+    /** SIG-EVENTS: the catch is cached (the engine saved it): carried off in the mouth and buried, not eaten here. */
+    cache?: boolean;
     seed: string;
 };
 
