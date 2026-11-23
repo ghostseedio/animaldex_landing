@@ -865,19 +865,25 @@ export function clearWithin(pose: {x: number; z: number}, radius: number, solid:
     if (!solid.blocked(pose.x, pose.z, radius)) return;
     const x0 = pose.x;
     const z0 = pose.z;
-    for (let ring = 1; ring <= 12; ring++) {
-        const n = 8 + ring * 2;
-        for (let k = 0; k < n; k++) {
-            const a = (k / n) * Math.PI * 2;
-            const wx = x0 + Math.cos(a) * ring * 0.25;
-            const wz = z0 + Math.sin(a) * ring * 0.25;
-            if (!inside(wx, wz) || solid.blocked(wx, wz, radius)) continue;
-            pose.x = wx;
-            pose.z = wz;
-            return;
+    // (SPECIES-ANIM-A 11-24: a crowded yard, a garden room filling the corner the rails pulled a cat back to, had no
+    // point within 3 m clear by its pen margin's width (0.44 m) and left it 0.39 m inside the room; then the walk grid's
+    // 0.2 m, which any small body still clears.)
+    for (const r of radius > CLEAR_FALLBACK ? [radius, CLEAR_FALLBACK] : [radius]) {
+        for (let ring = 1; ring <= 12; ring++) {
+            const n = 8 + ring * 2;
+            for (let k = 0; k < n; k++) {
+                const a = (k / n) * Math.PI * 2;
+                const wx = x0 + Math.cos(a) * ring * 0.25;
+                const wz = z0 + Math.sin(a) * ring * 0.25;
+                if (!inside(wx, wz) || solid.blocked(wx, wz, r)) continue;
+                pose.x = wx;
+                pose.z = wz;
+                return;
+            }
         }
     }
 }
+const CLEAR_FALLBACK = 0.2;
 
 /**
  * A point inside its pen, `margin` in from the rails, clear of the buildings in it. The rails win, but never by leaving the animal in a

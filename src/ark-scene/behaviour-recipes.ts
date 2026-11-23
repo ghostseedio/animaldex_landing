@@ -1110,7 +1110,10 @@ function walkableAt(world: ScheduleWorld, x: number, z: number): boolean {
 
 /** Whether a leg's way, sampled every quarter metre or so, stays where `ok` says (and, on the ground, crosses no collider). */
 function wayClear(from: P, c: {x: number; z: number} | null, c2: {x: number; z: number} | null, to: P, ok: (x: number, z: number) => boolean, ground = false): boolean {
-    const n = Math.min(Math.max(Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 0.25), 3), 60);
+    // (At least 8 points, was 3: a short rush (0.74 m) clipped the corner of a steep 2 m nav cell between its three samples,
+    // and the drawn pose crossed it: the cat's pounce in ark-chases, once its run went at its v3 clip's own pace. Longer
+    // legs keep the quarter metre: every 0.1 m doubled the worst planning frame.)
+    const n = Math.min(Math.max(Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 0.25), 8), 60);
     let last = {x: from.x, z: from.z};
     for (let j = 1; j <= n; j++) {
         const at = j === n ? {x: to.x, z: to.z} : legAt(from, c, c2, to, j / n);
