@@ -1128,6 +1128,10 @@
             "arrival": "{species} ανέβηκε στην Ark",
             "arrivalAn": "{species} ανέβηκε στην Ark",
             "arrivalSee": "Δες το στην Ark",
+            "deathEnded": "Η ζωή του {species} σου στην Ark τελείωσε.",
+            "deathLivedOne": "Έζησε εκεί 1 ημέρα.",
+            "deathLivedMany": "Έζησε εκεί {days} ημέρες.",
+            "deathSee": "Δες το είδος του στην Ark",
             "stats": {
                 "money": "Χρήματα",
                 "relationships": "Σχέσεις",

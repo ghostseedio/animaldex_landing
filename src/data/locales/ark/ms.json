@@ -1128,6 +1128,10 @@
             "arrival": "Seekor {species} naik ke Ark",
             "arrivalAn": "Seekor {species} naik ke Ark",
             "arrivalSee": "Lihat di Ark",
+            "deathEnded": "Kehidupan {species} anda di Ark telah berakhir.",
+            "deathLivedOne": "Ia hidup di sana selama 1 hari.",
+            "deathLivedMany": "Ia hidup di sana selama {days} hari.",
+            "deathSee": "Lihat spesiesnya di Ark",
             "stats": {
                 "money": "Wang",
                 "relationships": "Hubungan",

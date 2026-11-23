@@ -1128,6 +1128,10 @@
             "arrival": "{species} kom om bord i Ark",
             "arrivalAn": "{species} kom om bord i Ark",
             "arrivalSee": "Se den i Ark",
+            "deathEnded": "Livet til din {species} i Ark er over.",
+            "deathLivedOne": "Den levde der i 1 dag.",
+            "deathLivedMany": "Den levde der i {days} dager.",
+            "deathSee": "Se arten dens i Ark",
             "stats": {
                 "money": "Penger",
                 "relationships": "Relasjoner",

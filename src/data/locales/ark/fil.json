@@ -1128,6 +1128,10 @@
             "arrival": "Sumakay sa Ark ang isang {species}",
             "arrivalAn": "Sumakay sa Ark ang isang {species}",
             "arrivalSee": "Tingnan sa Ark",
+            "deathEnded": "Natapos na ang buhay ng iyong {species} sa Ark.",
+            "deathLivedOne": "Nabuhay ito roon nang 1 araw.",
+            "deathLivedMany": "Nabuhay ito roon nang {days} araw.",
+            "deathSee": "Tingnan ang kauri nito sa Ark",
             "stats": {
                 "money": "Pera",
                 "relationships": "Mga Relasyon",

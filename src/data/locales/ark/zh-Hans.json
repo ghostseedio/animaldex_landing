@@ -1128,6 +1128,10 @@
             "arrival": "{species}登上了 Ark",
             "arrivalAn": "{species}登上了 Ark",
             "arrivalSee": "在 Ark 中查看",
+            "deathEnded": "你的{species}在 Ark 上的一生已经结束。",
+            "deathLivedOne": "它在那里生活了 1 天。",
+            "deathLivedMany": "它在那里生活了 {days} 天。",
+            "deathSee": "在 Ark 中查看它的同类",
             "stats": {
                 "money": "金钱",
                 "relationships": "人际关系",

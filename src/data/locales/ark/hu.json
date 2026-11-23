@@ -1128,6 +1128,10 @@
             "arrival": "{species} felszállt az Arkra",
             "arrivalAn": "{species} felszállt az Arkra",
             "arrivalSee": "Nézd meg az Arkon",
+            "deathEnded": "A te {species} állatod élete az Arkon véget ért.",
+            "deathLivedOne": "1 napig élt ott.",
+            "deathLivedMany": "{days} napig élt ott.",
+            "deathSee": "Nézd meg a faját az Arkon",
             "stats": {
                 "money": "Pénz",
                 "relationships": "Kapcsolatok",

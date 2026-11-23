@@ -1128,6 +1128,10 @@
             "arrival": "{species} Ark पर सवार हो गया",
             "arrivalAn": "{species} Ark पर सवार हो गया",
             "arrivalSee": "इसे Ark में देखें",
+            "deathEnded": "Ark पर आपके {species} का जीवन समाप्त हो गया है।",
+            "deathLivedOne": "वह वहाँ 1 दिन रहा।",
+            "deathLivedMany": "वह वहाँ {days} दिन रहा।",
+            "deathSee": "Ark में इसकी प्रजाति देखें",
             "stats": {
                 "money": "पैसा",
                 "relationships": "रिश्ते",

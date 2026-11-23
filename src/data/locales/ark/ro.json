@@ -1128,6 +1128,10 @@
             "arrival": "{species} a urcat la bordul Ark",
             "arrivalAn": "{species} a urcat la bordul Ark",
             "arrivalSee": "Vezi-l în Ark",
+            "deathEnded": "Viața animalului tău {species} în Ark s-a încheiat.",
+            "deathLivedOne": "A trăit acolo 1 zi.",
+            "deathLivedMany": "A trăit acolo {days} zile.",
+            "deathSee": "Vezi specia lui în Ark",
             "stats": {
                 "money": "Bani",
                 "relationships": "Relații",

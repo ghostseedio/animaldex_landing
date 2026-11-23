@@ -1128,6 +1128,10 @@
             "arrival": "{species} ha pujat a bord de l'Ark",
             "arrivalAn": "{species} ha pujat a bord de l'Ark",
             "arrivalSee": "Mira'l a l'Ark",
+            "deathEnded": "La vida del teu {species} a l'Ark ha acabat.",
+            "deathLivedOne": "Hi va viure 1 dia.",
+            "deathLivedMany": "Hi va viure {days} dies.",
+            "deathSee": "Mira la seva espècie a l'Ark",
             "stats": {
                 "money": "Diners",
                 "relationships": "Relacions",

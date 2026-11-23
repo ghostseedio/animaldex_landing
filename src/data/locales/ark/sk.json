@@ -1128,6 +1128,10 @@
             "arrival": "{species} je teraz na palube Ark",
             "arrivalAn": "{species} je teraz na palube Ark",
             "arrivalSee": "Pozrieť v Ark",
+            "deathEnded": "Život tvojho zvieraťa ({species}) v Ark sa skončil.",
+            "deathLivedOne": "Žilo tam 1 deň.",
+            "deathLivedMany": "Žilo tam {days} dní.",
+            "deathSee": "Pozrieť jeho druh v Ark",
             "stats": {
                 "money": "Peniaze",
                 "relationships": "Vzťahy",

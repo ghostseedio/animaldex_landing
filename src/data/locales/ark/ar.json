@@ -1128,6 +1128,10 @@
             "arrival": "صعد {species} على متن Ark",
             "arrivalAn": "صعد {species} على متن Ark",
             "arrivalSee": "شاهده في Ark",
+            "deathEnded": "انتهت حياة {species} الخاص بك على Ark.",
+            "deathLivedOne": "عاش هناك يومًا واحدًا.",
+            "deathLivedMany": "عاش هناك {days} يومًا.",
+            "deathSee": "شاهد بني نوعه في Ark",
             "stats": {
                 "money": "المال",
                 "relationships": "العلاقات",

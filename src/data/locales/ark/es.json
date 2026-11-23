@@ -1128,6 +1128,10 @@
             "arrival": "{species} subió a bordo del Ark",
             "arrivalAn": "{species} subió a bordo del Ark",
             "arrivalSee": "Verlo en el Ark",
+            "deathEnded": "La vida de tu {species} en el Ark ha terminado.",
+            "deathLivedOne": "Vivió allí 1 día.",
+            "deathLivedMany": "Vivió allí {days} días.",
+            "deathSee": "Ver su especie en el Ark",
             "stats": {
                 "money": "Dinero",
                 "relationships": "Relaciones",

@@ -1128,6 +1128,10 @@
             "arrival": "{species} nousi Arkin kyytiin",
             "arrivalAn": "{species} nousi Arkin kyytiin",
             "arrivalSee": "Katso se Arkissa",
+            "deathEnded": "Eläimesi {species} elämä Arkissa on päättynyt.",
+            "deathLivedOne": "Se eli siellä 1 päivän.",
+            "deathLivedMany": "Se eli siellä {days} päivää.",
+            "deathSee": "Katso sen lajia Arkissa",
             "stats": {
                 "money": "Raha",
                 "relationships": "Ihmissuhteet",

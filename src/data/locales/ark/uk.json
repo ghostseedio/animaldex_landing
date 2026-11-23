@@ -1128,6 +1128,10 @@
             "arrival": "{species} тепер на борту Ark",
             "arrivalAn": "{species} тепер на борту Ark",
             "arrivalSee": "Подивитися в Ark",
+            "deathEnded": "Життя твоєї тварини ({species}) в Ark завершилося.",
+            "deathLivedOne": "Вона прожила там 1 день.",
+            "deathLivedMany": "Вона прожила там днів: {days}.",
+            "deathSee": "Подивитися її вид в Ark",
             "stats": {
                 "money": "Гроші",
                 "relationships": "Стосунки",

@@ -1128,6 +1128,10 @@
             "arrival": "{species} amepanda Ark",
             "arrivalAn": "{species} amepanda Ark",
             "arrivalSee": "Mwone ndani ya Ark",
+            "deathEnded": "Maisha ya {species} wako kwenye Ark yamefikia mwisho.",
+            "deathLivedOne": "Iliishi huko kwa siku 1.",
+            "deathLivedMany": "Iliishi huko kwa siku {days}.",
+            "deathSee": "Mwone jamii yake ndani ya Ark",
             "stats": {
                 "money": "Fedha",
                 "relationships": "Mahusiano",

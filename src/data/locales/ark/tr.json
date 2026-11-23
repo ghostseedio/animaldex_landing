@@ -1128,6 +1128,10 @@
             "arrival": "{species} Ark'a bindi",
             "arrivalAn": "{species} Ark'a bindi",
             "arrivalSee": "Ark'ta gör",
+            "deathEnded": "{species} hayvanının Ark'taki hayatı sona erdi.",
+            "deathLivedOne": "Orada 1 gün yaşadı.",
+            "deathLivedMany": "Orada {days} gün yaşadı.",
+            "deathSee": "Türünü Ark'ta gör",
             "stats": {
                 "money": "Para",
                 "relationships": "İlişkiler",
