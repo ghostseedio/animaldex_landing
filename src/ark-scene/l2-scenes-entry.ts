@@ -16,6 +16,7 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import {heightAt, LAKE, ZONE_SITES} from "@/ark-scene/world";
+import {freshLevelAt, freshWaterAt} from "@/ark-scene/water-level";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {flightPaces, stoopPose} from "@/ark-scene/locomotion/flight";
 
@@ -44,7 +45,16 @@ const CAST: Array<[string, string, string]> = [
     ["salmon", "atlantic-salmon", "open_ocean"],
     ["mamba", "eastern-green-mamba", "grassland"],
     ["sidewinder", "sidewinder", "desert"],
-    ["python", "african-rock-python", "grassland"]
+    ["python", "african-rock-python", "grassland"],
+    // (The eel-like swimmers and the seabed crab, SPECIES-ANIM-B2: crevice dwellers, open-sea and bed walkers.)
+    ["moray", "green-moray", "coral_reef"],
+    ["krait", "yellow-lipped-sea-krait", "coral_reef"],
+    ["wolfeel", "wolf-eel", "seashore"],
+    ["hagfish", "pacific-hagfish", "open_ocean"],
+    ["lamprey", "sea-lamprey", "open_ocean"],
+    ["crab", "japanese-spider-crab", "open_ocean"],
+    ["swampeel", "asian-swamp-eel", "wetland"],
+    ["ameel", "american-eel", "river_lake"]
 ];
 
 function castId(prefix: string): string {
@@ -55,7 +65,7 @@ function castId(prefix: string): string {
 function castAnimals(): Raw[] {
     const template = fixture.animals[0];
     // (The moth is "yours", so the scene draws it close up at its porch light whatever the camera's distance.)
-    return CAST.map(([prefix, slug, zone], k) => ({...template, id: castId(prefix), name: slug, scientific_name: slug, model_slug: slug, zone, activity: prefix === "moth" ? "nocturnal" : "diurnal", sociality: null, slot: 120 + k, slot_rank: 0, ...(prefix === "moth" ? {mine: true} : {})} as Raw));
+    return CAST.map(([prefix, slug, zone], k) => ({...template, id: castId(prefix), name: slug, scientific_name: slug, model_slug: slug, zone, activity: prefix === "moth" ? "nocturnal" : "diurnal", sociality: null, slot: k < 21 ? 120 + k : 60 + k, slot_rank: 0, ...(prefix === "moth" ? {mine: true} : {})} as Raw));
 }
 
 type Debug = {
@@ -162,6 +172,33 @@ async function mountScenes(el: HTMLElement) {
     const goLine = (fn: () => void) => () => {
         lineStart = nowS();
         fn();
+    };
+
+    /** SPECIES-ANIM-B2: the nearest water (a fresh pool or the sea) to a point, on a ring search, for a line to start in. */
+    const waterNear = (p: {x: number; z: number}) => {
+        for (let r = 0; r < 40; r += 1) for (let a = 0; a < 16; a++) {
+            const x = p.x + Math.cos((a / 16) * Math.PI * 2) * r;
+            const z = p.z + Math.sin((a / 16) * Math.PI * 2) * r;
+            if (freshWaterAt(x, z) >= 0.5 && freshLevelAt(x, z) > heightAt(x, z) + 0.4) return {x, z};
+        }
+        return {x: p.x, z: p.z};
+    };
+    const seaNear = (p: {x: number; z: number}) => {
+        for (let r = 0; r < 60; r += 1) for (let a = 0; a < 16; a++) {
+            const x = p.x + Math.cos((a / 16) * Math.PI * 2) * r;
+            const z = p.z + Math.sin((a / 16) * Math.PI * 2) * r;
+            if (heightAt(x, z) < -3) return {x, z};
+        }
+        return {x: p.x, z: p.z};
+    };
+    /** A straight swim along +x at `speed` m/s, `y` under the surface (the band places it), seen side on and a little above. */
+    const eelLine = (prefix: string, from: {x: number; z: number}, speed: number, y: number, note: string, view = {distance: Number(new URLSearchParams(location.search).get("eelDistance") ?? 1.2), polar: Number(new URLSearchParams(location.search).get("eelPolar") ?? 0.35)}) => {
+        const id = ids[prefix];
+        debug().setHome(id, from.x, from.z);
+        lineStart = nowS() + 1e6;
+        swimLine(id, lineStart, from, Math.PI / 2, speed, y);
+        track(id, view.distance, view.polar, 0, 0, lineAt(from, Math.PI / 2, speed));
+        return {note, watch: [id], go: goLine(() => swimLine(id, lineStart, from, Math.PI / 2, speed, y))};
     };
 
     const SCENES: Record<string, () => {note: string; watch: string[]; go?: () => void}> = {
@@ -395,6 +432,44 @@ async function mountScenes(el: HTMLElement) {
             track(id, 2.2, 1.7, (yaw) => yaw + 0.6, 0);
             return {note: "a European eel in the lake (anguilliform: the whole body waves)", watch: [id], go: () => swimLine(id, nowS(), from, Math.PI / 2, 0.35, -1)};
         },
+        /** SPECIES-ANIM-B2: each eel-like swimmer on a straight line through its own water, side on, then the crab's walk and run. */
+        eel_moray: () => eelLine("moray", site("coral_reef", -4, 0), 0.3, -2.5, "a green moray out of its crevice, swimming (crevice dweller: pinned out of its hole)"),
+        eel_krait: () => eelLine("krait", site("coral_reef", 4, 3), 0.35, -2, "a yellow-lipped sea krait swimming over the reef (crevice dweller: pinned out of its hole)"),
+        eel_wolfeel: () => eelLine("wolfeel", seaNear(ZONE_SITES.seashore), 0.25, -2, "a wolf-eel swimming off the shore (crevice dweller: pinned out of its hole)"),
+        eel_hagfish: () => eelLine("hagfish", site("open_ocean", 0, 0), 0.2, -30, "a Pacific hagfish on the seabed (band seabed: the bed walker's slither)"),
+        eel_lamprey: () => eelLine("lamprey", site("open_ocean", 6, 4), 0.4, -4, "a sea lamprey in open water (open-sea roamer: pinned off its loop)"),
+        eel_european: () => eelLine("eel", {x: LAKE.x - 4, z: LAKE.z}, 0.3, -1, "a European eel in the lake (band pond_bed: the bed walker's slither)"),
+        eel_american: () => eelLine("ameel", {x: LAKE.x - 4, z: LAKE.z + 2}, 0.3, -1, "an American eel in the lake (band pond_mid: swims)"),
+        eel_swamp: () => eelLine("swampeel", waterNear(ZONE_SITES.wetland), 0.25, -0.5, "an Asian swamp eel in the wetland's water (band pond_bed)"),
+        eel_lamprey_loop: () => {
+            const id = ids.lamprey;
+            pinPose(id, null);
+            track(id, Number(new URLSearchParams(location.search).get("eelDistance") ?? 2.5), 1.45, (yaw) => yaw + Math.PI / 2, 0);
+            return {note: "a sea lamprey on its own open-ocean loop (not pinned), the camera beside it", watch: [id]};
+        },
+        crab_live: () => {
+            const id = ids.crab;
+            pinPose(id, null);
+            track(id, 3.2, 1.25, 0.2, 0.3);
+            return {note: "a Japanese spider crab on its own seabed loop (not pinned)", watch: [id]};
+        },
+        crab_walk_run: () => {
+            const at = site("open_ocean", -6, -4);
+            const id = ids.crab;
+            const from = {x: at.x - 2, z: at.z};
+            const speedAt = (t: number) => (t < 6 ? 0.12 : 0.45);
+            const pin = (start: number) => pinPose(id, (epoch: number) => {
+                const t = Math.max(epoch - start, 0);
+                let d = 0;
+                for (let i = 0; i < Math.ceil(t / 0.05); i++) d += speedAt(Math.min((i + 0.5) * 0.05, t)) * Math.min(0.05, t - i * 0.05);
+                const x = from.x + d;
+                return {x, z: from.z, y: heightAt(x, from.z), yaw: Math.PI / 2, moving: t > 0, aloft: false, doing: "forage", beat: t < 6 ? "walk" : "run"};
+            });
+            pin(nowS() + 1e6);
+            debug().setHome(id, from.x, from.z);
+            track(id, 3.2, 1.25, 0.2, 0.3);
+            return {note: "a Japanese spider crab on the seabed: 6 s at 0.12 m/s (walk), then 0.45 m/s (run)", watch: [id], go: () => pin(nowS())};
+        },
         /** A green mamba crawls across the grass (lateral undulation, no slip). */
         snake_lateral: () => {
             const at = site("grassland", -8, 10);
@@ -468,7 +543,14 @@ async function mountScenes(el: HTMLElement) {
                     y: r2(e?.middle?.y),
                     micro: Boolean((e as {place?: {micro?: unknown}} | undefined)?.place?.micro),
                     aloft: (e as {sched?: {pose?: {aloft?: boolean}} | null} | undefined)?.sched?.pose?.aloft ?? null,
-                    air: r2(e?.air)
+                    air: r2(e?.air),
+                    // (SPECIES-ANIM-B2: is it on the schedule, where its pinned pose and its drawn middle are, and its water.)
+                    sched: Boolean((e as {sched?: unknown} | undefined)?.sched),
+                    pose: (() => {
+                        const p = (e as {sched?: {pose?: {x: number; y: number; z: number; moving?: boolean}} | null} | undefined)?.sched?.pose;
+                        return p ? {x: r2(p.x), y: r2(p.y), z: r2(p.z), moving: p.moving ?? null} : null;
+                    })(),
+                    middle: e?.middle ? {x: r2(e.middle.x), z: r2(e.middle.z)} : null
                 };
             });
         },
