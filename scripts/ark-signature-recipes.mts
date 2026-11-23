@@ -83,6 +83,14 @@ const NEW: Record<string, {plans: string[]; weight: number}> = {
     sally_chase: {plans: ["flying_insect"], weight: 5},
     patrol_low: {plans: ["flying_insect"], weight: 4},
     display_flight: {plans: ["walking_bird", "flying_bird"], weight: 6},
+    // (sig2-aquatic: the water's own templates, `recipe-templates.ts`: a cleaner, an adult pair's patrol, a tunnel dug into the bed,
+    // a bloom of jellies; and the moray's and the surgeonfish's mixed group: their acts are `aquatic-acts.ts`'s.)
+    clean_client: {plans: ["fish"], weight: 6},
+    pair_patrol: {plans: ["fish"], weight: 6},
+    bed_tunnel: {plans: ["fish"], weight: 6},
+    bed_tunnel_m: {plans: ["fish"], weight: 6},
+    bloom: {plans: ["cephalopod_jelly"], weight: 6},
+    mixed_follow: {plans: ["fish", "legless"], weight: 4},
     ...seeded
 };
 for (const [id, seed] of Object.entries(NEW)) {

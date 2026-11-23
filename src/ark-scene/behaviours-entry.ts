@@ -21,13 +21,14 @@ import {surfacePoint} from "@/ark-scene/micro";
 import {SMALL_SCENES, smallMoments} from "@/ark-scene/behaviours-small";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
 import {speciesRecipes} from "@/ark-scene/behaviour-recipes";
+import {aquaticLinkOf, aquaticWindows} from "@/ark-scene/aquatic-acts";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number; /** sig2-small: the slot it is placed at (a place on the island: a flower for a moth), else 90. */ slot?: number; /** sig2-small: the species' own activity (the profile's), else diurnal as the harness always had it. */ activity?: string};
-type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group" | "recipe" | "micro" | "flight" | "tails" | "state"; /** (recipe) the recipe's episode to find, and the row to give the first cast when its table has not got it yet ("recipe.weight[,...]"). */ recipe?: string; inject?: string; /** (recipe, micro) how far in body lengths, the camera's azimuth off its side and its polar angle. */ lengths?: number; azimuth?: number; polar?: number; /** (recipe) the first of the cast to frame. */ pick?: number};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group" | "recipe" | "micro" | "flight" | "tails" | "state" | "water"; /** (recipe) the recipe's episode to find, and the row to give the first cast when its table has not got it yet ("recipe.weight[,...]"). */ recipe?: string; inject?: string; /** (recipe, micro) how far in body lengths, the camera's azimuth off its side and its polar angle. */ lengths?: number; azimuth?: number; polar?: number; /** (recipe) the first of the cast to frame. */ pick?: number};
 
 const SCENES: Record<string, Scene> = {
     // Signature behaviours, wave 2, the small bodies (`behaviours-small.ts`).
@@ -163,6 +164,17 @@ const SCENES: Record<string, Scene> = {
     lsindividual: {zone: "river_lake", hours: 12, kind: "state", cast: [{slug: "koi", name: "Koi", n: 4}, {slug: "guppy", name: "Guppy", n: 4}]},
     lsseasonwater: {zone: "river_lake", hours: 12, kind: "state", cast: [{slug: "mallard", name: "Mallard", n: 8}, {slug: "mandarin-duck", name: "Mandarin Duck", n: 1}, {slug: "black-headed-gull", name: "Black-headed Gull", n: 1}, {slug: "great-crested-grebe", name: "Great Crested Grebe", n: 1}]},
     lsseasonland: {zone: "woodland", hours: 12, kind: "state", cast: [{slug: "winter-white-dwarf-hamster", name: "Winter White Dwarf Hamster", n: 1}, {slug: "southeastern-five-lined-skink", name: "Southeastern Five-lined Skink", n: 1}, {slug: "two-spotted-spider-mite", name: "Two-spotted Spider Mite", n: 1}, {slug: "white-tailed-deer", name: "White-tailed Deer", n: 1}, {slug: "red-deer", name: "Red Deer", n: 1}, {slug: "raccoon-dog", name: "Raccoon Dog", n: 1}]},
+    // sig2-aquatic: the water's signature behaviours (`aquatic-acts.ts`, the engine's `bed_tunnel`, `bloom`). The first cast is the one
+    // that acts; the others are what its text names (a larger fish, a grouper, a green sea turtle, the other surgeonfishes).
+    aquaclean: {zone: "coral_reef", hours: 10, kind: "water", cast: [{slug: "bluestreak-cleaner-wrasse", name: "Bluestreak Cleaner Wrasse", n: 3}, {slug: "giant-grouper", name: "Giant Grouper", n: 2}, {slug: "green-sea-turtle", name: "Green Sea Turtle", n: 1}]},
+    aquatang: {zone: "coral_reef", hours: 10, kind: "water", cast: [{slug: "yellow-tang", name: "Yellow Tang", n: 3}, {slug: "green-sea-turtle", name: "Green Sea Turtle", n: 2}]},
+    aquajuv: {zone: "coral_reef", hours: 10, kind: "water", cast: [{slug: "gray-angelfish", name: "Gray Angelfish", n: 0, young: 3}, {slug: "giant-grouper", name: "Giant Grouper", n: 2}]},
+    aquapatrol: {zone: "coral_reef", hours: 10, kind: "water", cast: [{slug: "gray-angelfish", name: "Gray Angelfish", n: 4}]},
+    aquamoray: {zone: "coral_reef", hours: 10, kind: "water", cast: [{slug: "giant-moray", name: "Giant Moray", n: 2}, {slug: "giant-grouper", name: "Giant Grouper", n: 2}]},
+    aquasurgeon: {zone: "coral_reef", hours: 10, kind: "water", cast: [{slug: "yellowfin-surgeonfish", name: "Yellowfin Surgeonfish", n: 3}, {slug: "yellow-tang", name: "Yellow Tang", n: 2}, {slug: "blue-tang", name: "Blue Tang", n: 1}]},
+    aquatunnel: {zone: "river_lake", hours: 10, kind: "water", cast: [{slug: "threadfin-acara", name: "Threadfin Acara", n: 4}]},
+    aquacatfish: {zone: "river_lake", hours: 10, kind: "water", cast: [{slug: "amazon-sailfin-catfish", name: "Amazon Sailfin Catfish", n: 6}]},
+    aquabloom: {zone: "open_ocean", hours: 10, kind: "water", cast: [{slug: "moon-jellyfish", name: "Moon Jellyfish", n: 6}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]},
     // Decision 434: the dung users at a herd's fresh marks (`dung.ts` dungVisitPose).
@@ -400,6 +412,59 @@ async function main() {
             rig.controls.minDistance = Math.min(rig.controls.minDistance, distance);
             if (at) handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance, polar, azimuth: 0.7});
             await frames(3);
+        },
+        /** sig2-aquatic: every one of the cast: what it is, where it has its place, the act it is wired to (`aquatic-acts.ts`) and what it is at now. */
+        aquaInfo: () => {
+            const rows = debug.entries() as unknown as Array<{animal: {id: string; model_slug: string}; length: number; middle: {x: number; y: number; z: number} | null; place: {x: number; z: number}; recipeAct?: {recipe: string; block: string} | null; sched?: {pose?: {act?: {recipe: string; block: string} | null} | null} | null}>;
+            return rows.map((e) => ({id: e.animal.id, slug: e.animal.model_slug, length: Number(e.length.toFixed(2)), place: [Number(e.place.x.toFixed(1)), Number(e.place.z.toFixed(1))], link: aquaticLinkOf(e.animal.id), act: e.recipeAct ? `${e.recipeAct.recipe}/${e.recipeAct.block}` : e.sched?.pose?.act ? `${e.sched.pose.act.recipe}/${e.sched.pose.act.block}` : null}));
+        },
+        /** sig2-aquatic: the first window of an act of `recipe` (of the cast's wired links) in the next two hours, with who and with whom. */
+        aquaFind: (recipe: string) => {
+            const info = api.aquaInfo();
+            for (const i of info) {
+                if (!i.link || i.link.recipe !== recipe) continue;
+                const windows = aquaticWindows(i.id, t0, t0 + 7200, () => scene.hours);
+                if (windows.length) return {id: i.id, slug: i.slug, other: i.link.other, otherSlug: info.find((o) => o.id === i.link!.other)?.slug ?? "?", approach: i.link.approach, work: i.link.work, start: windows[0].start, end: windows[0].end};
+            }
+            return null;
+        },
+        /** sig2-aquatic: the first time from `from` (s) that one of the cast is at a recipe of the engine (its stay's episode, its flock), stepping `step` s. */
+        aquaScan: async (prefix: string, from: number, to: number, step: number) => {
+            for (let s = from; s < to; s += step) {
+                await setAt(t0 + s);
+                const hit = (api.aquaInfo().find((e) => e.act?.startsWith(prefix)));
+                if (hit) return {epoch: t0 + s, id: hit.id, slug: hit.slug, act: hit.act};
+            }
+            return null;
+        },
+        /**
+         * sig2-aquatic: the world at an absolute time, run up to it a tenth of a second a frame, then framed on one (and its other, when
+         * there is one) from `lengths` of the larger one's body, from `azimuth` off the other's heading.
+         */
+        aquaShot: async (epoch: number, who: string, other: string | null, lengths: number, azimuth: number, polar: number, point: {x: number; y: number; z: number} | null = null) => {
+            await setAt(epoch - 2.2);
+            for (let i = 0; i < 22; i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const rows = debug.entries() as unknown as Array<{animal: {id: string; model_slug: string}; length: number; drawnHeight: number; middle: {x: number; y: number; z: number} | null; yawNow?: number; recipeAct?: {recipe: string; block: string; state: string} | null; sched?: {pose?: {act?: {recipe: string; block: string; state: string} | null} | null} | null}>;
+            const me = rows.find((e) => e.animal.id === who);
+            const you = other ? rows.find((e) => e.animal.id === other) : null;
+            const here = me?.middle;
+            const there = you?.middle ?? here;
+            const target = point ?? (here && there ? {x: (here.x + there.x) / 2, y: (here.y + there.y) / 2, z: (here.z + there.z) / 2} : here ?? {x: 0, y: -1, z: 0});
+            const controls = (debug as unknown as {controls: {minDistance: number}}).controls;
+            const size = Math.max(me?.length ?? 0.3, you?.length ?? 0, 0.1);
+            for (let i = 0; i < 3; i++) {
+                controls.minDistance = 0.08;
+                handle.setView({target, distance: Math.max(lengths * size, 0.4), polar, azimuth: (you?.yawNow ?? me?.yawNow ?? 0) + azimuth});
+                await frames(1);
+            }
+            const act = (e: (typeof rows)[number] | null | undefined) => (e ? (e.recipeAct ?? e.sched?.pose?.act ? `${(e.recipeAct ?? e.sched!.pose!.act)!.recipe}/${(e.recipeAct ?? e.sched!.pose!.act)!.block}/${(e.recipeAct ?? e.sched!.pose!.act)!.state}` : "its day") : "-");
+            const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
+            const gap = here && there && you ? Math.hypot(here.x - there.x, here.y - there.y, here.z - there.z) : null;
+            return `${me?.animal.model_slug ?? "?"}: ${act(me)}${you ? `   with ${you.animal.model_slug}: ${act(you)}   apart ${gap?.toFixed(2)} m` : ""}   ${said.join(" / ")}`;
         },
         /** The world at an absolute time (s), looking at a point from close by. */
         look: async (epoch: number, at: {x: number; y: number; z: number}, distance: number) => {

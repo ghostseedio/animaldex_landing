@@ -24,6 +24,7 @@ import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {topOf, waterSurfaceOf} from "@/ark-scene/behaviour-water";
 import table from "@/ark-scene/recipes.json";
 import groupRecipes from "@/ark-scene/group-recipes.json";
+import waterActs from "@/ark-scene/aquatic-partners.json";
 import {BLOCKS, type BlockDef} from "@/ark-scene/behaviour-blocks";
 import {AFTER_BLOCKS, ENTRY_BLOCKS, EXIT_BLOCKS, TEMPLATES, type AfterStyle, type CarryAt, type EntryStyle, type ExitStyle, type Posture, type PreyKind, type Target, type Template, type TemplateStep} from "@/ark-scene/recipe-templates";
 import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, swimSpeedOf, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
@@ -438,6 +439,38 @@ function lookoutDrop(world: ScheduleWorld, from: {x: number; z: number}, length:
     return ground >= 3;
 }
 
+/**
+ * A spot on the bed of the water a swimmer can dig into (sig2-aquatic: a catfish's or an acara's tunnel): wet floor
+ * deeper than its body and no deeper than 3 m, within `reach` of a point, the one nearest the bank first (the most dry
+ * ground among the cells round it), searched in seeded rings. Null: no such bed there.
+ */
+function bedNear(world: ScheduleWorld, x: number, z: number, reach: number, length: number, seed: number): {x: number; z: number; floor: number; top: number} | null {
+    const sampler = world.sampler;
+    const turn = (seed % 360) * (Math.PI / 180);
+    const need = Math.max(length * 1.4, 0.3);
+    const around = Math.max(length * 3, 1.2);
+    let best: {x: number; z: number; floor: number; top: number; dry: number} | null = null;
+    for (const f of [0.2, 0.4, 0.6, 0.8, 1]) {
+        for (let k = 0; k < 12; k++) {
+            const a = turn + (k / 12) * Math.PI * 2;
+            const px = x + Math.sin(a) * reach * f;
+            const pz = z + Math.cos(a) * reach * f;
+            const floor = sampler.heightAt(px, pz);
+            const top = waterSurfaceOf(sampler, px, pz);
+            if (floor >= top - need || floor < top - 3) continue;
+            let dry = 0;
+            for (let j = 0; j < 8; j++) {
+                const b = (j / 8) * Math.PI * 2;
+                const qx = px + Math.sin(b) * around;
+                const qz = pz + Math.cos(b) * around;
+                if (sampler.heightAt(qx, qz) >= waterSurfaceOf(sampler, qx, qz) - 0.05) dry++;
+            }
+            if (!best || dry > best.dry) best = {x: px, z: pz, floor, top, dry};
+        }
+    }
+    return best;
+}
+
 function goalSpot(input: RecipeIntentInput, template: Template, random: () => number): Spot | null {
     const {world, profile, animal, kit, centre} = input;
     const length = Math.max(animal.length, 0.05);
@@ -488,6 +521,12 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
             // A flyer that fishes from the air starts from the shore.
             const edge = kit.placeNear(world, centre, length, ["water_edge"], Math.min(radius * 1.8, 40), random());
             return edge ? kit.spotOf(edge) : null;
+        }
+        case "bed": {
+            // (sig2-aquatic) The bed of its water, by a bank where there is one: its tunnel's mouth. A swimmer's alone.
+            if (!kit.aquatic(profile)) return null;
+            const bed = bedNear(world, centre.x, centre.z, Math.max(radius * 1.2, 6), length, hashString(`${animal.id}#bed#${input.slot}`));
+            return bed ? {x: bed.x, y: bed.top - (bed.top - bed.floor) * 0.5, z: bed.z, nx: 0, ny: 1, nz: 0, point: null} : null;
         }
         case "ground":
         case "bare": {
@@ -742,7 +781,7 @@ export type RecipeAct = {
 };
 
 /** Ambient flock-mates the scene draws round catalogue animals: a murmuration, a swarm, a crawling cluster, bats streaming out of a roost. */
-export type Flock = {centre: P; seed: number; t0: number; t1: number; kind?: "murmuration" | "swarm" | "cluster" | "bats" | "roost"; /** A roost's: the birds' body length (m), how dark they are drawn, how far they spread round the centre (m: a crown's two, a house eave's less). */ length?: number; tone?: "dark" | "brown"; spread?: number};
+export type Flock = {centre: P; seed: number; t0: number; t1: number; kind?: "murmuration" | "swarm" | "cluster" | "bats" | "roost" | "bloom"; /** A roost's: the birds' body length (m), how dark they are drawn, how far they spread round the centre (m: a crown's two, a house eave's less). */ length?: number; tone?: "dark" | "brown"; spread?: number};
 
 export type RecipePose = TripPose & {act?: RecipeAct | null; /** Ambient flock-mates round it now (its act may be anything). */ flock?: Flock | null};
 
@@ -1193,6 +1232,13 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             const water = waterNear(world, origin.x, origin.z, reach, depth, hashString(`${ctx.seed}#${Math.floor(random() * 1e6)}`));
             if (!water) return null;
             return inWater(water.x, water.z, water.floor);
+        }
+        case "bed": {
+            // (sig2-aquatic) The bed under where it is (a swim down to dig), or the nearest bed round its place.
+            const down = Math.max(length * 0.3, 0.04);
+            if (step.near === "here") return {x: pos.x, y: sampler.heightAt(pos.x, pos.z) + down, z: pos.z};
+            const bed = bedNear(world, origin.x, origin.z, within(step.r ?? 5), length, hashString(`${ctx.seed}#bed#${Math.floor(random() * 1e6)}`));
+            return bed ? {x: bed.x, y: bed.floor + down, z: bed.z} : null;
         }
         case "shallows": {
             const deepest = Math.min(Math.max(heightOf(length) * 0.45, 0.04), 0.7);
@@ -1904,6 +1950,10 @@ const links = new WeakMap<ScheduleAnimal, PairLink[]>();
 
 /** How often a pair may meet (world seconds), in season; and the longest a pair episode can run. */
 export const PAIR_PERIOD = 600;
+/** The acts of the water (sig2-aquatic): worked out in `aquatic-acts.ts` (a reef fish's crevice is where no schedule's episode reaches), not here. */
+const WATER_ACTS: ReadonlySet<string> = new Set(["clean_client", "pair_patrol"]);
+/** The species whose acts with another kind are the water's (`aquatic-partners.json`): never the ground's mixed flocks, whatever their profile says. */
+const WATER_SPECIES: ReadonlySet<string> = new Set(Object.keys((waterActs as {species: Record<string, unknown>}).species));
 const PAIR_MAX = 90;
 
 export type WireInput = {animal: ScheduleAnimal; profile: ArkBehaviourProfile; slug: string; activity?: ArkBehaviourProfile["activity"] | null};
@@ -1937,7 +1987,7 @@ export function wireRecipes(animals: WireInput[]) {
     };
     for (const [slug, list] of Array.from(bySpecies)) {
         const species = speciesRecipes(slug);
-        const pairs = species.recipes.map((r) => TEMPLATES[r.id]).filter((t): t is Template => Boolean(t && t.kind === "pair" && t.id !== "mixed_follow"));
+        const pairs = species.recipes.map((r) => TEMPLATES[r.id]).filter((t): t is Template => Boolean(t && t.kind === "pair" && t.id !== "mixed_follow" && !WATER_ACTS.has(t.id)));
         if (!pairs.length || list.length < 2) continue;
         const sorted = [...list].sort((a, b) => a.animal.id.localeCompare(b.animal.id));
         const dist = (a: WireInput, b: WireInput) => Math.hypot(a.animal.home.x - b.animal.home.x, a.animal.home.z - b.animal.home.z);
@@ -2298,7 +2348,9 @@ export function episodePose(world: ScheduleWorld, trip: Trip, base: TripPose, ep
     if (!enabled) return base;
     const owner = (trip as Trip & {owner?: TripOwner | null}).owner;
     if (!owner) return base;
-    const pose = settingOff(world, owner, trip, overlaid(world, owner, trip, base, epoch, kit), epoch, kit);
+    const laid = settingOff(world, owner, trip, overlaid(world, owner, trip, base, epoch, kit), epoch, kit);
+    // (sig2-aquatic: a jelly of a bloom is drawn near the surface, unless it is at an act of its own.)
+    const pose = laid.act ? laid : bloomPose(world, owner, laid, epoch) ?? laid;
     // Ambient flock-mates round it (a swarm at its spot, its roost-mates streaming out at dusk), whatever it is doing.
     const flock = emergenceFlock(world, owner, kit, epoch) ?? roostFlock(world, owner, kit, epoch) ?? (speciesRecipes(owner.slug).has.size ? swarmFlock(owner.animal.id, owner.slug, owner.animal.home, epoch, owner.hoursAt(epoch)) : null);
     return flock ? {...pose, flock} : pose;
@@ -2483,6 +2535,15 @@ export function marksOf(world: ScheduleWorld, trips: Trip[], epoch: number, kit:
             const key = episode.keys[i];
             if (!key.block.mark || key.t0 > epoch) continue;
             // A burrow's spoil heap and a dust bath's hollow; a turtle's covered pit is a mound.
+            // (sig2-aquatic) A fish's tunnel: the pit its first dig makes, then the spoil heap thrown back behind it, both on the bed.)
+            if (episode.recipe.startsWith("bed_tunnel")) {
+                const first = episode.keys.findIndex((k) => k.block.mark) === i;
+                const back = first ? 0 : episode.length * 1.1;
+                const x = key.from.x - Math.sin(key.yaw) * back;
+                const z = key.from.z - Math.cos(key.yaw) * back;
+                out.push({id: `${episode.id}#${i}`, kind: first ? "hole" : "mound", x, y: world.sampler.heightAt(x, z), z, size: Math.max(episode.length * (first ? 0.55 : 0.4), 0.05), from: key.t0, to: key.t0 + MARK_SECONDS});
+                continue;
+            }
             const base = recipeBase(episode.recipe);
             const kind = base === "dig_burrow" || base === "burrow_dig" || base === "bank_burrow" || (base === "beach_nest" && i > 2) ? "mound" : key.block.mark;
             out.push({id: `${episode.id}#${i}`, kind, x: key.from.x, y: key.from.y, z: key.from.z, size: Math.max(episode.length * (kind === "hollow" ? 0.9 : 0.5), 0.06), from: key.t0, to: key.t0 + MARK_SECONDS});
@@ -2515,7 +2576,7 @@ export function recipeRoostTags(profile: ArkBehaviourProfile): AttachTag[] | nul
 export function swarmFlock(id: string, slug: string, at: P, epoch: number, hours: number): Flock | null {
     if (!enabled) return null;
     const species = speciesRecipes(slug);
-    for (const kind of ["swarm", "swarm_dusk", "cluster"] as const) {
+    for (const kind of ["swarm", "swarm_dusk", "cluster", "bloom"] as const) {
         if (!species.has.has(kind)) continue;
         const template = TEMPLATES[kind];
         if (kind !== "cluster" && !hourOk(template, hours)) continue;
@@ -2523,7 +2584,7 @@ export function swarmFlock(id: string, slug: string, at: P, epoch: number, hours
         // Everyone of its species at one spot (a 12 m cell) shares one swarm (drawn once, round whichever reports it).
         const cx = (Math.floor(at.x / 12) + 0.5) * 12;
         const cz = (Math.floor(at.z / 12) + 0.5) * 12;
-        return {centre: {x: at.x, y: at.y, z: at.z}, seed: hashString(`${slug}#${cx}#${cz}`), t0: epoch - 60, t1: epoch + 60, kind: kind === "cluster" ? "cluster" : "swarm"};
+        return {centre: {x: at.x, y: at.y, z: at.z}, seed: hashString(`${slug}#${cx}#${cz}`), t0: epoch - 60, t1: epoch + 60, kind: kind === "cluster" ? "cluster" : kind === "bloom" ? "bloom" : "swarm"};
     }
     return null;
 }
@@ -2548,6 +2609,45 @@ export function swarmPoint(centre: P, seed: number, index: number, epoch: number
     const mz = centre.z + 0.4 * Math.cos(t * 0.11 + (seed % 5));
     const my = centre.y + 1.4 + 0.25 * Math.sin(t * 0.21 + (seed % 3));
     return {x: mx + Math.cos(a + t * f1 * 0.6) * rad + 0.08 * Math.sin(t * 5.1 * f2 + p2), y: my + 0.55 * Math.sin(t * f2 + p1) * (0.4 + 0.6 * r()), z: mz + Math.sin(a + t * f1 * 0.6) * rad + 0.08 * Math.cos(t * 4.3 * f1 + p1)};
+}
+
+/**
+ * One ambient moon jelly of a bloom (sig2-aquatic: "gathers in dense swarms near the surface"): a cloud drifting slowly on
+ * the current, each bell a few metres from the middle and a metre or two under the surface, pulsing at its own rate. Pure
+ * in the bloom's middle (whose `y` is the water's surface there), its seed, the bell's index and the time.
+ */
+export const BLOOM_AMBIENT = 26;
+export function bloomPoint(centre: P, seed: number, index: number, epoch: number): P & {pulse: number; size: number} {
+    const r = rng(hashString(`j${seed}#${index}`));
+    const a = r() * Math.PI * 2;
+    const rad = 1.2 + 5.5 * Math.sqrt(r());
+    const depth = 0.7 + 1.9 * r();
+    const p1 = r() * 6.3;
+    const p2 = r() * 6.3;
+    const rate = 0.9 + 0.5 * r();
+    const t = epoch;
+    // The cloud drifts together; each bell turns slowly about the middle and bobs.
+    const mx = centre.x + 2.5 * Math.sin(t * 0.021 + (seed % 7));
+    const mz = centre.z + 2.5 * Math.cos(t * 0.017 + (seed % 5));
+    const swing = a + t * 0.04 * (index % 2 ? 1 : -1);
+    return {x: mx + Math.cos(swing) * rad, y: centre.y - depth + 0.16 * Math.sin(t * 0.45 + p1), z: mz + Math.sin(swing) * rad, pulse: 0.5 + 0.5 * Math.sin(t * rate * 2.2 + p2), size: 0.26 + 0.2 * r()};
+}
+
+/**
+ * A moon jelly of a bloom is itself drawn near the surface (its band is mid-water: the whole column's middle, which is not
+ * "near the surface"): its own act, under the surface by a bell's height and a little, bobbing with the others.
+ */
+function bloomPose(world: ScheduleWorld, owner: TripOwner, base: TripPose, epoch: number): RecipePose | null {
+    if (!speciesRecipes(owner.slug).has.has("bloom") || base.aloft) return null;
+    const sampler = world.sampler;
+    const top = waterSurfaceOf(sampler, base.x, base.z);
+    const length = Math.max(owner.animal.length, 0.05);
+    if (sampler.heightAt(base.x, base.z) > top - length * 2.4 - 1) return null;
+    const bob = Math.sin(epoch * 0.45 + (hashString(owner.animal.id) % 628) / 100);
+    // (A moon jelly's model is 2.4 lengths tall, its bell on top: the bell a half metre under, its arms hanging below.)
+    const y = top - 0.5 - length * 2.4 + 0.16 * bob;
+    const seed = hashString(`${owner.slug}#${Math.floor(owner.animal.home.x / 12)}#${Math.floor(owner.animal.home.z / 12)}`);
+    return {...base, y, moving: base.moving, act: {episode: `bloom#${seed}`, recipe: "bloom", block: "drift", state: "swim", u: 0, pitch: 0, roll: 0, own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: TEMPLATES.bloom.label}};
 }
 
 /** The dusk emergence (island hours): bats stream out of their roost. */
@@ -2717,6 +2817,8 @@ function wireMixed(animals: WireInput[]) {
     const sorted = [...animals].sort((a, b) => a.animal.id.localeCompare(b.animal.id));
     for (const a of sorted) {
         if (!speciesRecipes(a.slug).has.has("mixed_follow") || taken.has(a.animal.id)) continue;
+        // (A swimmer's mixed group is the water's own: `aquatic-acts.ts`. This one stands on the ground or flies.)
+        if (a.profile.move === "swim" || a.profile.seabed || WATER_SPECIES.has(a.slug)) continue;
         const flies = (w: WireInput) => w.profile.move === "fly" || w.profile.moves.includes("fly");
         const candidates = sorted.filter((b) => b.slug !== a.slug && social.has(b.profile.social) && flies(b) === flies(a) && Math.hypot(a.animal.home.x - b.animal.home.x, a.animal.home.z - b.animal.home.z) < 40);
         if (!candidates.length) continue;

@@ -33,7 +33,7 @@ import {
     SphereGeometry,
     Vector3
 } from "three";
-import {EMERGENCE_AMBIENT, emergencePoint, MARK_SECONDS, MURMURATION_AMBIENT, murmurationPoint, ROOST_AMBIENT, roostPoint, swarmPoint, type Flock, type RecipeAct, type RecipeMark} from "@/ark-scene/behaviour-recipes";
+import {BLOOM_AMBIENT, bloomPoint, EMERGENCE_AMBIENT, emergencePoint, MARK_SECONDS, MURMURATION_AMBIENT, murmurationPoint, ROOST_AMBIENT, roostPoint, swarmPoint, type Flock, type RecipeAct, type RecipeMark} from "@/ark-scene/behaviour-recipes";
 import {quarrySize, type QuarryNow} from "@/ark-scene/recipe-hunt";
 import {hashString} from "@/ark-scene/world";
 
@@ -45,7 +45,7 @@ type ItemKind = (typeof ITEM_KINDS)[number];
 const ITEM_COLOURS: Record<ItemKind, string> = {fish: "#b9c4cc", twig: "#6e5235", grass: "#c9b46a", clump: "#5e4630", nut: "#7a4e2a", stone: "#8d8a84", worm: "#b97a6f", insect: "#2b2620", shellfish: "#6f5d6e"};
 const MATERIAL_ITEM: Record<string, ItemKind> = {twigs: "twig", bark: "twig", reeds: "grass", grass: "grass", mud: "clump", moss: "clump", leaves: "clump", hair: "clump", feathers: "clump", seaweed: "clump", lichen: "clump", saliva: "clump", silk: "clump", sand: "clump", pebbles: "stone", bubbles: "clump"};
 const MATERIAL_COLOURS: Record<string, string> = {twigs: "#6e5235", bark: "#6b4a2f", reeds: "#9c9a52", grass: "#c2ad62", mud: "#5c4630", moss: "#5d7040", leaves: "#6a7a3a", hair: "#7b6650", feathers: "#e6e0d4", seaweed: "#4c5a2e", lichen: "#a9b48c", saliva: "#d8cfb8", silk: "#e8e8e0", sand: "#cdb98a", pebbles: "#8d8a84", bubbles: "#e9f2f2"};
-const FX_COLOURS: Record<string, string> = {splash: "#eef6f8", spray: "#f2f8fa", bubbles: "#dff0f4", dirt: "#6b5236", dust: "#c9b08a", mud: "#4e3b28", chips: "#d8c49c", sand: "#d9c595"};
+const FX_COLOURS: Record<string, string> = {splash: "#eef6f8", spray: "#f2f8fa", bubbles: "#dff0f4", dirt: "#6b5236", dust: "#c9b08a", mud: "#4e3b28", chips: "#d8c49c", sand: "#d9c595", silt: "#c9bb92"};
 
 /** p3 (shake): the shaken drops' colour (one, shared: the particles only read it). */
 const SHAKE_DROP = new Color("#6fa9d6");
@@ -65,6 +65,7 @@ const MAX_BATS = EMERGENCE_AMBIENT * 2;
 /** Signature wave 2 (birds): a roost's ambient birds, in flight and perched (a roost or two in view). */
 const MAX_ROOST = ROOST_AMBIENT * 3;
 const MAX_QUARRY = 64;
+const MAX_JELLIES = BLOOM_AMBIENT * 2;
 const NEST_TWIGS = 44;
 
 /**
@@ -88,7 +89,7 @@ function chevronGeometry(): BufferGeometry {
     return g;
 }
 
-type Particle = {x: number; y: number; z: number; vx: number; vy: number; vz: number; born: number; life: number; colour: Color; size: number; /** p3 (shake): a falling drop drawn with its short streak. */ streak?: boolean};
+type Particle = {x: number; y: number; z: number; vx: number; vy: number; vz: number; born: number; life: number; colour: Color; size: number; /** p3 (shake): a falling drop drawn with its short streak. */ streak?: boolean; /** sig2-aquatic: silt in water: it rises slowly and hangs, it does not fall. */ drift?: boolean};
 
 export class RecipeScene {
     readonly root = new Group();
@@ -103,6 +104,8 @@ export class RecipeScene {
     private readonly roostFlying: InstancedMesh;
     private readonly roostBodies: InstancedMesh;
     private readonly roostHeads: InstancedMesh;
+    /** sig2-aquatic: a moon jelly bloom's ambient bells. */
+    private readonly jellies: InstancedMesh;
     /** The quarry: grasshoppers, moths and flies, fish. */
     private readonly hoppers: InstancedMesh;
     private readonly fliers: InstancedMesh;
@@ -164,6 +167,14 @@ export class RecipeScene {
         (this.roostFlying.material as MeshStandardMaterial).side = 2;
         this.roostBodies = make(new SphereGeometry(0.5, 8, 5), "#ffffff", MAX_ROOST, 0.85);
         this.roostHeads = make(new SphereGeometry(0.5, 7, 4), "#ffffff", MAX_ROOST, 0.85);
+        // A moon jelly's bell: a pale, see-through dome (a little lit from within, so it reads against blue water).
+        this.jellies = make(new SphereGeometry(0.5, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2), "#d6ebf2", MAX_JELLIES, 0.35);
+        const jelly = this.jellies.material as MeshStandardMaterial;
+        jelly.transparent = true;
+        jelly.opacity = 0.62;
+        jelly.side = 2;
+        jelly.depthWrite = false;
+        jelly.emissive.set("#5d7f8c");
         // A grasshopper: a long body, nose along +z (scaled to its length); a moth or fly: a tiny chevron with its wings
         // beating; a fish: a long silvery body.
         this.hoppers = make(new SphereGeometry(0.5, 8, 5), "#93b44c", MAX_QUARRY, 0.7);
@@ -218,6 +229,7 @@ export class RecipeScene {
         this.roostFlying.count = 0;
         this.roostBodies.count = 0;
         this.roostHeads.count = 0;
+        this.jellies.count = 0;
         this.hoppers.count = 0;
         this.fliers.count = 0;
         this.quarryFish.count = 0;
@@ -362,6 +374,16 @@ export class RecipeScene {
                 }
                 continue;
             }
+            if (kind === "bloom") {
+                // (sig2-aquatic) A moon jelly bloom: bells near the surface, each pulsing (its dome squeezes and eases), only near enough to see.
+                if (away > 70) continue;
+                for (let i = 0; i < BLOOM_AMBIENT && this.jellies.count < MAX_JELLIES; i++) {
+                    const p = bloomPoint(flock.centre, flock.seed, i, epoch);
+                    const size = Math.max(p.size, Math.hypot(p.x - camera.x, p.y - camera.y, p.z - camera.z) * 0.004);
+                    this.put(this.jellies, p.x, p.y, p.z, i, 0, 0, size * (1 + 0.1 * p.pulse), size * (0.62 + 0.38 * (1 - p.pulse)), size * (1 + 0.1 * p.pulse));
+                }
+                continue;
+            }
             if (kind === "bats") {
                 if (away > 160) continue;
                 for (let i = 0; i < EMERGENCE_AMBIENT && this.bats.count < MAX_BATS; i++) {
@@ -418,7 +440,7 @@ export class RecipeScene {
     }
 
     private meshes(): InstancedMesh[] {
-        return [...Object.values(this.items), this.fish, this.twigs, this.flock, this.insects, this.bats, this.roostFlying, this.roostBodies, this.roostHeads, this.hoppers, this.fliers, this.quarryFish, ...Object.values(this.marks)];
+        return [...Object.values(this.items), this.fish, this.twigs, this.flock, this.insects, this.bats, this.roostFlying, this.roostBodies, this.roostHeads, this.jellies, this.hoppers, this.fliers, this.quarryFish, ...Object.values(this.marks)];
     }
 
     /**
@@ -505,8 +527,9 @@ export class RecipeScene {
             const a = random() * Math.PI * 2;
             const out = (0.4 + random()) * scale;
             const wet = kind === "splash" || kind === "spray";
-            const rise = kind === "bubbles" ? 0.3 : wet ? (1.6 + random() * 1.6) * Math.sqrt(scale) : kind === "dust" ? 0.3 + random() * 0.3 : (0.8 + random()) * Math.sqrt(scale);
-            this.particles.push({x, y, z, vx: Math.cos(a) * out * (wet ? 0.8 : 0.5), vy: rise, vz: Math.sin(a) * out * (wet ? 0.8 : 0.5), born: now, life: kind === "dust" ? 1.6 : kind === "bubbles" ? 2 : 0.9, colour, size: scale});
+            const silt = kind === "silt";
+            const rise = silt ? 0.12 + random() * 0.16 : kind === "bubbles" ? 0.3 : wet ? (1.6 + random() * 1.6) * Math.sqrt(scale) : kind === "dust" ? 0.3 + random() * 0.3 : (0.8 + random()) * Math.sqrt(scale);
+            this.particles.push({x, y, z, vx: Math.cos(a) * out * (silt ? 0.18 : wet ? 0.8 : 0.5), vy: rise, vz: Math.sin(a) * out * (silt ? 0.18 : wet ? 0.8 : 0.5), born: now, life: silt ? 2.6 : kind === "dust" ? 1.6 : kind === "bubbles" ? 2 : 0.9, colour, size: scale, ...(silt ? {drift: true} : {})});
         }
     }
 
@@ -521,7 +544,7 @@ export class RecipeScene {
         for (let i = this.particles.length - 1; i >= 0; i--) if (now - this.particles[i].born > this.particles[i].life) this.particles.splice(i, 1);
         for (const p of this.particles) {
             const t = now - p.born;
-            const fall = p.vy > 0.5 ? 4.9 : 0.4;
+            const fall = p.drift ? 0 : p.vy > 0.5 ? 4.9 : 0.4;
             position.setXYZ(n, p.x + p.vx * t, p.y + p.vy * t - fall * t * t, p.z + p.vz * t);
             // p3 (shake): its streak back along its arc (where it was 40 ms ago).
             if (p.streak && m < MAX_STREAKS) {

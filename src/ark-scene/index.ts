@@ -83,6 +83,7 @@ import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook,
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
 import {applyRecipeCoat, seasonMonthAt, setRecipeArkDay, fallbackNests, microMurmuration, microRoost, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, seasonFactor, setRecordedSexes, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {aquaticPose, hasAquaticAct, isAquaticRecipe, wireAquatic, type AquaticFrame} from "@/ark-scene/aquatic-acts";
 import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
 import {fishSchoolsNear} from "@/ark-scene/fish-schools";
 import {setFishChasers} from "@/ark-scene/fish-render";
@@ -2170,6 +2171,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             forgetSchedules();
             // Who meets whom in the behaviour recipes: rival males, a male and a female, two of a group (`behaviour-recipes.ts`).
             wireRecipes(onIt.map((e) => ({animal: e.sched!.animal, profile: e.sched!.profile, slug: e.animal.model_slug, activity: e.animal.activity})));
+            // (sig2-aquatic) The water's acts with another kind or a mate: a cleaner at a larger swimmer, a moray with a grouper (`aquatic-acts.ts`).
+            wireAquatic(onIt.filter((e) => e.depth && e.place.water).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, x: e.place.x, z: e.place.z, length: e.length, young: Boolean(e.sched!.animal.young), motion: waterMotion(e.depth!)})));
             // (A recording, and reduced motion, at once; else each one's first step as the frames come, `WARM_MS`.)
             const epoch = worldMs() / 1000;
             if (options.recording) for (const e of onIt) if (!reducedMotion) stepSchedule(e, epoch, 1);
@@ -2603,7 +2606,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const plan = subject ? scheduleStatus(subject, epoch, {trip: entry.sched?.trip ?? null, hunting: huntingNow}) : null;
         // Off the schedule (reduced motion, a micro or underground animal, a replay's act): its one state, said plainly.
         // (A meal's act says what it is drawn doing: hunting in the chase, eating, drinking, resting after it, scavenging.)
-        const activity = entry.act?.meal ?? (plan ? plan.activity : arkActivityKey({doing: null, asleep: entry.state.asleep, airborne: entry.state.airborne, breathing: entry.state.breathing}));
+        // (sig2-aquatic: out of its crevice for an act with another kind, the card says that.)
+        const aquaticNow = isAquaticRecipe(entry.recipeAct?.recipe) ? entry.recipeAct!.recipe : null;
+        const activity = entry.act?.meal ?? (aquaticNow ? arkActivityKey({doing: aquaticNow === "clean_client" ? "groom" : "swim"}) : plan ? plan.activity : arkActivityKey({doing: null, asleep: entry.state.asleep, airborne: entry.state.airborne, breathing: entry.state.breathing}));
         const notes = records.get(animal.id) ?? [];
         const record: ArkStatusLogEntry[] = [arkOriginEntry(animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null, ...(note.text ? {text: note.text} : {})}))];
         // How fed it is and its energy over its day (card truth, 2026-11-13): from its own schedule, its eating and waking
@@ -5189,6 +5194,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {x, y, z, nx: n.x, ny: n.y, nz: n.z, tx: tx / length, ty: ty / length, tz: tz / length};
     };
 
+    /** (sig2-aquatic) An animal as it is drawn now, for the acts that work over it: the middle of its body, its heading and size (null: not drawn). */
+    const aquaticFrameOf = (id: string): AquaticFrame | null => {
+        const e = entryById.get(id);
+        return e?.middle ? {x: e.middle.x, y: e.middle.y, z: e.middle.z, yaw: e.yawNow ?? e.place.yaw, length: e.length, height: e.drawnHeight} : null;
+    };
     const waterPose = (entry: Entry, depth: SpeciesDepth, modelHeight: number, time: number): Pose => {
         const place = entry.place;
         const motion = waterMotion(depth);
@@ -5198,7 +5208,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // In its hole: still, its head turning slowly.
             const spec = waterSpec(depth, place.ground, entry.seed, clock, breath, waterSurfaceAt(place.x, place.z));
             const yaw = place.yaw + (reducedMotion ? 0 : Math.sin(time * 0.2 + entry.phase * 9) * 0.5 * (1 - entry.rest));
-            return {x: place.x, z: place.z, base: tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base, yaw, pitch: 0, roll: 0, afloat: true, water: spec};
+            const base = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
+            // (sig2-aquatic) Out of its crevice for an act with another kind, or its mate (`aquatic-acts.ts`: a window of the shared clock).
+            if (!reducedMotion && hasAquaticAct(entry.animal.id)) {
+                const at = aquaticPose(entry.animal.id, worldMs() / 1000, scheduleHours, {x: place.x, y: base + modelHeight / 2, z: place.z, yaw, height: modelHeight, length: entry.length}, aquaticFrameOf, {floorAt: heightAt, topAt: waterSurfaceAt});
+                entry.recipeAct = at?.act ?? null;
+                // (Out of its crevice it swims: its swim clip and tail beat, as any swimmer's in its band.)
+                if (at) return {x: at.x, z: at.z, base: at.y - modelHeight / 2, yaw: at.yaw, pitch: at.pitch, roll: at.roll, afloat: true, water: {...spec, motion: "swim"}};
+            }
+            return {x: place.x, z: place.z, base, yaw, pitch: 0, roll: 0, afloat: true, water: spec};
         }
         const lead = entry.leader && entry.leader !== entry && !entry.leader.act && entry.leader.depth ? entry.leader : null;
         const follower = lead ? Math.max(entry.place.rank ?? 1, 1) : 0;
@@ -5690,7 +5708,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (ARK-CANOPY: how far through a leap on its canopy route it is, or null: `canopy-scene.ts`.)
         const canopyLeap = (where.surface as {leap?: number | null} | undefined)?.leap ?? null;
         // A behaviour recipe's act (`behaviour-recipes.ts`): on its schedule pose, or a house starling's own.
-        const recipeAct = ((own?.pose ?? null) as RecipePose | null)?.act ?? entry.recipeAct ?? null;
+        // (sig2-aquatic: a reef fish out of its crevice for an act with another kind is at that, whatever its undrawn schedule has.)
+        const recipeAct = (isAquaticRecipe(entry.recipeAct?.recipe) ? entry.recipeAct : null) ?? ((own?.pose ?? null) as RecipePose | null)?.act ?? entry.recipeAct ?? null;
         // In the air: on its schedule, from the moment an air leg starts (the pose counts as aloft only a little way up,
         // and the take-off plays from the ground); otherwise as its state's air eases in.
         const pose = own?.pose ?? null;
@@ -6199,6 +6218,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const ownLine = signatureLineOf(a.model_slug, "night_hawk");
                 if (ownLine) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: "night_hawk", episode: `night_hawk:${a.id}:${Math.floor(epoch / 1800)}`, block: "hunt", fish: false, line: ownLine});
             }
+            // (sig2-aquatic) A reef fish out of its crevice for an act with another kind, in the species' own sentence in the log.
+            if (c.entry.recipeAct && isAquaticRecipe(c.entry.recipeAct.recipe) && c.visible && c.distance < 60) {
+                const laid = c.entry.recipeAct;
+                const a = c.entry.animal;
+                const ownLine = signatureLineOf(a.model_slug, laid.recipe);
+                if (ownLine) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: laid.recipe, episode: laid.episode, block: laid.block, fish: false, line: ownLine});
+            }
+            if (isAquaticRecipe(c.entry.recipeAct?.recipe)) continue;
             if (!own?.pose || c.distance > 90) continue;
             const act = (own.pose as RecipePose).act;
             if (act && c.visible) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act});
