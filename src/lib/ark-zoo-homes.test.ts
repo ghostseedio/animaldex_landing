@@ -337,3 +337,11 @@ test("the wild island's real record (when the local snapshot is here): no two cr
     }
     assert.deepEqual(same, []);
 });
+
+test("the 35 worms, millipedes, centipedes, eels and the caterpillar: the aquarium or the insect house, as the server holds them", () => {
+    // (`voyage_species.zoo_enclosure` on 2026-11-24, read only: none of them is the reptile house's.)
+    const aquarium = ["american-eel", "asian-swamp-eel", "bobbit-worm", "bootlace-worm", "common-rotifer", "dragon-moray", "electric-eel", "european-eel", "freshwater-eel", "giant-moray", "green-moray", "medicinal-leech", "pacific-hagfish", "pelican-eel", "planarian", "ribbon-eel", "sea-lamprey", "splendid-garden-eel", "spotted-garden-eel", "zebra-moray-eel"];
+    const insects = ["algerian-millipede", "amazonian-giant-centipede", "american-giant-millipede", "centipede", "common-earthworm", "common-soil-centipede", "eastern-tiger-swallowtail-caterpillar", "flat-backed-millipede", "giant-african-millipede", "house-centipede", "indian-earthworm", "pill-millipede", "stone-centipede", "yellow-banded-millipede", "yellow-spotted-millipede"];
+    for (const slug of aquarium) assert.equal(zooTypeOfSlug(slug), "aquarium", slug);
+    for (const slug of insects) assert.equal(zooTypeOfSlug(slug), "insect_house", slug);
+});
