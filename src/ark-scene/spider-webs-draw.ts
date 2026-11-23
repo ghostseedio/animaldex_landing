@@ -69,7 +69,7 @@ export type FittedWeb = {
     retreat: WebPoint | null;
     gold: number;
     /** Filled silk (a sheet's felt, its funnel's tube; alpha > 0) and dark (the funnel's mouth; alpha < 0): triangles. */
-    fill?: Array<{a: V3; b: V3; c: V3; alpha: number}>;
+    fill?: Array<{a: V3; b: V3; c: V3; alpha: number; /** Each corner's own (else `alpha` at all three). */ alphas?: [number, number, number]}>;
 };
 
 // MARK: Fitting (pure, given a caster)
@@ -552,31 +552,36 @@ export function fitSheet(id: string, habit: WebHabit, home: V3, ground: (x: numb
         const ring = (p: V3, rr: number): V3 => ({x: p.x + side.x * Math.cos(a) * rr, y: p.y + 0.012 + Math.sin(a) * rr * 0.7, z: p.z + side.z * Math.cos(a) * rr});
         threads.push({a: ring(mouth, 0.03), b: ring(funnelEnd, 0.012), order: 0});
     }
-    // The felt: a sheet's silk is dense enough to read as a pale patch (Agelenidae: Foelix 2011); a dark mouth.
+    // The felt: a sheet's silk is dense enough to read as a pale patch (Agelenidae: Foelix 2011), densest by the mouth
+    // where the spider runs most and thinning to its edge; the shader draws its fibres (`FRAGMENT`). Each corner's own
+    // density, so the patch has no rings.
     const fill: NonNullable<FittedWeb["fill"]> = [];
+    const felt = (u: number) => 0.5 * (1 - 0.62 * u);
     for (let s = 0; s < RINGS; s++) {
         for (let i = 0; i < RADII - 1; i++) {
             const u0 = s / RINGS;
             const u1 = (s + 1) / RINGS;
             const w0 = i / (RADII - 1);
             const w1 = (i + 1) / (RADII - 1);
-            const alpha = 0.34 * (1 - 0.6 * u1);
             const p00 = s === 0 ? mouth : pt(u0, w0);
             const p01 = s === 0 ? mouth : pt(u0, w1);
-            fill.push({a: p00, b: pt(u1, w0), c: pt(u1, w1), alpha});
-            if (s > 0) fill.push({a: p00, b: pt(u1, w1), c: p01, alpha});
+            fill.push({a: p00, b: pt(u1, w0), c: pt(u1, w1), alpha: felt(u1), alphas: [felt(u0), felt(u1), felt(u1)]});
+            if (s > 0) fill.push({a: p00, b: pt(u1, w1), c: p01, alpha: felt(u1), alphas: [felt(u0), felt(u1), felt(u0)]});
         }
     }
     {
         const ringAt = (p: V3, rr: number, a: number): V3 => ({x: p.x + side.x * Math.cos(a) * rr, y: p.y + 0.012 + Math.sin(a) * rr * 0.7, z: p.z + side.z * Math.cos(a) * rr});
         const centre = {x: mouth.x + back.x * 0.004, y: mouth.y + 0.012, z: mouth.z + back.z * 0.004};
-        for (let i = 0; i < 10; i++) {
-            const a0 = (i / 10) * Math.PI * 2;
-            const a1 = ((i + 1) / 10) * Math.PI * 2;
-            // The tube, pale; its opening, dark.
-            fill.push({a: ringAt(mouth, 0.03, a0), b: ringAt(funnelEnd, 0.012, a0), c: ringAt(funnelEnd, 0.012, a1), alpha: 0.4});
-            fill.push({a: ringAt(mouth, 0.03, a0), b: ringAt(funnelEnd, 0.012, a1), c: ringAt(mouth, 0.03, a1), alpha: 0.4});
-            fill.push({a: centre, b: ringAt(centre, 0.026, a0), c: ringAt(centre, 0.026, a1), alpha: -0.85});
+        for (let i = 0; i < 12; i++) {
+            const a0 = (i / 12) * Math.PI * 2;
+            const a1 = ((i + 1) / 12) * Math.PI * 2;
+            // The tube, thick silk at its mouth (a pale collar) thinning back into the corner.
+            fill.push({a: ringAt(mouth, 0.03, a0), b: ringAt(funnelEnd, 0.012, a0), c: ringAt(funnelEnd, 0.012, a1), alpha: 0.6, alphas: [0.62, 0.3, 0.3]});
+            fill.push({a: ringAt(mouth, 0.03, a0), b: ringAt(funnelEnd, 0.012, a1), c: ringAt(mouth, 0.03, a1), alpha: 0.6, alphas: [0.62, 0.3, 0.62]});
+            // Its opening: dark in the middle (the tube's shadow), lighter to the collar.
+            fill.push({a: centre, b: ringAt(centre, 0.016, a0), c: ringAt(centre, 0.016, a1), alpha: -0.92});
+            fill.push({a: ringAt(centre, 0.016, a0), b: ringAt(centre, 0.027, a0), c: ringAt(centre, 0.027, a1), alpha: -0.6, alphas: [-0.92, -0.35, -0.35]});
+            fill.push({a: ringAt(centre, 0.016, a0), b: ringAt(centre, 0.027, a1), c: ringAt(centre, 0.016, a1), alpha: -0.6, alphas: [-0.92, -0.35, -0.92]});
         }
     }
     // Scaffold threads from the sheet's edge up to the wall or the plants over it.
@@ -1008,6 +1013,7 @@ varying float vFade;
 varying float vGlint;
 varying float vU;
 varying float vGold;
+varying vec3 vWorld;
 void main() {
     int slot = int(aSlot + 0.5);
     float built = 1.0;
@@ -1044,6 +1050,7 @@ void main() {
     vU = aCorner.x * length(aB - position);
     vGold = aGold;
     vFill = aFill;
+    vWorld = wp;
 }
 `;
 
@@ -1052,14 +1059,55 @@ uniform float uDay;
 uniform float uDew;
 uniform vec3 uGlint;
 uniform float uDebug;
+uniform vec3 uSun;
 varying float vFade;
 varying float vGlint;
 varying float vU;
 varying float vGold;
 varying float vFill;
+varying vec3 vWorld;
+// One family of fibres across a sheet (strips \`f\` a metre, wavering), each strip's fibre broken into random lengths so
+// the families cross as a felt, not a net; their cover eased to its mean once the strips come closer than a pixel or two
+// (no shimmer at a phone's distance).
+float fibres(vec2 p, float ang, float f, float seed) {
+    vec2 d = vec2(cos(ang), sin(ang));
+    vec2 o = vec2(-d.y, d.x);
+    float along = dot(p, o) * f;
+    float s = dot(p, d) * f + 1.6 * sin(along * 0.11 + seed) + 0.6 * sin(along * 0.37 + seed * 3.0);
+    float w = fwidth(s);
+    float id = floor(s);
+    float on = step(0.5, fract(sin(floor(along * 0.09 + fract(id * 0.618) * 9.0) * 12.9898 + id * 78.233 + seed) * 43758.5453));
+    float line = on * (1.0 - smoothstep(0.0, 0.09 + w, abs(fract(s) - 0.5) * 2.0));
+    return mix(line, 0.045, smoothstep(0.2, 0.55, w));
+}
 void main() {
-    if (vFill < 0.0) {
-        gl_FragColor = vec4(vec3(0.03, 0.03, 0.025), vFade * -vFill);
+    if (vFill != 0.0) {
+        // A sheet's felt or its funnel: its face from the screen's derivatives, toward the camera.
+        vec3 v = normalize(cameraPosition - vWorld);
+        vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
+        if (dot(n, v) < 0.0) n = -n;
+        if (vFill < 0.0) {
+            gl_FragColor = vec4(vec3(0.03, 0.03, 0.025), vFade * -vFill);
+            return;
+        }
+        // Fibres every few millimetres, every way: a felt, not a fan (Agelenidae: Foelix 2011).
+        vec2 p = vWorld.xz + vec2(0.0, vWorld.y * 0.7);
+        float felt = min(fibres(p, 0.3, 190.0, 1.0) + fibres(p, 0.95, 230.0, 2.0) + fibres(p, 1.6, 205.0, 3.0) + fibres(p, 2.2, 250.0, 4.0) + fibres(p, 2.8, 175.0, 5.0), 1.0);
+        float mottle = 0.75 + 0.25 * sin(p.x * 61.0 + sin(p.y * 47.0) * 1.7) * sin(p.y * 53.0 + p.x * 11.0);
+        // Its sheen: the sun off the felt (a soft highlight) and through it, against the light.
+        float sheen = (0.6 * pow(max(dot(reflect(-uSun, n), v), 0.0), 5.0) + 0.5 * pow(max(dot(-v, uSun), 0.0), 4.0)) * uDay;
+        // Dew: beads caught in the felt at a still dawn, a sparkle each, a silvering where they are too small to see.
+        vec2 q = p * 380.0;
+        vec2 cell = floor(q);
+        float h = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+        float r = length(fract(q) - 0.5 + (vec2(fract(h * 13.1), fract(h * 7.7)) - 0.5) * 0.5);
+        float aa = fwidth(q.x);
+        float bead = uDew * mix(step(0.8, h) * (1.0 - smoothstep(0.2, 0.2 + aa, r)), 0.03, smoothstep(0.35, 0.9, aa));
+        float a = vFade * clamp(vFill * (0.4 + 0.6 * uDay) * mottle * (0.8 + 0.6 * felt) * (1.0 + 0.35 * uDew) + 0.35 * sheen + 0.8 * bead, 0.0, 0.88);
+        vec3 silk = vec3(0.88, 0.9, 0.9) * (0.4 + 0.6 * uDay);
+        // (Dew beads catch the low sun white, a little of its colour in them.)
+        vec3 colour = mix(mix(silk, uGlint, clamp(sheen, 0.0, 1.0)), mix(uGlint, vec3(1.0), 0.65), clamp(bead * 1.5, 0.0, 1.0));
+        gl_FragColor = uDebug > 0.5 ? vec4(1.0, 0.1, 0.6, 1.0) : vec4(colour, a);
         return;
     }
     // Dew: beads along the threads at a still dawn.
@@ -1068,7 +1116,6 @@ void main() {
     float a = vFade * clamp(0.12 * (0.35 + 0.65 * uDay) + 0.7 * lit + 0.5 * bead, 0.0, 0.9);
     vec3 silk = mix(vec3(0.86, 0.89, 0.9), vec3(0.95, 0.8, 0.35), vGold * 0.8);
     vec3 colour = mix(silk * (0.35 + 0.65 * uDay), uGlint, clamp(lit + bead * 0.6, 0.0, 1.0));
-    if (vFill > 0.0) a = vFade * clamp(vFill * (0.45 + 0.55 * uDay) + 0.35 * lit + 0.4 * bead, 0.0, 0.85);
     gl_FragColor = uDebug > 0.5 ? vec4(1.0, 0.1, 0.6, 1.0) : vec4(colour, a);
 }
 `;
@@ -1424,7 +1471,7 @@ export class SpiderWebs {
                     a.set([p.x, p.y, p.z], (v + c) * 3);
                     b.set([p.x, p.y, p.z], (v + c) * 3);
                     slot[v + c] = i;
-                    fillA[v + c] = f.alpha;
+                    fillA[v + c] = f.alphas?.[c] ?? f.alpha;
                 });
                 index.set([v, v + 1, v + 2], q);
                 v += 3;
@@ -1451,6 +1498,9 @@ export class SpiderWebs {
         if (this.fitting?.id === id) this.fitting = null;
         Object.assign(s, {home, web: null, tries: 0, triedAt: -Infinity, job: null});
         this.slots = this.slots.filter((x) => x.id !== id);
+        // (The chosen set re-picked from scratch: else its refitted web keeps the old key and is never drawn again.)
+        this.slotKey = "";
+        this.lastPick = -Infinity;
     }
 
     /** Development: what is drawn round a spider's home (the probes read it). */

@@ -1214,6 +1214,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                             }
                             return best;
                         },
+                        // (Weaver ants' crowns: the drawn trees' branch, leaf and bark places.)
+                        canopyPoints: (x, z, r) => (world ? (["branch", "leaf", "bark"] as const).flatMap((tag) => world!.sampler.attachPoints(tag, {x, z, r}).map((p) => ({id: p.id, tag, x: p.x, y: p.y, z: p.z}))) : []),
                         awake: (activity) => isAwake((activity ?? "diurnal") as ArkAnimal["activity"], sunElevation)
                     });
                     scene.add(ants.group);

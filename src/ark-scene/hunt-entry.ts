@@ -78,6 +78,8 @@ async function main() {
     const mode = params.get("mode") === "miss" ? "miss" : "catch";
     const scene = SCENES[name];
     if (!scene) throw new Error(`no scene ${name}`);
+    // (?hours=H: the scene at another hour, a dawn's dew on a web.)
+    const hours = params.has("hours") ? Number(params.get("hours")) : scene.hours;
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
     const template = fixture.animals[0];
     const casts = [scene.predator, scene.prey];
@@ -86,9 +88,9 @@ async function main() {
     const snapshot = decodeArkSnapshot({...fixture, animals});
     if (!snapshot) throw new Error("fixture did not decode");
     let ready = false;
-    const handle: ArkSceneHandle = mountArk(document.getElementById("ark")!, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: scene.hours, onReady: () => (ready = true)});
+    const handle: ArkSceneHandle = mountArk(document.getElementById("ark")!, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours, onReady: () => (ready = true)});
     handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.15, storm: 0, windDirection: 0.4, rain: 0, fog: 0});
-    const t0 = Date.UTC(2026, 10, 20, scene.hours) / 1000 + 60;
+    const t0 = Date.UTC(2026, 10, 20, Math.floor(hours), Math.round((hours % 1) * 60)) / 1000 + 60;
     const setAt = async (epoch: number) => {
         const ms = epoch * 1000;
         if (!fake) {
@@ -253,7 +255,7 @@ async function main() {
                 // (Once per scene and distance: the clearest side, by rays from each candidate camera to the web; leaves and
                 // stems between the camera and the web ruled it out.)
                 const key = d0.toFixed(3);
-                if (!webViews.has(key)) webViews.set(key, clearestWebView(hung.normal, target, d0, (debug as unknown as {scene: Object3D}).scene, azimuth));
+                if (!webViews.has(key)) webViews.set(key, clearestWebView(hung.normal, target, d0, (debug as unknown as {scene: Object3D}).scene, azimuth, name === "sheet" ? (hung as {up?: {x: number; y: number; z: number}}).up : undefined));
                 handle.setView({target, distance: d0, ...webViews.get(key)!});
             } else if (a && b) {
                 // Readable catch frames: around the strike (1.5 s either side) the camera holds on the hunter at the scene's
@@ -294,10 +296,11 @@ async function main() {
  * (either side), or a tangle or sheet from a little above the side, then turned a little at a time; each candidate is tested with a ray from the
  * camera to the hub against what the scene draws (the webs and anything within 6 cm of the hub excepted).
  */
-function clearestWebView(n: {x: number; y: number; z: number}, target: {x: number; y: number; z: number}, dist: number, scene: Object3D, fallback: number): {polar: number; azimuth: number} {
+function clearestWebView(n: {x: number; y: number; z: number}, target: {x: number; y: number; z: number}, dist: number, scene: Object3D, fallback: number, open?: {x: number; y: number; z: number}): {polar: number; azimuth: number} {
     const flat = Math.hypot(n.x, n.z);
-    const face = flat > 0.3 ? Math.atan2(n.x, n.z) : fallback;
-    const polars = flat > 0.3 ? [1.3, 1.1, 1.45, 0.9] : [1.0, 0.8, 1.2, 0.6];
+    // (A sheet, `open` its way out from the funnel: seen from that side, looking into the funnel's mouth.)
+    const face = flat > 0.3 ? Math.atan2(n.x, n.z) : open ? Math.atan2(open.x, open.z) : fallback;
+    const polars = flat > 0.3 ? [1.3, 1.1, 1.45, 0.9] : open ? [0.9, 0.7, 1.1, 0.5] : [1.0, 0.8, 1.2, 0.6];
     const turns = [0, 0.3, -0.3, 0.6, -0.6, Math.PI, Math.PI + 0.3, Math.PI - 0.3, Math.PI + 0.6, Math.PI - 0.6];
     const ray = new Raycaster();
     const to = new Vector3(target.x, target.y, target.z);

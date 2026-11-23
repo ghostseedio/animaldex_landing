@@ -7,7 +7,10 @@ import {
     LOAD_NONE,
     LOAD_PIECE,
     antKindOf,
+    canopySearchers,
     colonyKeyOf,
+    nestTrailPath,
+    weaverCanopy,
     colonySteps,
     eats,
     raidNow,
@@ -173,4 +176,39 @@ test("live log: the colony's line in the reader's words, once per episode; every
     assert.equal(antItems([act], memory, words, "en").length, 1);
     assert.equal(antItems([act], memory, words, "en").length, 0);
     for (const key of ["antTrailFound", "antTend", "antLeaves", "antSeeds", "antRaid", "antBivouac", "antWeave"] as const) assert.ok(ARK_LIVE_ENGLISH[key]);
+});
+
+test("weaver ants live in the crown: searchers on its limbs, trails along branches between leaf nests, a food trail down to real food", () => {
+    const c = colony("asian-weaver-ant");
+    const trunk = {cx: 0, cz: 0, r: 0.2};
+    // A tree's places: limbs (on the wood) round the trunk at 2-4 m, a leaf a little past each.
+    const points = [];
+    for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        const y = 2 + (i % 3) * 0.8;
+        points.push({x: Math.cos(a) * 1.2, y, z: Math.sin(a) * 1.2, leaf: false, wood: true});
+        points.push({x: Math.cos(a) * 1.8, y: y + 0.2, z: Math.sin(a) * 1.8, leaf: true, wood: false});
+    }
+    const canopy = weaverCanopy(c.seed, trunk, 0, points)!;
+    assert.ok(canopy && canopy.ways.length === 8 && canopy.nests.length === 3, JSON.stringify(canopy?.nests));
+    // Every nest on a leaf, up in the crown.
+    for (const n of canopy.nests) assert.ok(canopy.ways[n].leaf && canopy.ways[n].leaf!.y > 1.2);
+    const w = {...c, canopy, trunk};
+    // Searchers: none on the ground; all up in the crown on the ways, carrying nothing.
+    const ants: Array<{y: number; load: number}> = [];
+    canopySearchers(w, canopy, T0, true, 120, {x: 0, z: 0, r: 5}, (_x, y, _z, _tx, _ty, _tz, _ux, _uy, _uz, _s, load) => (ants.push({y, load}), true));
+    assert.ok(ants.length > 60);
+    assert.ok(ants.every((a) => a.y > 1.5 && a.load === LOAD_NONE), JSON.stringify(ants.slice(0, 5)));
+    // The trail between two nests never touches the ground: along limbs and the trunk.
+    const between = nestTrailPath(canopy, canopy.nests[0], canopy.nests[1]);
+    let low = Infinity;
+    for (let i = 0; i < between.n; i++) low = Math.min(low, between.p[i * 3 + 1]);
+    assert.ok(low > 1.5, `lowest ${low}`);
+    // A body on the ground: the food trail leaves the nest along its limb, comes down the trunk and ends at the body.
+    const food = body(3);
+    const path = trailPath({...w, nest: canopy.ways[canopy.nests[0]].leaf!}, food, flat);
+    assert.ok(Math.abs(path.p[1] - canopy.ways[canopy.nests[0]].leaf!.y - 0.004) < 0.01);
+    assert.ok(Math.abs(path.p[(path.n - 1) * 3] - 3) < 0.05 && Math.abs(path.p[(path.n - 1) * 3 + 1]) < 0.01);
+    // No food: no trail at all (only the searchers and the nests' own trails).
+    assert.equal(trailNow(w, [], T0 + 500), null);
 });

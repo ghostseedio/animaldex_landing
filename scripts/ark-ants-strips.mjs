@@ -111,7 +111,18 @@ for (const name of pairs) {
         const near = name === "ghost" ? 0.09 : name === "fire" ? 0.16 : 0.22;
         const finder = (t) => at(1 - Math.min(Math.max((t - plan.found) / Math.max(plan.home - plan.found, 1), 0), 1));
         const lo = name === "weaver" ? 0.6 : 0.5;
+        // Weaver ants: their crown first (the leaf nests, searchers along the branches, the trail between nests).
+        const cz = c.canopy;
+        const crown = cz
+            ? [
+                  [d.t0 - 20, 0.5, cz.nests[0], "the leaf nest, searchers on its branches"],
+                  [d.t0 - 20, 1.6, cz.nests[0], "the crown: nests and branches"],
+                  [d.t0 - 20, 0.3, cz.branches[1], "searchers along a branch"],
+                  ...(cz.between ? [[d.t0 - 20, 0.6, cz.between[3], "the trail between two leaf nests"], [d.t0 - 20, 0.4, cz.between[9], "the trail out to the other nest"]] : [])
+              ]
+            : [];
         shots = [
+            ...crown,
             [d.t0 - 20, near * 2.5, at(0), "before: the nest, searching round it (no food yet)"],
             [d.t0 - 20, near, at(0.3), "before: searchers (no trail, no find)"],
             [plan.found + (plan.home - plan.found) * 0.5, near, finder(plan.found + (plan.home - plan.found) * 0.5), "the finder heads home laying the trail"],

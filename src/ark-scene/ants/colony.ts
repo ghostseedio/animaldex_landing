@@ -102,6 +102,8 @@ export type Colony = {
     nest: Pt;
     /** A nest up a tree (weaver ants' leaf nest, carpenter ants in a trunk): the trunk under it. */
     trunk: {cx: number; cz: number; r: number} | null;
+    /** Weaver ants: their tree's crown (`weaverCanopy`): the leaf nests and the branch ways they forage along. */
+    canopy?: Canopy | null;
     seed: number;
     /** The engine has it hungry (its condition): no plant forage is narrated. */
     hungry: boolean;
@@ -355,9 +357,23 @@ export function trailPath(colony: Colony, food: Pick<AntFood, "x" | "y" | "z" | 
         return {x: x + nx * 0.01, z: z + nz * 0.01};
     };
     let from = {x: colony.nest.x, z: colony.nest.z};
-    if (colony.trunk && colony.nest.y > groundY(colony.nest.x, colony.nest.z) + 0.05) from = climb(colony.trunk, {x: food.x, z: food.z}, colony.nest.y, true);
-    let to = {x: food.x, z: food.z};
+    const canopy = colony.canopy ?? null;
     const up = food.trunk && food.y > groundY(food.x, food.z) + 0.05 ? food.trunk : null;
+    if (canopy) {
+        // Weaver ants: from the leaf nest in along its limb to the trunk, round it to the food's side.
+        const way = canopy.ways[canopy.nests[0]];
+        branchWalk(canopy, way, false, pts, nrm);
+        const a0 = wayAngle(canopy, way);
+        if (up && sameTrunk(up, canopy.trunk)) {
+            // A host on the nest's own tree: along the trunk to it, never down to the ground and up again.
+            trunkWalk(canopy.trunk, a0, way.y, Math.atan2(food.z - up.cz, food.x - up.cx), food.y, pts, nrm);
+            return finishPath(pts, nrm);
+        }
+        const a1 = Math.atan2(food.z - canopy.trunk.cz, food.x - canopy.trunk.cx);
+        trunkWalk(canopy.trunk, a0, way.y, a1, way.y - Math.min(0.15, way.y - groundY(colony.nest.x, colony.nest.z)), pts, nrm);
+        from = climb(canopy.trunk, {x: food.x, z: food.z}, way.y - 0.15, true);
+    } else if (colony.trunk && colony.nest.y > groundY(colony.nest.x, colony.nest.z) + 0.05) from = climb(colony.trunk, {x: food.x, z: food.z}, colony.nest.y, true);
+    let to = {x: food.x, z: food.z};
     if (up) {
         const a = Math.atan2(from.z - up.cz, from.x - up.cx);
         to = {x: up.cx + Math.cos(a) * (up.r + 0.013), z: up.cz + Math.sin(a) * (up.r + 0.013)};
@@ -382,10 +398,207 @@ export function trailPath(colony: Colony, food: Pick<AntFood, "x" | "y" | "z" | 
         nrm.push(0, 1, 0);
     }
     if (up) climb(up, from, food.y, false);
+    return finishPath(pts, nrm);
+}
+
+function finishPath(pts: number[], nrm: number[]): Path {
     const n = pts.length / 3;
     const s = new Float32Array(n);
     for (let i = 1; i < n; i++) s[i] = s[i - 1] + Math.hypot(pts[i * 3] - pts[i * 3 - 3], pts[i * 3 + 1] - pts[i * 3 - 2], pts[i * 3 + 2] - pts[i * 3 - 1]);
     return {n, p: new Float32Array(pts), nrm: new Float32Array(nrm), s, length: s[n - 1]};
+}
+
+// MARK: Weaver ants in the crown
+
+/**
+ * Weaver ants (Oecophylla) live and forage in the crown: one colony holds many leaf nests over its trees, joined by
+ * trails along the branches, and its workers patrol the branches and leaves for prey and honeydew (Hölldobler & Wilson
+ * 1990, *The Ants*; the Field Guide: "Their nests are built in vegetation rather than underground"). Here: the drawn
+ * tree's own branch and leaf places (`canopyPoints`), each a way out along a branch from the trunk to a leaf; its leaf
+ * nests on a few of them.
+ */
+export type CanopyWay = {to: Pt; /** Where its limb leaves the trunk (m, world height). */ y: number; /** A leaf it reaches on past the limb (a twig's hop), when one is near. */ leaf: Pt | null};
+export type Canopy = {trunk: {cx: number; cz: number; r: number}; foot: number; ways: CanopyWay[]; /** The nests' ways (the first the colony's main nest). */ nests: number[]};
+
+/** The crown's places as the host gives them: its drawn branch and leaf places; `wood` on the drawn wood (a limb's top). */
+export type CanopyPoint = {x: number; y: number; z: number; leaf: boolean; wood: boolean};
+
+/** The colony's crown on its tree (seeded), or null where its tree has too few places up in it. */
+export function weaverCanopy(seed: number, trunk: {cx: number; cz: number; r: number}, foot: number, points: readonly CanopyPoint[]): Canopy | null {
+    const inCrown = (p: CanopyPoint) => {
+        const d = Math.hypot(p.x - trunk.cx, p.z - trunk.cz);
+        return p.y > foot + 1 && d > trunk.r + 0.15 && d < 6;
+    };
+    const up = points.filter(inCrown);
+    // The ways go out along the drawn limbs (their places are on the wood); a tree with too few, along its branches.
+    const wood = up.filter((p) => p.wood);
+    const bases = wood.length >= 3 ? wood : up.filter((p) => !p.leaf).length >= 3 ? up.filter((p) => !p.leaf) : up;
+    if (bases.length < 3) return null;
+    const leaves = up.filter((p) => p.leaf);
+    // Seeded order; no two ways end within 25 cm.
+    const order = bases.map((p, i) => ({p, k: u01(seed, i, 61)})).sort((a, b) => a.k - b.k).map((o) => o.p);
+    const ends: CanopyPoint[] = [];
+    for (const p of order) {
+        if (ends.length >= 28) break;
+        if (ends.some((e) => Math.hypot(e.x - p.x, e.y - p.y, e.z - p.z) < 0.25)) continue;
+        ends.push(p);
+    }
+    const ways: CanopyWay[] = ends.map((p) => {
+        const d = Math.hypot(p.x - trunk.cx, p.z - trunk.cz) - trunk.r;
+        let leaf: Pt | null = null;
+        let best = 1.5;
+        for (const l of leaves) {
+            const dl = Math.hypot(l.x - p.x, l.y - p.y, l.z - p.z);
+            // (Further out than the limb's place, not back toward the trunk.)
+            if (dl < best && Math.hypot(l.x - trunk.cx, l.z - trunk.cz) > d) {
+                best = dl;
+                leaf = {x: l.x, y: l.y, z: l.z};
+            }
+        }
+        // (A limb rises a little as it leaves the trunk: it left a little lower down.)
+        return {to: {x: p.x, y: p.y, z: p.z}, y: Math.min(p.y, Math.max(foot + 0.6, p.y - 0.15 * d)), leaf};
+    });
+    // The nests: at a way's leaf (its leaves pulled together) where there is one, low enough in the crown to be seen
+    // (1.2 to 4.5 m up), a metre apart; up to 3.
+    const nests: number[] = [];
+    const nestAt = (w: CanopyWay) => w.leaf ?? w.to;
+    for (const pass of [0, 1, 2]) {
+        ways.forEach((w, i) => {
+            const at = nestAt(w);
+            if (nests.length >= 3 || nests.includes(i)) return;
+            if (pass === 0 && !(w.leaf && at.y < foot + 4.5 && at.y > foot + 1.2)) return;
+            if (pass === 1 && !w.leaf) return;
+            if (nests.some((n) => Math.hypot(nestAt(ways[n]).x - at.x, nestAt(ways[n]).y - at.y, nestAt(ways[n]).z - at.z) < 0.9)) return;
+            nests.push(i);
+        });
+    }
+    return {trunk, foot, ways, nests};
+}
+
+/** Where a nest is: its way's leaf, else the limb's place. */
+export const canopyNest = (canopy: Canopy, k: number): Pt => canopy.ways[canopy.nests[k]].leaf ?? canopy.ways[canopy.nests[k]].to;
+
+const sameTrunk = (a: {cx: number; cz: number}, b: {cx: number; cz: number}) => Math.hypot(a.cx - b.cx, a.cz - b.cz) < 0.05;
+const wayAngle = (canopy: Canopy, way: CanopyWay) => Math.atan2(way.to.z - canopy.trunk.cz, way.to.x - canopy.trunk.cx);
+
+/** Round and along the trunk from (a0, y0) to (a1, y1), on its bark, the shorter way round. */
+function trunkWalk(trunk: {cx: number; cz: number; r: number}, a0: number, y0: number, a1: number, y1: number, pts: number[], nrm: number[]): void {
+    let da = a1 - a0;
+    while (da > Math.PI) da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    const steps = Math.max(2, Math.min(160, Math.ceil(Math.hypot(da * trunk.r, y1 - y0) / 0.03)));
+    for (let i = 0; i <= steps; i++) {
+        const k = i / steps;
+        const a = a0 + da * k;
+        const nx = Math.cos(a);
+        const nz = Math.sin(a);
+        pts.push(trunk.cx + nx * (trunk.r + 0.003), y0 + (y1 - y0) * k, trunk.cz + nz * (trunk.r + 0.003));
+        nrm.push(nx, 0, nz);
+    }
+}
+
+/** A way's corners: off the trunk at its limb's foot, the limb's place, its leaf. */
+function wayCorners(canopy: Canopy, way: CanopyWay): Pt[] {
+    const a = wayAngle(canopy, way);
+    const base = {x: canopy.trunk.cx + Math.cos(a) * (canopy.trunk.r + 0.003), y: way.y, z: canopy.trunk.cz + Math.sin(a) * (canopy.trunk.r + 0.003)};
+    return way.leaf ? [base, way.to, way.leaf] : [base, way.to];
+}
+
+/** At `k` (0..1) of the way along its corners: the point, the unit way on. */
+function wayAt(corners: readonly Pt[], k: number): {x: number; y: number; z: number; tx: number; ty: number; tz: number} {
+    let total = 0;
+    for (let i = 1; i < corners.length; i++) total += Math.hypot(corners[i].x - corners[i - 1].x, corners[i].y - corners[i - 1].y, corners[i].z - corners[i - 1].z);
+    let left = Math.min(Math.max(k, 0), 1) * total;
+    for (let i = 1; i < corners.length; i++) {
+        const a = corners[i - 1];
+        const b = corners[i];
+        const l = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) || 1e-6;
+        if (left <= l || i === corners.length - 1) {
+            const f = Math.min(left / l, 1);
+            return {x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, z: a.z + (b.z - a.z) * f, tx: (b.x - a.x) / l, ty: (b.y - a.y) / l, tz: (b.z - a.z) / l};
+        }
+        left -= l;
+    }
+    const c = corners[0];
+    return {x: c.x, y: c.y, z: c.z, tx: 1, ty: 0, tz: 0};
+}
+
+/** Along a way: out from the trunk along its limb to its leaf, or in (on its top: the ants' up is the world's). */
+function branchWalk(canopy: Canopy, way: CanopyWay, out: boolean, pts: number[], nrm: number[]): void {
+    const corners = wayCorners(canopy, way);
+    let L = 0;
+    for (let i = 1; i < corners.length; i++) L += Math.hypot(corners[i].x - corners[i - 1].x, corners[i].y - corners[i - 1].y, corners[i].z - corners[i - 1].z);
+    const steps = Math.max(2, Math.min(240, Math.ceil(L / 0.02)));
+    for (let i = 0; i <= steps; i++) {
+        const p = wayAt(corners, out ? i / steps : 1 - i / steps);
+        pts.push(p.x, p.y + 0.004, p.z);
+        nrm.push(0, 1, 0);
+    }
+}
+
+/** The trail between two leaf nests: in along one's branch, along the trunk, out along the other's. */
+export function nestTrailPath(canopy: Canopy, a: number, b: number): Path {
+    const pts: number[] = [];
+    const nrm: number[] = [];
+    const wa = canopy.ways[a];
+    const wb = canopy.ways[b];
+    branchWalk(canopy, wa, false, pts, nrm);
+    trunkWalk(canopy.trunk, wayAngle(canopy, wa), wa.y, wayAngle(canopy, wb), wb.y, pts, nrm);
+    branchWalk(canopy, wb, true, pts, nrm);
+    return finishPath(pts, nrm);
+}
+
+/** A trail between nests as a trail plan: always there, steady, nothing carried along it. */
+export function nestTrailPlan(key: string, at: Pt): TrailPlan {
+    return {food: {key, kind: "honeydew", x: at.x, y: at.y, z: at.z, from: -Infinity, until: Infinity, label: "nest"}, found: -Infinity, home: -Infinity, strength: 0.6, phase: "busy", stocked: false};
+}
+
+/**
+ * Weaver ant searchers in the crown: each out along a branch from the trunk toward its leaf and back, a seeded way a
+ * trip, winding a little across the branch; none on the ground. Searching only: no food, no load.
+ */
+export function canopySearchers(colony: Colony, canopy: Canopy, epoch: number, awake: boolean, count: number, view: View, sink: AntSink): number {
+    const kind = colony.kind;
+    const ways = canopy.ways;
+    let drawn = 0;
+    const r2 = view.r * view.r;
+    for (let j = 0; j < count; j++) {
+        // (Asleep: only on the nests' own branches, near the nest.)
+        const pick = (cycle: number) => (awake ? Math.floor(u01(colony.seed, j, cycle + 1000) * ways.length) : canopy.nests[j % canopy.nests.length]);
+        const span = 1.6 / kind.speed + 8;
+        const period = span * (0.6 + 0.8 * u01(colony.seed, j, 1));
+        const t = epoch + u01(colony.seed, j, 2) * period;
+        const cycle = Math.floor(t / period);
+        const u = t / period - cycle;
+        const way = ways[pick(cycle) % ways.length];
+        const corners = wayCorners(canopy, way);
+        // Out from the trunk along the limb toward its leaf and back in (asleep: a few close round the nest's leaf).
+        const reach = awake ? 0.35 + 0.65 * Math.sqrt(u01(colony.seed, j, cycle + 2000)) : 0.12;
+        const k = awake ? reach * Math.sin(Math.PI * u) : 1 - reach * (0.5 + 0.5 * Math.sin(u * 6.283 + j));
+        const at = wayAt(corners, k);
+        if ((at.x - view.x) ** 2 + (at.z - view.z) ** 2 > r2) continue;
+        const dir = awake ? (u < 0.5 ? 1 : -1) : 1;
+        let tx = at.tx * dir;
+        const ty = at.ty * dir;
+        let tz = at.tz * dir;
+        // Winding across the limb (its side: square to it, level).
+        const sx = -tz;
+        const sz = tx;
+        const sl = Math.hypot(sx, sz) || 1;
+        const w = Math.sin(k * 90 + j * 1.7) * kind.length * 1.2;
+        const turn = Math.cos(k * 90 + j * 1.7) * 0.5;
+        const c = Math.cos(turn);
+        const sn = Math.sin(turn);
+        const ntx = tx * c - tz * sn;
+        tz = tx * sn + tz * c;
+        tx = ntx;
+        const x = at.x + (sx / sl) * w;
+        const z = at.z + (sz / sl) * w;
+        const y = at.y + 0.004;
+        if (!sink(x, y, z, tx, ty, tz, 0, 1, 0, kind.length, LOAD_NONE, kind.front, kind.back)) return drawn;
+        drawn++;
+    }
+    return drawn;
 }
 
 const O = new Float32Array(9);
