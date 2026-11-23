@@ -102,6 +102,43 @@ const browser = await chromium.launch(
 const context = await browser.newContext({viewport: {width: Number(arg("width", "900")), height: Number(arg("height", "640"))}, deviceScaleFactor: 1});
 const page = await context.newPage();
 page.setDefaultTimeout(900_000);
+// A watch on the page's own thread: a call that does not come back in a minute is stopped where it is, with where it
+// was (the scene's function names: a development bundle), so a stall is a line in the report and not a run that hangs.
+const cdp = await context.newCDPSession(page);
+await cdp.send("Debugger.enable");
+const stalls = [];
+cdp.on("Debugger.paused", (event) => {
+    const frames = (event.callFrames ?? []).slice(0, 14).map((f) => `${f.functionName || "(anonymous)"}@${(f.url || "").split("/").pop()}:${f.location?.lineNumber}`);
+    stalls.push(frames);
+    console.log("STALL in the page:", frames.join(" < "));
+    void cdp.send("Runtime.terminateExecution").catch(() => undefined);
+    void cdp.send("Debugger.resume").catch(() => undefined);
+});
+// (And between calls: every 20 s, has the page answered at all? A trivial question, watched the same way.)
+let pulseBusy = false;
+const pulse = setInterval(() => {
+    if (pulseBusy) return;
+    pulseBusy = true;
+    let timer = setTimeout(() => void cdp.send("Debugger.pause").catch(() => undefined), 20_000);
+    page.evaluate(() => 1).catch(() => undefined).finally(() => {
+        clearTimeout(timer);
+        pulseBusy = false;
+    });
+}, 20_000);
+const watched = async (work, what) => {
+    let timer;
+    const stall = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+            void cdp.send("Debugger.pause").catch(() => undefined);
+            setTimeout(() => reject(new Error(`the page did not answer in a minute (${what})`)), 5000);
+        }, 60_000);
+    });
+    try {
+        return await Promise.race([work(), stall]);
+    } finally {
+        clearTimeout(timer);
+    }
+};
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
 // The clock: from a fixed moment, running at real speed (the same animals in the same places run to run).
@@ -161,7 +198,7 @@ const settle = async () => {
         // (By frames drawn, not by the clock: software WebGL draws a few a second.)
         frame += 3;
         await page.waitForFunction((f) => window.__arkSeat.frames >= f, frame, {timeout: 4000, polling: 50}).catch(() => undefined);
-        const now = await page.evaluate(() => {
+        const now = await watched(() => page.evaluate(() => {
             const rows = window.__arkSeatProbe.drawn(3);
             const entries = new Map(window.__arkDebug.entries().map((e) => [e.animal.id, e]));
             let moving = 0;
@@ -174,7 +211,8 @@ const settle = async () => {
             // (The models and the rigs on their way: an animal is its marker until its model is in.)
             const loading = (window.__arkDebug.library?.busy ? 1 : 0) + (window.__arkDebug.rigs?.busy ? 1 : 0);
             return {key: `${rows.length}|${rows.filter((r) => r.level !== "far").length}`, moving, loading, pending: window.__arkSeat.solids.stats().pending, frames: window.__arkSeat.frames};
-        });
+        }), "settling").catch(() => null);
+        if (!now) return;
         frame = now.frames;
         if (now.key === last && !now.loading && (seatOff || (now.moving === 0 && now.pending === 0))) {
             if (++same >= 3) return;
@@ -271,14 +309,21 @@ for (const island of islands) {
                 }
                 return out;
             }, {ids, skip, target: next.id, island});
-            const measured = await measure(null, Array.from(seen));
+            let measured = [];
+            try {
+                measured = await watched(() => measure(null, Array.from(seen)), `measuring at ${next.id}`);
+            } catch (error) {
+                console.log(String(error));
+                gone.add(next.id);
+                continue;
+            }
             // One caught off its seat is looked at again, up to seven times over three seconds: a stride's or a landing's
             // moment passes, and one on its way to its seat arrives; one that is off every time is off.
             for (let again = 0; again < 7; again++) {
                 const off = measured.filter((row) => verdict(row) !== "ok" && verdict(row) !== "exempt");
                 if (!off.length) break;
                 await wait(430);
-                for (const row of await measure(off.map((r) => r.id), [])) {
+                for (const row of await watched(() => measure(off.map((r) => r.id), []), "looking again").catch(() => [])) {
                     const at = measured.findIndex((r) => r.id === row.id);
                     if (at >= 0 && badness(row) < badness(measured[at])) measured[at] = {...row, looks: again + 2};
                 }
@@ -303,6 +348,7 @@ for (const island of islands) {
         writeFileSync(path.join(out, `${label}.partial.json`), JSON.stringify({coverage, rows: rows.map((row) => ({...row, verdict: verdict(row)})), notDrawn}));
     }
 }
+clearInterval(pulse);
 const seatStats = await page.evaluate(() => ({...window.__arkSeat.solids.stats(), solves: window.__arkSeat.solves, ms: window.__arkSeat.ms}));
 await browser.close();
 server.close();
@@ -345,7 +391,7 @@ const grossOver = Number(arg("gross", "0"));
 const allowGross = Number(arg("allow-gross", "0"));
 const isGross = (row) => row.verdict === "nothing" || (row.verdict === "inside" && (row.middle || row.inside >= 0.25 * Math.max(row.of, 1))) || Math.max(Math.abs(row.gap ?? 0), Math.abs(row.low ?? 0)) > grossOver;
 const gross = failures.filter(isGross);
-const summary = {label, gate: {seated: seatedCount, off: failures.length, gross: gross.length, allow, grossOver}, seat: seatOff ? "off" : "on", quality: arg("quality", "high"), afloatInAir: afloatInAir.length, tolerance: TOLERANCE, hours, islands, coverage, table, failures: failures.length, exempt, seatStats, errors: errors.slice(0, 10)};
+const summary = {label, stalls, gate: {seated: seatedCount, off: failures.length, gross: gross.length, allow, grossOver}, seat: seatOff ? "off" : "on", quality: arg("quality", "high"), afloatInAir: afloatInAir.length, tolerance: TOLERANCE, hours, islands, coverage, table, failures: failures.length, exempt, seatStats, errors: errors.slice(0, 10)};
 writeFileSync(path.join(out, `${label}.json`), JSON.stringify({summary, rows, notDrawn}, null, 1));
 const md = [
     `# Ark seat audit: ${label} (seat pass ${seatOff ? "off" : "on"})`,
@@ -384,4 +430,5 @@ console.log(md.split("\n").slice(0, 14).join("\n"));
 console.log(`failures: ${failures.length}; rows: ${rows.length}; wrote ${path.join(out, `${label}.json`)}`);
 if (errors.length) console.log("page errors:", JSON.stringify(errors.slice(0, 6)));
 console.log(`gate: ${failures.length} of ${seatedCount} seated animals off their seats (${seatedCount ? ((100 * failures.length) / seatedCount).toFixed(2) : "-"}%; allowed ${(100 * allow).toFixed(2)}%), ${gross.length} of them grossly (over ${(grossOver * 100).toFixed(0)} cm, inside a solid, nothing under it: ${seatedCount ? ((100 * gross.length) / seatedCount).toFixed(2) : "-"}%; allowed ${(100 * allowGross).toFixed(2)}%)`);
-if (has("gate") && (!seatedCount || failures.length > allow * seatedCount || gross.length > allowGross * seatedCount)) process.exit(1);
+if (stalls.length) console.log(`the page stalled ${stalls.length} time(s): see STALL above`);
+if (has("gate") && (!seatedCount || stalls.length || failures.length > allow * seatedCount || gross.length > allowGross * seatedCount)) process.exit(1);

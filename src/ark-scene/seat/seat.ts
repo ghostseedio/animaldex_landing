@@ -97,6 +97,8 @@ export type SeatState = {
     /** What keeps its feet level through a clip of its own (m, `clipLift`): drawn now, and the feet's level it is taken from. */
     lift: number;
     liftFrom: number;
+    /** How far its search for a way out of rock has got (the place it takes it up from at its next turn). */
+    ring: number;
     /** Moves onto a surface beside it in a row that left it no nearer one. */
     sides: number;
     /** Held where nothing is drawn (a trunk's side that is not there, a perch over nothing): drawn upright, coming down; and where that was. */
@@ -164,6 +166,12 @@ const world = new Float32Array(3 * (MAX_POINTS + 8));
 const model = new Float32Array(3 * MAX_POINTS);
 const hits: SolidHit[] = [];
 const near: Near[] = [];
+/** Of `near`, the closed ones (rock, and built things drawn one-sided): what a body can be inside, or over. */
+const hard: Near[] = [];
+function closedOf(): void {
+    hard.length = 0;
+    for (const it of near) if (!it.solid.double && it.solid.cls & (ROCK | HARD)) hard.push(it);
+}
 const order: number[] = [];
 const support: number[] = [];
 const gaps: number[] = [];
@@ -367,7 +375,7 @@ export class SeatPass {
      * After its matrix is final: work out where it rests, if it is its turn. Sets the target its offset eases to.
      */
     settle(input: SeatInput): void {
-        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, ox: NaN, oy: NaN, oz: NaN, sx: NaN, sz: NaN, urgent: false, mute: 0, mutes: 0, wasGap: NaN, wasOff: 0, wasOwnY: NaN, lean: 0, idle: 99, lift: 0, liftFrom: NaN, sides: 0, fell: false, fellX: 0, fellZ: 0});
+        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, ox: NaN, oy: NaN, oz: NaN, sx: NaN, sz: NaN, urgent: false, mute: 0, mutes: 0, wasGap: NaN, wasOff: 0, wasOwnY: NaN, lean: 0, idle: 99, lift: 0, liftFrom: NaN, ring: 0, sides: 0, fell: false, fellX: 0, fellZ: 0});
         s.kind = input.kind;
         if (this.keepPoints) {
             // Development (the audit's probe, `audit-probe.ts`): the animal as drawn this frame.
@@ -460,6 +468,7 @@ export class SeatPass {
         near.length = 0;
         this.solids.release();
         const whole = this.solids.collect(cx - far, cy - reach, cz - far, cx + far, cy + ROCK_REACH, cz + far, ROCK | HARD, near);
+        closedOf();
         s.frame = this.frame;
         s.seen = this.solids.version;
         s.due = this.frame + (whole ? 6 + (Math.abs(Math.round(e[12] * 31 + e[14] * 17)) % 6) : 1);
@@ -608,6 +617,7 @@ export class SeatPass {
         near.length = 0;
         this.solids.release();
         const whole = this.solids.collect(x0 - pad, under, z0 - pad, x1 + pad, y1 + (cling ? Math.max(up, reachUp) : ROCK_REACH), z1 + pad, mask, near);
+        closedOf();
         gaps.length = 0;
         groundGaps.length = 0;
         let on = "ground";
@@ -732,7 +742,7 @@ export class SeatPass {
         let sideways = false;
         let closedMin = Infinity;
         s.inside = 0;
-        if (!cling && near.some((it) => it.solid.cls & (ROCK | HARD) && !it.solid.double)) {
+        if (!cling && hard.length) {
             const below = Math.max(gap, 0) + 0.02;
             let closed = Infinity;
             // (Its points, and its middle: the middle of their box.)
@@ -742,7 +752,7 @@ export class SeatPass {
                 const z = i < n ? world[i * 3 + 2] : (z0 + z1) / 2;
                 if (!this.boxed(x, z)) continue;
                 hits.length = 0;
-                this.solids.castIn(near, x, y + ROCK_REACH, z, 0, -(ROCK_REACH + below), 0, hits);
+                this.solids.castIn(hard, x, y + ROCK_REACH, z, 0, -(ROCK_REACH + below), 0, hits);
                 let top = -Infinity;
                 let overY = Infinity;
                 let overNy = 0;
@@ -789,7 +799,10 @@ export class SeatPass {
                     sideways = true;
                 }
             }
-            if (!s.inside && !sideways) s.pushes = 0;
+            if (!s.inside && !sideways) {
+                s.pushes = 0;
+                s.ring = 0;
+            }
         }
         // Held on something with nothing near under it: a drawn surface beside it first; none, it comes down, once
         // that has lasted (what it is held on may be a moment from being drawn).
@@ -889,9 +902,11 @@ export class SeatPass {
         }
         if (sideways && !moved && s.pushes < 8 && s.x === s.tx && s.y === s.ty && s.z === s.tz && (this.pushesLeft > 0 || this.forced || input.focus)) {
             this.pushesLeft--;
-            const out = this.wayOut(n, e, cx, cy, cz, length, reachUp, input.ground);
-            s.pushes++;
-            if (out) {
+            const out = this.wayOut(s, this.forced ? 30 : input.focus ? 6 : 1.5, n, e, cx, cy, cz, length, reachUp, input.ground);
+            // (A search not yet through is taken up at its next turn; one through with no free place is not made again.)
+            if (out === null) s.pushes = 8;
+            else if (out !== "more") s.pushes++;
+            if (out && out !== "more") {
                 s.tx = s.x + out.x;
                 s.ty = s.y + out.y;
                 s.tz = s.z + out.z;
@@ -928,6 +943,7 @@ export class SeatPass {
         near.length = 0;
         this.solids.release();
         this.solids.collect(cx - far - 0.1, y - down - 0.1, cz - far - 0.1, cx + far + 0.1, y + up + 0.1, cz + far + 0.1, mask, near);
+        closedOf();
         const found: Array<{x: number; z: number; gap: number; kind: string; d: number}> = [];
         let least = Infinity;
         let last = -1;
@@ -996,8 +1012,7 @@ export class SeatPass {
 
     /** Whether a point is over or under the box of something closed near the body (most points are in none). */
     private boxed(x: number, z: number): boolean {
-        for (const it of near) {
-            if (it.solid.double || !(it.solid.cls & (ROCK | HARD))) continue;
+        for (const it of hard) {
             const b = it.solid.boxes;
             const o = it.o;
             if (x >= b[o] && x <= b[o + 3] && z >= b[o + 2] && z <= b[o + 5]) return true;
@@ -1011,7 +1026,7 @@ export class SeatPass {
      */
     private undersideBelow(x: number, y: number, z: number, reach: number): boolean {
         hits.length = 0;
-        this.solids.castIn(near, x, y, z, 0, -reach, 0, hits);
+        this.solids.castIn(hard, x, y, z, 0, -reach, 0, hits);
         let first: SolidHit | null = null;
         for (const hit of hits) if (!hit.double && hit.cls & (ROCK | HARD) && (!first || hit.t < first.t)) first = hit;
         return first !== null && first.ny < -0.2;
@@ -1026,7 +1041,7 @@ export class SeatPass {
     private depthAt(x: number, y: number, z: number, reach: number): number {
         if (!this.boxed(x, z)) return 0;
         hits.length = 0;
-        this.solids.castIn(near, x, y, z, 0, ROCK_REACH, 0, hits);
+        this.solids.castIn(hard, x, y, z, 0, ROCK_REACH, 0, hits);
         let first: SolidHit | null = null;
         for (const hit of hits) if (!hit.double && (hit.cls === ROCK || (hit.cls === HARD && hit.t * ROCK_REACH <= reach)) && (!first || hit.t < first.t)) first = hit;
         if (first === null || first.ny <= 0.2) return 0;
@@ -1067,7 +1082,7 @@ export class SeatPass {
                 const under = ground(x, z, y);
                 let top = under;
                 hits.length = 0;
-                if (y + 0.02 > under) this.solids.castIn(near, x, y + 0.02, z, 0, under - y - 0.04, 0, hits);
+                if (y + 0.02 > under) this.solids.castIn(hard, x, y + 0.02, z, 0, under - y - 0.04, 0, hits);
                 for (const hit of hits) if (!hit.double && hit.cls & (ROCK | HARD) && hit.ny > 0 && hit.y > top) top = hit.y;
                 all++;
                 if (y - top <= Math.max(0.05, 0.15 * height)) held++;
@@ -1121,7 +1136,7 @@ export class SeatPass {
                 // underside (or the ground); a built thing, only a top under the body's own top (a log, a trough).
                 const from = highY + ROCK_REACH;
                 hits.length = 0;
-                if (from > floor) this.solids.castIn(near, x, from, z, 0, floor - from, 0, hits);
+                if (from > floor) this.solids.castIn(hard, x, from, z, 0, floor - from, 0, hits);
                 stoneOrder.length = 0;
                 for (let h = 0; h < hits.length; h++) if (!hits[h].double && hits[h].cls & (ROCK | HARD)) stoneOrder.push(h);
                 stoneOrder.sort((p, q) => hits[q].y - hits[p].y);
@@ -1149,9 +1164,9 @@ export class SeatPass {
 
     /**
      * The nearest move sideways that takes the body out of the closed things it is in: a step at a time each way, to
-     * the first place where none of its points is under a closed thing's own top. Null: none within three body lengths (it is left: the audit says so).
+     * the first place where none of its points is under a closed thing's own top. Null: none within three body lengths (it is left: the audit says so); "more": its time was up, the rest at its next turn.
      */
-    private wayOut(n: number, e: ArrayLike<number>, cx: number, cy: number, cz: number, length: number, reach: number, ground: (x: number, z: number, near?: number) => number): {x: number; y: number; z: number} | null {
+    private wayOut(s: SeatState, budget: number, n: number, e: ArrayLike<number>, cx: number, cy: number, cz: number, length: number, reach: number, ground: (x: number, z: number, near?: number) => number): {x: number; y: number; z: number} | "more" | null {
         const step = Math.max(0.125 * length, 0.03);
         const here = ground(cx, cz, cy);
         const far = step * 24 + length;
@@ -1167,21 +1182,33 @@ export class SeatPass {
         near.length = 0;
         this.solids.release();
         this.solids.collect(cx - far, cy - reach - length, cz - far, cx + far, cy + ROCK_REACH, cz + far, ROCK | HARD, near);
-        for (let j = 1; j <= 24; j++) {
-            for (let k = 0; k < 8; k++) {
-                const dx = Math.cos((k * Math.PI) / 4) * step * j;
-                const dz = Math.sin((k * Math.PI) / 4) * step * j;
-                const dy = ground(cx + dx, cz + dz, cy) - here;
-                let free = this.depthAt(cx + dx, cy + dy, cz + dz, reach) <= 0.02;
-                for (let w = 0; free && w < wayPoints.length; w++) {
-                    const i = wayPoints[w];
-                    if (this.depthAt(world[i * 3] + dx, world[i * 3 + 1] + dy, world[i * 3 + 2] + dz, reach) > 0.02) free = false;
-                }
-                // (And no stone under it there.)
-                if (free && this.stoneUnder(n, e, lowY + dy, highY + dy, length, dx, dy, dz, ground) < -0.02) free = false;
-                if (free) return {x: dx, y: dy, z: dz};
+        closedOf();
+        // (Inside a time: a body among many closed things costs a cast a point a place. What is left is taken up at
+        // its next turn, from the place it had reached.)
+        const started = performance.now();
+        for (let c = s.ring; c < 24 * 8; c++) {
+            if (c > s.ring && performance.now() - started > budget) {
+                s.ring = c;
+                return "more";
+            }
+            const j = 1 + Math.floor(c / 8);
+            const k = c % 8;
+            const dx = Math.cos((k * Math.PI) / 4) * step * j;
+            const dz = Math.sin((k * Math.PI) / 4) * step * j;
+            const dy = ground(cx + dx, cz + dz, cy) - here;
+            let free = this.depthAt(cx + dx, cy + dy, cz + dz, reach) <= 0.02;
+            for (let w = 0; free && w < wayPoints.length; w++) {
+                const i = wayPoints[w];
+                if (this.depthAt(world[i * 3] + dx, world[i * 3 + 1] + dy, world[i * 3 + 2] + dz, reach) > 0.02) free = false;
+            }
+            // (And no stone under it there.)
+            if (free && this.stoneUnder(n, e, lowY + dy, highY + dy, length, dx, dy, dz, ground) < -0.02) free = false;
+            if (free) {
+                s.ring = 0;
+                return {x: dx, y: dy, z: dz};
             }
         }
+        s.ring = 0;
         return null;
     }
 }
