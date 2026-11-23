@@ -25,7 +25,7 @@
 
 import type {BufferGeometry, Matrix4, Object3D} from "three";
 import {ALL, DrawnSolids, HARD, ROCK, SOFT, TREE, type Near, type SolidHit} from "@/ark-scene/seat/solids";
-import {feetOf, hullKnown, hullOf, posedHull, soleLevel, type RigPose} from "@/ark-scene/seat/support";
+import {feetOf, hullKnown, hullOf, lyingPoints, posedHull, soleLevel, type RigPose} from "@/ark-scene/seat/support";
 
 /** What the scene says the animal is doing, for the seat: the first four are seated, the rest left alone. */
 export type SeatKind = "stand" | "lie" | "perch" | "cling" | "fly" | "swim" | "hang" | "ride" | "carried" | "den" | "afloat" | "hop" | "act" | "swing" | "grow";
@@ -522,7 +522,10 @@ export class SeatPass {
         const pose = input.pose;
         const soles = feetOf(input.geometry, input.grips);
         const feet = soles ? posedHull(soles, pose, model) : 0;
-        const n = Math.min(feet + posedHull(hull, pose, feet ? model.subarray(feet * 3) : model), MAX_POINTS);
+        const posed = Math.min(feet + posedHull(hull, pose, feet ? model.subarray(feet * 3) : model), MAX_POINTS);
+        // (Lying: the posed body's lowest too, its folded legs and its belly, `lyingPoints`; after its hull, in the room
+        // left, so a bird's many soles never push the hull's own lowest out of the points.)
+        const n = posed + (input.kind === "lie" && posed < MAX_POINTS ? lyingPoints(input.geometry, pose, model.subarray(posed * 3)) : 0);
         const e = input.matrix.elements;
         const sway = input.surface?.sway;
         let cx = 0;
