@@ -185,7 +185,11 @@ const SWIM_FAMILY: Array<[RegExp, string, string]> = [
     [/^(Pleuronectidae|Scophthalmidae|Soleidae|Bothidae)$/, "ff", "flatfish: lying on its side, the whole flat body ripples up and down"],
     [/^(Myliobatidae|Mobulidae)$/, "mb", "mobuliform: flies with its wing-like fins, big slow flaps"],
     [/^(Dasyatidae|Potamotrygonidae|Rajidae|Urolophidae|Torpedinidae|Gymnuridae)$/, "rj", "rajiform: a wave runs front to back along the fin's edge"],
-    [/^(Trichechidae|Dugongidae)$/, "si", "sirenian: slow up-and-down beats of the paddle tail"]
+    [/^(Trichechidae|Dugongidae)$/, "si", "sirenian: slow up-and-down beats of the paddle tail"],
+    // SPECIES-ANIM-B (2026-11-24, aquatic audit): the families of the Ark's swimmers that had no swim style
+    [/^Cichlidae$/, "sc", "subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"],
+    [/^(Acipenseridae|Polyodontidae)$/, "sc", "subcarangiform: a sturgeon's long body and heterocercal tail beat side to side"],
+    [/^(Megalopidae|Elopidae)$/, "sc", "subcarangiform: the rear half of the body and the forked tail"]
 ];
 function swimOf(row: Row, tplan: string | null): {code: string; why: string} | null {
     const family = row.family_name ?? "";
@@ -193,6 +197,9 @@ function swimOf(row: Row, tplan: string | null): {code: string; why: string} | n
     const slug = row.slug!;
     if (order === "Cetacea" || (tplan === "cetacean" && order !== "Sirenia" && order !== "Acipenseriformes")) return {code: "ce", why: `cetacean (${family}): up-and-down fluke beats`};
     for (const [re, code, why] of SWIM_FAMILY) if (re.test(family)) return {code, why: `${family}: ${why}`};
+    // (No family on record: the order or the class decides. A generic group's row, freshwater-eel or ray, has none.)
+    if (!family && order === "Anguilliformes") return {code: "an", why: "Anguilliformes (no family on record): anguilliform, the whole body waves"};
+    if (!family && row.class_name === "Elasmobranchii" && /(^|-)ray$/.test(slug)) return {code: "rj", why: "a ray (Elasmobranchii, no family on record): rajiform, a wave along the fin's edge"};
     if (/sea-krait|sea-snake/.test(slug)) return {code: "an", why: "sea snake: anguilliform with a paddle tail"};
     if (tplan === "eel") return {code: "an", why: `eel-like body (model plan eel, ${family || order})`};
     if (tplan === "flatfish") return {code: family === "Orectolobidae" ? "sc" : "ff", why: family === "Orectolobidae" ? "wobbegong (Orectolobidae): a flat shark, but it swims side to side" : "flatfish model"};
@@ -229,13 +236,16 @@ const full: Record<string, Record<string, {code: string; why: string}>> = {};
 const tally: Record<string, Record<string, number>> = {flight: {}, ground: {}, swim: {}, legless: {}};
 for (const row of rows) {
     const slug = row.slug;
-    if (!slug || row.excluded_reason) continue;
+    if (!slug) continue;
+    // An excluded row (a generic group, a hybrid) is still a body in the Ark's water (a blood parrot in a town tank):
+    // it keeps its swim style; flight, ground and legless stay for the real species only (SPECIES-ANIM-B, 2026-11-24).
+    const excluded = Boolean(row.excluded_reason);
     const plan = detail[slug]?.plan ?? null;
     const tplan = talkingPlan(slug);
-    const f = flightOf(row, plan);
-    const g = f && row.class_name === "Aves" ? groundOf(row) : row.class_name === "Aves" ? groundOf(row) : null;
+    const f = excluded ? null : flightOf(row, plan);
+    const g = excluded ? null : f && row.class_name === "Aves" ? groundOf(row) : row.class_name === "Aves" ? groundOf(row) : null;
     const s = swimOf(row, tplan);
-    const l = leglessOf(row, tplan, plan);
+    const l = excluded ? null : leglessOf(row, tplan, plan);
     if (!f && !g && !s && !l) continue;
     compact[slug] = [f?.code ?? "", g?.code ?? "", s?.code ?? "", l?.code ?? ""].join("|");
     full[slug] = Object.fromEntries(Object.entries({flight: f, ground: g, swim: s, legless: l}).filter(([, v]) => v)) as Record<string, {code: string; why: string}>;

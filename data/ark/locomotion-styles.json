@@ -15,16 +15,16 @@
    "t": 7
   },
   "ground": {
-   "w": 232,
+   "w": 233,
    "a": 106,
-   "wb": 179,
+   "wb": 183,
    "r": 50,
    "h": 109,
    "rb": 4
   },
   "swim": {
-   "an": 33,
-   "sc": 100,
+   "an": 34,
+   "sc": 106,
    "ce": 22,
    "lb": 52,
    "si": 4,
@@ -32,7 +32,7 @@
    "ca": 26,
    "os": 60,
    "ff": 5,
-   "rj": 4,
+   "rj": 5,
    "mb": 4
   },
   "legless": {
@@ -289,7 +289,7 @@
   "american-paddlefish": {
    "swim": {
     "code": "sc",
-    "why": "fish (Polyodontidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Polyodontidae: subcarangiform: a sturgeon's long body and heterocercal tail beat side to side"
    }
   },
   "american-robin": {
@@ -575,7 +575,7 @@
   "atlantic-tarpon": {
    "swim": {
     "code": "sc",
-    "why": "fish (Megalopidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Megalopidae: subcarangiform: the rear half of the body and the forked tail"
    }
   },
   "atlantic-trumpetfish": {
@@ -778,6 +778,12 @@
     "why": "Hirundinidae: walks"
    }
   },
+  "bantam-chicken": {
+   "ground": {
+    "code": "wb",
+    "why": "Phasianidae: walks, head-bobbing as it walks"
+   }
+  },
   "bar-headed-goose": {
    "flight": {
     "code": "c1.35",
@@ -950,6 +956,12 @@
    "ground": {
     "code": "w",
     "why": "Alcedinidae: walks"
+   }
+  },
+  "beluga-sturgeon": {
+   "swim": {
+    "code": "sc",
+    "why": "Acipenseridae: subcarangiform: a sturgeon's long body and heterocercal tail beat side to side"
    }
   },
   "beluga-whale": {
@@ -1276,6 +1288,12 @@
     "why": "Psychrolutidae: fin-driven (ostraciiform/tetraodontiform): the body nearly still, fins and tail scull"
    }
   },
+  "blood-parrot-cichlid": {
+   "swim": {
+    "code": "sc",
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
+   }
+  },
   "blossom-headed-parakeet": {
    "flight": {
     "code": "c1.1",
@@ -1339,7 +1357,7 @@
   "blue-discus": {
    "swim": {
     "code": "sc",
-    "why": "fish (Cichlidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
    }
   },
   "blue-footed-booby": {
@@ -1815,7 +1833,7 @@
   "butterfly-peacock-bass": {
    "swim": {
     "code": "sc",
-    "why": "fish (Cichlidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
    }
   },
   "cabbage-cluster-moth": {
@@ -2078,6 +2096,12 @@
    "flight": {
     "code": "w110",
     "why": "Hymenoptera/Crabronidae: wasps 80-150 Hz"
+   }
+  },
+  "cichlid": {
+   "swim": {
+    "code": "sc",
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
    }
   },
   "cinereous-vulture": {
@@ -3209,7 +3233,7 @@
   "electric-blue-acara": {
    "swim": {
     "code": "sc",
-    "why": "fish (Cichlidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
    }
   },
   "electric-catfish": {
@@ -3613,7 +3637,7 @@
   "european-sturgeon": {
    "swim": {
     "code": "sc",
-    "why": "fish (Acipenseridae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Acipenseridae: subcarangiform: a sturgeon's long body and heterocercal tail beat side to side"
    }
   },
   "evergreen-bagworm-moth": {
@@ -3653,7 +3677,7 @@
   "featherfin-cichlid": {
    "swim": {
     "code": "sc",
-    "why": "fish (Cichlidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
    }
   },
   "fieldfare": {
@@ -3762,6 +3786,12 @@
     "why": "Hymenoptera/Scoliidae: wasps 80-150 Hz"
    }
   },
+  "flowerhorn-cichlid": {
+   "swim": {
+    "code": "sc",
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
+   }
+  },
   "flying-gurnard": {
    "swim": {
     "code": "os",
@@ -3809,13 +3839,19 @@
   "freshwater-angelfish": {
    "swim": {
     "code": "sc",
-    "why": "fish (Cichlidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
    }
   },
   "freshwater-butterflyfish": {
    "swim": {
     "code": "lb",
     "why": "Pantodontidae: labriform: rows with its pectoral fins, the body steady, a light tail"
+   }
+  },
+  "freshwater-eel": {
+   "swim": {
+    "code": "an",
+    "why": "Anguilliformes (no family on record): anguilliform, the whole body waves"
    }
   },
   "frilled-shark": {
@@ -5061,7 +5097,7 @@
   "indo-pacific-tarpon": {
    "swim": {
     "code": "sc",
-    "why": "fish (Megalopidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Megalopidae: subcarangiform: the rear half of the body and the forked tail"
    }
   },
   "indus-river-dolphin": {
@@ -5466,6 +5502,12 @@
    "ground": {
     "code": "wb",
     "why": "Ardeidae: walks, head-bobbing as it walks"
+   }
+  },
+  "leghorn-chicken": {
+   "ground": {
+    "code": "wb",
+    "why": "Phasianidae: walks, head-bobbing as it walks"
    }
   },
   "leopard-lacewing": {
@@ -6281,7 +6323,7 @@
   "nile-tilapia": {
    "swim": {
     "code": "sc",
-    "why": "fish (Cichlidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
    }
   },
   "northern-bald-ibis": {
@@ -6609,7 +6651,7 @@
   "oscar-fish": {
    "swim": {
     "code": "sc",
-    "why": "fish (Cichlidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
    }
   },
   "osprey": {
@@ -6926,6 +6968,12 @@
    "ground": {
     "code": "w",
     "why": "Cracticidae: walks"
+   }
+  },
+  "pied-cockatiel": {
+   "ground": {
+    "code": "w",
+    "why": "Psittacidae: walks"
    }
   },
   "pied-crow": {
@@ -7266,6 +7314,12 @@
    "swim": {
     "code": "ca",
     "why": "Melanotaeniidae: carangiform: the rear third of the body and the tail beat"
+   }
+  },
+  "ray": {
+   "swim": {
+    "code": "rj",
+    "why": "a ray (Elasmobranchii, no family on record): rajiform, a wave along the fin's edge"
    }
   },
   "razorbill": {
@@ -7625,7 +7679,7 @@
   "red-zebra-cichlid": {
    "swim": {
     "code": "sc",
-    "why": "fish (Cichlidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
    }
   },
   "redcoat-squirrelfish": {
@@ -7708,6 +7762,12 @@
    "legless": {
     "code": "re",
     "why": "Viperidae: heavy-bodied; rectilinear (straight, belly ripples) when slow, lateral undulation when faster (rule, not stored text)"
+   }
+  },
+  "rhode-island-red": {
+   "ground": {
+    "code": "wb",
+    "why": "Phasianidae: walks, head-bobbing as it walks"
    }
   },
   "ribbon-eel": {
@@ -8301,13 +8361,19 @@
   "siberian-sturgeon": {
    "swim": {
     "code": "sc",
-    "why": "fish (Acipenseridae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Acipenseridae: subcarangiform: a sturgeon's long body and heterocercal tail beat side to side"
    }
   },
   "sidewinder": {
    "legless": {
     "code": "sw",
     "why": "stored text: \"Sidewinding locomotion across loose hot sand\""
+   }
+  },
+  "silkie-chicken": {
+   "ground": {
+    "code": "wb",
+    "why": "Phasianidae: walks, head-bobbing as it walks"
    }
   },
   "silver-appleyard-duck": {
@@ -8837,7 +8903,7 @@
   "sterlet-sturgeon": {
    "swim": {
     "code": "sc",
-    "why": "fish (Acipenseridae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Acipenseridae: subcarangiform: a sturgeon's long body and heterocercal tail beat side to side"
    }
   },
   "stone-centipede": {
@@ -8888,6 +8954,12 @@
    "swim": {
     "code": "an",
     "why": "Channidae: anguilliform: the whole body waves, head to tail"
+   }
+  },
+  "sturgeon": {
+   "swim": {
+    "code": "sc",
+    "why": "Acipenseridae: subcarangiform: a sturgeon's long body and heterocercal tail beat side to side"
    }
   },
   "sulphur-crested-cockatoo": {
@@ -9076,6 +9148,12 @@
     "why": "Hymenoptera/Pompilidae: wasps 80-150 Hz"
    }
   },
+  "tarpon": {
+   "swim": {
+    "code": "sc",
+    "why": "Megalopidae: subcarangiform: the rear half of the body and the forked tail"
+   }
+  },
   "tasselled-wobbegong": {
    "swim": {
     "code": "sc",
@@ -9133,7 +9211,7 @@
   "threadfin-acara": {
    "swim": {
     "code": "sc",
-    "why": "fish (Cichlidae): subcarangiform default (the rear half of the body and the tail)"
+    "why": "Cichlidae: subcarangiform, as the Ark's other cichlids (oscar, discus, angelfish): the rear half of the body and the tail"
    }
   },
   "three-spined-stickleback": {
