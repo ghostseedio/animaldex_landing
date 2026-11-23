@@ -182,7 +182,8 @@
    "recipe": "wallow~turtle",
    "behaviour": "rests in shade and wallows in heat",
    "field": "sleep",
-   "quote": "Day-active but rests during heat, using shade, wallows, and slow rhythms"
+   "quote": "Day-active but rests during heat, using shade, wallows, and slow rhythms",
+   "line": "{aAnimal} is wallowing in the mud at the water's edge"
   },
   {
    "slug": "asian-forest-tortoise",
@@ -190,7 +191,8 @@
    "recipe": "wallow~turtle",
    "behaviour": "pushes into damp leaf litter or mud for hours on warm days",
    "field": "story",
-   "quote": "On warm days it pushes itself into damp leaf litter or soft mud and stays there for hours"
+   "quote": "On warm days it pushes itself into damp leaf litter or soft mud and stays there for hours",
+   "line": "{aAnimal} is pushing itself down into the soft mud"
   },
   {
    "slug": "galapagos-tortoise",
@@ -198,7 +200,8 @@
    "recipe": "wallow~turtle",
    "behaviour": "sleeps half-submerged in mud wallows",
    "field": "sleep",
-   "quote": "At night it sleeps in shallow scrapes, under bushes, or half-submerged in mud wallows and pools."
+   "quote": "At night it sleeps in shallow scrapes, under bushes, or half-submerged in mud wallows and pools.",
+   "line": "{aAnimal} is settling into a mud wallow"
   },
   {
    "slug": "hawksbill-sea-turtle",

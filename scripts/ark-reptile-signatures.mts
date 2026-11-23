@@ -38,9 +38,9 @@ const PLAN: Plan[] = [
     {slug: "leopard-tortoise", behaviour: "female digs nest", recipe: "dig_burrow~nest", line: "{aAnimal} is digging a nest in the soil for its clutch"},
     {slug: "russian-tortoise", behaviour: "digs metre-long burrows with strong forelimbs", recipe: "dig_burrow"},
     {slug: "sulcata-tortoise", behaviour: "excavates deep burrows and retreats in midday heat/drought", recipe: "dig_burrow", line: "{aAnimal} is excavating a deep burrow"},
-    {slug: "aldabra-giant-tortoise", behaviour: "rests in shade and wallows in heat", recipe: "wallow~turtle", line: "{aAnimal} is wallowing to ride out the heat"},
-    {slug: "asian-forest-tortoise", behaviour: "pushes into damp leaf litter or mud for hours on warm days", recipe: "wallow~turtle", line: "{aAnimal} is pushing itself down into damp litter or soft mud"},
-    {slug: "galapagos-tortoise", behaviour: "sleeps half-submerged in mud wallows", recipe: "wallow~turtle", line: "{aAnimal} is settling half-submerged into a mud wallow"},
+    {slug: "aldabra-giant-tortoise", behaviour: "rests in shade and wallows in heat", recipe: "wallow~turtle", line: "{aAnimal} is wallowing in the mud at the water's edge"},
+    {slug: "asian-forest-tortoise", behaviour: "pushes into damp leaf litter or mud for hours on warm days", recipe: "wallow~turtle", line: "{aAnimal} is pushing itself down into the soft mud"},
+    {slug: "galapagos-tortoise", behaviour: "sleeps half-submerged in mud wallows", recipe: "wallow~turtle", line: "{aAnimal} is settling into a mud wallow"},
     // MARK: A sea turtle and a lizard on the forest floor
     {slug: "hawksbill-sea-turtle", behaviour: "probes beak into coral crevices for sponges", recipe: "probe_feed~turtle"},
     {slug: "indonesian-blue-tongued-skink", behaviour: "forages through leaf litter; shelters in midday heat", recipe: "probe_feed~lizard", line: "{aAnimal} is foraging through the leaf litter"},
