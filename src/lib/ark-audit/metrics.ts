@@ -240,7 +240,10 @@ export class AuditMeter {
                     // How it crossed the shore between two samples: flying, walking/swimming at a believable pace, in place, or a jump.
                     const moved = Math.hypot(s.x - prev.x, s.z - prev.z);
                     const fastest = Math.max(6, subject.length * 10) * step;
-                    if (prev.aloft || s.aloft) this.transitions[i].flew++;
+                    // (SPECIES-ANIM-A 11-24: a flight that fits between two samples, both on the ground but both on the
+                    // schedule's one fly leg, is a flight, not a jump: a red-necked phalarope took off at a sample and
+                    // landed on the water 27 s later, 185 m on, its largest one-second step 11.5 m.)
+                    if (prev.aloft || s.aloft || (prev.doing === "fly" && s.doing === "fly")) this.transitions[i].flew++;
                     else if (moved > fastest) this.transitions[i].snapped++;
                     else if (moved > 0.05) this.transitions[i].walked++;
                     else this.transitions[i].inPlace++;
