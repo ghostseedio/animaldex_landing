@@ -788,7 +788,8 @@ export function prepareRigPoses(rig: LocoRig, slug: string, plan: string | null,
         geometry.computeBoundingBox();
         const ground = geometry.boundingBox!.min.y;
         const ownClip = [clips.lie, clips.sleep].find((clip) => clip && clipBase(clip) === "lying") ?? null;
-        const own = gateOn && ownClip ? measureLyingClip(rig, skin, rowsData, bones, ownClip, ground) : null;
+        const measured = gateOn && ownClip ? measureLyingClip(rig, skin, rowsData, bones, ownClip, ground) : null;
+        const own = measured && !measured.ok && OWN_LIE_BY_EYE.has(slug) ? {...measured, ok: true} : measured;
         let posedMeasure: LyingMeasure | null = null;
         let chose: LyingReport["chose"] = ownClip ? "own" : "stand";
         if (posedOn && !POSED_LIE_HELD.has(slug) && (POSED_LIE_OVER_PILOT.has(slug) || !(clips.sleep || clips.lie) || own)) {
@@ -893,6 +894,12 @@ export const POSED_LIE_OVER_PILOT: ReadonlySet<string> = new Set(["domestic-dog"
  * standing until they are rigged again.
  */
 export const POSED_LIE_HELD: ReadonlySet<string> = new Set(["addax", "walia-ibex", "oribi", "american-pika", "ili-pika", "poodle", "arabian-oryx"]);
+/**
+ * ARK-CLIPS-2: pilot rigs whose own lying clip the gate turns down but which lie right (each looked at, from its side,
+ * lying and asleep, in Blender and in this scene). A rabbit's loaf and a ground squirrel's flat rest hold the rump
+ * higher over the shoulder than the gate's four-legged measure allows; their bellies and folded legs are on the ground.
+ */
+export const OWN_LIE_BY_EYE: ReadonlySet<string> = new Set(["domestic-rabbit", "eastern-cottontail", "black-tailed-prairie-dog", "plantain-squirrel"]);
 /**
  * ARK-POSE (coordinator, batch 14d): primates whose posed sit is held; they sleep in the rig's own crouch until the
  * model is made again (`docs/ark/remake-list.json`). The toque macaque's model was made looking back over its right
