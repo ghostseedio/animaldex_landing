@@ -2499,7 +2499,8 @@ function wireMixed(animals: WireInput[]) {
 /** Molehills round a burrow (pure in its id, spot and the time): a new mound every 5 minutes, each fading over 40. */
 export const MOLEHILL_EVERY = 300;
 export const MOLEHILL_SECONDS = 2400;
-export function molehillsOf(id: string, slug: string, at: P, epoch: number, heightAt: (x: number, z: number) => number): RecipeMark[] {
+/** (`scale`: the mounds' size and spread for a digger smaller than a mole: a mole cricket's are a few centimetres, `length / 0.15` of a mole's.) */
+export function molehillsOf(id: string, slug: string, at: P, epoch: number, heightAt: (x: number, z: number) => number, scale = 1): RecipeMark[] {
     if (!enabled || !speciesRecipes(slug).has.has("molehills")) return [];
     const out: RecipeMark[] = [];
     for (let n = Math.floor((epoch - MOLEHILL_SECONDS) / MOLEHILL_EVERY); n <= Math.floor(epoch / MOLEHILL_EVERY); n++) {
@@ -2507,12 +2508,12 @@ export function molehillsOf(id: string, slug: string, at: P, epoch: number, heig
         const from = n * MOLEHILL_EVERY + random() * MOLEHILL_EVERY;
         if (from > epoch || from + MOLEHILL_SECONDS < epoch) continue;
         const a = random() * Math.PI * 2;
-        const r = 0.6 + random() * 2.4;
+        const r = (0.6 + random() * 2.4) * scale;
         const x = at.x + Math.sin(a) * r;
         const z = at.z + Math.cos(a) * r;
         const h = heightAt(x, z);
         if (h < 0.02) continue;
-        out.push({id: `mole#${id}#${n}`, kind: "mound", x, y: h, z, size: 0.18 + random() * 0.12, from, to: from + MOLEHILL_SECONDS});
+        out.push({id: `mole#${id}#${n}`, kind: "mound", x, y: h, z, size: (0.18 + random() * 0.12) * scale, from, to: from + MOLEHILL_SECONDS});
     }
     return out;
 }

@@ -131,3 +131,18 @@ test("a pair's recipe is played by the two of a cluster in one window, in opposi
     assert.equal(microActWindows(a, "carpenter-ant", T0, T0 + 4 * 3600, 22, 0.02, {soil: true, flower: false}, null).length, 0);
     assert.ok(speciesRecipes("carpenter-ant").has.has("border_spar"));
 });
+
+test("beetles wrestle only as two males, in their mating season", () => {
+    setRecipeArkDay(() => 6.5 * (365 / 12)); // July: the golden stag beetle's months (June to August)
+    const ids = Array.from({length: 60}, (_, i) => `b${i}`);
+    const males = ids.filter((id) => sexLook(id, "golden-stag-beetle").sex === "male");
+    const female = ids.find((id) => sexLook(id, "golden-stag-beetle").sex === "female")!;
+    const spot = {soil: true, flower: false};
+    const win = (a: string, b: string, otherMale: boolean) => microActWindows(a, "golden-stag-beetle", T0, T0 + 6 * 3600, 21, 0.04, spot, {...pair(a, b), otherMale});
+    assert.ok(win(males[0], males[1], true).length > 0, "two males wrestle");
+    assert.equal(win(males[0], female, false).length, 0, "not a male and a female");
+    assert.equal(win(female, males[0], true).length, 0, "a female does not");
+    setRecipeArkDay(() => 1.5 * (365 / 12));
+    assert.equal(win(males[0], males[1], true).length, 0, "out of season, none");
+    setRecipeArkDay(null);
+});

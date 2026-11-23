@@ -249,12 +249,16 @@ for (const name of scenes) {
         mkdirSync(dir, {recursive: true});
         writeFileSync(path.join(dir, "moments.json"), JSON.stringify(moments.slice(0, 12), null, 1));
         console.log(name, meta.recipe, `${moments.length} moments`, JSON.stringify(moments.slice(0, 3).map((m) => ({id: m.id.slice(-3), other: m.other?.slice(-3), start: Math.round(m.start), len: Math.round(m.end - m.start), blocks: m.blocks.map((b) => b.block).join(">")}))));
-        const pick = moments[Number(arg("pick", "0"))];
+        for (const pickAt of arg("picks", arg("pick", "0")).split(",").map(Number)) {
+        const pick = moments[pickAt];
         if (!pick) {
-            summary[name] = {errors: ["no episode of " + meta.recipe + " in the day"]};
-            await context.close();
+            summary[name] = {errors: ["no episode " + pickAt + " of " + meta.recipe + " in the day"]};
             continue;
         }
+        const tag = arg("picks", "").includes(",") ? `${name}-p${pickAt}` : name;
+        const dirOf = path.join(out, tag);
+        rmSync(dirOf, {recursive: true, force: true});
+        mkdirSync(dirOf, {recursive: true});
         // Moments: before, then each distinct block at 35% (and 80% when it is long), then after.
         const shots = [[pick.start - 1.5, "before"]];
         const seen = new Set();
@@ -273,14 +277,15 @@ for (const name of scenes) {
             const note = await page.evaluate(async ([ids, epoch, lengths, azimuth, polar]) => window.__behaviours.smShot(ids, epoch, lengths, azimuth === "" ? null : Number(azimuth), polar), [pick.other ? [pick.id, pick.other] : [pick.id], epoch, Number(arg("lengths", String(meta.lengths))), arg("azimuth", ""), Number(arg("polar", String(meta.polar)))]);
             await page.evaluate((t) => (document.getElementById("note").textContent = t), `${label} (+${(epoch - pick.start).toFixed(1)} s)\n${note}`);
             labels.push(`${String(i).padStart(2, "0")} ${label} (+${(epoch - pick.start).toFixed(1)} s): ${note}`);
-            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+            await page.screenshot({path: path.join(dirOf, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
         }
-        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        writeFileSync(path.join(dirOf, "labels.txt"), labels.join("\n") + "\n");
         const cols = picked.length > 8 ? 4 : picked.length > 4 ? 3 : 2;
-        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(picked.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dirOf, "%02d.jpg"), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(picked.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${tag}-strip.jpg`)]);
         summary[name] = {errors: errors.slice(0, 10), shots: labels};
-        console.log(name, labels.join("\n"));
-        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        console.log(tag, labels.join("\n"));
+        if (errors.length) console.log(tag, "errors:", errors.slice(0, 5));
+        }
         await context.close();
         continue;
     }

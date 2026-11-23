@@ -90,8 +90,8 @@ export type MicroActIn = {
     flower?: boolean;
     /** It is resting or asleep (its schedule's). */
     resting: boolean;
-    /** A pair's recipe: the pair's key (the two ids, in order) and this animal's role. */
-    pair?: {key: string; role: "a" | "b"} | null;
+    /** A pair's recipe: the pair's key (the two ids, in order), this animal's role, and whether the other is a male (a males' contest needs two). */
+    pair?: {key: string; role: "a" | "b"; otherMale?: boolean} | null;
 };
 
 export type MicroActNow = {
@@ -142,6 +142,7 @@ export function microActAt(input: MicroActIn): MicroActNow | null {
         if (d.hours === "night" && !(input.hours < 5.2 || input.hours > 19.5)) continue;
         if (d.pair && !input.pair) continue;
         if (d.sex === "male" && sexLook(input.id, input.slug).sex !== "male") continue;
+        if (d.sex === "male" && d.pair && input.pair?.otherMale !== true) continue;
         const factor = d.season ? seasonFactor(speciesRecipes(input.slug), d.season, input.epoch) : 1;
         if (!factor) continue;
         const key = d.pair ? input.pair!.key : input.id;

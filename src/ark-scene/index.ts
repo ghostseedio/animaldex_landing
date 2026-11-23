@@ -3694,7 +3694,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * the act, a pair's facing each other; after the act it eases back into the crawl over `RELEASE` seconds.
      */
     const RELEASE = 2.5;
-    const microPartners = new Map<string, {until: number; hit: {id: string; key: string; role: "a" | "b"} | null}>();
+    const microPartners = new Map<string, {until: number; hit: {id: string; key: string; role: "a" | "b"; otherMale: boolean} | null}>();
     const microMarks = new Map<string, RecipeMark>();
     const microLast = new Map<string, {t0: number; t1: number}>();
     const microPartnerOf = (entry: Entry, epoch: number) => {
@@ -3704,11 +3704,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (The other of its cluster's pair: rank 0 and 1, 2 and 3, of the same kind about the same spot.)
         const lead = entry.place.leader ?? id;
         const want = (entry.place.rank ?? 0) ^ 1;
-        let hit: {id: string; key: string; role: "a" | "b"} | null = null;
+        let hit: {id: string; key: string; role: "a" | "b"; otherMale: boolean} | null = null;
         for (const e of allEntries()) {
             if (e === entry || e.animal.model_slug !== entry.animal.model_slug || (e.place.leader ?? e.animal.id) !== lead || (e.place.rank ?? 0) !== want) continue;
             const [a, b] = [id, e.animal.id].sort();
-            hit = {id: e.animal.id, key: `${a}#${b}`, role: id === a ? "a" : "b"};
+            hit = {id: e.animal.id, key: `${a}#${b}`, role: id === a ? "a" : "b", otherMale: sexLook(e.animal.id, e.animal.model_slug).sex === "male"};
             break;
         }
         if (microPartners.size > 600) microPartners.clear();
@@ -5276,7 +5276,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const entry of allEntries()) {
             if (!entry.place.burrow || !speciesRecipes(entry.animal.model_slug).has.has("molehills")) continue;
             if (Math.hypot(entry.place.x - camera.position.x, entry.place.z - camera.position.z) > 50) continue;
-            marks.push(...molehillsOf(entry.animal.id, entry.animal.model_slug, {x: entry.place.x, y: entry.place.ground, z: entry.place.z}, epoch, heightAt));
+            marks.push(...molehillsOf(entry.animal.id, entry.animal.model_slug, {x: entry.place.x, y: entry.place.ground, z: entry.place.z}, epoch, heightAt, Math.min(Math.max(entry.trueLength / 0.15, 0.12), 1))); // (sig2-small: a mole cricket's mounds are its own size)
         }
         if (recipeNear.size > 300) recipeNear.clear();
         recipeScene.droplets = !reducedMotion && !liteOn(); // p3 (shake): no shaken drops on the low tier

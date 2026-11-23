@@ -57,6 +57,9 @@
    "arachnid",
    "insect",
    "crustacean"
+  ],
+  "molehills": [
+   "insect"
   ]
  }
 }

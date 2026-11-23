@@ -1437,11 +1437,12 @@
   {
    "slug": "southern-mole-cricket",
    "name": "Southern Mole Cricket",
-   "recipe": "dig_burrow",
+   "recipe": "molehills",
    "behaviour": "digs with shovel-like front legs",
    "field": "story",
    "quote": "The Southern Mole Cricket digs with front legs shaped like little shovels",
-   "line": "{aAnimal} is digging with its shovel-shaped front legs"
+   "line": "{aAnimal} is digging with its shovel-shaped front legs, pushing up small mounds of soil",
+   "variant_of": "dig_burrow"
   },
   {
    "slug": "spotted-wood-owl",

@@ -430,7 +430,7 @@ async function main() {
             return `+${s} s ${mode}:${clutch} view ${v.distance.toFixed(2)} m; apart ${apart} m; lengths ${at.map((p) => p?.length.toFixed(3) ?? "-").join("/")}`;
         },
         /** sig2-small: which recipe the scene is for and how it is framed. */
-        smInfo: () => ({recipe: (scene as {recipe?: string}).recipe ?? "", lengths: (scene as {lengths?: number}).lengths ?? 5, polar: (scene as {polar?: number}).polar ?? 1.4, ids: scene.cast.map((_, k) => castId(k, 0))}),
+        smInfo: () => ({recipe: (scene as {recipe?: string}).recipe ?? "", lengths: (scene as {lengths?: number}).lengths ?? 5, polar: (scene as {polar?: number}).polar ?? 1.0, ids: scene.cast.map((_, k) => castId(k, 0))}),
         /** sig2-small: the first cast species' moments of a recipe in the day from the event (`behaviours-small.ts`), and the scene's own pace on them. */
         recipeMoments: (recipe: string) => smallMoments(debug.entries().filter((e) => e.animal.model_slug === scene.cast[0].slug) as never, recipe, TEMPLATES[recipe], t0, scene.hours),
         /** sig2-small: the world run up to an absolute time (a tenth of a second a frame), then the animals (`ids`) framed together from `lengths` of the first one's body, side on. */
