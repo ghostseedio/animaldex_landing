@@ -102,6 +102,7 @@ import {skipEmptyDraws} from "@/ark-scene/runtime/empty-draws";
 import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {climbClipName, rigBasesFrom, rigSetVersion} from "@/ark-scene/rig-clips";
+import {gaitHzMax} from "@/ark-scene/gait-cadence";
 import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, halfToFloat, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, rigLookShare, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
@@ -6187,7 +6188,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // ARK-ANIM (decision 447, the owner's blue-tongued skink "too shaky"): never more than GAIT_HZ_MAX cycles a second.
         // A short-legged clip played by the distance covered ran its legs at 20-30 cycles a second (the skink's 0.12 s
         // run at 3.5 times its pace), a blur of shaking at 60 frames a second; above that the feet slide a little instead.
-        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 3.5, dt * GAIT_HZ_MAX) * (state.reverse ? -1 : 1);
+        // SPECIES-ANIM-A: the cap by body size (`gaitHzMax`): 6 at half a metre and up, to 10 for the smallest, which stride faster.
+        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 3.5, dt * gaitHzMax(entry.trueLength)) * (state.reverse ? -1 : 1);
         else if (mode === "sync") state.now.phase = sync;
         else state.now.phase += (dt / playing.seconds) * (want === "idle" ? 1 - 0.65 * entry.rest : rate);
         state.ratio = mode === "distance" && playing.ground_speed && dt > 0 ? moved / dt / playing.ground_speed : 0;
@@ -12452,8 +12454,8 @@ function sleepState(state: string | null | undefined): string | null | undefined
     return state === "sleep_hang" ? "sleep" : state;
 }
 
-/** ARK-ANIM: the most step cycles a second a gait clip plays (a cycle is two steps: twelve steps a second). */
-export const GAIT_HZ_MAX = 6;
+/** ARK-ANIM: the most step cycles a second a gait clip plays for an animal half a metre or longer; smaller ones by size (`gait-cadence.ts`). */
+export {GAIT_HZ_MAX} from "@/ark-scene/gait-cadence";
 
 /** ARK-ANIM: the rig's own sleeping clip for a posture (`sleepPostureClips`, then its kind's), or null. */
 function sleepClipOf(rig: RigModel, posture: SleepPosture): string | null {
