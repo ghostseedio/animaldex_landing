@@ -45,6 +45,7 @@ import {
     antKindOf,
     colonyKeyOf,
     finderAt,
+    pathAt,
     raidNow,
     raiders,
     rivalEdge,
@@ -163,7 +164,7 @@ export class AntColonies {
     private blobCount = 0;
     private readonly materials: Material[] = [];
     private readonly ribbonMaterialScent = new MeshStandardMaterial({color: 0x2c2418, roughness: 1, transparent: true, opacity: 0.15, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2});
-    private readonly ribbonMaterialCleared = new MeshStandardMaterial({color: 0x9a8461, roughness: 1, transparent: true, opacity: 0.6, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2});
+    private readonly ribbonMaterialCleared = new MeshStandardMaterial({color: 0x8c7556, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2});
     private stats = {drawn: 0, colonies: 0, trails: 0, ms: 0};
 
     constructor(private readonly host: AntHost) {
@@ -503,9 +504,22 @@ export class AntColonies {
     debug() {
         return {
             ...this.stats,
-            colonies: this.colonies.map((c) => ({key: c.key, slug: c.kind.slug, form: c.kind.form, nest: c.nest, members: c.members.length, hungry: c.hungry, plan: c.plan ? {food: c.plan.food.key, kind: c.plan.food.kind, phase: c.plan.phase, strength: c.plan.strength, found: c.plan.found, home: c.plan.home} : null, plant: c.plantFood ? {key: c.plantFood.key, x: c.plantFood.x, y: c.plantFood.y, z: c.plantFood.z} : null, raid: c.raid})),
+            colonies: this.colonies.map((c) => ({key: c.key, slug: c.kind.slug, form: c.kind.form, nest: c.nest, members: c.members.length, hungry: c.hungry, plan: c.plan ? {food: c.plan.food.key, kind: c.plan.food.kind, phase: c.plan.phase, strength: c.plan.strength, found: c.plan.found, home: c.plan.home, path: this.samplePath(c, c.plan.food)} : null, plant: c.plantFood ? {key: c.plantFood.key, x: c.plantFood.x, y: c.plantFood.y, z: c.plantFood.z} : null, raid: c.raid})),
             foods: this.foods.map((f) => ({key: f.key, kind: f.kind, x: f.x, z: f.z, label: f.label}))
         };
+    }
+
+    /** The trail's path at tenths of its length (the harness frames it). */
+    private samplePath(c: ColonyState, food: AntFood): Array<{x: number; y: number; z: number}> {
+        const p = c.paths.get(food.key)?.path;
+        if (!p) return [];
+        const o = new Float32Array(9);
+        const out: Array<{x: number; y: number; z: number}> = [];
+        for (let k = 0; k <= 10; k++) {
+            pathAt(p, (p.length * k) / 10, o);
+            out.push({x: o[0], y: o[1], z: o[2]});
+        }
+        return out;
     }
 
     dispose() {

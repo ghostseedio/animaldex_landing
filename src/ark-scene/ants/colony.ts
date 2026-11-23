@@ -377,7 +377,8 @@ export function trailPath(colony: Colony, food: Pick<AntFood, "x" | "y" | "z" | 
         const bend = Math.sin(Math.PI * k) * (amp * Math.sin(w1 * Math.PI * k + p1) + amp * 0.3 * Math.sin(w2 * Math.PI * k));
         const x = from.x + dx * k + px * bend;
         const z = from.z + dz * k + pz * bend;
-        pts.push(x, groundY(x, z) + 0.0005, z);
+        // (A leafcutters' highway is cleared of litter: its floor is drawn over the litter, the ants on it.)
+        pts.push(x, groundY(x, z) + (colony.kind.form === "leafcut" ? 0.005 : 0.0005), z);
         nrm.push(0, 1, 0);
     }
     if (up) climb(up, from, food.y, false);

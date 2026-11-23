@@ -106,35 +106,35 @@ for (const name of pairs) {
         const probe = await page.evaluate(() => window.__ants.info());
         const plan = probe.colony.plan;
         console.log(name, "plan", JSON.stringify(plan));
-        const mid = {x: (nest.x + d.x) / 2, z: (nest.z + d.z) / 2};
+        const pts = plan.path;
+        const at = (k) => pts[Math.round(k * 10)];
         const near = name === "ghost" ? 0.09 : name === "fire" ? 0.16 : 0.22;
-        const finderAt = (t) => {
-            const k = Math.min(Math.max((t - plan.found) / Math.max(plan.home - plan.found, 1), 0), 1);
-            return {x: d.x + (nest.x - d.x) * k, z: d.z + (nest.z - d.z) * k};
-        };
-        const at = (k) => ({x: nest.x + (d.x - nest.x) * k, z: nest.z + (d.z - nest.z) * k});
+        const finder = (t) => at(1 - Math.min(Math.max((t - plan.found) / Math.max(plan.home - plan.found, 1), 0), 1));
+        const lo = name === "weaver" ? 0.6 : 0.5;
         shots = [
-            [d.t0 - 20, near * 1.6, at(0.15), "before: searching round the nest (no food yet)"],
-            [plan.found + (plan.home - plan.found) * 0.5, near, finderAt(plan.found + (plan.home - plan.found) * 0.5), "the finder heads home laying the trail"],
-            [plan.home + 15, near, mid, "forming: the first recruits"],
-            [plan.home + 45, near, mid, "forming: more on it"],
-            [plan.home + 300, near, mid, "busy: both ways, pieces carried home"],
+            [d.t0 - 20, near * 2.5, at(0), "before: the nest, searching round it (no food yet)"],
+            [d.t0 - 20, near, at(0.3), "before: searchers (no trail, no find)"],
+            [plan.found + (plan.home - plan.found) * 0.5, near, finder(plan.found + (plan.home - plan.found) * 0.5), "the finder heads home laying the trail"],
+            [plan.home + 15, near, at(lo), "forming: the first recruits"],
+            [plan.home + 45, near, at(lo), "forming: more on it"],
+            [plan.home + 300, near, at(lo), "busy: both ways, pieces carried home"],
             [plan.home + 300, near * 1.6, at(1), "busy: at the body"],
-            [plan.home + 300, near * 3.5, mid, "busy: the trail from higher"],
-            [until + 60, near, mid, "fading: the body is gone"],
-            [until + 125, near, mid, "faded: searching again"]
+            [plan.home + 300, near * 4, at(lo), "busy: the trail from higher"],
+            [until + 60, near, at(lo), "fading: the body is gone"],
+            [until + 125, near, at(lo), "faded: searching again"]
         ];
     } else if (c.plant) {
-        const p = c.plant;
-        const at = (k) => ({x: nest.x + (p.x - nest.x) * k, z: nest.z + (p.z - nest.z) * k});
         const t = info.date + 60;
+        await page.evaluate(([t, at]) => window.__ants.shot(t, 2, at), [t, nest]);
+        const pts = (await page.evaluate(() => window.__ants.info())).colony.plan.path;
+        const at = (k) => pts[Math.round(k * 10)];
         shots = [
             [t, 2.2, nest, "the mound and its highway"],
             [t, 0.25, at(0.1), "the highway leaving the mound"],
-            [t, 0.12, at(0.35), "leaf pieces carried home, held upright"],
+            [t, 0.12, at(0.4), "leaf pieces carried home, held upright"],
             [t + 20, 0.12, at(0.6), "the highway, both ways"],
-            [t, 0.6, at(0.5), "the cleared highway from higher"],
-            [t, 0.3, {x: p.x, z: p.z, y: p.y * 0.5 + nest.y * 0.5}, "up the plant"]
+            [t, 0.7, at(0.5), "the cleared highway from higher"],
+            [t, 0.3, at(1), "up the plant"]
         ];
     } else if (c.slug === "eciton-army-ant" || c.slug === "driver-ant") {
         const tick = Math.floor(info.date / TICK) + 1;
@@ -143,7 +143,7 @@ for (const name of pairs) {
             return (await page.evaluate(() => window.__ants.info())).colony.raid;
         };
         shots = [];
-        for (const [u, dist, where, label] of [[0.12, 0.35, "front", "the raid sets out: the swarm front"], [0.4, 0.3, "front", "the broad swarm front"], [0.4, 1.4, "front", "the swarm front from higher"], [0.4, 0.25, "column", "the column behind it"], [0.6, 0.2, "bivouac", "the bivouac"], [0.93, 0.25, "move", "the bivouac moves: workers carry brood"]]) {
+        for (const [u, dist, where, label] of [[0.12, 0.35, "front", "the raid sets out: the swarm front"], [0.4, 0.3, "front", "the broad swarm front"], [0.4, 0.9, "front", "the swarm front from higher"], [0.4, 0.25, "column", "the column behind it"], [0.6, 0.9, "bivouac", "the bivouac"], [0.93, 0.25, "move", "the bivouac moves: workers carry brood"]]) {
             const r = await raidAt(u);
             const hx = Math.cos(r.heading);
             const hz = Math.sin(r.heading);
@@ -161,7 +161,7 @@ for (const name of pairs) {
     for (let i = 0; i < shots.length; i++) {
         const [t, distance, at, label] = shots[i];
         const note = await page.evaluate(async ([t, distance, at, label]) => {
-            const text = await window.__ants.shot(t, distance, at);
+            const text = await window.__ants.shot(t, distance, at, 0.8);
             document.getElementById("note").textContent = `${label}\n${text}`;
             return text;
         }, [t, distance, at, label]);
