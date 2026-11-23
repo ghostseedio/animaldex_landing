@@ -45,7 +45,7 @@ export type BlockDef = {
     /** In the water (its pose may go below the surface). */
     wet?: boolean;
     /** Near-only: particles (at the start of the step unless `fxAt` says the end), a mark left on the ground. */
-    fx?: "splash" | "dirt" | "dust" | "mud" | "chips" | "bubbles" | "sand" | "spray" | "shake";
+    fx?: "splash" | "dirt" | "dust" | "mud" | "chips" | "bubbles" | "sand" | "spray" | "shake" | "silt";
     fxAt?: "start" | "end" | "during";
     mark?: "hole" | "mound" | "hollow" | "pit";
 };
@@ -135,7 +135,13 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         B({id: "turn", label: "turn on the spot (before setting off the other way)", motion: "hold", states: ["freeze"], beat: "pause"}),
         B({id: "perch", label: "perch", motion: "hold", states: ["perch"], beat: "rest"}),
         B({id: "rest", label: "rest", motion: "hold", states: ["rest"], beat: "rest"}),
-        B({id: "incubate", label: "sit on the nest", motion: "hold", states: ["incubate"], beat: "rest", heave: -0.08})
+        B({id: "incubate", label: "sit on the nest", motion: "hold", states: ["incubate"], beat: "rest", heave: -0.08}),
+        // sig2-aquatic: the water's signature behaviours (`aquatic-acts.ts`; the bed tunnel's dig is `bed_tunnel`'s).
+        B({id: "dig_bed", label: "dig into the bed (head down, tail fanning, silt rising)", motion: "hold", states: ["dig"], beat: "bite", pitch: 0.8, rollWave: 0.3, rate: 2.6, wet: true, fx: "silt", fxAt: "during", mark: "hole"}),
+        B({id: "clean", label: "work over a larger swimmer's body, picking at its skin", motion: "hold", states: ["groom_other"], beat: "bite", wet: true}),
+        B({id: "patrol", label: "swim on, side by side, from one patch to the next", motion: "travel", curve: "line", states: ["swim"], beat: "swim", wet: true}),
+        B({id: "drift", label: "drift with its own kind near the surface", motion: "hold", states: ["swim"], beat: "swim", wet: true}),
+        B({id: "graze_with", label: "feed alongside another kind, mouthing the bottom", motion: "hold", states: ["probe"], beat: "bite", wet: true, pitch: 0.35, pitchWave: 0.15, rate: 0.7})
     ].map((b) => [b.id, b])
 );
 

@@ -26,9 +26,10 @@
  * - nest: its nest site; material: a ground spot near the nest to pick material from;
  * - beach: dry sand a few metres inland of the edge;
  * - meet, meet_far, meet_side: a pair's meeting point (touching; a few body lengths apart; side by side);
- * - away: back off from the other in a pair.
+ * - away: back off from the other in a pair;
+ * - bed: the bed of the water, a few body lengths below the surface at least (sig2-aquatic: a fish digging into it).
  */
-export type Target = "anchor" | "here" | "water" | "over_water" | "shallows" | "edge" | "ground" | "air" | "up" | "prey" | "nest" | "material" | "beach" | "meet" | "meet_far" | "meet_side" | "away";
+export type Target = "anchor" | "here" | "water" | "over_water" | "shallows" | "edge" | "ground" | "air" | "up" | "prey" | "nest" | "material" | "beach" | "meet" | "meet_far" | "meet_side" | "away" | "bed";
 
 /** Ambient prey only (never a catalogue animal). */
 export type PreyKind = "fish" | "insect" | "worm" | "shellfish" | "nut" | "seed";
@@ -63,7 +64,7 @@ export type TemplateStep = {
     role?: "a" | "b";
 };
 
-export type Goal = "perch_water" | "perch" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "air" | "here";
+export type Goal = "perch_water" | "perch" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "air" | "here" | "bed";
 
 export type Template = {
     id: string;
@@ -881,7 +882,51 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
                 {b: "scan", s: [1, 2]},
                 {b: "dig", s: [4, 8]}
             ]
-        })
+        }),
+        // MARK: The water's signature behaviours (sig2-aquatic: AnimalDex docs/ark/signature-behaviours.json, the rows `dig_burrow`
+        // held for another body plan). A fish's tunnel is dug at the bed: head down, tail fanning, silt rising, a pit and a
+        // spoil heap left on the bed; it keeps the mouth between its digs (the acara's "guards its entrance").
+        T({
+            id: "bed_tunnel",
+            label: "digs a nest tunnel into the bed of the water and guards its mouth",
+            kind: "stay",
+            goal: "bed",
+            replaces: ["burrow", "forage", "rest", "hide", "wander", "watch"],
+            doing: "burrow",
+            season: "mating",
+            steps: [
+                {b: "swim", to: "bed", near: "here"},
+                {b: "dig_bed", s: [6, 12]},
+                {b: "scan", s: [3, 6]},
+                {b: "dig_bed", s: [5, 10]},
+                {b: "scan", s: [3, 6]}
+            ],
+            loop: 1
+        }),
+        // (The catfish's text has the male dig: the same, for males only.)
+        T({
+            id: "bed_tunnel_m",
+            label: "digs a nest tunnel into the bank and guards its mouth (the male)",
+            kind: "stay",
+            goal: "bed",
+            replaces: ["burrow", "forage", "rest", "hide", "wander", "watch"],
+            doing: "burrow",
+            season: "mating",
+            sex: "male",
+            steps: [
+                {b: "swim", to: "bed", near: "here"},
+                {b: "dig_bed", s: [6, 12]},
+                {b: "scan", s: [3, 6]},
+                {b: "dig_bed", s: [5, 10]},
+                {b: "scan", s: [3, 6]}
+            ],
+            loop: 1
+        }),
+        // The water's pair and group acts are `aquatic-acts.ts`'s (a reef fish lives in its crevice, which no stay's episode leaves):
+        // the templates stand here for their words (the card, the log) and their rows in `recipes.json`.
+        T({id: "clean_client", label: "works over a larger swimmer at its cleaning station, picking at its skin", kind: "pair", goal: "here", replaces: [], doing: "groom", hours: "day", sex: "any", steps: []}),
+        T({id: "pair_patrol", label: "patrols the reef side by side, from one patch to the next", kind: "pair", goal: "here", replaces: [], doing: "swim", hours: "day", sex: "any", steps: []}),
+        T({id: "bloom", label: "a dense swarm of its own kind near the surface (ambient jellies drift round it)", kind: "flock", goal: "here", replaces: [], doing: "swim", steps: []})
     ].map((t) => [t.id, t])
 );
 

@@ -1,5 +1,5 @@
 {
- "about": "Signature behaviours, wave 1 (AnimalDex docs/ark/behaviours-plan.md, decision 369): species whose own text states a behaviour an existing recipe shows, but whose recipes lacked it. Each row keeps the stored field and the exact sentence. Applied to src/ark-scene/recipes.json by scripts/ark-signature-recipes.mts (run it after scripts/ark-behaviour-recipes.mts regenerates the table).",
+ "about": "Signature behaviours, wave 1 (AnimalDex docs/ark/behaviours-plan.md, decision 369): species whose own text states a behaviour an existing recipe shows, but whose recipes lacked it. Each row keeps the stored field and the exact sentence. Applied to src/ark-scene/recipes.json by scripts/ark-signature-recipes.mts (run it after scripts/ark-behaviour-recipes.mts regenerates the table). The rows of the water's body plans (sig2-aquatic: fish, eel, jellyfish) name the water's own templates where the held one was written for another body plan: clean_client (allogroom), pair_patrol (a pair's mixed_follow), bed_tunnel and bed_tunnel_m (dig_burrow), bloom (swarm); mixed_follow stays for the moray and the surgeonfish, whose acts src/ark-scene/aquatic-acts.ts draws.",
  "version": "signature-wave-1",
  "additions": [
   {
@@ -37,7 +37,7 @@
   {
    "slug": "amazon-sailfin-catfish",
    "name": "Amazon Sailfin Catfish",
-   "recipe": "dig_burrow",
+   "recipe": "bed_tunnel_m",
    "behaviour": "male digs a metre-long tunnel into the riverbank and guards the clutch inside",
    "field": "young",
    "quote": "The male digs and holds the bank tunnel, and the female lays inside it; he guards the clutch until it hatches."
@@ -189,7 +189,7 @@
   {
    "slug": "bluestreak-cleaner-wrasse",
    "name": "Bluestreak Cleaner Wrasse",
-   "recipe": "allogroom",
+   "recipe": "clean_client",
    "behaviour": "cleans parasites off visiting client fish at a reef station",
    "field": "story",
    "quote": "A reef fish that earns safety by removing parasites and irritation from larger animals."
@@ -677,7 +677,7 @@
   {
    "slug": "gray-angelfish",
    "name": "Gray Angelfish",
-   "recipe": "allogroom",
+   "recipe": "clean_client",
    "behaviour": "juveniles run cleaning stations, picking parasites from bigger fish",
    "field": "facts",
    "quote": "Juveniles set up cleaning stations and pick parasites from larger fish."
@@ -685,7 +685,7 @@
   {
    "slug": "gray-angelfish",
    "name": "Gray Angelfish",
-   "recipe": "mixed_follow",
+   "recipe": "pair_patrol",
    "behaviour": "adult pairs patrol the reef together patch to patch",
    "field": "story",
    "quote": "Adult pairs patrol a wide stretch of reef and hard bottom together, moving steadily from one feeding patch to the next."
@@ -1021,7 +1021,7 @@
   {
    "slug": "moon-jellyfish",
    "name": "Moon Jellyfish",
-   "recipe": "swarm",
+   "recipe": "bloom",
    "behaviour": "gathers in dense swarms near the surface",
    "field": "traits",
    "quote": "Often gathers in dense swarms near the surface"
@@ -1485,7 +1485,7 @@
   {
    "slug": "threadfin-acara",
    "name": "Threadfin Acara",
-   "recipe": "dig_burrow",
+   "recipe": "bed_tunnel",
    "behaviour": "pair digs a breeding tunnel in the river bed and guards its entrance",
    "field": "evidence",
    "quote": "Parent fish actively patrol and defend the immediate area around the opening of their excavated nest."
@@ -1629,7 +1629,7 @@
   {
    "slug": "yellow-tang",
    "name": "Yellow Tang",
-   "recipe": "allogroom",
+   "recipe": "clean_client",
    "behaviour": "cleans algae off the shells of visiting green sea turtles",
    "field": "facts",
    "quote": "It cleans algae off the shells of green sea turtles, which visit reef to be groomed."

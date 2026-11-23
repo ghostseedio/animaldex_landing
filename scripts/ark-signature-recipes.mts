@@ -36,7 +36,18 @@ for (const [slug, row] of Object.entries(table.species)) {
 }
 // A template new with a signature wave has no users yet to learn its plans and weight from: stated here.
 // (3.3 batch (D): `dip_lay`, a dragonfly laying, `data/ark/egg-dip.json`.)
-const NEW: Record<string, {plans: string[]; weight: number}> = {dip_lay: {plans: ["flying_insect"], weight: 6}};
+// (sig2-aquatic: the water's own templates, written for its body plans, `src/ark-scene/recipe-templates.ts`: a cleaner, an
+// adult pair's patrol, a tunnel dug into the bed, a bloom of jellies; and the moray's and the surgeonfish's mixed group,
+// which no fish or legless body used: their acts are `src/ark-scene/aquatic-acts.ts`'s, one species' text each.)
+const NEW: Record<string, {plans: string[]; weight: number}> = {
+    dip_lay: {plans: ["flying_insect"], weight: 6},
+    clean_client: {plans: ["fish"], weight: 6},
+    pair_patrol: {plans: ["fish"], weight: 6},
+    bed_tunnel: {plans: ["fish"], weight: 6},
+    bed_tunnel_m: {plans: ["fish"], weight: 6},
+    bloom: {plans: ["cephalopod_jelly"], weight: 6},
+    mixed_follow: {plans: ["fish", "legless"], weight: 4}
+};
 for (const [id, seed] of Object.entries(NEW)) {
     for (const plan of seed.plans) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
     if (!weights.has(id)) weights.set(id, new Map([[seed.weight, 1]]));

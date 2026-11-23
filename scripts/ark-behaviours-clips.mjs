@@ -71,6 +71,23 @@ const PLANS = {
  */
 const DEFENCE = {curl: [5], pangolin: [4], pill: [7, 2.4, 0.5], coil: [3, 2.4, 0.5], millipede: [4, 2.4, 0.5], shell: [5], snail: [7], hermit: [7], puff: [6], monitor: [3.5], puffer: [5], flash: [7, 2.4, 0.5], eyes: [5, 2.4, 0.5], peacock: [6, 2.4, 0.5], owl: [5, 2.4, 0.5], harnessed: [7, 2.4, 0.5], blotched: [6, 2.4, 0.5], lubber: [6, 5.4, 0.7], tail: [5, 2.4, 0.6], salamander: [5, 2.4, 0.6]};
 const DEFENCE_STEPS = [["none", 2, "before: about its day"], ["near", 0.5, "a predator beside it, half a second"], ["hold", 0.5, "one second"], ["hold", 1, "two seconds"], ["hold", 3, "five seconds"], ["away", 4, "the predator gone, four seconds"], ["hold", 12, "sixteen seconds on"], ["hold", 30, "calm again"]];
+/**
+ * sig2-aquatic: the water's scenes (`aquatic-acts.ts`, and the engine's `bed_tunnel` and `bloom`). `link`: the act the cast's first
+ * is wired to (its window in the next two hours is found, then framed through: in its crevice, out to the other, at it, back);
+ * `scan`: the engine's recipe to wait for (a stay's episode, found by stepping the clock). lengths: how many of the larger one's
+ * body lengths away it is framed from; azimuth and polar: the camera's, off the other's heading.
+ */
+const WATER = {
+    aquaclean: {link: "clean_client", lengths: 3.4, azimuth: 1.55, polar: 1.42},
+    aquatang: {link: "clean_client", lengths: 3.2, azimuth: 1.55, polar: 1.42},
+    aquajuv: {link: "clean_client", lengths: 3.4, azimuth: 1.55, polar: 1.42},
+    aquapatrol: {link: "pair_patrol", lengths: 12, azimuth: 1.2, polar: 1.3},
+    aquamoray: {link: "mixed_follow", lengths: 3.6, azimuth: 1.4, polar: 1.4},
+    aquasurgeon: {link: "mixed_follow", lengths: 6, azimuth: 1.4, polar: 1.35},
+    aquatunnel: {scan: "bed_tunnel", lengths: 8, azimuth: 0.9, polar: 1.3},
+    aquacatfish: {scan: "bed_tunnel", lengths: 8, azimuth: 0.9, polar: 1.3},
+    aquabloom: {scan: "bloom", lengths: 36, azimuth: 0.7, polar: 1.42}
+};
 const summary = {};
 for (const name of scenes) {
     const context = await browser.newContext({viewport: {width: 1280, height: 720}});
@@ -92,6 +109,60 @@ for (const name of scenes) {
     const failed = await page.evaluate(() => window.__behavioursError ?? null);
     if (failed) {
         console.log(name, "failed:", failed.slice(0, 500));
+        await context.close();
+        continue;
+    }
+    if (WATER[name]) {
+        const spec = WATER[name];
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const info = await page.evaluate(() => window.__behaviours.aquaInfo());
+        console.log(name, "cast", JSON.stringify(info.map((i) => [i.slug, i.length, i.place, i.link ? `${i.link.recipe}->${i.link.other.slice(-3)} ${i.link.seconds.toFixed(0)}s` : null])));
+        /** [world seconds, label, framed on both (else the first alone), lengths of the larger one's body]. */
+        let moments = [];
+        let who;
+        let other = null;
+        if (spec.link) {
+            const found = await page.evaluate((recipe) => window.__behaviours.aquaFind(recipe), spec.link);
+            if (!found) {
+                console.log(name, "no", spec.link, "window in two hours; the cast's links:", JSON.stringify(info.filter((i) => i.link).map((i) => i.link)));
+                summary[name] = {errors: ["no window"], cast: info};
+                await context.close();
+                continue;
+            }
+            console.log(name, "window", JSON.stringify(found));
+            who = found.id;
+            other = found.other;
+            const a = found.approach;
+            const k = found.work;
+            const t = found.start;
+            moments = [[t - 3, "in its crevice", false, 5], [t + a * 0.45, "swimming out", false, 9], [t + a + 1, "at the other", true, spec.lengths], ...[0.12, 0.26, 0.4, 0.55, 0.7, 0.84].map((f, i) => [t + a + k * f, `the act ${i + 1}/6`, true, spec.lengths]), [t + a + k + a * 0.4, "swimming back", false, 9], [t + found.end - 0.5 * 0, "back", false, 5]];
+        } else {
+            const hit = await page.evaluate(([prefix]) => window.__behaviours.aquaScan(prefix, 0, 3 * 3600, 20), [spec.scan]);
+            if (!hit) {
+                console.log(name, "no", spec.scan, "in three hours");
+                summary[name] = {errors: ["no episode"], cast: info};
+                await context.close();
+                continue;
+            }
+            console.log(name, "found", JSON.stringify(hit));
+            who = hit.id;
+            moments = (spec.scan === "bloom" ? [0, 12, 24, 36, 50, 64] : [-6, 0, 6, 14, 24, 36, 50, 64, 80, 100]).map((d) => [hit.epoch + d, `+${d} s`, false, spec.lengths]);
+        }
+        const labels = [];
+        for (let i = 0; i < moments.length; i++) {
+            const [epoch, label, both, lengths] = moments[i];
+            const note = await page.evaluate(async ([epoch, who, other, lengths, azimuth, polar]) => window.__behaviours.aquaShot(epoch, who, other, lengths, azimuth, polar), [epoch, who, both ? other : null, lengths, spec.azimuth, spec.polar]);
+            await page.evaluate((t) => (document.getElementById("note").textContent = t), `${label}\n${note}`);
+            labels.push(`${String(i).padStart(2, "0")} ${label}: ${note}`);
+            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=4x${Math.ceil(moments.length / 4)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
         await context.close();
         continue;
     }

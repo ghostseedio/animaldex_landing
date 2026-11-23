@@ -1,0 +1,22 @@
+{
+  "about": "Signature behaviours of the water (sig2-aquatic, AnimalDex docs/ark/signature-behaviours.json, decision 367/369): the species whose own stored sentence has them act with another kind of the Ark (a cleaner at a larger swimmer, a moray with a grouper, a surgeonfish with other surgeonfishes) or with its mate (an angelfish pair). `with` says who, from that sentence: `larger` any water animal that many times its length; `slugs` those species; `pattern` a slug pattern (the family the sentence names); `same` its own kind. `stage` gates the acts the sentence gives to the young or the adults only. `block` is what the act shows once it is there. Each row keeps its field and its exact sentence. Read by src/ark-scene/aquatic-acts.ts.",
+  "version": "aquatic-1",
+  "species": {
+    "bluestreak-cleaner-wrasse": {
+      "clean_client": {"with": {"larger": 2.5}, "block": "clean", "field": "story", "quote": "A reef fish that earns safety by removing parasites and irritation from larger animals."}
+    },
+    "gray-angelfish": {
+      "clean_client": {"with": {"larger": 2.5}, "stage": "young", "block": "clean", "field": "facts", "quote": "Juveniles set up cleaning stations and pick parasites from larger fish."},
+      "pair_patrol": {"with": {"same": true}, "stage": "adult", "block": "patrol", "field": "story", "quote": "Adult pairs patrol a wide stretch of reef and hard bottom together, moving steadily from one feeding patch to the next."}
+    },
+    "yellow-tang": {
+      "clean_client": {"with": {"slugs": ["green-sea-turtle"]}, "block": "clean", "field": "facts", "quote": "It cleans algae off the shells of green sea turtles, which visit reef to be groomed."}
+    },
+    "giant-moray": {
+      "mixed_follow": {"with": {"pattern": "grouper"}, "block": "patrol", "field": "facts", "quote": "Some morays cooperate with other predators such as groupers in reef hunting systems."}
+    },
+    "yellowfin-surgeonfish": {
+      "mixed_follow": {"with": {"pattern": "(surgeonfish|-tang$|unicornfish)"}, "block": "graze_with", "field": "facts", "quote": "It is often reported feeding in mixed groups with other surgeonfishes over open ground rather than alone."}
+    }
+  }
+}
