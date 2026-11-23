@@ -59,8 +59,8 @@ export type LeapStep = {
 };
 
 const G = 9.81;
-/** Up from its depth to the surface, and down again after re-entry (s). */
-const RISE = 0.7;
+/** Up from its depth to the surface (a burst of speed), and down again after re-entry (s). */
+const RISE = 1.6;
 const SINK = 1.1;
 
 function rng(...parts: Array<string | number>): () => number {
