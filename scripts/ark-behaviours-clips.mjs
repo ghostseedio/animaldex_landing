@@ -105,7 +105,7 @@ for (const name of scenes) {
         if (m.type() === "error") errors.push(m.text().slice(0, 300));
         if (m.text().startsWith("[behaviours]")) console.log(name, m.text().slice(0, 600));
     });
-    await page.goto(`${base}?scene=${name}&quality=high${arg("grass", "") === "0" ? "&grass=0" : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
+    await page.goto(`${base}?scene=${name}&quality=high${arg("grass", "") === "0" ? "&grass=0" : ""}${arg("query", "") ? `&${arg("query", "")}` : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
     try {
         await page.waitForFunction(() => window.__behaviours || window.__behavioursError, null, {timeout: 300000});
     } catch (error) {
@@ -144,6 +144,189 @@ for (const name of scenes) {
         writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
         const cols = 4;
         execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(times.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
+    if (name.startsWith("rt_")) {
+        // Reptile signatures (lane SIG2-REPTILES): the recipe's episode of the cast, found from the schedule: a frame at the
+        // middle of each of its steps (the long holds at their start and end too), each framed close from the animal's side.
+        const found = await page.evaluate(() => window.__behaviours.episode());
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const episode = (found ?? [])[Number(arg("pick", "0"))];
+        if (!episode) {
+            console.log(name, "no episode of the recipe in the search window", JSON.stringify(found));
+            summary[name] = {errors: ["no episode"]};
+            await context.close();
+            continue;
+        }
+        console.log(name, "episode", JSON.stringify({id: episode.id.slice(-3), t0: episode.t0, t1: episode.t1, keys: episode.keys.map((k) => `${k.b} ${(k.t1 - k.t0).toFixed(1)}s${k.caught === null ? "" : k.caught ? " caught" : " missed"}`)}));
+        let moments = [];
+        for (const k of episode.keys) {
+            if (k.b === "turn") continue;
+            const d = k.t1 - k.t0;
+            if (d > 9) moments.push([k.t0 + 1.2, `${k.b} start`], [k.t0 + d / 2, `${k.b} middle`], [k.t1 - 1.2, `${k.b} end`]);
+            else if (d > 3) moments.push([k.t0 + d * 0.25, `${k.b} early`], [k.t0 + d * 0.75, `${k.b} late`]);
+            else moments.push([k.t0 + d / 2, k.b]);
+        }
+        const cap = Number(arg("max", "16"));
+        if (moments.length > cap) moments = Array.from({length: cap}, (_, i) => moments[Math.round((i * (moments.length - 1)) / (cap - 1))]);
+        const labels = [];
+        for (let i = 0; i < moments.length; i++) {
+            const [at, label] = moments[i];
+            const note = await page.evaluate(async ([id, at, lengths, azimuth, polar]) => window.__behaviours.recipeShot(id, at, lengths, azimuth, polar), [episode.id, at, Number(arg("lengths", "0")) || null, arg("azimuth", "") === "" ? undefined : Number(arg("azimuth", "")), arg("polar", "") === "" ? undefined : Number(arg("polar", ""))]);
+            await page.evaluate((t) => (document.getElementById("note").textContent = t), `${name}  ${label} (+${(at - episode.t0).toFixed(1)} s)`);
+            labels.push(`${String(i).padStart(2, "0")} ${label} (+${(at - episode.t0).toFixed(1)} s): ${note}`);
+            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        const rows = Math.ceil(moments.length / 4);
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=4x${rows}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), episode: {id: episode.id, t0: episode.t0, t1: episode.t1}, shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
+    if (name.startsWith("mi_")) {
+        // Reptile signatures (lane SIG2-REPTILES): a small clinger's sit-and-wait bout (`micro-ambush.ts`): the first of the cast with one,
+        // framed close from in front of its wall or from its side on a rock, at the bout's moments (s from the dash's start).
+        const found = await page.evaluate(() => window.__behaviours.microBouts());
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        if (!found) {
+            console.log(name, "no bout in four minutes");
+            summary[name] = {errors: ["no bout"]};
+            await context.close();
+            continue;
+        }
+        const bout = found.bouts[0];
+        console.log(name, "bout", JSON.stringify({id: found.id.slice(-3), length: found.length, bout}));
+        const moments = [[bout.tv + 0.6, "the insect settles"], [bout.td - 0.6, "waiting"], [bout.td + 0.2, "the dash"], [bout.td + 0.5, "the snap begins"], [bout.td + 0.85, "the snap"], [bout.td + 1.25, "eating"], [bout.td + 2.6, "turning"], [bout.td + 3.2, "walking back"], [bout.te - 0.1, "back, turned"], [bout.te + 4, "still on its spot"]];
+        const labels = [];
+        for (let i = 0; i < moments.length; i++) {
+            const [at, label] = moments[i];
+            const note = await page.evaluate(async ([id, at, lengths]) => window.__behaviours.microShot(id, at, lengths), [found.id, at, Number(arg("lengths", "0")) || null]);
+            await page.evaluate((t) => (document.getElementById("note").textContent = t), `${name}  ${label} (td ${(at - bout.td).toFixed(2)} s)`);
+            labels.push(`${String(i).padStart(2, "0")} ${label} (td ${(at - bout.td).toFixed(2)} s): ${note}`);
+            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", "scale=640:-1,tile=4x3:padding=4:color=black", "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), bout, shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
+    if (["sally", "sallyb", "patrol", "display"].includes(name)) {
+        // Lane SIG-OTHER (flights): wait for a male in the recipe's act, then follow him: frames 1 s apart from a few body lengths.
+        const recipe = {sally: "sally_chase", sallyb: "sally_chase", patrol: "patrol_low", display: "display_flight"}[name];
+        const distance = Number(arg("distance", name === "display" ? "9" : "1.6"));
+        const count = Number(arg("frames", "12"));
+        const step = Number(arg("step", name === "display" ? "1.6" : "0.9"));
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const found = await page.evaluate(([recipe, limit]) => window.__behaviours.flightWatch(recipe, limit), [recipe, Number(arg("limit", "900"))]);
+        console.log(name, "found", JSON.stringify(found));
+        const labels = [];
+        if (found.id) {
+            for (let i = 0; i < count; i++) {
+                const note = await page.evaluate(async ([id, seconds, distance, azimuth, label]) => {
+                    const text = await window.__behaviours.flightFrame(id, seconds, distance, azimuth);
+                    document.getElementById("note").textContent = `${label}\n${text}`;
+                    return text;
+                }, [found.id, i === 0 ? 0.1 : step, distance, 0.7 + (i % 3) * 0.25, `${recipe} +${(i * step).toFixed(1)} s`]);
+                await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+                labels.push(`${String(i).padStart(2, "0")} +${(i * step).toFixed(1)} s: ${note}`);
+            }
+            writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+            execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", "scale=640:-1,tile=4x3:padding=4:color=black", "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        }
+        summary[name] = {errors: errors.slice(0, 10), found, shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
+    if (name === "tails") {
+        // Lane SIG-OTHER (tail postures, `tail-posture.ts`): each species of the cast framed from its side and from behind, its posture off and on.
+        const plan = await page.evaluate(() => window.__behaviours.tailPlan());
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const labels = [];
+        const lengths = Number(arg("lengths", "2.4"));
+        const WANT = {"domestic-dog": [{label: "calm, side", social: 0, moving: false, azimuth: Math.PI / 2}, {label: "greeting, side", social: 1, moving: false, azimuth: Math.PI / 2}, {label: "greeting, from behind", social: 1, moving: false, azimuth: Math.PI}, {label: "greeting, from behind +0.12 s", social: 1, moving: false, azimuth: Math.PI, run: 0.12}]};
+        for (const sp of plan) {
+            const steps = WANT[sp.slug] ?? [{label: "side", social: null, moving: true, azimuth: Math.PI / 2}, {label: "from behind", social: null, moving: true, azimuth: Math.PI}, {label: "three-quarters behind", social: null, moving: true, azimuth: Math.PI * 0.75}];
+            const files = [];
+            for (let i = 0; i < steps.length; i++) {
+                const step = steps[i];
+                const note = await page.evaluate(async ([id, step, lengths, label]) => {
+                    const text = await window.__behaviours.tailShot(id, {social: step.social, moving: step.moving, lengths, azimuth: step.azimuth, run: step.run});
+                    document.getElementById("note").textContent = `${label}: ${step.label}\n${text}`;
+                    return text;
+                }, [sp.ids[0], step, lengths, sp.name]);
+                const file = path.join(dir, `${sp.slug}-${i}.jpg`);
+                await page.screenshot({path: file, type: "jpeg", quality: 88});
+                files.push(file);
+                labels.push(`${sp.slug} ${step.label}: ${note}`);
+            }
+            const cols = files.length <= 3 ? files.length : 2;
+            execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, `${sp.slug}-%d.jpg`), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(files.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-${sp.slug}.jpg`)]);
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
+    if (name.startsWith("ls")) {
+        // Lane SIG-OTHER (look states, `look-state.ts`): each species of the cast close up, its state off and on. `night`: by the island's hour
+        // (12:00, then 01:00 the next day), `season`: the strength forced off and on, `display`: forced off and on, from the side, three-quarters and front.
+        const kind = /^ls(fish|land)/.test(name) ? "night" : name === "lsglow" ? "glow" : name === "lsindividual" ? "individual" : name.startsWith("lsseason") ? "season" : "display";
+        const lengths = Number(arg("lengths", kind === "night" ? "2.2" : kind === "season" || kind === "individual" ? "1.9" : kind === "glow" ? "1.6" : name === "lscheek" ? "0.9" : "1.2"));
+        const SIDE = Math.PI / 2;
+        const STEPS = {
+            night: [{label: "day, 12:00", k: null, hour: 12, azimuth: SIDE}, {label: "night, 01:00", k: null, hour: 25, azimuth: SIDE}, {label: "night, three-quarters", k: null, hour: 25, azimuth: Math.PI / 4}],
+            season: [{label: "state off (k 0)", k: 0, azimuth: SIDE}, {label: "state on (k 1)", k: 1, azimuth: SIDE}, {label: "state on, three-quarters", k: 1, azimuth: Math.PI / 4}],
+            glow: [{label: "night, state off", k: 0, hour: 25, azimuth: SIDE}, {label: "night, state on", k: 1, hour: 25, azimuth: SIDE}, {label: "night, on, three-quarters", k: 1, hour: 25, azimuth: Math.PI / 4}],
+            individual: [{label: "its own pattern, side", k: null, azimuth: SIDE}, {label: "its own pattern, three-quarters", k: null, azimuth: Math.PI / 4}],
+            display: [{label: "off (k 0), side", k: 0, azimuth: SIDE}, {label: "on (k 1), side", k: 1, azimuth: SIDE}, {label: "on, three-quarters", k: 1, azimuth: Math.PI / 4}, {label: "on, front", k: 1, azimuth: 0.05}]
+        }[kind];
+        const only = arg("only", "").split(",").filter(Boolean);
+        const plan = await page.evaluate(() => window.__behaviours.lsPlan());
+        const dir = path.join(out, name);
+        mkdirSync(dir, {recursive: true});
+        const labels = [];
+        const subjects = kind === "individual" ? plan.flatMap((sp) => sp.ids.map((id, n) => ({...sp, ids: [id], slug: `${sp.slug}-${n}`}))) : plan;
+        for (const sp of subjects) {
+            if (only.length && !only.includes(sp.slug)) continue;
+            const files = [];
+            for (let i = 0; i < STEPS.length; i++) {
+                const step = STEPS[i];
+                const note = await page.evaluate(async ([id, step, lengths, label]) => {
+                    const text = await window.__behaviours.lsShot(id, {k: step.k, lengths, azimuth: step.azimuth, hour: step.hour ?? null, month: step.month ?? null, run: step.hour ? 3 : 1.5, lift: Number(label.lift ?? 0)});
+                    document.getElementById("note").textContent = `${label.name}: ${step.label}\n${text}`;
+                    return text;
+                }, [sp.ids[0], step, lengths, {name: sp.name, lift: arg("lift", "0")}]);
+                const file = path.join(dir, `${sp.slug}-${i}.jpg`);
+                await page.screenshot({path: file, type: "jpeg", quality: 88});
+                files.push(file);
+                labels.push(`${sp.slug} ${step.label}: ${note.replace(/\n/g, " | ")}`);
+            }
+            const cols = files.length <= 3 ? files.length : 2;
+            execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, `${sp.slug}-%d.jpg`), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(files.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-${sp.slug}.jpg`)]);
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
         summary[name] = {errors: errors.slice(0, 10), shots: labels};
         console.log(name, labels.join("\n"));
         if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
@@ -293,6 +476,56 @@ for (const name of scenes) {
         summary[name] = {errors: errors.slice(0, 10), shots: labels};
         console.log(name, labels.join("\n"));
         if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
+    if (name.startsWith("sm-")) {
+        // sig2-small (signature behaviours, wave 2, the small bodies): the scene's recipe found in the day by the engine's own
+        // functions (`behaviours-small.ts`), then a frame at each of its blocks (the pair framed together), 1280x720.
+        const meta = await page.evaluate(() => window.__behaviours.smInfo());
+        const moments = await page.evaluate((r) => window.__behaviours.recipeMoments(r), meta.recipe);
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        writeFileSync(path.join(dir, "moments.json"), JSON.stringify(moments.slice(0, 12), null, 1));
+        console.log(name, meta.recipe, `${moments.length} moments`, JSON.stringify(moments.slice(0, 3).map((m) => ({id: m.id.slice(-3), other: m.other?.slice(-3), start: Math.round(m.start), len: Math.round(m.end - m.start), blocks: m.blocks.map((b) => b.block).join(">")}))));
+        for (const pickAt of arg("picks", arg("pick", "0")).split(",").map(Number)) {
+        const pick = moments[pickAt];
+        if (!pick) {
+            summary[name] = {errors: ["no episode " + pickAt + " of " + meta.recipe + " in the day"]};
+            continue;
+        }
+        const tag = arg("picks", "").includes(",") ? `${name}-p${pickAt}` : name;
+        const dirOf = path.join(out, tag);
+        rmSync(dirOf, {recursive: true, force: true});
+        mkdirSync(dirOf, {recursive: true});
+        // Moments: before, then each distinct block at 35% (and 80% when it is long), then after.
+        const shots = [[pick.start - 1.5, "before"]];
+        const seen = new Set();
+        for (const b of pick.blocks) {
+            const len = b.t1 - b.t0;
+            if (len < 0.4) continue;
+            shots.push([b.t0 + len * 0.35, `${b.block} (${len.toFixed(1)} s)`]);
+            if (len >= 3.5 && !seen.has(b.block)) shots.push([b.t0 + len * 0.8, `${b.block} again`]);
+            seen.add(b.block);
+        }
+        shots.push([pick.end + 3, "after"]);
+        const picked = shots.slice(0, Number(arg("max", "12")));
+        const labels = [];
+        for (let i = 0; i < picked.length; i++) {
+            const [epoch, label] = picked[i];
+            const note = await page.evaluate(async ([ids, epoch, lengths, azimuth, polar]) => window.__behaviours.smShot(ids, epoch, lengths, azimuth === "" ? null : Number(azimuth), polar), [pick.other ? [pick.id, pick.other] : [pick.id], epoch, Number(arg("lengths", String(meta.lengths))), arg("azimuth", ""), Number(arg("polar", String(meta.polar)))]);
+            await page.evaluate((t) => (document.getElementById("note").textContent = t), `${label} (+${(epoch - pick.start).toFixed(1)} s)\n${note}`);
+            labels.push(`${String(i).padStart(2, "0")} ${label} (+${(epoch - pick.start).toFixed(1)} s): ${note}`);
+            await page.screenshot({path: path.join(dirOf, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+        }
+        writeFileSync(path.join(dirOf, "labels.txt"), labels.join("\n") + "\n");
+        const cols = picked.length > 8 ? 4 : picked.length > 4 ? 3 : 2;
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dirOf, "%02d.jpg"), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(picked.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${tag}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(tag, labels.join("\n"));
+        if (errors.length) console.log(tag, "errors:", errors.slice(0, 5));
+        }
         await context.close();
         continue;
     }

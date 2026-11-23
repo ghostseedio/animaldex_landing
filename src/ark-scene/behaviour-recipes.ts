@@ -31,6 +31,7 @@ import type {ArkBeat, HoursAt, ScheduleAnimal, ScheduleWorld, Spot, Trip, TripMo
 import type {AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import {hashString} from "@/ark-scene/world";
 import {arkRecipeActivity} from "@/lib/ark-animal-status";
+import {recipeBase} from "@/ark-scene/recipe-templates-reptiles";
 import {dipDepth} from "@/ark-scene/egg-dip";
 // p3 (shake): shaking off the water after a swim.
 import {shakeAt, shakeOnArrival, shakeTotal, sinceOutOfWater, waterShakeOf, type ShakeNow} from "@/ark-scene/water-shake";
@@ -55,6 +56,11 @@ export type SpeciesRecipes = {
     /** Signature wave 2 (birds): the male alone sits the eggs (an emu's, a cassowary's, a rhea's): the props' nest sitter is the seeded male. */
     maleSits: boolean;
     defaulted: boolean;
+    /**
+     * sig2 (mammals): it builds a nest of its own the props do not draw (a squirrel's drey, a hog's farrowing nest: the
+     * props' nests are birds'), so the recipe draws and builds it itself (row flag `o`, `scripts/ark-signature-recipes.mts`).
+     */
+    ownNest: boolean;
     /** Its recipe ids, for a quick "has it" (posing runs often). */
     has: ReadonlySet<string>;
 };
@@ -98,11 +104,12 @@ export function decodeRecipeRow(slug: string, row: string): SpeciesRecipes {
         hovers: flags.includes("h"),
         maleSits: flags.includes("m"),
         defaulted: flags.includes("d"),
+        ownNest: flags.includes("o"),
         has: new Set(recipes ? recipes.split(",").map((r) => r.split(".")[0]) : [])
     };
 }
 
-const NONE: Omit<SpeciesRecipes, "slug"> = {recipes: [], sex: {system: "separate", maleShare: 0.5, bigger: null, ratio: 1, duller: null}, mating: [], nesting: [], nest: null, entry: "wade", exit: "walk", after: "shake", posture: null, hovers: false, maleSits: false, defaulted: true, has: new Set()};
+const NONE: Omit<SpeciesRecipes, "slug"> = {recipes: [], sex: {system: "separate", maleShare: 0.5, bigger: null, ratio: 1, duller: null}, mating: [], nesting: [], nest: null, entry: "wade", exit: "walk", after: "shake", posture: null, hovers: false, maleSits: false, defaulted: true, ownNest: false, has: new Set()};
 
 export function speciesRecipes(slug: string): SpeciesRecipes {
     const hit = decoded.get(slug);
@@ -282,6 +289,8 @@ const SOCIAL_RECIPE = new Set(["courting", "sparring", "playing", "calling", "ne
 
 /** How often a bird whose drawn nest is finished still takes a slot to it with material, against one building it. */
 export const NEST_TEND = 0.4;
+/** sig2 (mammals): how often an own-nest species with no stored nesting months builds, against one in its season (a rat's day nest stands all year). */
+export const OWN_NEST_YEAR = 0.25;
 
 /** On unless a page or a test turns it off. */
 let enabled = true;
@@ -304,7 +313,8 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         const template = TEMPLATES[id];
         if (!template || template.kind !== "stay" || template.goal === "here") continue;
         if (!template.replaces.includes(input.behaviour) && !template.replaces.includes(input.doing)) continue;
-        if (!hourOk(template, input.hours)) continue;
+        // (sig2, mammals: a night animal's own nest is built in its night: a rat's, a hog's, not only in the day.)
+        if (!hourOk(template, input.hours) && !(id === "nest_build" && species.ownNest && input.profile.activity === "nocturnal")) continue;
         if (template.sex === "male" && sex === "female") continue;
         if (template.sex === "female" && sex !== "female") continue; // 3.3 batch (D): a female's alone (egg-laying)
         // With the props' nests wired, it builds while its nest is growing (their stage), whatever the months say; once
@@ -313,16 +323,22 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         // through the season, the building of it only its first few Ark days.
         const nests = id === "nest_build" || id === "dummy_nests";
         const building = nests && nestSource ? nestSource(input.animal.id, input.start) : null;
-        if (nests && nestSource && !building) continue;
-        const tending = building ? (building.stage >= 1 ? NEST_TEND : 1) : null;
-        const pull = input.socialPull && input.socialPull !== 1 && SOCIAL_RECIPE.has(arkRecipeActivity(id) ?? "") ? input.socialPull : 1;
-        const chance = weight * 0.7 * (template.often ?? 1) * (tending ?? seasonFactor(species, template.season, input.start)) * pull;
+        // (sig2, mammals: a nest of its own the props do not draw: built from its row, in its season, or all year where none is stored.)
+        const own = id === "nest_build" && !building && species.ownNest;
+        if (nests && nestSource && !building && !own) continue;
+        let tending = building ? (building.stage >= 1 ? NEST_TEND : 1) : null;
+        // (Its own: in its months it builds while the nest grows and tends it after, as a bird does; none out of them; no months stored: now and then all year.)
+        if (own) tending = !species.nesting.length ? OWN_NEST_YEAR : !species.nesting.includes(seasonMonthAt(input.start)) ? 0 : nestStageAt(input.slug, input.start) >= 1 ? NEST_TEND : 1;
+        const pull = input.socialPull && input.socialPull !== 1 && SOCIAL_RECIPE.has(arkRecipeActivity(recipeBase(id)) ?? "") ? input.socialPull : 1;
+        // (A nest dug or guarded by a kind whose text names no month for it: a little all year, where its template says so.)
+        const season = template.season === "nesting" && !species.nesting.length && template.unstored !== undefined ? template.unstored : seasonFactor(species, template.season, input.start);
+        const chance = weight * 0.7 * (template.often ?? 1) * (tending ?? season) * pull;
         if (random() >= chance) continue;
         const to = goalSpot(input, template, random);
         if (!to) continue;
         const flyer = input.kit.flies(input.profile);
         const raisedTo = to.y > topOf(input.world.sampler, to.x, to.z) + 0.4;
-        const mode: TripMode = input.kit.aquatic(input.profile) ? "water" : flyer && (raisedTo || template.goal === "perch_water" || template.goal === "nest") ? "air" : "ground";
+        const mode: TripMode = input.kit.aquatic(input.profile) ? "water" : flyer && (raisedTo || template.goal === "perch_water" || template.goal === "nest" || template.goal === "flower") ? "air" : "ground";
         return {doing: template.doing, to, mode, recipe: id};
     }
     return null;
@@ -483,6 +499,11 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
             const point = kit.placeNear(world, centre, length, ["bark"], radius * 1.4, random());
             return point ? kit.spotOf(point) : null;
         }
+        case "flower": {
+            // (Wave 2: a flower to hang in front of, one of the schedule's own `visit_flowers` places.)
+            const point = kit.placeNear(world, centre, length, ["flower"], radius * 1.3, random());
+            return point ? kit.spotOf(point) : null;
+        }
         case "rock": {
             const point = kit.placeNear(world, centre, length, ["rock_top"], radius * 1.4, random());
             return point ? kit.spotOf(point) : null;
@@ -585,8 +606,10 @@ export function nestSiteOf(world: ScheduleWorld, profile: ArkBehaviourProfile, a
     const key = `${animal.id}#${nestYear(species, epochSeconds)}`;
     if (nestSites.has(key)) return nestSites.get(key)!;
     const kind = species.nest.kind;
-    // A low branch first (most stick and cup nests are within a few metres of the ground, and can be seen there).
-    if (kit.flies(profile) && ["cup", "dome", "platform", "other"].includes(kind)) {
+    // A low branch first (most stick and cup nests are within a few metres of the ground, and can be seen there). (sig2, mammals:
+    // a climber's ball of twigs, a squirrel's drey, is wedged in a fork too: it climbs to it.)
+    const drey = species.ownNest && kind === "dome" && (profile.move === "climb" || profile.moves.includes("climb"));
+    if ((kit.flies(profile) || drey) && ["cup", "dome", "platform", "other"].includes(kind)) {
         const low = world.sampler
             .attachPoints("branch", {x: animal.home.x, z: animal.home.z, r: 14})
             .filter((p) => p.y - topOf(world.sampler, p.x, p.z) < 5 && p.y - topOf(world.sampler, p.x, p.z) > 1.2)
@@ -615,6 +638,8 @@ export const NEST_BUILD_DAYS = 5;
  */
 export function nestStageAt(slug: string, epochSeconds: number): number {
     const species = speciesRecipes(slug);
+    // (sig2, mammals: an own nest with no stored months stands all year.)
+    if (species.ownNest && species.nest && !species.nesting.length) return 1;
     if (!species.nest || !species.nesting.length) return 0;
     const month = seasonMonthAt(epochSeconds);
     if (!species.nesting.includes(month)) return 0;
@@ -1860,6 +1885,8 @@ function stayEpisode(world: ScheduleWorld, trip: Trip, owner: TripOwner, kit: Sc
             const template = TEMPLATES[id];
             if (!template || template.kind !== "stay" || template.goal !== "here") continue;
             if (!template.replaces.includes(trip.doing) || !hourOk(template, hours)) continue;
+            // (Lane SIG-OTHER: a stay where it is may be a sex's own, a male's low patrol; none of the older ones names a sex.)
+            if (template.sex && template.sex !== "any" && template.sex !== sexLook(owner.animal.id, owner.slug).sex) continue;
             if (random() >= weight * 0.6 * seasonFactor(species, template.season, trip.arrive)) continue;
             const start = trip.arrive + Math.max(1 + random() * Math.max(trip.end - trip.arrive - 40, 0), shakeOnArrival(trip, waterShakeOf(owner.slug), Math.max(owner.animal.length, 0.05)));
             episode = buildEpisode({world, kit, owner, species, template, anchor, t0: start, t1: Math.min(trip.end - 3, start + 60), seed: `${owner.animal.id}#here#${trip.slot}#${id}`, hours, yaw0: kit.basePose(world, trip, start).yaw});
@@ -2456,7 +2483,8 @@ export function marksOf(world: ScheduleWorld, trips: Trip[], epoch: number, kit:
             const key = episode.keys[i];
             if (!key.block.mark || key.t0 > epoch) continue;
             // A burrow's spoil heap and a dust bath's hollow; a turtle's covered pit is a mound.
-            const kind = episode.recipe === "dig_burrow" || episode.recipe === "burrow_dig" || episode.recipe === "bank_burrow" || (episode.recipe === "beach_nest" && i > 2) ? "mound" : key.block.mark;
+            const base = recipeBase(episode.recipe);
+            const kind = base === "dig_burrow" || base === "burrow_dig" || base === "bank_burrow" || (base === "beach_nest" && i > 2) ? "mound" : key.block.mark;
             out.push({id: `${episode.id}#${i}`, kind, x: key.from.x, y: key.from.y, z: key.from.z, size: Math.max(episode.length * (kind === "hollow" ? 0.9 : 0.5), 0.06), from: key.t0, to: key.t0 + MARK_SECONDS});
         }
     }
@@ -2704,7 +2732,8 @@ function wireMixed(animals: WireInput[]) {
 /** Molehills round a burrow (pure in its id, spot and the time): a new mound every 5 minutes, each fading over 40. */
 export const MOLEHILL_EVERY = 300;
 export const MOLEHILL_SECONDS = 2400;
-export function molehillsOf(id: string, slug: string, at: P, epoch: number, heightAt: (x: number, z: number) => number): RecipeMark[] {
+/** (`scale`: the mounds' size and spread for a digger smaller than a mole: a mole cricket's are a few centimetres, `length / 0.15` of a mole's.) */
+export function molehillsOf(id: string, slug: string, at: P, epoch: number, heightAt: (x: number, z: number) => number, scale = 1): RecipeMark[] {
     if (!enabled || !speciesRecipes(slug).has.has("molehills")) return [];
     const out: RecipeMark[] = [];
     for (let n = Math.floor((epoch - MOLEHILL_SECONDS) / MOLEHILL_EVERY); n <= Math.floor(epoch / MOLEHILL_EVERY); n++) {
@@ -2712,12 +2741,12 @@ export function molehillsOf(id: string, slug: string, at: P, epoch: number, heig
         const from = n * MOLEHILL_EVERY + random() * MOLEHILL_EVERY;
         if (from > epoch || from + MOLEHILL_SECONDS < epoch) continue;
         const a = random() * Math.PI * 2;
-        const r = 0.6 + random() * 2.4;
+        const r = (0.6 + random() * 2.4) * scale;
         const x = at.x + Math.sin(a) * r;
         const z = at.z + Math.cos(a) * r;
         const h = heightAt(x, z);
         if (h < 0.02) continue;
-        out.push({id: `mole#${id}#${n}`, kind: "mound", x, y: h, z, size: 0.18 + random() * 0.12, from, to: from + MOLEHILL_SECONDS});
+        out.push({id: `mole#${id}#${n}`, kind: "mound", x, y: h, z, size: (0.18 + random() * 0.12) * scale, from, to: from + MOLEHILL_SECONDS});
     }
     return out;
 }
@@ -2739,7 +2768,8 @@ export function coatOf(world: ScheduleWorld, trips: Trip[], epoch: number, kit: 
             if (key.t0 > epoch) continue;
             const since = Math.max(epoch - key.t1, 0);
             const id = key.block.id;
-            if (id === "wallow") {
+            // (A tortoise settling into the mud, `wallow~turtle`, is muddied as a wallowing pig is.)
+            if (id === "wallow" || (id === "bury" && recipeBase(episode.recipe) === "wallow")) {
                 wet = Math.max(wet, 0.55 * Math.max(1 - since / 1200, 0));
                 dust = Math.max(dust, 0.9 * Math.max(1 - since / 1200, 0));
             } else if (id === "dust_bathe" || id === "roll") dust = Math.max(dust, Math.max(1 - since / 900, 0));

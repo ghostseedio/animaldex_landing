@@ -1,0 +1,334 @@
+{
+ "about": "Signature behaviours, wave 2, the reptile and turtle plans (lane SIG2-REPTILES): the rows wave 1 held (data/ark/signature-recipes.json) for lizards, geckos, crocodilians, tortoises and sea turtles, each with the recipe that shows it on its own body (src/ark-scene/recipe-templates-reptiles.ts). Built by scripts/ark-reptile-signatures.mts from AnimalDex docs/ark/signature-behaviours.json; applied by scripts/ark-signature-recipes.mts. templates: the plans a template is drawn for and its weight; held: the rows still held and why.",
+ "version": "reptiles-1",
+ "templates": {
+  "pounce~lizard": {
+   "plans": [
+    "lizard"
+   ],
+   "weight": 6
+  },
+  "dig_burrow~nest": {
+   "plans": [
+    "turtle"
+   ],
+   "weight": 5
+  },
+  "wallow~turtle": {
+   "plans": [
+    "turtle"
+   ],
+   "weight": 5
+  },
+  "probe_feed~turtle": {
+   "plans": [
+    "turtle"
+   ],
+   "weight": 5
+  },
+  "beach_nest~bank": {
+   "plans": [
+    "lizard"
+   ],
+   "weight": 5
+  },
+  "incubate_sit~reptile": {
+   "plans": [
+    "lizard"
+   ],
+   "weight": 5
+  },
+  "dig_burrow": {
+   "plans": [
+    "turtle"
+   ],
+   "weight": 5
+  },
+  "probe_feed": {
+   "plans": [
+    "lizard"
+   ],
+   "weight": 5
+  }
+ },
+ "replaces": [
+  {
+   "slug": "aldabra-giant-tortoise",
+   "recipe": "dig_burrow"
+  },
+  {
+   "slug": "leopard-tortoise",
+   "recipe": "dig_burrow"
+  },
+  {
+   "slug": "aldabra-giant-tortoise",
+   "recipe": "wallow"
+  },
+  {
+   "slug": "asian-forest-tortoise",
+   "recipe": "wallow"
+  },
+  {
+   "slug": "galapagos-tortoise",
+   "recipe": "wallow"
+  },
+  {
+   "slug": "hawksbill-sea-turtle",
+   "recipe": "probe_feed"
+  },
+  {
+   "slug": "mugger-crocodile",
+   "recipe": "beach_nest"
+  },
+  {
+   "slug": "amboina-sailfin-lizard",
+   "recipe": "beach_nest"
+  },
+  {
+   "slug": "siamese-crocodile",
+   "recipe": "incubate_sit"
+  },
+  {
+   "slug": "philippine-crocodile",
+   "recipe": "incubate_sit"
+  },
+  {
+   "slug": "red-tegu",
+   "recipe": "incubate_sit"
+  },
+  {
+   "slug": "oriental-garden-lizard",
+   "recipe": "pounce"
+  },
+  {
+   "slug": "brazilian-lava-lizard",
+   "recipe": "pounce"
+  },
+  {
+   "slug": "bocages-wall-lizard",
+   "recipe": "pounce"
+  },
+  {
+   "slug": "leopard-gecko",
+   "recipe": "pounce"
+  },
+  {
+   "slug": "common-house-gecko",
+   "recipe": "pounce"
+  },
+  {
+   "slug": "common-wall-gecko",
+   "recipe": "pounce"
+  },
+  {
+   "slug": "mediterranean-house-gecko",
+   "recipe": "pounce"
+  },
+  {
+   "slug": "tropical-house-gecko",
+   "recipe": "pounce"
+  }
+ ],
+ "additions": [
+  {
+   "slug": "aldabra-giant-tortoise",
+   "name": "Aldabra Giant Tortoise",
+   "recipe": "dig_burrow~nest",
+   "behaviour": "female lays eggs in soil nest and leaves",
+   "field": "young",
+   "quote": "Females lay eggs in soil nests"
+  },
+  {
+   "slug": "leopard-tortoise",
+   "name": "Leopard Tortoise",
+   "recipe": "dig_burrow~nest",
+   "behaviour": "female digs nest",
+   "field": "young",
+   "quote": "Females dig nests and lay clutches of eggs in soil"
+  },
+  {
+   "slug": "russian-tortoise",
+   "name": "Russian Tortoise",
+   "recipe": "dig_burrow",
+   "behaviour": "digs metre-long burrows with strong forelimbs",
+   "field": "facts",
+   "quote": "Its compact body and strong forelimbs are built for digging burrows, which are reported to reach a metre or more."
+  },
+  {
+   "slug": "sulcata-tortoise",
+   "name": "Sulcata Tortoise",
+   "recipe": "dig_burrow",
+   "behaviour": "excavates deep burrows and retreats in midday heat/drought",
+   "field": "evidence",
+   "quote": "Tortoises are most active during the cooler parts of the day (early morning, late afternoon) and retreat into their burrows during the peak heat of midday or during prolonged dry spells."
+  },
+  {
+   "slug": "aldabra-giant-tortoise",
+   "name": "Aldabra Giant Tortoise",
+   "recipe": "wallow~turtle",
+   "behaviour": "rests in shade and wallows in heat",
+   "field": "sleep",
+   "quote": "Day-active but rests during heat, using shade, wallows, and slow rhythms"
+  },
+  {
+   "slug": "asian-forest-tortoise",
+   "name": "Asian Forest Tortoise",
+   "recipe": "wallow~turtle",
+   "behaviour": "pushes into damp leaf litter or mud for hours on warm days",
+   "field": "story",
+   "quote": "On warm days it pushes itself into damp leaf litter or soft mud and stays there for hours"
+  },
+  {
+   "slug": "galapagos-tortoise",
+   "name": "Galápagos Tortoise",
+   "recipe": "wallow~turtle",
+   "behaviour": "sleeps half-submerged in mud wallows",
+   "field": "sleep",
+   "quote": "At night it sleeps in shallow scrapes, under bushes, or half-submerged in mud wallows and pools."
+  },
+  {
+   "slug": "hawksbill-sea-turtle",
+   "name": "Hawksbill Sea Turtle",
+   "recipe": "probe_feed~turtle",
+   "behaviour": "probes beak into coral crevices for sponges",
+   "field": "story",
+   "quote": "The Hawksbill Sea Turtle uses a narrow hooked beak to reach food tucked deep inside coral reefs."
+  },
+  {
+   "slug": "indonesian-blue-tongued-skink",
+   "name": "Indonesian Blue-tongued Skink",
+   "recipe": "probe_feed",
+   "behaviour": "forages through leaf litter; shelters in midday heat",
+   "field": "sleep",
+   "quote": "It basks in the morning to warm up, then forages through leaf litter, and shelters at night and in the hottest hours under logs, in burrows or in deep litter."
+  },
+  {
+   "slug": "mugger-crocodile",
+   "name": "Mugger Crocodile",
+   "recipe": "beach_nest~bank",
+   "behaviour": "digs nest hole in sandy bank",
+   "field": "young",
+   "quote": "In the dry season the female digs a nest hole in a sandy bank"
+  },
+  {
+   "slug": "amboina-sailfin-lizard",
+   "name": "Amboina Sailfin Lizard",
+   "recipe": "beach_nest~bank",
+   "behaviour": "female buries eggs in bank nest",
+   "field": "young",
+   "quote": "Females dig a shallow nest in soil or sand on the bank above the waterline and bury their eggs."
+  },
+  {
+   "slug": "siamese-crocodile",
+   "name": "Siamese Crocodile",
+   "recipe": "incubate_sit~reptile",
+   "behaviour": "female guards nest",
+   "field": "young",
+   "quote": "Females build nests and lay clutches of eggs, often guarding the nest or young.",
+   "nest": "other:"
+  },
+  {
+   "slug": "philippine-crocodile",
+   "name": "Philippine Crocodile",
+   "recipe": "incubate_sit~reptile",
+   "behaviour": "female guards nest near water",
+   "field": "young",
+   "quote": "Females lay eggs in nests near water and may guard nesting areas.",
+   "nest": "other:"
+  },
+  {
+   "slug": "red-tegu",
+   "name": "Red Tegu",
+   "recipe": "incubate_sit~reptile",
+   "behaviour": "female lines nest with plants and guards it",
+   "field": "young",
+   "quote": "She is reported to line the nest with plant material and to stay and guard it",
+   "nest": "other:"
+  },
+  {
+   "slug": "oriental-garden-lizard",
+   "name": "Oriental Garden Lizard",
+   "recipe": "pounce~lizard",
+   "behaviour": "hunts from a perch with short rapid attack",
+   "field": "evidence",
+   "quote": "The lizard commonly hunts visually from a perch, observing its surroundings before making a short, rapid attack on prey."
+  },
+  {
+   "slug": "brazilian-lava-lizard",
+   "name": "Brazilian Lava Lizard",
+   "recipe": "pounce~lizard",
+   "behaviour": "motionless on rock then dashes out at insect",
+   "field": "story",
+   "quote": "It sits motionless on speckled rock or sand, its grey-brown mottling blending with the surface, until an insect passes and it dashes out.",
+   "micro": "day"
+  },
+  {
+   "slug": "bocages-wall-lizard",
+   "name": "Bocage's Wall Lizard",
+   "recipe": "pounce~lizard",
+   "behaviour": "dash from basking spot to catch insects",
+   "field": "evidence",
+   "quote": "or by a quick dash from a basking spot",
+   "micro": "day"
+  },
+  {
+   "slug": "leopard-gecko",
+   "name": "Leopard Gecko",
+   "recipe": "pounce~lizard",
+   "behaviour": "waits at burrow mouths for insects",
+   "field": "story",
+   "quote": "making it a ground hunter that waits at burrow mouths for passing insects",
+   "micro": "night"
+  },
+  {
+   "slug": "common-house-gecko",
+   "name": "Common House Gecko",
+   "recipe": "pounce~lizard",
+   "behaviour": "hunts insects at lit walls at night",
+   "field": "evidence",
+   "quote": "Common House Geckos frequently hunt insects attracted to artificial lights on walls and ceilings of human dwellings at night.",
+   "micro": "night"
+  },
+  {
+   "slug": "common-wall-gecko",
+   "name": "Common Wall Gecko",
+   "recipe": "pounce~lizard",
+   "behaviour": "waits motionless beside wall lamps for moths",
+   "field": "story",
+   "quote": "On warm nights it stations itself beside outdoor lamps on house walls, clinging motionless until a moth lands within reach.",
+   "micro": "night"
+  },
+  {
+   "slug": "mediterranean-house-gecko",
+   "name": "Mediterranean House Gecko",
+   "recipe": "pounce~lizard",
+   "behaviour": "waits by lamps at night to snap moths",
+   "field": "story",
+   "quote": "On warm nights it waits beside outdoor lamps and darts out to snap up moths and other insects that the light draws in.",
+   "micro": "night"
+  },
+  {
+   "slug": "tropical-house-gecko",
+   "name": "Tropical House Gecko",
+   "recipe": "pounce~lizard",
+   "behaviour": "waits beside lamps at night to snap insects",
+   "field": "story",
+   "quote": "The Tropical House Gecko settles on the wall beside a lamp after dark and snaps up the insects that the light draws in.",
+   "micro": "night"
+  }
+ ],
+ "held": [
+  {
+   "slug": "tokay-gecko",
+   "behaviour": "may guard eggs stuck to surfaces",
+   "recipe": "incubate_sit",
+   "reason": "its eggs are stuck to a wall or a trunk; the nest guard is a lying-over of a mound on the ground, which is another animal's"
+  },
+  {
+   "slug": "southeastern-five-lined-skink",
+   "behaviour": "female coils around her clutch until it hatches",
+   "recipe": "incubate_sit",
+   "reason": "a small clinger on the leaf litter (a micro animal, off the schedule), and no clutch of eggs is drawn without the server's record of laying; a coil around nothing would show nothing"
+  }
+ ]
+}

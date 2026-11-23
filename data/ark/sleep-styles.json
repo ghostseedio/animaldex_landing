@@ -10402,7 +10402,7 @@
    "slug": "capybara",
    "posture": "curl",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -10411,7 +10411,8 @@
      "rule": "order Rodentia: curls up"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "evidence",
+     "phrase": "often resting communally during the hottest parts of the day or night, frequently partly submerged or at the water's edge"
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -17202,7 +17203,7 @@
    "slug": "domestic-sheep",
    "posture": "sternal",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -17211,7 +17212,8 @@
      "rule": "family Bovidae: lies on its chest, the legs folded under"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "evidence",
+     "phrase": "In cold weather or when feeling threatened, sheep will huddle closely together, often forming a tight mass."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -59197,7 +59199,7 @@
    "slug": "zebu",
    "posture": "sternal",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -59206,7 +59208,8 @@
      "rule": "family Bovidae: lies on its chest, the legs folded under"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "At night the herd lies down together"
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"

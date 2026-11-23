@@ -18,6 +18,7 @@
  * - **Secondary.** Tails on springs (lag, overshoot), driven by turns, sway, bob and speed.
  */
 
+import {tailPostureLinks} from "@/ark-scene/tail-posture";
 import {Matrix4, Quaternion, Vector3} from "three";
 import {columnarLegs, G, GAITS, gaitFor, gaitLadder, headBobs, landGait, legOffset, strideFor, type GaitLadder} from "@/ark-scene/locomotion/gaits";
 import {restPole, solveLeg} from "@/ark-scene/locomotion/ik";
@@ -631,7 +632,13 @@ function poseInBodyFrame(rig: LocoRig, input: LocoInput, world: Matrix4[], s: Le
         const pitchDrive = clamp(0.25 * Math.min(s.froude, 2), 0, 0.5) * motion - (bob / Math.max(legH, 1e-4)) * 2;
         const out = {yaw: [] as number[], pitch: [] as number[]};
         stepChain(s.tail, yawDrive, pitchDrive, dt, tailHz, 0.3, out);
+        // Lane SIG-OTHER: its species' own posture on top (a dog's wag, a coati's flag, a baboon's arch: `tail-posture.ts`).
+        const posture = input.tail ? tailPostureLinks(input.tail.spec, {motion, social: input.tail.social, clock: input.clock, seed: input.seed}, rig.tail.length) : null;
         for (let k = 0; k < rig.tail.length; k++) {
+            if (posture) {
+                out.pitch[k] += posture.pitch[k];
+                out.yaw[k] += posture.yaw[k];
+            }
             const b = rig.tail[k];
             pivot.setFromMatrixPosition(world[b]);
             tmpQ.setFromAxisAngle(Y, out.yaw[k]);

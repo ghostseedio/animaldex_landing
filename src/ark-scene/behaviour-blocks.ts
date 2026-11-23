@@ -14,6 +14,8 @@
  */
 
 import type {ArkBeat} from "@/ark-scene/behaviour-schedule";
+import {REPTILE_BLOCKS} from "@/ark-scene/behaviour-blocks-reptiles";
+import {SMALL_BLOCKS} from "@/ark-scene/recipe-small";
 
 export type BlockMotion = "travel" | "hold";
 /** A travel block's path: on the ground; a flight's arc; a plunge (steep, fast at the end); a dive (down and along); straight up; straight. */
@@ -108,6 +110,9 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         B({id: "dig", label: "dig (dirt flies; a hole or a mound)", motion: "hold", states: ["dig"], beat: "peck", pitch: 0.4, surge: 0.05, rate: 3, fx: "dirt", fxAt: "during", mark: "hole"}),
         B({id: "push", label: "push or roll an object", motion: "travel", curve: "ground", states: ["push"], beat: "walk", pitch: 0.3}),
         B({id: "tool", label: "use a tool (a stone, a stick)", motion: "hold", states: ["tool"], beat: "bite", surge: 0.06, rate: 2.5}),
+        // sig2 (mammals): a stone raised and brought down on a nut or a shell (macaques, capuchins). Its clip is the forelimbs' dig
+        // (a stroke of both arms, looped: no new state), the body's own rise and fall and the crack's dust over it.
+        B({id: "pound", label: "pound a nut or shell with a stone", motion: "hold", states: ["dig"], beat: "peck", pitch: 0.3, heave: 0.07, surge: 0.05, rate: 1.7, fx: "dust", fxAt: "during"}),
         // Display, voice, contests
         B({id: "display", label: "display (posture, wings, crest, tail, throat)", motion: "hold", states: ["display"], beat: "scan", pitch: -0.12}),
         B({id: "pushup", label: "push-up display", motion: "hold", states: ["pushup"], beat: "scan", heave: 0.12, rate: 1.8}),
@@ -138,9 +143,14 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         B({id: "turn", label: "turn on the spot (before setting off the other way)", motion: "hold", states: ["freeze"], beat: "pause"}),
         B({id: "perch", label: "perch", motion: "hold", states: ["perch"], beat: "rest"}),
         B({id: "rest", label: "rest", motion: "hold", states: ["rest"], beat: "rest"}),
-        B({id: "incubate", label: "sit on the nest", motion: "hold", states: ["incubate"], beat: "rest", heave: -0.08})
+        B({id: "incubate", label: "sit on the nest", motion: "hold", states: ["incubate"], beat: "rest", heave: -0.08}),
+        // Wave 2, the small bodies (`recipe-small.ts`).
+        ...SMALL_BLOCKS.map(B)
     ].map((b) => [b.id, b])
 );
+
+// (Lane SIG2-REPTILES: the reptile signature variants' two blocks.)
+for (const block of REPTILE_BLOCKS) BLOCKS[block.id] = block;
 
 /** Every named animation state a block can ask for: the rig player lane maps these to clips (unmapped: the block's `beat`). */
 export const ARK_RECIPE_STATES: string[] = Array.from(new Set(Object.values(BLOCKS).flatMap((b) => b.states))).sort();

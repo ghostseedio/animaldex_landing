@@ -69,6 +69,9 @@ varying float vArkEyesShut;
 varying vec2 vArkBody;
 // 3.3 batch (C): where its model's antlers start (y, zMin, zBase; antler-cycle.ts), folded to the skull as they grow or are shed.
 uniform vec4 arkAntler;
+// Lane SIG-OTHER: a display's swell (look-state.ts): the centre and push (A), the radii and whether mirrored (B) of the region of the rest pose pushed out along its normals.
+uniform vec4 arkSwellA;
+uniform vec4 arkSwellB;
 #endif
 #ifdef ARK_SHELL
 attribute vec2 arkShellLayer;
@@ -105,10 +108,17 @@ export const LOOK_VERTEX = `
     vArkEyeR = (arkModelView * vec4(arkToEyeR, 0.0)).xyz;
     // 3.3 batch (C): the antler cycle (antler-cycle.ts foldAntler): its code rides above the young coat in arkCoat.y's
     // 32s (0 as drawn, 1-14 growing, 15 none); the antlers' points fold toward the skull, to nothing when shed.
-    float arkAntlerCode = floor(arkCoat.y / 32.0 + 0.00001);
+    float arkAntlerCode = mod(floor(arkCoat.y / 32.0 + 0.00001), 16.0);
     if (arkAntlerCode > 0.5 && position.y > arkAntler.x && position.z > arkAntler.y) {
         float arkAntlerK = arkAntlerCode > 14.5 ? 0.0 : 0.35 + 0.65 * (arkAntlerCode - 1.0) / 13.0;
         transformed = vec3(position.x * arkAntlerK, arkAntler.x + (position.y - arkAntler.x) * arkAntlerK, arkAntler.z + (position.z - arkAntler.z) * arkAntlerK);
+    }
+    // Lane SIG-OTHER: a display's swell (look-state.ts): its strength rides above the antlers in arkCoat.y's 512s (0-15).
+    float arkSwellCode = mod(floor(arkCoat.y / 512.0 + 0.00001), 16.0);
+    if (arkSwellCode > 0.5 && arkSwellA.w > 0.0) {
+        vec3 arkSwellP = vec3(arkSwellB.w > 0.5 ? abs(position.x) : position.x, position.y, position.z);
+        float arkSwellD = length((arkSwellP - arkSwellA.xyz) / max(arkSwellB.xyz, vec3(0.0001)));
+        transformed += normalize(normal) * arkSwellA.w * (arkSwellCode / 15.0) * (1.0 - smoothstep(0.55, 1.0, arkSwellD));
     }
 }
 #endif
@@ -148,6 +158,18 @@ uniform vec4 arkYoungC;
 uniform vec2 arkYoungD;
 varying vec2 vArkBody;
 uniform vec4 arkAntler;
+// Lane SIG-OTHER: the species' look states (look-state.ts). Night (by the island's daylight) and State (by the animal's strength in arkCoat.y's 512s):
+// A = colour rgb and how much of the skin it replaces, B = (grey: + duller, - richer; gain; on; glow: > 0 adds its colour as light and takes the eyes too), C = (region centre xyz, mirrored), D = (region radii xyz, region on).
+uniform vec4 arkNightA;
+uniform vec4 arkNightB;
+uniform vec4 arkNightC;
+uniform vec4 arkNightD;
+uniform vec4 arkStateA;
+uniform vec4 arkStateB;
+uniform vec4 arkStateC;
+uniform vec4 arkStateD;
+// And an animal's own pattern (A = kind: 1 patches, 2 spots; scale; share dark; share light), by its seed in arkVary.w (ark-variation.ts).
+uniform vec4 arkIndA;
 varying vec3 vArkRest;
 varying vec3 vArkRestNormal;
 varying vec2 vArkLookV;
@@ -160,6 +182,19 @@ varying float vArkEyesShut;
 varying float vArkShell;
 varying float vArkShellHere;
 #endif
+// How much of a state's region (an ellipsoid of the rest pose, folded on x when mirrored; none: the whole body) a point is in.
+float arkStateRegion(vec3 p, vec4 C, vec4 D) {
+    if (D.w < 0.5) return 1.0;
+    vec3 q = vec3(C.w > 0.5 ? abs(p.x) : p.x, p.y, p.z);
+    return 1.0 - smoothstep(0.55, 1.0, length((q - C.xyz) / max(D.xyz, vec3(0.0001))));
+}
+// A state's tone over a colour at a strength: greyer or richer, lighter or darker, its colour mixed in (the painted light and shade kept).
+vec3 arkStateTone(vec3 c, vec4 A, vec4 B, float k) {
+    float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    vec3 t = mix(c, vec3(l), B.x) * B.y;
+    t = mix(t, A.rgb * (0.9 + 0.35 * l), A.w);
+    return mix(c, max(t, vec3(0.0)), clamp(k, 0.0, 1.0));
+}
 float arkLookHash(vec3 p) {
     p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419));
     p *= 17.0;
@@ -299,10 +334,47 @@ if (arkYoung > 0.5) {
 }
 // 3.3 batch (C): growing antlers are in velvet (antler-cycle.ts): a soft grey-brown skin over them.
 {
-    float arkAntlerNow = floor(vArkLookV.y / 32.0 + 0.00001);
+    float arkAntlerNow = mod(floor(vArkLookV.y / 32.0 + 0.00001), 16.0);
     if (arkAntlerNow > 0.5 && arkAntlerNow < 14.5 && vArkRest.y > arkAntler.x && vArkRest.z > arkAntler.y) {
         float arkVl = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.19, 0.135, 0.095) * (0.8 + 0.6 * arkVl), 0.8);
+    }
+}
+// Lane SIG-OTHER: look states (look-state.ts): the night's tone by the island's daylight (a gecko pales, a goldfish fades), and the
+// animal's own state (a season's colour, a display's flush) by its strength in arkCoat.y's 512s. Not on the eyes, unless the tone glows (eyeshine).
+float arkGlowAmount = 0.0;
+vec3 arkGlowColour = vec3(0.0);
+{
+    float arkLsEye = 1.0 - arkEyeAmount;
+    if (arkNightB.z > 0.5) {
+        float arkNightT = clamp((1.0 - arkDaylight) / 0.66, 0.0, 1.0);
+        float arkNightM = arkNightT * arkNightT * (3.0 - 2.0 * arkNightT) * arkStateRegion(vArkRest, arkNightC, arkNightD);
+        if (arkNightM > 0.001) {
+            diffuseColor.rgb = arkStateTone(diffuseColor.rgb, arkNightA, arkNightB, arkNightM * (arkNightB.w > 0.0 ? 1.0 : arkLsEye));
+            arkGlowAmount = arkNightB.w * arkNightM;
+            arkGlowColour = arkNightA.rgb;
+        }
+    }
+    float arkStateK = mod(floor(vArkLookV.y / 512.0 + 0.00001), 16.0) / 15.0;
+    if (arkStateK > 0.001 && arkStateB.z > 0.5) {
+        float arkStateM = arkStateK * arkStateRegion(vArkRest, arkStateC, arkStateD);
+        diffuseColor.rgb = arkStateTone(diffuseColor.rgb, arkStateA, arkStateB, arkStateM * (arkStateB.w > 0.0 ? 1.0 : arkLsEye));
+        if (arkStateB.w > 0.0) {
+            arkGlowAmount = max(arkGlowAmount, arkStateB.w * arkStateM);
+            arkGlowColour = arkStateA.rgb;
+        }
+    }
+    if (arkStateK > 0.001 && arkIndA.x > 0.5) {
+        // Its own patches or spots: dark and light areas of noise seeded by the animal (the skin's own colours, darker or paler).
+        vec2 arkIndPat = vec2(floor(vArkVary.w) / 997.0, fract(vArkVary.w));
+        vec3 arkIndQ = vArkRest * arkIndA.y + vec3(arkIndPat * 61.0, arkIndPat.x * 23.0);
+        float arkIndDark = arkIndA.x < 1.5 ? smoothstep(0.95 - arkIndA.z, 1.05 - arkIndA.z, arkLookNoise(arkIndQ)) : smoothstep(0.97 - arkIndA.z, 1.03 - arkIndA.z, arkLookNoise(arkIndQ * 2.7 + 7.1));
+        float arkIndLight = arkIndA.x < 1.5 ? smoothstep(arkIndA.w + 0.05, arkIndA.w - 0.05, arkLookNoise(arkIndQ + 13.7)) : 0.0;
+        vec3 arkIndC = diffuseColor.rgb;
+        float arkIndL = dot(arkIndC, vec3(0.2126, 0.7152, 0.0722));
+        arkIndC = mix(arkIndC, vec3(0.04) * (0.6 + arkIndL), arkIndDark * 0.85);
+        arkIndC = mix(arkIndC, vec3(0.9 + 0.1 * arkIndL), arkIndLight * 0.8);
+        diffuseColor.rgb = mix(diffuseColor.rgb, arkIndC, clamp(arkStateK, 0.0, 1.0) * arkLsEye);
     }
 }
 #ifdef ARK_SHELL
@@ -413,6 +485,8 @@ export const LOOK_FINISH = `
     }
 #endif
     outgoingLight += arkRim * tint * rimShape * arkLookB.x * (1.0 - vArkDim) * (1.0 - 0.5 * arkWet);
+    // Lane SIG-OTHER: a state that glows (eyeshine, a firefly's light): its colour added to the lit surface (look-state.ts).
+    outgoingLight += arkGlowColour * arkGlowAmount;
     if (arkEyeAmount > 0.001) {
         // A catchlight: the sky's light up and to the left of the camera, mirrored in the eye's dome.
         vec3 r = reflect(-normalize(vViewPosition), normal);

@@ -12,6 +12,8 @@
  */
 
 import {GROUP_TEMPLATES} from "@/ark-scene/behaviour-group-templates";
+import {REPTILE_TEMPLATES} from "@/ark-scene/recipe-templates-reptiles";
+import {SMALL_TEMPLATES} from "@/ark-scene/recipe-small";
 
 /**
  * Where a step goes:
@@ -65,7 +67,7 @@ export type TemplateStep = {
     role?: "a" | "b";
 };
 
-export type Goal = "perch_water" | "perch" | "lookout" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "air" | "here";
+export type Goal = "perch_water" | "perch" | "lookout" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "air" | "here" | "flower";
 
 export type Template = {
     id: string;
@@ -81,6 +83,8 @@ export type Template = {
     hours?: "day" | "night" | "dawn_dusk" | "dusk" | "any";
     /** Only in its mating or nesting season (where the data has one). "tunnel": in its nesting months where stored, a little all year where not (a kingfisher digs its tunnel). */
     season?: "mating" | "nesting" | "tunnel";
+    /** (Lane SIG2-REPTILES) A nesting template, for a species whose text names no months: how much it runs all year (the others: never). */
+    unstored?: number;
     /** How often it takes a slot it could, relative to its weight (1 when absent): a fishing flight out and back is a
      *  now-and-then thing, not every forage. */
     often?: number;
@@ -586,6 +590,43 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
                 {b: "place", s: [0.6, 1], drop: true}
             ]
         }),
+        // sig2 (mammals): the catalogue's stone-hammer rows (AnimalDex docs/ark/signature-behaviours.json: Long-tailed Macaque,
+        // Tufted Capuchin): on a rock, a stone lifted and brought down on a nut or an oyster, over and over, then the kernel eaten.
+        T({
+            id: "stone_hammer",
+            label: "pounds a nut or an oyster on a rock with a stone held in its hands (macaques, capuchins)",
+            kind: "stay",
+            goal: "rock",
+            replaces: ["forage"],
+            doing: "forage",
+            hours: "day",
+            steps: [
+                {b: "scan", s: [1, 2]},
+                {b: "pick_up", s: [1, 2], pick: "stone", carry: "chest"},
+                {b: "pound", s: [4, 8]},
+                {b: "eat", s: [1.5, 3]},
+                {b: "pound", s: [3, 6]},
+                {b: "place", s: [0.6, 1], drop: true}
+            ]
+        }),
+        // sig2 (mammals): the Javan Ferret-Badger's own sentence (nose down in the leaf litter, then the long claws, a worm
+        // drawn out): `root_dig` has the digging, this has the catch.
+        T({
+            id: "worm_dig",
+            label: "snuffles the leaf litter, digs with its claws and draws out a worm",
+            kind: "stay",
+            goal: "ground",
+            replaces: ["forage", "wander"],
+            doing: "forage",
+            steps: [
+                {b: "walk", to: "ground", near: "here", r: 2.5},
+                {b: "probe", s: [1.5, 3]},
+                {b: "dig", s: [1.5, 3]},
+                {b: "pull", s: [0.6, 1.2], catch: "worm", p: 0.55, carry: "mouth"},
+                {b: "eat", s: [0.8, 1.4], if: "caught", eat: true}
+            ],
+            loop: 0
+        }),
         // MARK: Comfort
         T({id: "groom_self", label: "grooms or preens", kind: "stay", goal: "here", replaces: ["rest", "groom", "perch", "watch"], doing: "groom", steps: [{b: "groom", s: [4, 10]}, {b: "scan", s: [1, 2]}, {b: "groom", s: [3, 6]}]}),
         T({
@@ -946,6 +987,61 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             ],
             loop: 0
         }),
+        // MARK: Territory and display flights (lane SIG-OTHER, 2026-11-20: `data/ark/signature-recipes-other.json`)
+        T({
+            id: "sally_chase",
+            label: "holds a perch and darts out after what passes, then comes back to it (territorial males: dragonflies, butterflies, bees, flies)",
+            kind: "stay",
+            goal: "perch",
+            replaces: ["perch", "rest", "watch", "bask", "fly"],
+            doing: "idle",
+            hours: "day",
+            sex: "male",
+            often: 0.6,
+            steps: [
+                {b: "perch", s: [5, 14]},
+                {b: "take_off", to: "up", h: 0.5},
+                {b: "fly", to: "air", r: 5, fast: true},
+                {b: "fly", to: "air", r: 3, fast: true},
+                {b: "fly", to: "anchor"}
+            ],
+            loop: 0
+        }),
+        T({
+            id: "patrol_low",
+            label: "patrols low back and forth over its ground, looking for a female (males: moths, butterflies, wasps)",
+            kind: "stay",
+            goal: "here",
+            replaces: ["rest", "groom", "perch", "bask", "watch", "idle"],
+            doing: "fly",
+            hours: "day",
+            sex: "male",
+            steps: [
+                {b: "fly", to: "air", r: 6, near: "here"},
+                {b: "fly", to: "air", r: 6, near: "here"},
+                {b: "fly", to: "air", r: 6, near: "here"}
+            ],
+            tail: [{b: "fly", to: "anchor"}],
+            loop: 0
+        }),
+        T({
+            id: "display_flight",
+            label: "a display flight: climbs steeply from its perch, then glides down in a wide arc (doves and pigeons)",
+            kind: "stay",
+            goal: "perch",
+            replaces: ["perch", "rest", "watch", "fly"],
+            doing: "fly",
+            hours: "day",
+            season: "mating",
+            sex: "male",
+            steps: [
+                {b: "perch", s: [4, 10]},
+                {b: "take_off", to: "up", h: 9},
+                {b: "fly", to: "air", r: 12},
+                {b: "fly", to: "anchor"}
+            ],
+            loop: 0
+        }),
         // MARK: Nests and digging
         T({id: "incubate_sit", label: "sits on its eggs on the nest", kind: "stay", goal: "nest", replaces: [], doing: "rest", steps: [{b: "incubate", s: [60, 78]}]}),
         T({id: "molehills", label: "pushes up molehills round its burrow (they fade)", kind: "mark", goal: "here", replaces: [], doing: "burrow", steps: []}),
@@ -1051,12 +1147,16 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
                 {b: "scan", s: [1, 2]},
                 {b: "dig", s: [4, 8]}
             ]
-        })
+        }),
+        // Wave 2, the small bodies (`recipe-small.ts`).
+        ...SMALL_TEMPLATES.map(T)
     ].map((t) => [t.id, t])
 );
 
 // Group life (lane SIG-GROUP): the group acts' templates (`behaviour-group.ts`).
 for (const t of GROUP_TEMPLATES) TEMPLATES[t.id] = t;
+// (Lane SIG2-REPTILES: the reptile and turtle variants, `recipe-templates-reptiles.ts`.)
+for (const template of REPTILE_TEMPLATES) TEMPLATES[template.id] = template;
 
 /** Land-water crossings: the way in, the way out, and what follows (the schedule's enter and exit legs). */
 export const ENTRY_STYLES = ["wade", "slide", "slip", "dive", "launch"] as const;
