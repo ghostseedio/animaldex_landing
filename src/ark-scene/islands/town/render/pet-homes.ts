@@ -31,6 +31,10 @@ export type PetHomes = {group: Group; floors: Float32Array; dispose: () => void}
  * are taken at build (`toGeometry`), the floors are `homeDisplayFloors`', and no raycast runs on the town.
  */
 function releaseArray(this: {array: ArrayLike<number>}) {
+    // (Set aside for the seat audit's probe, development only: `scripts/ark-seat-audit.mjs` reads every drawn triangle
+    // near an animal, and with the copies gone a bird on a town tree's limb measured 8 m over the ground below it. Set
+    // aside, not kept on the attribute: the scene's own seat pass reads the attribute, and must see what it sees live.)
+    if (process.env.NODE_ENV !== "production" && (globalThis as {__arkKeepArrays?: boolean}).__arkKeepArrays) ((globalThis as {__arkKeptArrays?: WeakMap<object, ArrayLike<number>>}).__arkKeptArrays ??= new WeakMap()).set(this, this.array);
     this.array = new Float32Array(0);
 }
 

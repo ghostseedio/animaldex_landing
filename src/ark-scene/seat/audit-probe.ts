@@ -9,7 +9,7 @@
  * here before anyone names it.
  */
 
-import {Box3, DoubleSide, Matrix4, Ray, Vector3, type BufferAttribute, type BufferGeometry, type InstancedMesh, type Material, type Mesh, type Object3D} from "three";
+import {Box3, DoubleSide, Matrix4, Ray, Vector3, BufferAttribute, type BufferGeometry, type InstancedMesh, type Material, type Mesh, type Object3D} from "three";
 import {HARD, ROCK, SOFT, TREE, solidClass, solidLabel} from "@/ark-scene/seat/solids";
 import {posedHull, type Hull, type RigPose} from "@/ark-scene/seat/support";
 import {boxOf} from "@/ark-scene/seat/trigrid";
@@ -157,8 +157,8 @@ export class SeatProbe {
             if (!(target.cls & mask)) continue;
             const mesh = target.mesh as InstancedMesh;
             const geometry = mesh.geometry;
-            const position = geometry.getAttribute("position") as BufferAttribute;
-            const index = geometry.index;
+            const position = keptOf(geometry.getAttribute("position") as BufferAttribute);
+            const index = geometry.index ? keptOf(geometry.index) : null;
             const first = Math.max(geometry.drawRange.start, 0);
             const count = Math.min(index ? index.count : position.count, first + (Number.isFinite(geometry.drawRange.count) ? geometry.drawRange.count : Infinity));
             for (let i = 0; i < (mesh.isInstancedMesh ? mesh.count : 1); i++) {
@@ -169,7 +169,7 @@ export class SeatProbe {
                 // The box in the mesh's own space (its corners turned back): a triangle wholly outside it is passed over.
                 this.local.copy(this.box).applyMatrix4(this.inverse.copy(this.world).invert());
                 const l = this.local;
-                const own = boxOf(geometry);
+                const own = position === geometry.getAttribute("position") ? boxOf(geometry) : keptBox(position);
                 if (!own || !Number.isFinite(l.min.x + l.max.x)) continue;
                 if (own.max.x < l.min.x || own.min.x > l.max.x || own.max.y < l.min.y || own.min.y > l.max.y || own.max.z < l.min.z || own.min.z > l.max.z) continue;
                 for (let t = first; t + 2 < count; t += 3) {
@@ -491,4 +491,40 @@ export class SeatProbe {
         }
         return out;
     }
+}
+
+/**
+ * An attribute as the audit reads it: a town mesh's vertices are let go once on the GPU (`islands/town/render`), and the
+ * audit's page sets them aside instead (`__arkKeepArrays`, development only); the attribute itself stays empty, as live,
+ * for the scene's seat pass. Read from the set-aside copy when there is one.
+ */
+function keptOf(attribute: BufferAttribute): BufferAttribute {
+    const kept = (globalThis as {__arkKeptArrays?: WeakMap<object, ArrayLike<number>>}).__arkKeptArrays?.get(attribute);
+    if (!kept || kept === attribute.array) return attribute;
+    const own = attribute as BufferAttribute & {__kept?: BufferAttribute};
+    if (!own.__kept || own.__kept.array !== kept) own.__kept = new BufferAttribute(kept as Float32Array, attribute.itemSize, attribute.normalized);
+    return own.__kept;
+}
+
+const keptBoxes = new WeakMap<BufferAttribute, ReturnType<typeof boxOf>>();
+/** A set-aside copy's own box (the geometry's, read from its emptied attribute, is no box). */
+function keptBox(position: BufferAttribute): ReturnType<typeof boxOf> {
+    let box = keptBoxes.get(position);
+    if (box === undefined) {
+        box = {min: {x: Infinity, y: Infinity, z: Infinity}, max: {x: -Infinity, y: -Infinity, z: -Infinity}};
+        for (let v = 0; v < position.count; v++) {
+            const x = position.getX(v);
+            const y = position.getY(v);
+            const z = position.getZ(v);
+            if (x < box.min.x) box.min.x = x;
+            if (y < box.min.y) box.min.y = y;
+            if (z < box.min.z) box.min.z = z;
+            if (x > box.max.x) box.max.x = x;
+            if (y > box.max.y) box.max.y = y;
+            if (z > box.max.z) box.max.z = z;
+        }
+        if (!Number.isFinite(box.min.x + box.max.x)) box = null;
+        keptBoxes.set(position, box);
+    }
+    return box;
 }

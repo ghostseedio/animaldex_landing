@@ -25,6 +25,9 @@
  *                                    animal taken out (made with `--make-fixture <snapshot.json>`, which writes it and exits)
  *        [--hours 3,7,11,15,19,23] [--islands wild,town]
  *        [--stops 400]               camera stops per island and hour at most (0: until every animal is seen)
+ *        [--only id,id]              those animals alone (one caught off its seat in CI, looked at again)
+ *        [--only-from <ci.json>]     those a run had off their seats, each island and hour (the camera goes to each first)
+ *        [--shoot]                   a picture of each one off its seat (and each --only one), framed on it
  *        [--seat off]                the pass off (the "before" numbers)
  *        [--gl swiftshader]          software WebGL (GitHub's runners)
  *        [--quality high|medium|low] the tier, pinned (default high: 1,200 animals out at once; medium 400)
@@ -152,6 +155,11 @@ await page.addInitScript(() => {
 await page.addInitScript((quality) => {
     window.__arkQuality = quality;
 }, arg("quality", "high"));
+// (The town trees' vertex arrays kept on the page, development only, so the probe can read the limbs a bird sits on:
+// `render/assets.ts` lets them go once on the GPU.)
+await page.addInitScript(() => {
+    window.__arkKeepArrays = true;
+});
 const wait = (ms) => page.waitForTimeout(ms);
 const source = `snapshot=${snapshotFile ? "/__seat/snapshot.json" : arg("snapshot", "/ark-local/live.json")}`;
 await page.goto(`${base}/ark/embed.html?${source}&hud=0&lang=en${seatOff ? "&seat=off" : ""}`, {waitUntil: "domcontentloaded"});
@@ -254,9 +262,33 @@ for (const island of islands) {
         // the scene lets go of the ones out of sight), each with where it is now.
         await page.evaluate((view) => window.__arkScene.setView(view), wide);
         await wait(5000);
+        // (The town's animals join the scene a few at a time: the roster is read once its count has stopped growing, and
+        // with --only once every one asked for is in it, or a minute and a half has gone. Read at once, an --only animal
+        // not joined yet was no target at all, and the run measured none.)
+        // (--only-from <run's json>: the animals that run had off their seats on this island and hour; the camera goes to
+        // where each was first, since the town lets its animals join by where the camera is.)
+        const from = arg("only-from", "") ? JSON.parse(readFileSync(arg("only-from", ""), "utf8")).rows.filter((r) => r.island === island && r.hour === hour && verdict(r) !== "ok" && verdict(r) !== "exempt") : [];
+        const only = arg("only", "") ? new Set(arg("only", "").split(",")) : from.length ? new Set(from.map((r) => r.id)) : arg("only-from", "") ? new Set() : null;
+        for (const r of from) {
+            await page.evaluate((r) => window.__arkScene.setView({target: {x: r.x, y: r.y, z: r.z}, distance: 12, polar: 1.05, azimuth: 0.7}), r);
+            await wait(4000);
+        }
+        for (let k = 0, last = -1, still = 0; k < 45; k++) {
+            const have = await page.evaluate(({island, ids}) => {
+                const list = window.__arkDebug.entries().filter((e) => !e.ghost && !e.visitor && (e.animal.island ?? "wild") === island);
+                const in_ = new Set(list.map((e) => e.animal.id));
+                return {count: list.length, missing: ids.filter((id) => !in_.has(id)).length};
+            }, {island, ids: only ? [...only] : []});
+            still = have.count === last ? still + 1 : 0;
+            last = have.count;
+            if (still >= 2 && have.missing === 0) break;
+            await wait(2000);
+        }
         const targets = new Map(
             (await page.evaluate((island) => window.__arkDebug.entries().filter((e) => !e.ghost && !e.visitor && (e.animal.island ?? "wild") === island).map((e) => { const at = window.__arkScene.locate(e.animal.id); return at && {id: e.animal.id, x: at.x, y: at.y, z: at.z, length: e.length}; }).filter(Boolean), island)).map((t) => [t.id, t])
         );
+        // (--only id,id: those animals alone, framed in turn: one caught off its seat in CI looked at again.)
+        if (only) for (const id of [...targets.keys()]) if (!only.has(id)) targets.delete(id);
         const all = new Set(targets.keys());
         const seen = new Set();
         const gone = new Set();
@@ -326,6 +358,17 @@ for (const island of islands) {
                 for (const row of await watched(() => measure(off.map((r) => r.id), []), "looking again").catch(() => [])) {
                     const at = measured.findIndex((r) => r.id === row.id);
                     if (at >= 0 && badness(row) < badness(measured[at])) measured[at] = {...row, looks: again + 2};
+                }
+            }
+            // (--shoot: a picture of each one still off its seat, framed on it, for the record and a before/after.)
+            if (has("shoot")) {
+                for (const row of measured.filter((r) => (verdict(r) !== "ok" && verdict(r) !== "exempt") || only?.has(r.id))) {
+                    const at = await page.evaluate((id) => window.__arkScene.locate(id), row.id).catch(() => null);
+                    if (!at) continue;
+                    await look(at);
+                    await wait(600);
+                    const slug = await page.evaluate((id) => window.__arkDebug.entries().find((x) => x.animal.id === id)?.animal.model_slug ?? "animal", row.id);
+                    await page.screenshot({path: path.join(out, `${label}-${island}-${hour}-${slug}-${row.id.slice(0, 6)}.png`)}).catch(() => undefined);
                 }
             }
             for (const row of measured) {
