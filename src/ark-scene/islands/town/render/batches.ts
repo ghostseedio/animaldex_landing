@@ -163,7 +163,11 @@ export class TownBatch {
         // (Its chunks by instance, for probes and tests.)
         this.mesh.userData.chunks = this.chunks;
         let start = 0;
+        // SIG4: each part's triangles that are ground drawn in a solid (`kit.ts` Geo.sheets), as the batch's triangles.
+        const ground: number[] = [];
         for (const part of parts) {
+            const sheets = part.geometry.userData.seatGround as ArrayLike<number> | undefined;
+            if (sheets && !part.geometry.getIndex()) for (let i = 0; i + 1 < sheets.length; i += 2) ground.push(start / 3 + sheets[i], start / 3 + sheets[i + 1]);
             // (Each chunk's bounds come with it, so nothing reads the batch's arrays back to cull.)
             if (!part.geometry.boundingSphere) part.geometry.computeBoundingSphere();
             if (!part.geometry.boundingBox) part.geometry.computeBoundingBox();
@@ -174,6 +178,7 @@ export class TownBatch {
             this.vertexStart.push(start);
             start += part.geometry.getAttribute("position").count;
         }
+        if (ground.length) this.mesh.geometry.userData.seatGround = Uint32Array.from(ground);
         this.shown = parts.length;
         // (The first upload is the whole array anyway: no per-chunk ranges left over for the first later update.)
         const geometry = this.mesh.geometry;

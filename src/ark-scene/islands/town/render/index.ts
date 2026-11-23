@@ -570,6 +570,8 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             for (const [geo, name] of list) {
                 if (!geo.triangles) continue;
                 const geometry = geo.toGeometry(name === "decal" || name === "foliage" || name === "net");
+                // (SIG4: the solid's ground-cover patches, ground to the seat pass: `TownBatch`, `seat/trigrid.ts`.)
+                if (geo.sheets?.length) geometry.userData.seatGround = Uint32Array.from(geo.sheets);
                 if (name === "glass") geometry.setAttribute("aLit", new BufferAttribute(new Float32Array(geo.pos.length / 3), 1));
                 parts.add(name, key, geometry);
             }

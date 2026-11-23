@@ -81,6 +81,13 @@ export class Geo {
      * each, to be drawn as instances (`rock-instances.ts`). (Declared only: a Geo without it has no such field.)
      */
     declare rocks?: number[];
+    /**
+     * SIG4: where given, the triangle ranges ([from, to) pairs) that are open sheets drawn in a solid, not a solid
+     * (`zoo-habitat.ts`: a patch, a one-sided raised sheet of ground cover; a tuft's grass blades). The seat pass and its
+     * audit leave them out: the ground under a patch is the walk surfaces' (`cover`), and a body under a patch's top or
+     * through a blade is not inside anything. (Declared only, as `rocks`.)
+     */
+    declare sheets?: number[];
 
     get triangles(): number {
         return this.pos.length / 9;

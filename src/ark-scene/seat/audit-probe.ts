@@ -12,7 +12,7 @@
 import {Box3, DoubleSide, Matrix4, Ray, Vector3, type BufferAttribute, type BufferGeometry, type InstancedMesh, type Material, type Mesh, type Object3D} from "three";
 import {HARD, ROCK, SOFT, TREE, solidClass, solidLabel} from "@/ark-scene/seat/solids";
 import {posedHull, type Hull, type RigPose} from "@/ark-scene/seat/support";
-import {boxOf} from "@/ark-scene/seat/trigrid";
+import {boxOf, groundMask} from "@/ark-scene/seat/trigrid";
 import type {SeatKind} from "@/ark-scene/seat/seat";
 
 /** An animal as it was drawn in the last frame (kept by the pass in development). */
@@ -163,6 +163,9 @@ export class SeatProbe {
             const index = geometry.index;
             const first = Math.max(geometry.drawRange.start, 0);
             const count = Math.min(index ? index.count : position.count, first + (Number.isFinite(geometry.drawRange.count) ? geometry.drawRange.count : Infinity));
+            // (SIG4: ground drawn in a solid, a zoo ground-cover patch, is measured as ground (the probe's floor is the walk
+            // surfaces), never as a closed solid: `trigrid.ts` groundMask.)
+            const ground = groundMask(geometry, Math.ceil(count / 3));
             for (let i = 0; i < (mesh.isInstancedMesh ? mesh.count : 1); i++) {
                 if (mesh.isInstancedMesh) {
                     mesh.getMatrixAt(i, this.world);
@@ -175,6 +178,7 @@ export class SeatProbe {
                 if (!own || !Number.isFinite(l.min.x + l.max.x)) continue;
                 if (own.max.x < l.min.x || own.min.x > l.max.x || own.max.y < l.min.y || own.min.y > l.max.y || own.max.z < l.min.z || own.min.z > l.max.z) continue;
                 for (let t = first; t + 2 < count; t += 3) {
+                    if (ground && ground[t / 3]) continue;
                     const ia = index ? index.getX(t) : t;
                     const ib = index ? index.getX(t + 1) : t + 1;
                     const ic = index ? index.getX(t + 2) : t + 2;

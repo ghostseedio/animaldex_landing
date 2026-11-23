@@ -252,7 +252,8 @@ const TOWN_DIGESTS = {
     // (p5 (zoospace): the dome's birds out of the aviaries; the vulture aviary and the stork flight wider.)
     // (ark-world, decision 447: kopjes as piles of fourteen granite blocks, soft three-ring earth patches, the dome's waterfall curtain, smooth bushes; refreshed.)
     // (ark-world round 2: the earth patches in the paving, the dome's still waterfall strands out of the solids, leaf-tagged bushes; refreshed.)
-    zoo: "660fc5ec8c00e82b",
+    // (SIG4: the solids' ground-cover patches and grass tufts recorded as open sheets for the seat pass, `Geo.sheets`; nothing drawn changed.)
+    zoo: "83d3bcf9ea27d00e",
     // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
     // (p4 (safari): the herbivores, big cats, hyenas and crocodilians moved to the safari by the rule, `town/safari.ts`.)
     // (Pass 5 rural lane: pass 4 merged into the safari; these recomputed on that merge. Then p5 (rural): the countryside

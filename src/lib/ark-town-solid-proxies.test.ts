@@ -49,6 +49,44 @@ test("the zoo's solid batch keeps its positions for the seat pass (the rest of i
     assert.equal(geometry.getAttribute("color").array.length, 0);
 });
 
+test("a ground-cover patch (and a grass tuft) drawn in the zoo's solids is ground to the seat pass, not a closed solid", async () => {
+    const {TownBatch} = await import("@/ark-scene/islands/town/render/batches");
+    const {Geo} = await import("@/ark-scene/islands/town/render/kit");
+    const {patch} = await import("@/ark-scene/islands/town/render/zoo-habitat");
+    const {TriGrid} = await import("@/ark-scene/seat/trigrid");
+    const {MeshBasicMaterial} = await import("three");
+    const plot = {p: (x: number, z: number, lift = 0) => [x, lift, z] as [number, number, number]} as unknown as Parameters<typeof patch>[1];
+    // A box under a patch, in one Geo as the zoo draws them: the box is a solid, the patch (12 cm up) ground.
+    const geo = new Geo();
+    geo.sheets = [];
+    geo.box({x: 10, y: 0, z: 0, rot: 0}, 0, 0, 0, 1, 1, 1, [1, 1, 1]);
+    const boxTris = geo.triangles;
+    patch(geo, plot, 0, 0, 1.5, [0.5, 0.4, 0.3], 7, 0.12);
+    assert.deepEqual(geo.sheets, [boxTris, geo.triangles]);
+    // (A tuft's grass blades are open sheets too.)
+    const {tuft} = await import("@/ark-scene/islands/town/render/zoo-habitat");
+    const blades = new Geo();
+    blades.sheets = [];
+    tuft(blades, plot, 0, 0, 0.5, [0.3, 0.5, 0.2], 3);
+    assert.deepEqual(blades.sheets, [0, blades.triangles]);
+    const other = new Geo();
+    other.box({x: -10, y: 0, z: 0, rot: 0}, 0, 0, 0, 1, 1, 1, [1, 1, 1]);
+    const part0 = other.toGeometry();
+    const part1 = geo.toGeometry();
+    part1.userData.seatGround = Uint32Array.from(geo.sheets);
+    const batch = new TownBatch([{chunk: 0, geometry: part0}, {chunk: 1, geometry: part1}], new MeshBasicMaterial(), "zoo:solid", {castShadow: false, receiveShadow: false, release: true, keepPositions: true});
+    const grid = new TriGrid(batch.mesh.geometry);
+    while (!grid.step(1e6));
+    const down = (x: number) => {
+        const out: Array<{t: number}> = [];
+        grid.cast(x, 5, 0, 0, -10, 0, out as never);
+        return out.length;
+    };
+    assert.equal(down(0), 0, "the patch is not in the solids' grid");
+    assert.equal(down(10), 2, "the box beside it is");
+    assert.equal(down(-10), 2, "and the other chunk's box");
+});
+
 test("the proxies are never drawn and are read as built solids", () => {
     const proxies = buildSolidProxies(colliders, origin);
     assert.equal(proxies.solids, chosen.length);
