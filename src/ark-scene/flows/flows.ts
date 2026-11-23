@@ -6,10 +6,15 @@
  * Pure: a function of the animal's id, the engine's tick (the Ark day: `ARK_DAY_MS` of the shared clock) and what the
  * server released. Never the viewer, the camera or the frame. Nothing here decides anything on the Ark.
  *
- * Truth rules (owner, 2026-11-23):
- * - No catch without the server's kill (`kills`), at its time and with its prey. No eating in a tick the engine did not
- *   feed it, and in a tick it did, it eats (its own foods; a hunter's ambient foods, never an Ark animal).
- * - No mating without the server's `mated`; no clutch, hatch or birth here at all (they are the server's lines).
+ * Truth rules (owner, 2026-11-23, "no fake events"):
+ * - Every catch, find, meal and near miss is backed by the engine: a catch is a `meal` event (its time, its prey); a near
+ *   miss is an `escaped` event; a cache and a meal from one are SIG-EVENTS'; a kept animal's meal is its keepers'. Its
+ *   everyday eating is of its background food as the engine stores it (`params.foods`, `voyage_species_traits.
+ *   ambient_phrases`), and only while the engine says it is fed. Nothing is a seeded draw's outcome.
+ * - Where the engine records nothing, only neutral steps: searching, listening, watching, moving on, resting, grooming,
+ *   drinking, sleeping. No seeded pounce, miss, "found nothing", "gave up", rival, courtship or rejection.
+ * - No mating without the server's `mated`; displays only at the server's own (`signature` display/courtship); nest
+ *   building only before a clutch the server laid; no clutch, hatch or birth here at all (they are the server's lines).
  * - Eating, handling and caching are always still (ground, perch or water), never in the air or moving.
  */
 
@@ -22,10 +27,10 @@ export const FLOW_TICK_SECONDS = (86_400 * 14) / 365;
 
 export type StepKind =
     | "sleep" | "settle" | "wake"
-    | "search" | "movePatch" | "stalk" | "attempt" | "nearMiss" | "nothing" | "giveUp" | "catch" | "found" | "eat" | "cache" | "dance"
+    | "search" | "movePatch" | "stalk" | "attempt" | "nearMiss" | "catch" | "found" | "eat" | "cache" | "dance"
     | "rest" | "digest" | "groom" | "toWater" | "drink" | "wary"
     | "keptWait" | "keptEat"
-    | "call" | "scentMark" | "display" | "spar" | "court" | "rejected" | "mate" | "build";
+    | "display" | "court" | "mate" | "build";
 
 export type Pose = "moving" | "air" | "still";
 
@@ -40,7 +45,19 @@ export type FlowStep = {
     detail?: string;
     /** Set when a step is the engine's own event (a kill, a cache, a mating). */
     server?: true;
+    /**
+     * A repeating cycle said as one activity with progress (coordinator, 2026-11-23: no card line flickering between two
+     * steps): a grazer's patches, a forager's pecks, a bee's flowers, a nest's trips. Its steps still drive the pose.
+     */
+    bout?: FlowBout;
 };
+
+export type FlowBoutKind = "graze" | "browse" | "forage" | "flowers" | "filter" | "nest";
+/** `n`: meals in it so far (a nest: its trip); `visits`: spots or flowers tried; `food`: what it is eating. */
+export type FlowBout = {kind: FlowBoutKind; n: number; visits: number; food?: FoodWord; material?: string};
+
+/** The guilds whose foraging is one activity with progress: their tries are seconds, not stalks. */
+const GROUPED: Partial<Record<FlowParams["guild"], FlowBoutKind>> = {grazer: "graze", browser: "browse", seed: "forage", glean: "forage", nectar: "flowers", filter: "filter"};
 
 /** What the server released about this animal: the engine's outcomes the flow narrates. */
 export type FlowServer = {
@@ -58,7 +75,17 @@ export type FlowServer = {
     /** A kept animal (house, farm, zoo): its keepers' feeding times (epoch s, the scene's feeding rhythm), none when not kept. */
     kept?: {feedings: readonly number[]} | null;
     /** Reproduction, from the server: in its season (the kind's months), whether it has a mate it may court, matings. */
-    repro?: {inSeason: boolean; sex: "male" | "female" | null; partner: boolean; neutered?: boolean; mated?: readonly number[]} | null;
+    repro?: {
+        inSeason: boolean;
+        sex: "male" | "female" | null;
+        partner: boolean;
+        neutered?: boolean;
+        mated?: readonly number[];
+        /** Its displays and courtships the engine logged (SIG-EVENTS `signature` display / courtship): when. */
+        displays?: readonly number[];
+        /** Its clutches the engine laid (`laid`): a pair builds its nest only in the ticks before one. */
+        laid?: readonly number[];
+    } | null;
 };
 
 export type FlowSubject = {id: string; params: FlowParams; server: FlowServer; /** The island's hour at a moment (0-24). */ hoursAt: (epoch: number) => number};
@@ -133,7 +160,6 @@ export function flowSteps(subject: FlowSubject, from: number, to: number): FlowS
     return out;
 }
 
-const HUNTERS = new Set(["stalker", "pursuit", "sitwait", "fish", "hawk", "web"]);
 
 function buildTick(subject: FlowSubject, tick: number): FlowStep[] {
     const {params: p, server} = subject;
@@ -156,8 +182,9 @@ function buildTick(subject: FlowSubject, tick: number): FlowStep[] {
     const caches = (server.caches ?? []).filter((c) => c.at >= start && c.at < end);
     const cacheMeals = (server.cacheMeals ?? []).filter((t) => t >= start && t < end);
     const matings = (server.repro?.mated ?? []).filter((t) => t >= start && t < end);
-    // A hunter's own non-prey foods (a fox's fruit and insects): what it eats on a day the engine fed it without a kill.
-    const plain = HUNTERS.has(p.guild) ? p.foods.filter((f) => !f.the) : p.foods;
+    const displays = (server.repro?.displays ?? []).filter((t) => t >= start && t < end);
+    // Its background food as the engine stores it (a fox's insects and fruit): what it eats on a day the engine has it fed.
+    const plain = p.foods;
     let ate = false;
     let gaveUp = false;
     // (Its last drink: once it has drunk it does not go back to the water for a while.)
@@ -165,13 +192,19 @@ function buildTick(subject: FlowSubject, tick: number): FlowStep[] {
     // A kept animal eats what its keepers give it, at their times; its own searches are play, never a meal.
     const kept = Boolean(server.kept);
     const feedings = (server.kept?.feedings ?? []).filter((f) => f >= start && f < end);
+    // (The server's next event from a moment on: its kills, escapes, caches, matings, displays, keepers' feedings.)
+    const nextEvent = (from: number) => Math.min(...[...escapes.map((e) => e.at), ...kills.map((k) => k.at), ...caches.map((c) => c.at), ...cacheMeals, ...matings, ...displays, ...feedings].filter((x) => x >= from));
     let t = start;
     let guard = 0;
     while (t < end && guard++ < 400) {
-        if (!flowAwake(subject, t)) {
+        if (!flowAwake(subject, t) && nextEvent(t) - t > 125) {
             // Asleep until it wakes (scanned a minute at a time; the tick's end at most).
             let wake = t;
             while (wake < end && !flowAwake(subject, wake)) wake += 60;
+            // (The engine's own events wake it: an escape, a kill, a cache, a mating at a time its hours say it sleeps
+            // still happened, so it is up for them, two minutes before.)
+            const next = nextEvent(t);
+            if (next < wake) wake = Math.max(t, next - 120);
             const settle = steps.length && steps[steps.length - 1].kind !== "sleep" ? push("settle", t, t + Math.min(40, wake - t), "still") : t;
             t = push("sleep", settle, wake, "still");
             if (wake < end) t = push("wake", t, t + 8 + random() * 12, "still");
@@ -226,92 +259,115 @@ function buildTick(subject: FlowSubject, tick: number): FlowStep[] {
             t = push("mate", t, t + 30, "still", {server: true});
             continue;
         }
-        // The next server event's lead-in: its own bouts end there.
-        limit = Math.min(end, ...kills.filter((k) => k.at > t).map((k) => k.at - p.patience * 0.9), ...caches.filter((c) => c.at > t).map((c) => c.at - 290), ...cacheMeals.filter((m) => m > t).map((m) => m - 290), ...escapes.filter((e) => e.at > t).map((e) => e.at - p.patience * 0.9), ...matings.filter((m) => m > t).map((m) => m - 110), ...feedings.filter((f) => f > t).map((f) => f - 80));
-        if (limit <= t + 0.5) {
-            limit = end;
-            t = Math.min(...[...kills.map((k) => k.at - p.patience * 0.9), ...caches.map((c) => c.at - 290), ...cacheMeals.map((m) => m - 290), ...escapes.map((e) => e.at - p.patience * 0.9), ...matings.map((m) => m - 110), ...feedings.map((f) => f - 80)].filter((x) => x > t), end);
+        // The engine's own display or courtship (SIG-EVENTS), at its time.
+        const display = displays.find((d) => d >= t && d - t < 120);
+        if (display !== undefined) {
+            displays.splice(displays.indexOf(display), 1);
+            t = push("search", t, display, "moving", {detail: "mate"});
+            t = push("display", t, t + Math.max(around(random, p.repro.lek ? 300 : 90), 45), "still", {detail: p.repro.display ?? "display", server: true});
             continue;
         }
-        // Its choice of bout: hungry for its tick's meal first, then its rhythm.
-        // (In season and able: a male's calls and displays; a pair-living kind with a mate builds, both sexes.)
+        // The next server event's lead-in: its own bouts end there.
+        limit = Math.min(end, ...kills.filter((k) => k.at > t).map((k) => k.at - p.patience * 0.9), ...caches.filter((c) => c.at > t).map((c) => c.at - 290), ...cacheMeals.filter((m) => m > t).map((m) => m - 290), ...escapes.filter((e) => e.at > t).map((e) => e.at - p.patience * 0.9), ...matings.filter((m) => m > t).map((m) => m - 110), ...displays.filter((d) => d > t).map((d) => d - 110), ...feedings.filter((f) => f > t).map((f) => f - 80));
+        if (limit <= t + 0.5) {
+            limit = end;
+            t = Math.min(...[...kills.map((k) => k.at - p.patience * 0.9), ...caches.map((c) => c.at - 290), ...cacheMeals.map((m) => m - 290), ...escapes.map((e) => e.at - p.patience * 0.9), ...matings.map((m) => m - 110), ...displays.map((d) => d - 110), ...feedings.map((f) => f - 80)].filter((x) => x > t), end);
+            continue;
+        }
+        // Too little time before the tick's end or the server's next event for a new bout to be told: it keeps on with
+        // what it was doing (never a few seconds of something else and back).
+        if (Math.min(end, limit) - t < 90 && steps.length) {
+            const last = steps[steps.length - 1];
+            const kind: StepKind = ["search", "movePatch", "rest", "digest", "groom", "sleep", "display", "build", "keptEat"].includes(last.kind) ? last.kind : "rest";
+            t = push(kind, t, Math.min(end, limit), last.pose === "air" ? "still" : kind === last.kind ? last.pose : "still", kind === last.kind ? {detail: last.detail, food: last.food, bout: last.bout} : {});
+            continue;
+        }
+        // Its choice of bout: its meal first on a day the engine has it fed, then its rhythm.
+        // (A pair with a mate builds its nest only in the ticks before a clutch the server laid: section 5.)
         const able = Boolean(server.repro && server.repro.inSeason && !server.repro.neutered && p.repro.system !== "none");
-        const repro = able && (server.repro!.sex === "male" || (p.repro.system === "pair" && p.repro.nest && server.repro!.partner));
+        const laidSoon = (server.repro?.laid ?? []).some((l) => l >= start && l < end + 3 * FLOW_TICK_SECONDS);
+        const repro = able && p.repro.system === "pair" && p.repro.nest && Boolean(server.repro!.partner) && laidSoon;
         const pick = random();
-        const needs = fed && !ate && plain.length > 0 && !kept;
-        // (In season, a male's or a pair's breeding comes before more food: a rutting stag barely eats.)
+        const mayEat = fed && plain.length > 0 && !kept;
+        const needs = mayEat && !ate;
         if (repro && !needs && (pick < 0.45 || (ate && pick < 0.7))) t = reproBout(t);
-        // (After giving up it moves off and rests or tidies itself before searching again: never straight back at it.)
-        else if (!gaveUp && (needs || pick < (fed ? 0.45 : 0.7))) t = forage(t, needs, fed && plain.length > 0 && !kept);
-        else if (gaveUp && pick < 0.3) {
-            gaveUp = false;
-            t = push("movePatch", t, t + around(random, 40), "moving");
-        } else if (pick < 0.82 && t - drank > 1800) {
+        // (After a search that came to nothing it rests or tidies itself before searching again: never straight back at it.)
+        else if (!gaveUp && (needs || pick < (fed ? 0.45 : 0.7))) t = forage(t, mayEat);
+        else if (pick < 0.82 && t - drank > 1800) {
             gaveUp = false;
             t = drinkBout(t);
             drank = t;
         }
         else {
             gaveUp = false;
-            t = pick < 0.9 ? push("groom", t, t + around(random, 90), "still") : push("rest", t, t + around(random, 300), "still");
+            t = pick < 0.9 ? push("groom", t, t + Math.max(around(random, 90), 40), "still") : push("rest", t, t + Math.max(around(random, 300), 60), "still");
         }
+    }
+    // (A sliver left at the tick's end is not a new activity: the one before it runs on to the end.)
+    const tail = steps[steps.length - 1];
+    if (tail && steps.length > 1 && !tail.server && tail.to - tail.from < CARD_RETURN_SECONDS && tail.kind !== "sleep") {
+        steps.pop();
+        steps[steps.length - 1].to = tail.to;
     }
     return steps;
 
-    // A forage bout: search, tries with near misses or nothing, and (when the engine fed it and it may eat now) a find.
-    function forage(from: number, mustEat: boolean, mayEat: boolean): number {
+    // A forage bout: searching, moving between spots and, on a day the engine has it fed, eating its background food. A
+    // day it is not: the search comes to nothing (said as searching, then moving on and resting: no seeded miss or find).
+    function forage(from: number, mayEat: boolean): number {
         let t = from;
         gaveUp = false;
-        const bout = t + around(random, p.bout);
-        const giveUp = t + around(random, p.patience);
-        let tries = 0;
-        let found = false;
+        const first = steps.length;
+        const bout = t + around(random, mayEat ? p.bout : p.patience);
+        let spots = 0;
+        let fedHere = false;
+        const still = p.guild === "web" || p.mode === "sitwait" || p.mode === "watch";
         while (t < Math.min(bout, end, limit)) {
-            t = push(p.guild === "web" ? "search" : tries && random() < 0.3 ? "movePatch" : "search", t, t + Math.max(around(random, p.search), 20 + random() * 25), p.guild === "web" ? "still" : p.mode === "sitwait" || p.mode === "watch" ? "still" : "moving", {detail: p.mode});
-            if (t >= Math.min(end, limit)) break;
-            tries++;
-            // (Grazing and browsing: grass is there; a bout of them is a find from the first patch.)
-            const food = mayEat ? plain[Math.floor(random() * Math.min(plain.length, 3))] : undefined;
-            const succeed = food && (mustEat && t > giveUp - p.search ? true : random() < p.success) && !(HUNTERS.has(p.guild) && food.the);
-            if (succeed && food) {
-                t = push("found", t, t + 3 + random() * 4, "still", {food});
-                t = push("eat", t, t + around(random, p.handle), "still", {food});
-                found = true;
-                ate = true;
-                if (p.dance && random() < 0.5) t = push("dance", t, t + 20 + random() * 30, "still");
-                if (!mustEat && random() < 0.5) break;
-                mustEat = false;
-                continue;
-            }
-            // A try that fails: a near miss at something that could get away, or nothing found here.
-            const prey = p.foods.find((f) => f.the);
-            if (prey && random() < p.nearMiss) {
-                if (HUNTERS.has(p.guild)) t = push("stalk", t, t + around(random, p.search / 3), p.mode === "sitwait" || p.mode === "web" ? "still" : "moving", {food: prey, detail: p.mode});
-                t = push("attempt", t, t + 1.5 + random() * 2, "still", {food: prey, detail: p.mode});
-                t = push("nearMiss", t, t + 4, "still", {food: prey, detail: p.mode === "web" ? "web" : random() < 0.8 ? "escaped" : "dropped"});
-            } else if (random() < 0.35) t = push("nothing", t, t + 3 + random() * 3, "still");
-            if (t > giveUp && !mustEat) {
-                t = push("giveUp", t, t + 6, "still");
-                gaveUp = true;
-                return t;
-            }
+            t = push(!still && spots && random() < 0.3 ? "movePatch" : "search", t, t + Math.max(around(random, p.search), 20 + random() * 25), still ? "still" : "moving", {detail: p.mode});
+            spots++;
+            // (Too little time left for a meal to play out: the bout ends on its search.)
+            if (Math.min(end, limit) - t < 40) break;
+            if (!mayEat) continue;
+            const food = plain[Math.floor(random() * Math.min(plain.length, 3))];
+            // (A meal said on its own line lasts long enough not to flicker with the search around it: CARD_RETURN_SECONDS.)
+            t = push("eat", t, t + Math.max(around(random, p.handle), GROUPED[p.guild] ? 0 : CARD_RETURN_SECONDS + 2), "still", {food});
+            fedHere = true;
+            ate = true;
+            // (Full for now, it may stop, but a bout is never a single bite: a minute and a half at least.)
+            if (t - from > Math.max(90, p.bout * 0.25) && random() < 0.5) break;
         }
-        if (found) t = push("digest", t, t + around(random, p.handle * 1.5), "still");
-        return t;
+        group(first);
+        // (A bee's dance is back at the hive after a bout it fed in, never between two flowers.)
+        if (fedHere && p.dance && random() < 0.5) t = push("dance", t, t + CARD_RETURN_SECONDS + 2 + random() * 20, "still");
+        if (fedHere) return push("digest", t, t + Math.max(around(random, p.handle * 1.5), 45), "still");
+        gaveUp = true;
+        if (!still && Math.min(end, limit) - t >= 40) t = push("movePatch", t, t + 30 + random() * 30, "moving", {detail: p.mode});
+        return push("rest", t, t + Math.max(around(random, 240), 60), "still");
     }
 
-    // The server's kill at its time: the search and the near misses before it, then the catch and eating (or caching).
+    // A grouped guild's bout from `first` on: each step carries the bout's progress so far.
+    function group(first: number) {
+        const kind = GROUPED[p.guild];
+        if (!kind) return;
+        // (Straight on from a bout of the same: its count carries on, the card stays on its line.)
+        const before = steps[first - 1]?.bout;
+        const bout: FlowBout = before && before.kind === kind ? {...before} : {kind, n: 0, visits: 0};
+        for (let i = first; i < steps.length; i++) {
+            const step = steps[i];
+            if (step.kind === "eat") {
+                bout.n++;
+                bout.food = step.food;
+            } else if (step.kind === "movePatch" || step.kind === "search") bout.visits++;
+            step.bout = {...bout};
+        }
+    }
+
+    // The server's kill at its time: the search before it (only searching: its misses are the engine's own `escaped`), the
+    // stalk and the attempt on that prey, the catch, then eating (or caching, when SIG-EVENTS saved it).
     function huntTo(kill: {at: number; prey: string}, from: number): number {
         let t = from;
         const prey: FoodWord = {eat: `a ${kill.prey}`, the: `the ${kill.prey}`};
-        while (kill.at - t > p.search * 1.5) {
-            t = push("search", t, Math.min(t + around(random, p.search), kill.at - p.search * 0.5), p.mode === "sitwait" || p.mode === "watch" || p.mode === "web" ? "still" : "moving", {detail: p.mode});
-            if (kill.at - t > p.search && random() < p.nearMiss * 0.6) {
-                const other = p.foods.find((f) => f.the) ?? prey;
-                t = push("attempt", t, t + 2, "still", {food: other, detail: p.mode});
-                t = push("nearMiss", t, t + 4, "still", {food: other, detail: p.mode === "web" ? "web" : "escaped"});
-            }
-        }
+        const still = p.mode === "sitwait" || p.mode === "watch" || p.mode === "web";
+        if (kill.at - t > p.search * 1.5) t = push("search", t, kill.at - Math.min(p.search, 60), still ? "still" : "moving", {detail: p.mode});
         t = push("stalk", t, Math.max(t + 1, kill.at - 2), p.mode === "sitwait" || p.mode === "web" ? "still" : "moving", {food: prey, detail: p.mode});
         t = push("attempt", t, kill.at, "still", {food: prey, detail: p.mode});
         t = push("catch", t, t + 4, "still", {food: prey, detail: kill.prey, server: true});
@@ -330,27 +386,17 @@ function buildTick(subject: FlowSubject, tick: number): FlowStep[] {
         return push("drink", t, t + around(random, 25), "still");
     }
 
-    // In season, a male's bout (pilot: calls, scent, display, a spar), no outcome the engine does not decide.
+    // A pair's nest before the clutch the server laid: gathering and building, its trips counted (never the clutch itself).
     function reproBout(from: number): number {
         let t = from;
-        // A pair's nest: gathering and building (the clutch itself is the server's line, never here).
-        if (p.repro.system === "pair" && p.repro.nest && server.repro?.partner) {
-            for (let n = 0; n < 3; n++) {
-                t = push("search", t, t + around(random, p.search * 2), "moving", {detail: "material"});
-                t = push("build", t, t + around(random, 25), "still");
-            }
-            return t;
+        const trips = 4 + Math.floor(random() * 9);
+        const material = p.repro.material ?? "material";
+        for (let n = 1; n <= trips && t < Math.min(end, limit); n++) {
+            const bout: FlowBout = {kind: "nest", n, visits: n, material};
+            t = push("search", t, t + Math.max(around(random, p.search * 2), 12), "moving", {detail: "material", bout});
+            t = push("build", t, t + around(random, 25), "still", {bout});
         }
-        if (server.repro?.sex !== "male") return push("rest", from, from + 60, "still");
-        if (p.repro.call) t = push("call", t, t + around(random, 40), "still");
-        if (p.repro.scent && random() < 0.5) t = push("scentMark", t, t + around(random, 30), "moving");
-        if (p.repro.display || p.repro.lek) t = push("display", t, t + around(random, p.repro.lek ? 300 : 90), "still", {detail: p.repro.display ?? "display"});
-        if (p.repro.contest && random() < 0.4) t = push("spar", t, t + around(random, 45), "still", {detail: p.repro.contest});
-        if (server.repro?.partner && random() < 0.5) {
-            t = push("court", t, t + around(random, 60), "still", {detail: p.repro.display ?? "court"});
-            t = push("rejected", t, t + 10, "still");
-        }
-        return t > from ? t : push("rest", from, from + 60, "still");
+        return push("rest", t, t + Math.max(around(random, 120), 60), "still");
     }
 }
 
@@ -367,20 +413,47 @@ function fill(text: string, food?: FoodWord, the = false): string {
     return text.replace("{food}", word);
 }
 
-/** The card's line for a step ("Now: …" takes it as it is). */
+/** The card's line for a step ("Now: …"): its activity, and a grouped bout's progress after a " · ". */
 export function stepLine(step: FlowStep): string {
+    const card = stepCard(step);
+    return card.progress ? `${card.line} · ${card.progress}` : card.line;
+}
+
+/** A step as the card says it: the activity (what must not flicker) and its progress (which may count up). */
+export function stepCard(step: FlowStep): {line: string; progress: string | null} {
+    const b = step.bout;
+    if (b && step.kind !== "digest" && step.kind !== "dance" && step.kind !== "rest") {
+        const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+        const found = b.food ? `eating ${b.food.eat === "nectar" ? "nectar" : b.food.eat}` : null;
+        switch (b.kind) {
+            case "nest":
+                return {line: "Building its nest", progress: `trip ${b.n}, carrying ${b.material ?? "material"}`};
+            case "flowers":
+                return {line: "Visiting flowers", progress: `${b.visits + 1} so far`};
+            case "graze":
+            case "browse":
+                // (Head down and moving on through the sward from the start: grazing all the way, its patches counted.)
+                return {line: b.kind === "graze" ? "Grazing" : "Browsing", progress: b.n ? `${found} · patch ${b.n}` : "looking for a good patch"};
+            case "filter":
+                return {line: "Filter-feeding", progress: b.n ? found : null};
+            case "forage":
+                return {line: "Foraging", progress: b.n ? found : b.visits > 1 ? `${plural(b.visits, "spot", "spots")} searched` : "looking for food"};
+        }
+    }
+    return {line: soloLine(step), progress: null};
+}
+
+function soloLine(step: FlowStep): string {
     const f = step.food;
     switch (step.kind) {
         case "sleep": return "Sleeping";
         case "settle": return "Settling down to sleep";
         case "wake": return "Waking up";
-        case "search": return step.detail === "material" ? "Gathering nest material" : capital(MODE_SEARCH[step.detail ?? "sight"] ?? "looking for food");
-        case "movePatch": return "Trying another spot";
+        case "search": return step.detail === "material" ? "Gathering nest material" : step.detail === "mate" ? "Moving" : capital(MODE_SEARCH[step.detail ?? "sight"] ?? "looking for food");
+        case "movePatch": return "Moving on";
         case "stalk": return step.detail === "web" ? capital(fill("{food} hit its web", f)) : step.detail === "sitwait" ? fill("Eyeing {food}", f) : fill("Stalking {food}", f);
         case "attempt": return step.detail === "web" ? fill("Running out to wrap {food}", f) : step.detail === "sitwait" ? fill("Striking at {food}", f) : step.detail === "listen" || step.detail === "watch" ? fill("Pouncing on {food}", f) : fill("Going for {food}", f);
         case "nearMiss": return step.detail === "dropped" ? fill("Missed: dropped {food}", f) : step.detail === "web" ? capital(fill("Missed: {food} broke free", f, true)) : capital(fill("Missed: {food} got away", f, true));
-        case "nothing": return "Found nothing here";
-        case "giveUp": return "Gave up, moving on";
         case "catch": return fill("Caught {food}", f);
         case "found": return step.detail === "cache" ? fill("Dug up its cache: {food}", f) : fill("Found {food}", f);
         case "eat": return f?.eat === "nectar" ? "Drinking nectar" : f?.eat === "pollen" ? "Gathering pollen" : fill("Eating {food}", f);
@@ -394,12 +467,8 @@ export function stepLine(step: FlowStep): string {
         case "drink": return "Drinking";
         case "keptWait": return "Waiting for its keeper";
         case "keptEat": return fill("Eating {food} from its keeper", f);
-        case "call": return "Calling";
-        case "scentMark": return "Scent-marking";
         case "display": return "Displaying";
-        case "spar": return "Sparring with a rival";
         case "court": return "Courting";
-        case "rejected": return "Courting: turned down";
         case "mate": return "With its mate";
         case "build": return "Building its nest";
     }
@@ -411,23 +480,18 @@ function capital(text: string): string {
 
 // MARK: The live log's moments
 
-export type FlowMomentKind = "caught" | "nearMiss" | "cached" | "found" | "gaveUp";
-/** Each moment's chance of being said (a seeded draw a window), all above the everyday "doing" (0.3). */
-export const FLOW_MOMENT_WEIGHTS: Record<FlowMomentKind, number> = {caught: 0.8, cached: 0.9, nearMiss: 0.6, gaveUp: 0.5, found: 0.4};
+export type FlowMomentKind = "caught" | "nearMiss" | "cached" | "found";
+/** Each moment's chance of being said: always (every moment is the engine's own event; above the everyday "doing", 0.3). */
+export const FLOW_MOMENT_WEIGHTS: Record<FlowMomentKind, number> = {caught: 1, cached: 1, nearMiss: 1, found: 1};
 
-/** A step's moment, if it is one. A giving-up is said only after a long search (twice its patience's mean at least). */
-export function stepMoment(step: FlowStep, steps: readonly FlowStep[], params: FlowParams): FlowMomentKind | null {
+/** A step's moment, if it is one: only the engine's own events (a catch, a cache, a near miss, a meal from a cache). */
+export function stepMoment(step: FlowStep, _steps: readonly FlowStep[], _params: FlowParams): FlowMomentKind | null {
+    if (!step.server) return null;
     switch (step.kind) {
         case "catch": return "caught";
         case "cache": return "cached";
         case "nearMiss": return "nearMiss";
         case "found": return "found";
-        case "giveUp": {
-            const i = steps.indexOf(step);
-            let since = step.from;
-            for (let k = i - 1; k >= 0 && ["search", "movePatch", "stalk", "attempt", "nearMiss", "nothing"].includes(steps[k].kind); k--) since = steps[k].from;
-            return step.from - since >= params.patience * 0.8 ? "gaveUp" : null;
-        }
         default: return null;
     }
 }
@@ -440,8 +504,7 @@ export function momentLine(kind: FlowMomentKind, name: string, step: FlowStep): 
         case "caught": return `${a} caught ${f?.eat ?? "its prey"}`;
         case "cached": return `${a} is ${fill(CACHE[step.detail ?? "hide"] ?? CACHE.hide, f).replace(/^\w/, (c) => c.toLowerCase())}`;
         case "nearMiss": return `${a} missed: ${f?.the ?? "it"} ${step.detail === "web" ? "broke free" : "got away"}`;
-        case "found": return `${a} found ${f?.eat ?? "food"} and is ${f?.eat === "nectar" ? "drinking" : "eating"}`;
-        case "gaveUp": return `${a} gave up the search and moved on`;
+        case "found": return `${a} dug up its cache: ${f?.eat ?? "food"}`;
     }
 }
 
@@ -461,3 +524,18 @@ export function flowMoments(id: string, steps: readonly FlowStep[], params: Flow
     }
     return out;
 }
+
+/** The card's runs: consecutive steps that say the same activity (progress may count up inside a run). */
+export function cardRuns(steps: readonly FlowStep[]): Array<{line: string; from: number; to: number}> {
+    const runs: Array<{line: string; from: number; to: number}> = [];
+    for (const step of steps) {
+        const line = stepCard(step).line;
+        const last = runs[runs.length - 1];
+        if (last && last.line === line && step.from - last.to < 1) last.to = step.to;
+        else runs.push({line, from: step.from, to: step.to});
+    }
+    return runs;
+}
+
+/** A card line may not come back within this many seconds after one other line (no flicker between two steps). */
+export const CARD_RETURN_SECONDS = 30;

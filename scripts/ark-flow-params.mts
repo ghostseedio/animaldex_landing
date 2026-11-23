@@ -2,7 +2,7 @@
  * The behaviour flows' species parameters (docs/ark/behaviour-flows.md section 4), from the stored data only:
  * data/ark/behaviour-profiles.json (diet, diets, the diet sentence, size, activity, social, roost, behaviours),
  * data/ark/behaviour-recipes.json (recipes and their behaviours' phrases), data/ark/hunt-acts.json (the hunt act) and
- * data/ark/hunt-tactics.json (the hunt style). Deterministic rules, no model calls. Each value keeps its source.
+ * data/ark/hunt-tactics.json (the hunt style), data/ark/ambient-foods.json (the engine's background food). Deterministic rules, no model calls. Each value keeps its source.
  *
  *   npx tsx scripts/ark-flow-params.mts [--only slug,slug] [--out path]
  *
@@ -25,7 +25,8 @@ const sources: FlowSources = {
     profiles: read("data/ark/behaviour-profiles.json").profiles,
     recipes: read("data/ark/behaviour-recipes.json").species,
     acts: read("data/ark/hunt-acts.json").acts,
-    tactics: read("data/ark/hunt-tactics.json").species
+    tactics: read("data/ark/hunt-tactics.json").species,
+    ambient: read("data/ark/ambient-foods.json").foods
 };
 const table = buildFlowParams(sources, only);
 const counts: Record<string, number> = {};

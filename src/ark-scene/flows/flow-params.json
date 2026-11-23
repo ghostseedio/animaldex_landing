@@ -30,8 +30,6 @@
    "search": 390,
    "patience": 4680,
    "handle": 78,
-   "success": 0.8,
-   "nearMiss": 1,
    "cache": null,
    "bout": 4680,
    "kept": {
@@ -45,6 +43,7 @@
    "dance": false,
    "repro": {
     "system": "pair",
+    "material": null,
     "display": null,
     "contest": null,
     "call": false,
@@ -56,32 +55,27 @@
    },
    "src": {
     "guild": "hunt act web",
-    "foods": "profile diet: \"Grasshoppers, bees, wasps, flies and moths that blunder into the web make up most meals\""
+    "foods": "engine: voyage_species_traits.ambient_phrases [\"Grasshoppers, bees, wasps, flies and moths\"]",
+    "search": "estimate: web guild prior x size scale 0.65 (size 3 from profile size)",
+    "patience": "estimate: web guild prior x size scale 0.65 (size 3 from profile size)",
+    "handle": "estimate: web guild prior x size scale 0.65 (size 3 from profile size)",
+    "bout": "estimate: web guild prior x size scale 0.65 (size 3 from profile size)",
+    "size": "profile size",
+    "activity": "profile activity: \"Morning\""
    }
   },
   "domestic-cat": {
    "slug": "domestic-cat",
    "guild": "stalker",
    "mode": "watch",
-   "foods": [
-    {
-     "eat": "small prey",
-     "the": "the prey"
-    },
-    {
-     "eat": "meat-based food",
-     "the": null
-    }
-   ],
+   "foods": [],
    "search": 145,
    "patience": 3100,
    "handle": 93,
-   "success": 0.3,
-   "nearMiss": 0.75,
    "cache": null,
    "bout": 2480,
    "kept": {
-    "eat": "meat-based food",
+    "eat": "meat",
     "the": null
    },
    "activity": "crepuscular",
@@ -91,6 +85,7 @@
    "dance": false,
    "repro": {
     "system": "none",
+    "material": null,
     "display": null,
     "contest": null,
     "call": true,
@@ -102,8 +97,13 @@
    },
    "src": {
     "guild": "hunt act pounce",
-    "foods": "profile diet: \"Meat-based food and small prey\"",
-    "patience": "story: \"Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears\"",
+    "foods": "engine: no background food stored (eats only the server's kills, caches and keepers' food)",
+    "search": "estimate: stalker guild prior x size scale 1.03 (size 26 from profile size)",
+    "patience": "estimate: stalker guild prior x size scale 1.03 (size 26 from profile size), doubled by story: \"Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears\"",
+    "handle": "estimate: stalker guild prior x size scale 1.03 (size 26 from profile size)",
+    "bout": "estimate: stalker guild prior x size scale 1.03 (size 26 from profile size)",
+    "size": "profile size",
+    "activity": "profile activity: \"Cats are often crepuscular\"",
     "mode": "story: \"Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears\""
    }
   },
@@ -117,35 +117,17 @@
      "the": "the acorn"
     },
     {
-     "eat": "a nut",
-     "the": "the nut"
-    },
-    {
-     "eat": "seeds",
-     "the": null
-    },
-    {
      "eat": "an insect",
      "the": "the insect"
     },
     {
      "eat": "fruit",
      "the": null
-    },
-    {
-     "eat": "an egg",
-     "the": "the egg"
-    },
-    {
-     "eat": "a small animal",
-     "the": "the small animal"
     }
    ],
    "search": 11,
    "patience": 265,
    "handle": 7,
-   "success": 0.8,
-   "nearMiss": 0.3,
    "cache": {
     "method": "hide",
     "chance": 0.45
@@ -162,6 +144,7 @@
    "dance": false,
    "repro": {
     "system": "pair",
+    "material": "sticks",
     "display": null,
     "contest": null,
     "call": true,
@@ -173,7 +156,13 @@
    },
    "src": {
     "guild": "diet seeds",
-    "foods": "profile diet: \"Acorns, nuts, seeds, insects, fruit, eggs, and small animals\"",
+    "foods": "engine: voyage_species_traits.ambient_phrases [\"Acorns\",\"insects\",\"fruit\"]",
+    "search": "estimate: seed guild prior x size scale 0.88 (size 17 from profile size)",
+    "patience": "estimate: seed guild prior x size scale 0.88 (size 17 from profile size)",
+    "handle": "estimate: seed guild prior x size scale 0.88 (size 17 from profile size)",
+    "bout": "estimate: seed guild prior x size scale 0.88 (size 17 from profile size)",
+    "size": "profile size",
+    "activity": "profile activity: \"Eurasian Jays are diurnal\"",
     "cache": "habitat: \"Oak woods, mixed forests, parks, gardens, and farmland edges fit Eurasian Jays because caching needs trees, ground, and seasonal seed abundance\"",
     "system": "offspring: \"Females lay eggs in twig nests, and both parents feed the chicks\""
    }
@@ -186,13 +175,15 @@
     {
      "eat": "sagebrush leaves",
      "the": null
+    },
+    {
+     "eat": "a beetle",
+     "the": "the beetle"
     }
    ],
    "search": 32,
    "patience": 960,
    "handle": 128,
-   "success": 0.95,
-   "nearMiss": 0,
    "cache": null,
    "bout": 1600,
    "kept": {
@@ -206,6 +197,7 @@
    "dance": false,
    "repro": {
     "system": "lek",
+    "material": "grass",
     "display": "strut_display",
     "contest": null,
     "call": false,
@@ -217,7 +209,13 @@
    },
    "src": {
     "guild": "diet browser",
-    "foods": "profile diet: \"Sagebrush leaves make up nearly the whole winter diet and much of the rest of the year\"",
+    "foods": "engine: voyage_species_traits.ambient_phrases [\"Sagebrush leaves\",\"beetles\"]",
+    "search": "estimate: browser guild prior x size scale 1.07 (size 28 from profile size)",
+    "patience": "estimate: browser guild prior x size scale 1.07 (size 28 from profile size)",
+    "handle": "estimate: browser guild prior x size scale 1.07 (size 28 from profile size)",
+    "bout": "estimate: browser guild prior x size scale 1.07 (size 28 from profile size)",
+    "size": "profile size",
+    "activity": "profile activity: \"A daytime forager that roosts on the ground at night\"",
     "system": "basis: \"Greater Sage-Grouse males gather on leks, inflate air sacs, fan tail feathers, and display in sagebrush habitat to attract mates\"",
     "incubates": "offspring: \"The hen scrapes a shallow nest under a sagebrush shrub and lays about 6 to 9 eggs, incubating alone for roughly 25 to 27 days\""
    }
@@ -228,15 +226,13 @@
    "mode": "sitwait",
    "foods": [
     {
-     "eat": "its prey",
-     "the": "the prey"
+     "eat": "an insect",
+     "the": "the insect"
     }
    ],
    "search": 140,
    "patience": 3500,
    "handle": 29,
-   "success": 0.5,
-   "nearMiss": 0.7,
    "cache": null,
    "bout": 2450,
    "kept": {
@@ -250,6 +246,7 @@
    "dance": false,
    "repro": {
     "system": "none",
+    "material": null,
     "display": null,
     "contest": null,
     "call": false,
@@ -261,8 +258,13 @@
    },
    "src": {
     "guild": "hunt act wade",
-    "foods": "none stored (no diet written (plan flying_bird)): the guild's word",
-    "patience": "evidence: \"Grey Herons often stand motionless in shallow water or at the water's edge for extended periods\""
+    "foods": "engine: voyage_species_traits.ambient_phrases [\"insects\"]",
+    "search": "estimate: sitwait guild prior x size scale 1.17 (size 34 from profile size)",
+    "patience": "estimate: sitwait guild prior x size scale 1.17 (size 34 from profile size), doubled by evidence: \"Grey Herons often stand motionless in shallow water or at the water's edge for extended periods\"",
+    "handle": "estimate: sitwait guild prior x size scale 1.17 (size 34 from profile size)",
+    "bout": "estimate: sitwait guild prior x size scale 1.17 (size 34 from profile size)",
+    "size": "profile size",
+    "activity": "profile activity (diurnal)"
    }
   },
   "house-sparrow": {
@@ -275,27 +277,13 @@
      "the": null
     },
     {
-     "eat": "crumbs",
-     "the": null
-    },
-    {
      "eat": "an insect",
      "the": "the insect"
-    },
-    {
-     "eat": "grain",
-     "the": null
-    },
-    {
-     "eat": "scraps",
-     "the": null
     }
    ],
    "search": 9,
    "patience": 220,
    "handle": 6,
-   "success": 0.8,
-   "nearMiss": 0.3,
    "cache": null,
    "bout": 440,
    "kept": {
@@ -309,6 +297,7 @@
    "dance": false,
    "repro": {
     "system": "pair",
+    "material": "grass",
     "display": null,
     "contest": null,
     "call": true,
@@ -320,7 +309,13 @@
    },
    "src": {
     "guild": "diet seeds",
-    "foods": "profile diet: \"Seeds, crumbs, insects, grain, and opportunistic scraps\"",
+    "foods": "engine: voyage_species_traits.ambient_phrases [\"Seeds\",\"insects\"]",
+    "search": "estimate: seed guild prior x size scale 0.73 (size 8 from profile size)",
+    "patience": "estimate: seed guild prior x size scale 0.73 (size 8 from profile size)",
+    "handle": "estimate: seed guild prior x size scale 0.73 (size 8 from profile size)",
+    "bout": "estimate: seed guild prior x size scale 0.73 (size 8 from profile size)",
+    "size": "profile size",
+    "activity": "profile activity: \"All activity is by day.\"",
     "system": "offspring: \"Both parents feed the nestlings, mainly on insects, and the young leave the nest at about two weeks\"",
     "incubates": "offspring: \"The usual clutch is 4 or 5 eggs, incubated for about 11 to 14 days\""
    }
@@ -333,33 +328,11 @@
     {
      "eat": "a fly",
      "the": "the fly"
-    },
-    {
-     "eat": "a mosquito",
-     "the": "the mosquito"
-    },
-    {
-     "eat": "a moth",
-     "the": "the moth"
-    },
-    {
-     "eat": "a wasp",
-     "the": "the wasp"
-    },
-    {
-     "eat": "a beetle",
-     "the": "the beetle"
-    },
-    {
-     "eat": "a flying insect",
-     "the": "the flying insect"
     }
    ],
    "search": 400,
    "patience": 4800,
    "handle": 80,
-   "success": 0.8,
-   "nearMiss": 1,
    "cache": null,
    "bout": 4800,
    "kept": {
@@ -373,6 +346,7 @@
    "dance": false,
    "repro": {
     "system": "none",
+    "material": null,
     "display": null,
     "contest": null,
     "call": false,
@@ -384,7 +358,13 @@
    },
    "src": {
     "guild": "hunt act web",
-    "foods": "profile diet: \"Flies, mosquitoes, moths, wasps, beetles and other flying insects caught in the web\""
+    "foods": "engine: voyage_species_traits.ambient_phrases [\"Flies\"]",
+    "search": "estimate: web guild prior x size scale 0.67 (size 4 from profile size)",
+    "patience": "estimate: web guild prior x size scale 0.67 (size 4 from profile size)",
+    "handle": "estimate: web guild prior x size scale 0.67 (size 4 from profile size)",
+    "bout": "estimate: web guild prior x size scale 0.67 (size 4 from profile size)",
+    "size": "profile size",
+    "activity": "profile activity: \"Most species build at dusk and sit at the hub or in a nearby retreat through the night\""
    }
   },
   "red-deer": {
@@ -397,23 +377,7 @@
      "the": null
     },
     {
-     "eat": "heather",
-     "the": null
-    },
-    {
      "eat": "herbs",
-     "the": null
-    },
-    {
-     "eat": "leaves",
-     "the": null
-    },
-    {
-     "eat": "shoots",
-     "the": null
-    },
-    {
-     "eat": "bark",
      "the": null
     },
     {
@@ -424,8 +388,6 @@
    "search": 39,
    "patience": 1410,
    "handle": 235,
-   "success": 0.97,
-   "nearMiss": 0,
    "cache": null,
    "bout": 2820,
    "kept": {
@@ -439,6 +401,7 @@
    "dance": false,
    "repro": {
     "system": "rut",
+    "material": null,
     "display": "court_display",
     "contest": "antler_clash",
     "call": true,
@@ -450,7 +413,13 @@
    },
    "src": {
     "guild": "diet grazer",
-    "foods": "profile diet: \"Grasses, heather, herbs, leaves, shoots, bark, and acorns\"",
+    "foods": "engine: voyage_species_traits.ambient_phrases [\"Grasses\",\"herbs\",\"acorns\"]",
+    "search": "estimate: grazer guild prior x size scale 1.57 (size 58 from profile size)",
+    "patience": "estimate: grazer guild prior x size scale 1.57 (size 58 from profile size)",
+    "handle": "estimate: grazer guild prior x size scale 1.57 (size 58 from profile size)",
+    "bout": "estimate: grazer guild prior x size scale 1.57 (size 58 from profile size)",
+    "size": "profile size",
+    "activity": "profile activity: \"Crepuscular, often feeding at dawn and dusk\"",
     "system": "habitat: \"Woodland edges, moorland, meadows, forest clearings, and parkland fit Red Deer because the rut needs both cover and open display ground\""
    }
   },
@@ -460,43 +429,17 @@
    "mode": "listen",
    "foods": [
     {
-     "eat": "a rodent",
-     "the": "the rodent"
-    },
-    {
-     "eat": "a rabbit",
-     "the": "the rabbit"
-    },
-    {
-     "eat": "a bird",
-     "the": "the bird"
-    },
-    {
-     "eat": "an egg",
-     "the": "the egg"
-    },
-    {
      "eat": "an insect",
      "the": "the insect"
     },
     {
      "eat": "fruit",
      "the": null
-    },
-    {
-     "eat": "carrion",
-     "the": null
-    },
-    {
-     "eat": "scraps",
-     "the": null
     }
    ],
    "search": 149,
    "patience": 1600,
    "handle": 96,
-   "success": 0.3,
-   "nearMiss": 0.75,
    "cache": {
     "method": "hide",
     "chance": 0.25
@@ -513,6 +456,7 @@
    "dance": false,
    "repro": {
     "system": "none",
+    "material": null,
     "display": null,
     "contest": null,
     "call": false,
@@ -524,7 +468,13 @@
    },
    "src": {
     "guild": "hunt act leap",
-    "foods": "profile diet: \"Rodents, rabbits, birds, eggs, insects, fruit, carrion, and scraps\"",
+    "foods": "engine: voyage_species_traits.ambient_phrases [\"insects\",\"fruit\"]",
+    "search": "estimate: stalker guild prior x size scale 1.07 (size 28 from profile size)",
+    "patience": "estimate: stalker guild prior x size scale 1.07 (size 28 from profile size)",
+    "handle": "estimate: stalker guild prior x size scale 1.07 (size 28 from profile size)",
+    "bout": "estimate: stalker guild prior x size scale 1.07 (size 28 from profile size)",
+    "size": "profile size",
+    "activity": "profile activity: \"Dusk and dawn\"",
     "mode": "hunt act: \"The fox's large ears and acute low-frequency hearing allow it to locate rodents moving beneath grass, leaf litter and snow, after which it makes a high arcing pounce onto the detected point.\"",
     "cache": "traits: \"Cache Memory: extra food can be hidden for later instead of wasted\""
    }
@@ -537,17 +487,11 @@
     {
      "eat": "nectar",
      "the": null
-    },
-    {
-     "eat": "pollen",
-     "the": null
     }
    ],
    "search": 4,
    "patience": 228,
    "handle": 3,
-   "success": 0.6,
-   "nearMiss": 0,
    "cache": null,
    "bout": 443,
    "kept": {
@@ -561,6 +505,7 @@
    "dance": true,
    "repro": {
     "system": "none",
+    "material": null,
     "display": null,
     "contest": null,
     "call": false,
@@ -572,7 +517,13 @@
    },
    "src": {
     "guild": "diet nectar",
-    "foods": "profile diet: \"Nectar, converted to honey and stored, and pollen for protein\"",
+    "foods": "engine: voyage_species_traits.ambient_phrases [\"Nectar\"]",
+    "search": "estimate: nectar guild prior x size scale 0.63 (size 2 from profile size)",
+    "patience": "estimate: nectar guild prior x size scale 0.63 (size 2 from profile size)",
+    "handle": "estimate: nectar guild prior x size scale 0.63 (size 2 from profile size)",
+    "bout": "estimate: nectar guild prior x size scale 0.63 (size 2 from profile size)",
+    "size": "profile size",
+    "activity": "profile activity: \"nurse bees work in shifts around the clock\"",
     "dance": "traits: \"Waggle dances performed on vertical comb inside the hive\""
    }
   }

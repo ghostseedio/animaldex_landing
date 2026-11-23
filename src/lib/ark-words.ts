@@ -300,6 +300,11 @@ export type ArkSeoWords = {
     lifeBody: string;
     lifeRules: string;
     lifeNote: string;
+    /**
+     * Behaviour flows (docs/ark/behaviour-flows.md 4.4; owner 2026-11-23 "yes use them with credit"): the words before
+     * the credited datasets' names. Optional: English fills (`ARK_DATA_CREDITS`) until its locale has it.
+     */
+    dataCredits?: string;
     listTitle: string;
     listIntro: string;
     listAboard: string;

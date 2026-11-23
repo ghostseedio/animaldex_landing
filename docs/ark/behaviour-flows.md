@@ -18,19 +18,30 @@ _The owner, 2026-11-23:_
 - Its tests are in `src/lib/ark-flows.test.ts`.
 - The strips come from `scripts/ark-flow-strips.mts` and are in `~/AnimalDex-work/ark-eating/strips/`.
 
-## 0. The rule: flows tell the engine's story, they never make up their own
+## 0. The rule: no fake events (owner, 2026-11-23, binding)
 
-| Engine (server) decides | Scene (flow) narrates |
-|---|---|
-| fed this Ark day or not (its meal clock, food supply), a kill and its prey (`meal`), the prey that got away (`escaped`), a wound, a cache saved or eaten (SIG-EVENTS `signature` food_cache, `fed` source cache), a mating (`mated`), a clutch, a birth, a death | the search, how it searches (listening, crouched, standing in the water, on its web), the near misses on the way, giving up and moving on, the catch **at the kill's time**, eating, caching, resting after |
+> "no fake events": every found / caught / ate / near-miss step must be backed by something real.
 
-- **Seeded from the animal's id and the engine's tick.** The engine's day is the Ark day, `ARK_DAY_MS` of the shared
-  clock: one Ark year in 14 real days, so about 55 real minutes. Every viewer sees the same near miss at the same moment.
-- **What the client may never show without the server:** a catch, eating on a day the engine did not feed it, a cache,
-  a mating, a clutch, a hatch or a birth.
-- **Where the engine does not model an outcome yet,** the flow shows neutral steps only: searching, resting, grooming,
-  displaying, building, courting that is turned down. Client near misses are path narration ("the rodent got away") and
-  name no Ark animal. The engine's own `escaped` events are pinned and name the real prey.
+| Step | Backed by (the engine's own record) | Without it |
+|---|---|---|
+| Caught X, stalk and pounce on X | `meal` event: its time, its prey (a real Ark animal) | never shown |
+| Missed: X got away (near miss) | `escaped` event (predator in `otherAnimalId`): its time, its prey | never shown; no seeded misses, no "found nothing", no "gave up" |
+| Eating its everyday food | the engine says it is fed (not hungry), **and** the food is its background food as the engine stores it (`voyage_species_traits.ambient_phrases`, 2,036 kinds; `data/ark/ambient-foods.json`). A fox eats insects and fruit (its engine background food), never "scraps" or a rodent from the diet sentence | hungry: searching, moving on, resting only |
+| Hiding X for later; dug up its cache | SIG-EVENTS `signature` food_cache; `fed` source cache | never shown |
+| Eating its keeper's food | kept (`keptFed`) and the keepers' feeding time | never shown |
+| Displaying | SIG-EVENTS `signature` display / courtship, at its time | never shown; no seeded calls, scent marks, sparring, rivals or refusals |
+| Courting then with its mate | `mated` | never shown |
+| Building its nest (trips counted) | a clutch the server laid (`laid`) within the next 3 ticks, paired, in season | never shown |
+
+- **Neutral steps only, where the engine records nothing:** searching (listening, watching, on its web, probing),
+  moving on, resting, grooming, drinking, sleeping. They claim no outcome.
+- **The engine's events win over its hours:** an event at a time its activity pattern says it sleeps wakes it two
+  minutes before (the fox strip's 16:18 escape).
+- **Live log moments are server events only** (caught, cached, near miss, dug up a cache): weight 1, none seeded.
+- **Seeded from the animal's id and the engine's tick**: only durations, which spot, which of its background foods. The
+  engine's day is `ARK_DAY_MS` of the shared clock (one Ark year in 14 real days, about 55 real minutes).
+- Tested: `ark-flows.test.ts` "no fake events" runs every pilot kind fed, hungry and in season with no server events and
+  finds no outcome step, no moment, and no food that is not its engine background food.
 
 ## 1. What we have today, and why it reads wrong
 
@@ -47,8 +58,9 @@ _The owner, 2026-11-23:_
 TICK     = (the engine's Ark day)  its steps from the tick's start to its end, seeded hash32("flow-tick", id, tick)
 BOUT     = SLEEP | FORAGE | HUNT_TO(kill) | ESCAPE(escaped) | CACHE(saved) | KEPT_FED | DRINK | REST | GROOM | REPRO
 SLEEP    = settle(roost) · sleep · wake                      (awake by its activity pattern; interrupted by a predator)
-FORAGE   = (search(mode) · [stalk] · attempt · near-miss | nothing)* · (found · eat [· dance])* · (full | give-up | time of day)
-HUNT_TO  = search · [near-miss]* · stalk · attempt · CATCH(kill.at, prey) · (eat | cache when saved) · digest
+FORAGE   = fed:    (search(mode) | move on) · eat(background food) ... [· dance] · digest
+           hungry: (search(mode) | move on)* · move on · rest            (no seeded tries, misses or finds)
+HUNT_TO  = search · stalk · attempt · CATCH(kill.at, prey) · (eat | cache when saved) · digest
 ESCAPE   = search · stalk · attempt · near-miss(escaped.at, prey)                         (the engine's own miss)
 KEPT_FED = wait for the keeper · eat its keeper's food (hay, pellets, seed, meat, fish)    (at the keepers' times)
 DRINK    = to water · wary at the edge · drink                    (kinds that get their water from food: no bout)
@@ -62,10 +74,10 @@ REPRO    = section 5
   airborne and never walking.
 - `server: true` marks a step that is the engine's own event.
 
-**How a bout is chosen.** Hunger comes first: on a fed tick it eats at least once. Then the next server event's lead-in:
+**How a bout is chosen.** On a tick the engine has it fed it eats its background food at least once. Then the next server event's lead-in:
 the kill's hunt, a cache, an escape, the keeper's feeding time or a mating. Every bout gives way to the event's
-lead-in (`limit`). Then its rhythm (two peaks, siesta) and its season (a rutting stag barely eats). After giving up it
-moves off, rests or grooms before searching again. A drink is never repeated within 30 minutes.
+lead-in (`limit`). Then its rhythm (two peaks, siesta) and its season (a rutting stag barely eats). After a search that came to nothing it
+moves on, rests or grooms before searching again. A drink is never repeated within 30 minutes.
 
 **Durations** are draws around the species' own means (section 4), held to 0.25×–3× of the mean, with a search step at
 least 20 s so the card never flickers. There is no fixed slot. The tick's end is where the engine re-decides, and only
@@ -169,16 +181,26 @@ for reproduction flows, which wait anyway (section 8). The deterministic extract
 of them from the stored offspring text (2,360) before any external data. That is our own data, no backfill and no
 model.
 
-### 4.4 External datasets (only for the gaps that remain; nothing downloaded)
+### 4.4 External datasets (only for the gaps that remain, after our own data)
 
-| Dataset | Licence (as published) | Commercial use | Verdict |
+**Owner, 2026-11-23: "yes use them with credit"** (PanTHERIA and EltonTraits, with AnAge). Rules: gaps only, after our
+own data; downloaded only from the official archives (Ecological Archives / Figshare, HAGR); no paid calls; every
+number keeps its source (`src` in `flow-params.json`); the datasets are credited on the site (below). Recorded as an
+AnimalDex DECISIONS row.
+
+| Dataset | Citation | Licence | Official archive |
 |---|---|---|---|
-| AnAge (HAGR), https://genomics.senescence.info/legal.html | "HAGR is free for all purposes, including commercial, educational, and research purposes … This work is licensed under a Creative Commons Attribution 3.0 Unported License." (attribution: mention HAGR; contact before bulk retrieval) | yes, with attribution | usable; ask before a bulk download |
-| PanTHERIA (Jones et al. 2009, Ecological Archives E090-184), https://esapubs.org/archive/ecol/E090/184/ | the Archives' copyright page (https://esapubs.org/archive/copyright.htm): "Except where otherwise noted, Ecological Archives are covered under the Creative Commons Attribution (CC BY 4.0) license." The same page's footer says "All rights reserved". The figshare copy's licence could not be read (403). | probably yes (CC BY 4.0) | **owner to confirm**: the page says both CC BY and "All rights reserved" |
-| EltonTraits 1.0 (Wilman et al. 2014, Ecological Archives E095-178), https://esapubs.org/archive/ecol/E095/178/ | same copyright page as above; figshare record not readable (403) | probably yes (CC BY 4.0) | **owner to confirm**, same reason |
+| AnAge (Human Ageing Genomic Resources) | Tacutu R, Thornton D, Johnson E, et al. (2018). Human Ageing Genomic Resources: new and updated databases. *Nucleic Acids Research* 46(D1): D1083-D1090. https://doi.org/10.1093/nar/gkx1042 | CC BY 3.0 ("HAGR is free for all purposes, including commercial … licensed under a Creative Commons Attribution 3.0 Unported License", https://genomics.senescence.info/legal.html); HAGR asks to be contacted before a bulk download | https://genomics.senescence.info/species/ |
+| PanTHERIA | Jones KE, Bielby J, Cardillo M, et al. (2009). PanTHERIA: a species-level database of life history, ecology, and geography of extant and recently extinct mammals. *Ecology* 90(9): 2648. https://doi.org/10.1890/08-1494.1 (Ecological Archives E090-184) | CC BY 4.0 (Ecological Archives, https://esapubs.org/archive/copyright.htm) | https://esapubs.org/archive/ecol/E090/184/ |
+| EltonTraits 1.0 | Wilman H, Belmaker J, Simpson J, de la Rosa C, Rivadeneira MM, Jetz W (2014). EltonTraits 1.0: Species-level foraging attributes of the world's birds and mammals. *Ecology* 95(7): 2027. https://doi.org/10.1890/13-1917.1 (Ecological Archives E095-178) | CC BY 4.0 (as above) | https://esapubs.org/archive/ecol/E095/178/ |
 
-Each number keeps a source: `dataset` (with the row's citation), `species text` (field + phrase) or `estimate` (the guild
-prior, flagged).
+- **Used for:** timings and rhythms only (activity cycle, diet breadth shares for search modes, litter and gestation
+  gaps). Never an outcome: outcomes are the engine's (section 0).
+- **Not downloaded yet.** The pilot's timings are guild priors scaled by body size, and `src` says so on each number
+  ("estimate: … guild prior x size scale"). The roll-out by guild replaces them from the datasets where our own data
+  has no number, and `src` then names the dataset and row.
+- **Credits line on the site:** the /ark page's "about" section (`ark-about.tsx`, under "Life aboard"), one line with
+  the three datasets linked to their DOIs.
 
 ## 5. Reproduction flows (they wait until hunting is live and settled)
 
@@ -216,15 +238,22 @@ Rules:
 
 ## 6. Card and live log
 
-- **Card "Now:"** is the step's line: "Listening for prey", "Pouncing on a rodent", "Missed: the rodent got away",
-  "Caught a Bank Vole", "Hiding a Bank Vole for later", "Eating grass", "Drinking nectar", "A grasshopper hit its web",
-  "Missed: the grasshopper broke free", "Gave up, moving on", "Eating meat-based food from its keeper".
+- **Card "Now:"** is the step's line. Server-backed: "Stalking a Bank Vole", "Pouncing on a Bank Vole", "Caught a Bank
+  Vole", "Missed: the Wood Mouse got away", "Hiding a Bank Vole for later", "Eating meat from its keeper",
+  "Displaying". Background food: "Eating an insect", "Grazing · eating grass · patch 3", "Drinking nectar". Neutral:
+  "Listening for prey", "Waiting on its web", "Moving on", "Resting", "Drinking".
+- **A repeating cycle is one activity with progress** (coordinator, 2026-11-23: the sparrow's nest strip flickered
+  between "Gathering nest material" and "Building its nest" every 20-40 s). Grazing, browsing, foraging, flower visits,
+  filter-feeding and nest trips are grouped bouts (`FlowBout`): the card's line stays ("Building its nest", "Visiting
+  flowers", "Grazing", "Foraging") and only its progress counts up ("trip 5, carrying grass", "14 so far", "eating
+  grass · patch 3", "6 spots searched"). The steps inside still drive the pose.
+- **The flicker rule** (`CARD_RETURN_SECONDS = 30`, tested over every pilot kind fed, hungry, in season, with kills and
+  escapes, and a kept cat): a card line may not come back within 30 s when it alternates with one other line. Solo
+  steps that sit between two of the same line (a meal between searches, a dance between flower bouts) last at least
+  32 s; a bout never starts with under 90 s left before the tick's end or the server's next event (it carries on).
 - **Card log** is its last steps, newest first. Repeats merge.
-- **Live log moments** sit above everyday `doing`. The weights are `caught` 0.8, `cached` 0.9, `nearMiss` 0.6, `gaveUp`
-  0.5 and `found` 0.4.
-  - A giving-up is said only after a search of at least 0.8× its patience.
-  - One animal is said at most once in 180 s (`FLOW_MOMENT_GAP_SECONDS`); its server events are always said.
-  - The Ark-wide one line a 5 s window is unchanged.
+- **Live log moments are the server's events only** (section 0): caught, cached, near miss (`escaped`), dug up its
+  cache. Always said (weight 1). The Ark-wide one line a 5 s window is unchanged.
 - **Words** go in `ark.flow.*` keys through `ark-words.ts`, in all 45 locales. English comes first; the other 44 are
   authored in the lane (no paid API) and fall back to the generic line until then.
 
@@ -245,6 +274,16 @@ Design only. Engine changes land one at a time after hunting goes live (about 25
 - **Flag off**: the engine is md5-identical to main in popsim (5 seeds).
 - **The flows read the same effort.** A hungry, long-searching animal is shown searching longer. Effort is in the
   snapshot as the animal's `effort` for the step.
+- **Real prey encounters, for near misses (owner, "no fake events").** Today the only real near miss is `escaped`. For
+  near misses to be common enough to read as a hunt's drama, the engine must make them: in each step's encounter draw a
+  searching predator meets a real prey animal of its food links in its zone; the encounter ends in a kill (`meal`, as
+  now), an escape (`escaped`, payload `{preySpecies, cost}`), or nothing logged. Each encounter costs the predator
+  energy (`attemptCost(guild) × mass^0.75`) and, for the prey, an exposure step (its flee: `flee-envelope.md`). Only
+  logged encounters may be shown; the flows pin them as they pin `escaped` now.
+- **Background feeding events (optional, for the log).** Ambient food feeds without an event today. If the owner wants
+  "found / eating" moments in the live log for everyday food, the engine logs a light `foraged` record per animal per
+  Ark day (`{food: ambient phrase}`), sampled, not stored per bite; until then the flows show everyday eating on the card
+  only, never as a log moment.
 
 ## 8. Sequencing and what ships first
 
@@ -275,14 +314,14 @@ the live log's moments. The server events on them are **sample** inputs, labelle
 
 | Strip | What it shows |
 |---|---|
-| 01 red fox | listening, pouncing, two near misses, the server's kill (Bank Vole) at 16:38, hidden for later (SIG-EVENTS cache), then scraps on its fed day |
-| 02 grey heron | standing still for minutes, strikes that miss, the kill (Common Frog) at its time; no diet stored, so it eats nothing else |
-| 03 / 04 house sparrow | a fed day (finds, eats) against an unfed day (near misses, nothing here, gives up, rests, drinks, never eats) |
-| 05 red deer | patches of grass, heather and herbs, eating standing, resting after |
-| 06 honey bee | flower to flower, empty flowers, drinking nectar, gathering pollen, the waggle dance |
-| 07 domestic cat (kept) | crouched, pouncing with misses (no kill, so no catch), eating its keeper's food at feeding time |
-| 08 Eurasian jay | the saved cache at its time ("Hiding an acorn for later"), acorns and nuts |
-| 09 garden spider | long waits on the web, "broke free", the kill at its time, eating at the hub |
-| 10 red deer rut | calling, scent-marking, displaying, sparring, courting, the server's mating at 16:52 |
-| 11 sage-grouse lek | long strut displays, courting and turned down, no mating without the server |
-| 12 house sparrow pair | gathering material and building (no clutch shown) |
+| 01 red fox | asleep, woken by the engine's escape (Wood Mouse, 16:18): stalk, pounce, missed; the kill (Bank Vole) at 16:38, hidden (SIG-EVENTS cache); then listening and eating insects (its engine background food) |
+| 02 grey heron | standing still for minutes, the kill (Common Frog) at its time, insects (its engine background food) |
+| 03 / 04 house sparrow | engine fed: foraging on seeds and insects; engine hungry: "Foraging · 6 spots searched", moving on, resting, never eating, no misses |
+| 05 red deer | grazing grass, herbs, acorns (engine background food), patches counted, resting after |
+| 06 honey bee | "Visiting flowers · N so far", drinking nectar, the waggle dance after a bout it fed in |
+| 07 domestic cat (kept) | no background food stored and no kill: only watching, resting; its keeper's food at feeding time |
+| 08 Eurasian jay | the saved cache at its time ("Hiding an acorn for later"), acorns, insects, fruit |
+| 09 garden spider | long waits on the web, eating its background food at the hub, the kill at its time |
+| 10 red deer rut | the server's display (16:24) and mating (16:52) only: no seeded roars, rivals or refusals |
+| 11 sage-grouse lek | the server's displays only; no mating without the server |
+| 12 house sparrow pair | nest trips counted ("Building its nest · trip 5, carrying grass") before the server's clutch |

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import table from "@/ark-scene/flows/flow-params.json";
-import {FLOW_TICK_SECONDS, flowStepAt, flowSteps, forgetFlows, stepLine, stepMoment, tickOf, tickSteps, type FlowServer, type FlowSubject} from "@/ark-scene/flows/flows";
+import {CARD_RETURN_SECONDS, cardRuns, FLOW_TICK_SECONDS, flowStepAt, flowSteps, forgetFlows, stepCard, stepLine, stepMoment, tickOf, tickSteps, type FlowServer, type FlowSubject} from "@/ark-scene/flows/flows";
 import {foodWordsOf, type FlowParams} from "@/ark-scene/flows/params";
 import {islandHours} from "@/lib/ark-clock";
 
@@ -86,7 +86,7 @@ test("flows: no eating on a day the engine did not feed it; on a fed day it eats
 test("flows: no mating without the server's; a neutered or kept-alone animal never courts", () => {
     const repro = {inSeason: true, sex: "male" as const, partner: true};
     for (const tick of TICKS) assert.ok(!tickSteps(subject("red-deer", {repro}), tick).some((s) => s.kind === "mate"));
-    for (const tick of TICKS) assert.ok(!tickSteps(subject("red-deer", {repro: {...repro, neutered: true}}, "neutered"), tick).some((s) => ["court", "display", "spar", "call", "mate"].includes(s.kind)));
+    for (const tick of TICKS) assert.ok(!tickSteps(subject("red-deer", {repro: {...repro, neutered: true}}, "neutered"), tick).some((s) => ["court", "display", "mate", "build"].includes(s.kind)));
     for (const tick of TICKS) assert.ok(!tickSteps(subject("red-deer", {repro: {...repro, partner: false}}, "alone"), tick).some((s) => s.kind === "court"));
     // (17:30 UTC: a crepuscular deer's dusk.)
     const at = Date.UTC(2026, 10, 23, 17, 30) / 1000;
@@ -118,14 +118,23 @@ test("flows: parameters come from the stored text", () => {
     assert.deepEqual(foodWordsOf("Seeds, crumbs, insects, grain, and opportunistic scraps").map((f) => f.eat), ["seeds", "crumbs", "an insect", "grain", "scraps"]);
 });
 
-test("flows: a long fruitless search's giving up is a moment; a short one is not", () => {
-    const steps = flowSteps(subject("house-sparrow", {fedOn: () => false}, "gaveup"), T0, T0 + 3 * 3600);
-    const gaveUps = steps.filter((s) => s.kind === "giveUp");
-    assert.ok(gaveUps.length > 0);
-    for (const step of gaveUps) {
-        const kind = stepMoment(step, steps, P["house-sparrow"]);
-        assert.ok(kind === null || kind === "gaveUp");
+test("flows: no fake events: with nothing from the server, only neutral steps and its engine background food", () => {
+    forgetFlows();
+    const outcome = new Set(["stalk", "attempt", "nearMiss", "catch", "found", "cache", "display", "court", "mate", "build"]);
+    for (const slug of Object.keys(P)) {
+        for (const [k, server] of [{}, {fedOn: () => false}, {repro: {inSeason: true, sex: "male" as const, partner: true}}, {repro: {inSeason: true, sex: "female" as const, partner: true}}].entries()) {
+            const steps = flowSteps(subject(slug, {...server, version: `fake-${k}`}, `fake-${slug}-${k}`), T0, T0 + 20 * FLOW_TICK_SECONDS);
+            const foods = new Set(P[slug].foods.map((f) => f.eat));
+            for (const step of steps) {
+                assert.ok(!outcome.has(step.kind), `${slug}: ${step.kind} with no server event`);
+                if (step.kind === "eat") assert.ok(step.food && foods.has(step.food.eat), `${slug} ate ${step.food?.eat}, not its engine background food`);
+                assert.equal(stepMoment(step, steps, P[slug]), null, `${slug}: a moment with no server event`);
+            }
+        }
     }
+    // A fox's everyday food is its engine background food (insects, fruit), never a rodent of the diet sentence.
+    assert.deepEqual(P["red-fox"].foods.map((f) => f.eat), ["an insect", "fruit"]);
+    assert.deepEqual(P["domestic-cat"].foods, []);
 });
 
 test("flows: the engine's escape is said as its near miss, with the prey that got away, at its time", () => {
@@ -136,4 +145,36 @@ test("flows: the engine's escape is said as its near miss, with the prey that go
     assert.ok(miss);
     assert.ok(Math.abs(miss!.from - at) < 1);
     assert.equal(stepLine(miss!), "Missed: the Wood Mouse got away");
+});
+
+test("flows: the card never flickers between two lines (a line does not return within CARD_RETURN_SECONDS around one other)", () => {
+    forgetFlows();
+    const scenarios: Array<[string, Partial<FlowServer>]> = [];
+    for (const slug of Object.keys(P)) {
+        scenarios.push([slug, {}], [slug, {fedOn: () => false}]);
+        scenarios.push([slug, {repro: {inSeason: true, sex: "male", partner: true, displays: [T0 + 4000, T0 + 9000]}}], [slug, {repro: {inSeason: true, sex: "female", partner: true, laid: [T0 + 20 * FLOW_TICK_SECONDS]}}]);
+        scenarios.push([slug, {kills: [{at: T0 + 5000, prey: "Bank Vole"}], escapes: [{at: T0 + 2500, prey: "Wood Mouse"}]}]);
+    }
+    scenarios.push(["domestic-cat", {kept: {feedings: [T0 + 3000, T0 + 30000]}}]);
+    const bad: string[] = [];
+    scenarios.forEach(([slug, server], k) => {
+        const steps = flowSteps(subject(slug, {...server, version: `s${k}`}, `flicker-${k}`), T0, T0 + 30 * FLOW_TICK_SECONDS);
+        const runs = cardRuns(steps);
+        for (let i = 0; i + 2 < runs.length; i++) {
+            if (runs[i].line === runs[i + 2].line && runs[i + 1].to - runs[i + 1].from < CARD_RETURN_SECONDS && bad.length < 12) bad.push(`${slug}: ${runs[i].line} / ${runs[i + 1].line} (${Math.round(runs[i + 1].to - runs[i + 1].from)} s)`);
+        }
+    });
+    assert.deepEqual(bad, []);
+});
+
+test("flows: a nest's trips and a bee's flowers are one card line with progress", () => {
+    forgetFlows();
+    // (Only in the ticks before a clutch the server laid: none without one.)
+    assert.ok(!flowSteps(subject("house-sparrow", {repro: {inSeason: true, sex: "female", partner: true}, version: "nolaid"}, "nolaid"), T0, T0 + 3 * 3600).some((s) => s.kind === "build"));
+    const nest = flowSteps(subject("house-sparrow", {repro: {inSeason: true, sex: "female", partner: true, laid: [T0 + 4 * 3600]}, version: "nest"}, "nester"), T0, T0 + 3 * 3600).filter((s) => s.bout?.kind === "nest");
+    assert.ok(nest.length > 4);
+    assert.ok(nest.every((s) => stepCard(s).line === "Building its nest"));
+    assert.match(stepLine(nest[nest.length - 1]), /^Building its nest · trip \d+, carrying grass$/);
+    const bee = flowSteps(subject("western-honey-bee", {version: "bee"}, "bee"), T0, T0 + 3600).filter((s) => s.bout?.kind === "flowers");
+    assert.ok(bee.length > 4 && bee.every((s) => stepCard(s).line === "Visiting flowers"));
 });
