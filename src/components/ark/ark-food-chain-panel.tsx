@@ -13,6 +13,9 @@ export type ArkFoodChainWords = {
     eats: string;
     eatenBy: string;
     eatsNone: string;
+    /** Decision 482: a host-fed kind (a parasite): "Feeds on its hosts:" before its host kinds aboard, and when none is aboard. */
+    hosts: string;
+    hostsNone: string;
     eatenByNone: string;
     kept: string;
     pet: string;
@@ -33,7 +36,7 @@ export type ArkFoodChainWords = {
 };
 
 export const ARK_FOOD_CHAIN_WORD_KEYS: Array<keyof ArkFoodChainWords> = [
-    "aboardOne", "aboardOther", "eats", "eatenBy", "eatsNone", "eatenByNone", "kept", "pet", "fieldGuide", "about", "seeInArk",
+    "aboardOne", "aboardOther", "eats", "eatenBy", "eatsNone", "hosts", "hostsNone", "eatenByNone", "kept", "pet", "fieldGuide", "about", "seeInArk",
     "loading", "error", "searchLabel", "searchPlaceholder", "listTitle", "listHint", "noMatch", "showAll", "chooseLabel", "andMore"
 ];
 
@@ -110,6 +113,10 @@ export default function ArkFoodChainPanel({entry, words, locale, arkHref, headin
     const eats = capEats(entry.eats, maxPerList);
     const eatenBy = maxPerList ? entry.eatenBy.slice(0, maxPerList) : entry.eatenBy;
     const eatenByHidden = entry.eatenBy.length - eatenBy.length;
+    // A host-fed kind's hosts (decision 482): fed through them, never prey, so a list of their own under "Eats".
+    const hosts = entry.hosts && !entry.kept ? entry.hosts : null;
+    const hostsShown = hosts ? (maxPerList ? hosts.aboard.slice(0, maxPerList) : hosts.aboard) : [];
+    const hostsHidden = hosts ? hosts.aboard.length - hostsShown.length + hosts.more : 0;
     return (
         <article className="flex min-w-0 flex-col gap-5" aria-labelledby={headingId}>
             <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -150,9 +157,30 @@ export default function ArkFoodChainPanel({entry, words, locale, arkHref, headin
                         </ul>
                         <More count={eats.hidden} words={words} href={moreHref} locale={locale} />
                         </>
-                    ) : (
+                    ) : hosts ? null : (
                         <p className="mt-2 text-[15px] leading-relaxed text-ink-300">{words.eatsNone}</p>
                     )}
+                    {hosts ? (
+                        <div data-testid="ark-food-chain-hosts" className={`border-l-2 border-primary-400/40 pl-3 ${eats.rules.length ? "mt-3" : "mt-2"}`}>
+                            {hosts.phrase ? <p className="text-[13px] italic leading-relaxed text-ink-300">{words.fieldGuide.replace("{phrase}", hosts.phrase)}</p> : null}
+                            {hostsShown.length ? (
+                                <>
+                                    <p className="mt-1 text-[15px] font-semibold text-ink-200">{words.hosts}</p>
+                                    <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[15px]">
+                                        {hostsShown.map((host) => (
+                                            <li key={host.id} className="flex items-baseline gap-1.5">
+                                                <SpeciesName species={host} className="font-bold text-white" />
+                                                <Count count={host.aboard} words={words} locale={locale} />
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <More count={hostsHidden} words={words} href={moreHref} locale={locale} />
+                                </>
+                            ) : (
+                                <p className="mt-1 text-[15px] leading-relaxed text-ink-300">{words.hostsNone}</p>
+                            )}
+                        </div>
+                    ) : null}
                 </section>
             ) : null}
 

@@ -936,6 +936,8 @@
             "noneNearby": "Niciunul în apropiere",
             "noneAboard": "Niciunul aici",
             "dung": "bălegar",
+            "hosts": "Se hrănește de la gazdele sale",
+            "hostsNone": "Nicio gazdă de-a sa la bord",
             "keptFed": "Hrănit de îngrijitori",
             "keptSafe": "Ferit de prădători",
             "more": "Încă +{n}",

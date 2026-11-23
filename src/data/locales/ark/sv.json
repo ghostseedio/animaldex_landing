@@ -936,6 +936,8 @@
             "noneNearby": "Inga i närheten",
             "noneAboard": "Inga här",
             "dung": "spillning",
+            "hosts": "Lever på sina värdar",
+            "hostsNone": "Ingen av dess värdar ombord",
             "keptFed": "Matas av skötarna",
             "keptSafe": "Säker från rovdjur",
             "more": "+{n} till",

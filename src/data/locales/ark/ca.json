@@ -936,6 +936,8 @@
             "noneNearby": "Cap a prop",
             "noneAboard": "Cap aquí",
             "dung": "fems",
+            "hosts": "S'alimenta dels seus hostes",
+            "hostsNone": "Cap dels seus hostes a bord",
             "keptFed": "L'alimenten els cuidadors",
             "keptSafe": "A salvo dels depredadors",
             "more": "+{n} més",

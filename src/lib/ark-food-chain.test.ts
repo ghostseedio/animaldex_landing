@@ -104,6 +104,27 @@ test("kept animals are outside the wild food chain, and pets are never prey", ()
     assert.equal(arkHuntingRegion({area: null, island: "wild", zone: "rainforest"} as never), "forest");
 });
 
+test("a host-fed kind (decision 482) feeds on its hosts aboard, from the engine's own host link; none aboard is said plainly", () => {
+    // The hawk stands in for a parasite: hosts = fox, rabbit, its own kind, a kind not aboard and the fennec.
+    // Never its own kind; a kind not aboard is left out; most aboard first.
+    const notAboard = "00000000-0000-4000-8000-0000000000aa";
+    const hostRow = {species_profile_id: ID.hawk, hosts: [ID.fox, ID.rabbit, ID.hawk, notAboard, ID.fennec], hosts_phrase: "Feeds only on blood."};
+    const hawk = arkFoodChainEntry([], aboard, ID.hawk, page, [hostRow])!;
+    assert.deepEqual(hawk.eats, []);
+    assert.equal(hawk.hosts?.phrase, "Feeds only on blood.");
+    assert.deepEqual(hawk.hosts?.aboard.map((host) => `${host.name} ${host.aboard}`), ["European Rabbit 3", "Red Fox 2", "Fennec Fox 1"]);
+    assert.equal(hawk.hosts?.more, 0);
+    // Hosts named, none aboard: an empty list, not "eats none".
+    const lonely = arkFoodChainEntry([], aboard, ID.hawk, page, [{...hostRow, hosts: [notAboard]}])!;
+    assert.deepEqual(lonely.hosts?.aboard, []);
+    // Not host-fed (hosts NULL or {}), or another kind's row: no hosts at all.
+    assert.equal(arkFoodChainEntry([], aboard, ID.hawk, page, [{...hostRow, hosts: null}])!.hosts, undefined);
+    assert.equal(arkFoodChainEntry([], aboard, ID.hawk, page, [{...hostRow, hosts: []}])!.hosts, undefined);
+    assert.equal(arkFoodChainEntry([], aboard, ID.fox, page, [hostRow])!.hosts, undefined);
+    // A kept kind is fed by its keepers: no hosts.
+    assert.equal(arkFoodChainEntry([], aboard, ID.cat, page, [{...hostRow, species_profile_id: ID.cat}])!.hosts, undefined);
+});
+
 test("kinds by slug or id; strict slugs only", () => {
     assert.equal(arkFoodChainKind(aboard, "red-fox"), ID.fox);
     assert.equal(arkFoodChainKind(aboard, ID.rabbit.toUpperCase()), ID.rabbit);

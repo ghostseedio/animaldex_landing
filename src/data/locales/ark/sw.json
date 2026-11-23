@@ -936,6 +936,8 @@
             "noneNearby": "Hakuna karibu",
             "noneAboard": "Hakuna hapa",
             "dung": "kinyesi cha wanyama",
+            "hosts": "Hula kutoka kwa wenyeji wake",
+            "hostsNone": "Hakuna mwenyeji wake chomboni",
             "keptFed": "Hulishwa na walezi",
             "keptSafe": "Salama dhidi ya wawindaji",
             "more": "+{n} zaidi",

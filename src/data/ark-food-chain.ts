@@ -11,6 +11,7 @@ import {
     arkFoodChainLooks,
     type ArkFoodChainAboard,
     type ArkFoodChainEntry,
+    type ArkFoodChainHostsRow,
     type ArkFoodChainRow,
     type ArkFoodChainSpecies
 } from "@/lib/ark-food-chain";
@@ -58,19 +59,48 @@ async function readRows(filter: string, revalidate: number): Promise<ArkFoodChai
     }
 }
 
+/**
+ * A host-fed kind's hosts (decision 482): the engine's own link, `voyage_species_traits.hosts` (A10), read with the
+ * service key like the links (the table is service-role only): only the species, hosts and phrase columns. Only rows
+ * with hosts come back, so most kinds read an empty list. Null when it cannot be read (the card then shows the links only).
+ */
+async function readHostRows(looks: string[], revalidate: number): Promise<ArkFoodChainHostsRow[] | null> {
+    const url = getSupabaseUrl();
+    const key = getSupabaseServiceKey();
+    if (!url || !key || !looks.length) return null;
+    try {
+        const response = await fetch(
+            `${url}/rest/v1/voyage_species_traits?select=species_profile_id,hosts,hosts_phrase&species_profile_id=in.(${looks.join(",")})&hosts=not.is.null&limit=${looks.length}`,
+            {headers: getSupabaseHeaders(key), next: {revalidate, tags: ["ark-food-links"]}}
+        );
+        if (!response.ok) return null;
+        const body = await response.json();
+        return Array.isArray(body) ? (body as ArkFoodChainHostsRow[]) : null;
+    } catch {
+        return null;
+    }
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-/** Both sides of a kind's links: what its looks eat, and what eats any of its looks. Null when the view cannot be read. */
-async function readKindRows(aboard: ArkFoodChainAboard, kind: string, revalidate: number): Promise<ArkFoodChainRow[] | null> {
+type KindRows = {rows: ArkFoodChainRow[]; hosts: ArkFoodChainHostsRow[]};
+
+/**
+ * Both sides of a kind's links: what its looks eat, and what eats any of its looks; and its hosts' row when it is
+ * host-fed. Null when the view cannot be read.
+ */
+async function readKindRows(aboard: ArkFoodChainAboard, kind: string, revalidate: number): Promise<KindRows | null> {
     const looks = arkFoodChainLooks(aboard, kind).filter((id) => UUID.test(id)).slice(0, 40);
     if (!looks.length) return null;
     const list = looks.join(",");
-    const [eats, eatenBy] = await Promise.all([readRows(`predator=in.(${list})`, revalidate), readRows(`prey=in.(${list})`, revalidate)]);
+    const [eats, eatenBy, hosts] = await Promise.all([readRows(`predator=in.(${list})`, revalidate), readRows(`prey=in.(${list})`, revalidate), readHostRows(looks, revalidate)]);
     if (!eats || !eatenBy) return null;
     // Kept per kind for a day, so only the rows between species aboard now (most of a diet's catalogue is not aboard):
     // a species that comes aboard later shows in its links with the next read.
     const aboardSide = (value: unknown) => typeof value === "string" && aboard.kindOf.has(value.toLowerCase());
-    return [...eats, ...eatenBy].filter((row) => aboardSide(row.predator) && aboardSide(row.prey) && row.realm_ok !== false && row.size_ok !== false);
+    const rows = [...eats, ...eatenBy].filter((row) => aboardSide(row.predator) && aboardSide(row.prey) && row.realm_ok !== false && row.size_ok !== false);
+    // (The hosts' row is kept whole: who of them is aboard is worked out per read, with the counts.)
+    return {rows, hosts: hosts ?? []};
 }
 
 type Memo<T> = {at: number; promise: Promise<T>};
@@ -117,12 +147,12 @@ export async function readArkFoodChainAboard(revalidate = 300): Promise<ArkFoodC
 export async function readArkFoodChainEntry(read: ArkFoodChainRead, value: string, revalidate = DAY): Promise<ArkFoodChainEntry | null> {
     const kind = arkFoodChainKind(read.aboard, value);
     if (!kind) return null;
-    const rows = await remember(entryRowsMemo, kind, revalidate * 1000, () => readKindRows(read.aboard, kind, revalidate));
-    if (!rows) return null;
-    return arkFoodChainEntry(rows, read.aboard, kind, arkFoodChainPage);
+    const kindRows = await remember(entryRowsMemo, kind, revalidate * 1000, () => readKindRows(read.aboard, kind, revalidate));
+    if (!kindRows) return null;
+    return arkFoodChainEntry(kindRows.rows, read.aboard, kind, arkFoodChainPage, kindRows.hosts);
 }
 
-const entryRowsMemo = new Map<string, Memo<ArkFoodChainRow[] | null>>();
+const entryRowsMemo = new Map<string, Memo<KindRows | null>>();
 
 const sceneTable = foodTable as {slugs: string[]; links: Record<string, string>};
 

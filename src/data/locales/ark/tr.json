@@ -936,6 +936,8 @@
             "noneNearby": "Yakında yok",
             "noneAboard": "Burada yok",
             "dung": "dışkı",
+            "hosts": "Konakçılarından beslenir",
+            "hostsNone": "Konakçılarından hiçbiri gemide değil",
             "keptFed": "Bakıcıları besliyor",
             "keptSafe": "Avcılardan güvende",
             "more": "+{n} daha",

@@ -4,7 +4,7 @@ import en from "@/data/locales/en.json";
 import type {ArkAnimal} from "@/ark-scene/types";
 import type {ArkFoodChainEntry} from "@/lib/ark-food-chain";
 import {ARK_LANGUAGES} from "@/lib/ark-languages";
-import {ARK_RELATIONS_ENGLISH, ARK_RELATION_STYLE, arkBreedingPlace, arkFoodChainRows, arkRelations, arkRelationShown} from "@/lib/ark-relations";
+import {ARK_RELATIONS_ENGLISH, ARK_RELATION_STYLE, arkBreedingPlace, arkFoodChainRows, arkHostRows, arkRelations, arkRelationShown} from "@/lib/ark-relations";
 
 const ZEBRA = "00000000-0000-4000-8000-00000000000a";
 const LION = "00000000-0000-4000-8000-00000000000b";
@@ -155,4 +155,17 @@ test("food chain: kinds it eats and that eat it, with how many are in its region
 
 test("relations words: the English fallback is en.json's", () => {
     assert.deepEqual((en as unknown as {ark: {relations: unknown}}).ark.relations, ARK_RELATIONS_ENGLISH);
+});
+
+test("hosts (decision 482): a host-fed kind's host kinds aboard, counted in its region; none for a kept one or a kind without hosts", () => {
+    // The dog stands in for a parasite whose hosts are zebras and lions.
+    const tick = animal("t1", DOG);
+    const entry: ArkFoodChainEntry = {...zebraEntry, species: species(DOG, "domestic-dog"), eatenBy: [], hosts: {phrase: "Feeds only on blood.", aboard: [species(LION, "lion"), species(ZEBRA, "plains-zebra")], more: 7}};
+    const animals = [tick, animal("z1", ZEBRA), animal("z2", ZEBRA), animal("z3", ZEBRA, {zone: "polar"}), animal("l1", LION, {island: "town", area: "zoo", enclosure: "big_cats-1"})];
+    const rows = arkHostRows(entry, tick, animals)!;
+    assert.deepEqual(rows.kinds.map((k) => [k.slug, k.here]), [["plains-zebra", 2], ["lion", 0]]);
+    assert.equal(rows.more, 7);
+    assert.equal(arkHostRows(zebraEntry, tick, animals), null);
+    assert.equal(arkHostRows(entry, animal("t2", DOG, {island: "town", area: "house"}), animals), null);
+    assert.deepEqual(arkHostRows({...entry, hosts: {phrase: null, aboard: [], more: 0}}, tick, animals)?.kinds, []);
 });

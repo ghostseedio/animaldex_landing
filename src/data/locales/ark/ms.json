@@ -936,6 +936,8 @@
             "noneNearby": "Tiada berdekatan",
             "noneAboard": "Tiada di sini",
             "dung": "tahi haiwan",
+            "hosts": "Makan daripada perumahnya",
+            "hostsNone": "Tiada perumahnya di atas kapal",
             "keptFed": "Diberi makan penjaganya",
             "keptSafe": "Selamat daripada pemangsa",
             "more": "+{n} lagi",

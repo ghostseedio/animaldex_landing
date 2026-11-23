@@ -936,6 +936,8 @@
             "noneNearby": "Ingen i nærheten",
             "noneAboard": "Ingen her",
             "dung": "møkk",
+            "hosts": "Lever av vertene sine",
+            "hostsNone": "Ingen av vertene om bord",
             "keptFed": "Fôres av røkterne",
             "keptSafe": "Trygg for rovdyr",
             "more": "+{n} til",

@@ -936,6 +936,8 @@
             "noneNearby": "Nijedan u blizini",
             "noneAboard": "Nijedan ovdje",
             "dung": "izmet",
+            "hosts": "Hrani se na svojim domaćinima",
+            "hostsNone": "Nijedan njegov domaćin nije na brodu",
             "keptFed": "Hrane ga čuvari",
             "keptSafe": "Siguran od grabežljivaca",
             "more": "+{n} više",

@@ -936,6 +936,8 @@
             "noneNearby": "Nincs a közelben",
             "noneAboard": "Itt nincs",
             "dung": "trágya",
+            "hosts": "A gazdáiból táplálkozik",
+            "hostsNone": "Egyik gazdája sincs a fedélzeten",
             "keptFed": "A gondozói etetik",
             "keptSafe": "Védve a ragadozóktól",
             "more": "+{n} további",

@@ -936,6 +936,8 @@
             "noneNearby": "Keins in der Nähe",
             "noneAboard": "Keins hier",
             "dung": "Dung",
+            "hosts": "Ernährt sich von seinen Wirten",
+            "hostsNone": "Keiner seiner Wirte an Bord",
             "keptFed": "Von Pflegern gefüttert",
             "keptSafe": "Sicher vor Raubtieren",
             "more": "+{n} weitere",
