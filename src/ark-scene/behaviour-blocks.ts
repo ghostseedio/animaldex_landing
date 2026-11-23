@@ -108,6 +108,9 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         B({id: "dig", label: "dig (dirt flies; a hole or a mound)", motion: "hold", states: ["dig"], beat: "peck", pitch: 0.4, surge: 0.05, rate: 3, fx: "dirt", fxAt: "during", mark: "hole"}),
         B({id: "push", label: "push or roll an object", motion: "travel", curve: "ground", states: ["push"], beat: "walk", pitch: 0.3}),
         B({id: "tool", label: "use a tool (a stone, a stick)", motion: "hold", states: ["tool"], beat: "bite", surge: 0.06, rate: 2.5}),
+        // sig2 (mammals): a stone raised and brought down on a nut or a shell (macaques, capuchins). Its clip is the forelimbs' dig
+        // (a stroke of both arms, looped: no new state), the body's own rise and fall and the crack's dust over it.
+        B({id: "pound", label: "pound a nut or shell with a stone", motion: "hold", states: ["dig"], beat: "peck", pitch: 0.3, heave: 0.07, surge: 0.05, rate: 1.7, fx: "dust", fxAt: "during"}),
         // Display, voice, contests
         B({id: "display", label: "display (posture, wings, crest, tail, throat)", motion: "hold", states: ["display"], beat: "scan", pitch: -0.12}),
         B({id: "pushup", label: "push-up display", motion: "hold", states: ["pushup"], beat: "scan", heave: 0.12, rate: 1.8}),

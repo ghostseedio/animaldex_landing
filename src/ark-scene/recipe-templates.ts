@@ -586,6 +586,43 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
                 {b: "place", s: [0.6, 1], drop: true}
             ]
         }),
+        // sig2 (mammals): the catalogue's stone-hammer rows (AnimalDex docs/ark/signature-behaviours.json: Long-tailed Macaque,
+        // Tufted Capuchin): on a rock, a stone lifted and brought down on a nut or an oyster, over and over, then the kernel eaten.
+        T({
+            id: "stone_hammer",
+            label: "pounds a nut or an oyster on a rock with a stone held in its hands (macaques, capuchins)",
+            kind: "stay",
+            goal: "rock",
+            replaces: ["forage"],
+            doing: "forage",
+            hours: "day",
+            steps: [
+                {b: "scan", s: [1, 2]},
+                {b: "pick_up", s: [1, 2], pick: "stone", carry: "chest"},
+                {b: "pound", s: [4, 8]},
+                {b: "eat", s: [1.5, 3]},
+                {b: "pound", s: [3, 6]},
+                {b: "place", s: [0.6, 1], drop: true}
+            ]
+        }),
+        // sig2 (mammals): the Javan Ferret-Badger's own sentence (nose down in the leaf litter, then the long claws, a worm
+        // drawn out): `root_dig` has the digging, this has the catch.
+        T({
+            id: "worm_dig",
+            label: "snuffles the leaf litter, digs with its claws and draws out a worm",
+            kind: "stay",
+            goal: "ground",
+            replaces: ["forage", "wander"],
+            doing: "forage",
+            steps: [
+                {b: "walk", to: "ground", near: "here", r: 2.5},
+                {b: "probe", s: [1.5, 3]},
+                {b: "dig", s: [1.5, 3]},
+                {b: "pull", s: [0.6, 1.2], catch: "worm", p: 0.55, carry: "mouth"},
+                {b: "eat", s: [0.8, 1.4], if: "caught", eat: true}
+            ],
+            loop: 0
+        }),
         // MARK: Comfort
         T({id: "groom_self", label: "grooms or preens", kind: "stay", goal: "here", replaces: ["rest", "groom", "perch", "watch"], doing: "groom", steps: [{b: "groom", s: [4, 10]}, {b: "scan", s: [1, 2]}, {b: "groom", s: [3, 6]}]}),
         T({
