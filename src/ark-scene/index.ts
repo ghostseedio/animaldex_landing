@@ -103,7 +103,7 @@ import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, typ
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {climbClipName, rigBasesFrom, rigSetVersion} from "@/ark-scene/rig-clips";
 import {gaitHzMax} from "@/ark-scene/gait-cadence";
-import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, halfToFloat, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, rigLookShare, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {ASLEEP_CLIPS, baseStep, beatClip, bedGaitClip, clipBase, clipRows, halfToFloat, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, rigLookShare, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {waterLevelAt} from "@/ark-scene/water-level";
@@ -6010,11 +6010,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (Lane MA3: any animal with a band in the water, `swimDepth`, a coot as well as a duck: its band is its pose's.)
             const motion = where.water.motion;
             if (motion === "walk") {
-                // (SPECIES-ANIM-B2, 2026-11-24: a bed walker with a walk and a run takes the one whose own pace fits, as on land
-                // (`paceClip`), so a crab hurrying across the seabed runs instead of spinning its walk; else as before.)
+                // (SPECIES-ANIM-B2, 2026-11-24: a bed walker with a walk and a run runs when it hurries, `bedGaitClip`: on above
+                // 1.5 times its walk's pace, off below 1.3, so a crab hurrying across the seabed runs instead of spinning its
+                // walk, and a steady pace near the edge does not flicker; else as before.)
                 const walk = clip("walk");
                 const run = clip("run");
-                const move = walk && run ? paceClip(speed, [walk, run], state.now.name) : walk ?? clip("slither") ?? run;
+                const move = walk && run ? bedGaitClip(speed, walk, run, state.now.name) : walk ?? clip("slither") ?? run;
                 if (moving(move)) {
                     want = move.name;
                     mode = "distance";
