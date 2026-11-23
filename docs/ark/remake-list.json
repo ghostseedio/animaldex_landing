@@ -7,25 +7,29 @@
             "slug": "toque-macaque",
             "reason": "The model's head is turned at rest.",
             "seen": "From the front its head is in profile, facing its own right, a little up. With the neck bone turned through a strip of yaws the face is square to the front at 80 to 90 degrees to its left, so the turn is about 85 degrees. Its face moves with the neck bone and its head bone holds the crown alone: a head turn moves the crown without the face.",
-            "held": "sit"
+            "held": null,
+            "remade": "2026-11-23, lane ARK-MODELS: new model standing on four legs, face forward at rest; upload pending (publish plan in ~/AnimalDex-work/ark-models/publish)."
         },
         {
             "slug": "gees-golden-langur",
             "reason": "The model's head is turned at rest.",
             "seen": "From the front its head is in profile, facing its own right. The model also rests sitting, not standing on four legs.",
-            "held": null
+            "held": null,
+            "remade": "2026-11-23, lane ARK-MODELS: new model standing on four legs, face forward at rest; upload pending (publish plan in ~/AnimalDex-work/ark-models/publish)."
         },
         {
             "slug": "roloway-monkey",
             "reason": "The model's head is turned at rest.",
             "seen": "From the front its head is three-quarters round toward its own right, the beard hanging to that side.",
-            "held": null
+            "held": null,
+            "remade": "2026-11-23, lane ARK-MODELS: new model standing on four legs, face forward at rest; upload pending (publish plan in ~/AnimalDex-work/ark-models/publish)."
         },
         {
             "slug": "white-faced-capuchin",
             "reason": "The model's head is turned at rest.",
             "seen": "From its left side the face looks at the viewer: the head is turned toward its own left. The model also rests upright on its hind legs, not on four.",
-            "held": null
+            "held": null,
+            "remade": "2026-11-23, lane ARK-MODELS: new model standing on four legs, face forward at rest; upload pending (publish plan in ~/AnimalDex-work/ark-models/publish)."
         }
     ]
 }

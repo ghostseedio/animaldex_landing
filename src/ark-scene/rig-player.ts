@@ -900,7 +900,7 @@ export const POSED_LIE_HELD: ReadonlySet<string> = new Set(["addax", "walia-ibex
  * is the neck bone's and the head bone holds the crown alone. Sitting, its head could be levelled but not brought to
  * face ahead: turned back at the neck, the neck read 2.18 and its skin was a band round the throat.
  */
-export const POSED_SIT_HELD: ReadonlySet<string> = new Set(["toque-macaque"]);
+export const POSED_SIT_HELD: ReadonlySet<string> = new Set([]);
 
 /**
  * ARK-ANIM round 3 (decision 447): the posed lie's rows appended to a rig's bone rows (`locomotion/lie-pose.ts`): the
