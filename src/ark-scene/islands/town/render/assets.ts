@@ -380,6 +380,9 @@ const WHITE = new Color(1, 1, 1);
 
 /** `BufferAttribute.onUpload`: drop the CPU copy once the GPU has it (three's own pattern for static geometry). */
 function releaseArray(this: {array: ArrayLike<number>}) {
+    // (Kept for the seat audit, development only: `scripts/ark-seat-audit.mjs` reads every drawn triangle near an
+    // animal, and with the copies gone a bird on a town tree's limb measured 8 m over the ground below it.)
+    if (process.env.NODE_ENV !== "production" && (globalThis as {__arkKeepArrays?: boolean}).__arkKeepArrays) return;
     this.array = new Float32Array(0);
 }
 
