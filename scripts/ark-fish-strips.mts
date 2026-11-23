@@ -25,6 +25,7 @@ const out = path.resolve(arg("out", path.join(os.homedir(), "AnimalDex-work", "a
 const KINDS = arg("kinds", "spinner-dolphin,dusky-dolphin,flathead-grey-mullet,tropical-two-wing-flyingfish,southern-right-whale,spotted-eagle-ray,commersons-dolphin").split(",");
 const FRAMES = Number(arg("frames", "8"));
 const DIST = Number(arg("dist", "0"));
+const SIDE = process.argv.includes("--side");
 mkdirSync(out, {recursive: true});
 
 // The picture fixture: the golden v2 snapshot, with one of each leaping kind cloned from its humpback's row (open ocean).
@@ -147,12 +148,21 @@ for (const slug of KINDS) {
             if (spec.style === "sail") {
                 await page.evaluate(([s, who]) => {
                     (window as any).__pinArk(s);
-                    const golden = (window as any).__arkGolden;
-                    const at = golden.handle.locate(who);
-                    const v = golden.handle.view();
-                    void at; void v; // (the follow camera keeps it framed)
+                    // (The clock jumped: the app's own close-up of it again, as a viewer's tap would.)
+                    (window as any).__arkGolden.handle.select(who, true);
                 }, [own.from + want[f] - 2.5, id] as const);
                 await new Promise((r) => setTimeout(r, 2500));
+                if (SIDE) {
+                    // (A check of the pose itself: square to its side from over the water, not the app's camera.)
+                    await page.evaluate(([who, dist]) => {
+                        const debug = (window as any).__arkDebug;
+                        const e = debug.entries().find((x: any) => x.animal.id === who);
+                        const golden = (window as any).__arkGolden;
+                        golden.handle.select(null, false);
+                        if (e?.drawn) golden.handle.setView({target: {x: e.drawn.x, y: 1, z: e.drawn.z}, distance: dist || 45, polar: 1.45, azimuth: (e.yawNow ?? 0) + Math.PI / 2});
+                    }, [id, DIST] as const);
+                    await new Promise((r) => setTimeout(r, 1500));
+                }
             } else {
                 const realWait = (want[f] + lead) * 1000;
                 while (Date.now() - t0 < realWait) await new Promise((r) => setTimeout(r, 15));
@@ -164,10 +174,12 @@ for (const slug of KINDS) {
             const where = await page.evaluate((who) => {
                 const debug = (window as any).__arkDebug;
                 const e = debug.entries().find((x: any) => x.animal.id === who);
-                if (!e?.middle) return {drawn: false, found: Boolean(e), asleep: e?.state?.asleep ?? null, act: Boolean(e?.act), moment: Boolean(e?.moment), ocean: e?.ocean ?? null} as any;
+                const c = debug.camera.position;
+                const diag = {len: e ? Math.round(e.length * 100) / 100 : null, trueLen: e?.trueLength ?? null, drawnH: e ? Math.round((e.drawnHeight ?? 0) * 100) / 100 : null, level: e?.level ?? null, cam: [c.x, c.y, c.z].map((v: number) => Math.round(v * 10) / 10), tgt: [debug.controls.target.x, debug.controls.target.y, debug.controls.target.z].map((v: number) => Math.round(v * 10) / 10), mid: e?.middle ? [e.middle.x, e.middle.y, e.middle.z].map((v: number) => Math.round(v * 10) / 10) : null, drawnAt: e?.drawn ? [e.drawn.x, e.drawn.y, e.drawn.z].map((v: number) => Math.round(v * 10) / 10) : null, rigAvail: e ? debug.rigs.available(e.animal.model_slug) : null, rigNow: e?.rig?.now?.name ?? null, rigClips: e ? Object.keys(debug.rigs.get(e.animal.model_slug)?.clips ?? {}) : null, model: (() => { const m = e && debug.library.get(e.animal.model_slug); const g = m?.near?.geometry ?? m?.far?.geometry; if (!g) return null; g.computeBoundingBox(); const b = g.boundingBox; return {minY: m.minY, height: m.height, bodyLength: m.bodyLength, facing: m.facing, min: [b.min.x, b.min.y, b.min.z], max: [b.max.x, b.max.y, b.max.z]}; })(), pitch: e?.debugPitch ?? null};
+                if (!e?.middle) return {drawn: false, found: Boolean(e), asleep: e?.state?.asleep ?? null, act: Boolean(e?.act), moment: Boolean(e?.moment), ocean: e?.ocean ?? null, ...diag} as any;
                 const p = e.middle.clone().project(debug.camera);
                 const r = debug.camera.near !== undefined ? document.querySelector("canvas")!.getBoundingClientRect() : {width: innerWidth, height: innerHeight};
-                return {asleep: e.state?.asleep ?? null, act: Boolean(e.act), moment: Boolean(e.moment), ocean: e.ocean ?? null, y: Math.round(e.middle.y * 100) / 100, px: ((p.x + 1) / 2) * r.width, py: ((1 - p.y) / 2) * r.height};
+                return {...diag, asleep: e.state?.asleep ?? null, act: Boolean(e.act), moment: Boolean(e.moment), ocean: e.ocean ?? null, y: Math.round(e.middle.y * 100) / 100, px: ((p.x + 1) / 2) * r.width, py: ((1 - p.y) / 2) * r.height};
             }, id);
             const cx = Math.min(Math.max(Math.round(where?.px ?? 600) - 210, 0), 1200 - 420);
             const cy = Math.min(Math.max(Math.round(where?.py ?? 450) - 330, 0), 900 - 600);

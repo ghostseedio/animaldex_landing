@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {readdirSync, readFileSync} from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import {LEAP_TICK_SECONDS, leapAt, leapBoutsIn, leapKinds, leapPose, leapShown, leapSpec, leapsInTick} from "@/ark-scene/water-leaps";
+import {GLIDE_TAP, glideRun, LEAP_TICK_SECONDS, leapAt, leapBoutsIn, leapKinds, leapPose, leapShown, leapSpec, leapSplashes, leapsInTick, SAIL_TAIL_OUT, sailTail, tailEnd} from "@/ark-scene/water-leaps";
 
 test("only kinds whose own text says they leave the water leap; none tied to a catch", () => {
     for (const slug of ["flathead-grey-mullet", "spinner-dolphin", "dusky-dolphin", "tropical-two-wing-flyingfish", "southern-right-whale", "spotted-eagle-ray"]) assert.ok(leapSpec(slug), slug);
@@ -72,9 +72,55 @@ test("the leap lines are in all 45 locales", () => {
     }
 });
 
-test("kinds held back after the picture check are not shown (whale sail, flyingfish glide); the rest are", () => {
-    assert.equal(leapShown("southern-right-whale"), null);
-    assert.equal(leapShown("tropical-two-wing-flyingfish"), null);
-    for (const slug of ["spinner-dolphin", "dusky-dolphin", "spotted-eagle-ray", "flathead-grey-mullet"]) assert.ok(leapShown(slug), slug);
+test("the whale sail and the flyingfish glide are shown since the SEA-VISIBLE picture check; a kind with no leap is not", () => {
+    for (const slug of ["southern-right-whale", "tropical-two-wing-flyingfish", "spinner-dolphin", "dusky-dolphin", "spotted-eagle-ray", "flathead-grey-mullet"]) assert.ok(leapShown(slug), slug);
     assert.equal(leapShown("great-white-shark"), null);
+});
+
+test("a sail holds the flukes a quarter of the whale's length over the surface, the body under it", () => {
+    const sail = Array.from({length: 40}, (_, k) => leapsInTick("whale-b", "southern-right-whale", 14, 5000 + k)).flat()[0];
+    // (Either way round: a model made with its tail at +z pitches the other way.)
+    for (const tailAt of [-1, 1] as const) {
+        const body = {pivotUp: 3, tail: 7, tailAt};
+        const held = leapPose(sail, sail.out + 20, -8, 0, 6.6, 14.4, 1, body);
+        assert.equal(held.hold, 1);
+        assert.ok(held.pitch * tailAt < 0);
+        const tip = sailTail({base: held.base, pitch: held.pitch, yaw: 0}, body);
+        assert.ok(Math.abs(tip.y - SAIL_TAIL_OUT * 14.4) < 1e-6, `tail tip ${tip.y}`);
+        // Its origin (the body's middle) well under the surface.
+        assert.ok(held.base + body.pivotUp < -2);
+    }
+});
+
+test("a model's tail end is its narrower end", () => {
+    // A body along z from -0.5 to 0.5, wide (0.2) at the head end (+z), narrow (0.05) at the tail stock.
+    const points: number[] = [];
+    for (let k = 0; k <= 20; k++) {
+        const z = -0.5 + k / 20;
+        const wide = z > 0 ? 0.2 : 0.05;
+        points.push(wide, 0, z, -wide, 0, z);
+    }
+    assert.equal(tailEnd(points).tailAt, -1);
+    assert.equal(tailEnd(points.map((v, i) => (i % 3 === 2 ? -v : v))).tailAt, 1);
+});
+
+test("a glide: out, low over the water, a tail-tap down to the water half way, on, back in; its run is tens of metres", () => {
+    const glides = Array.from({length: 60}, (_, k) => leapsInTick("fish-b", "tropical-two-wing-flyingfish", 0.2, 6000 + k)).flat();
+    assert.ok(glides.length > 0);
+    for (const g of glides) {
+        assert.ok(g.tap > g.out && g.tap < g.back);
+        const at = (t: number) => leapPose(g, t, -4, 0, 0.06, 0.2, 1);
+        // Gliding: up to about a metre over the water, airborne.
+        const glide = at((g.out + g.tap) / 2);
+        assert.ok(glide.airborne && glide.base > 0.3 && glide.base < 1.5, `glide height ${glide.base}`);
+        // The tap: down at the water, nose up.
+        const tap = at(g.tap + GLIDE_TAP * 0.35);
+        assert.ok(tap.base < 0.05 && tap.pitch < -0.2, `tap ${tap.base} ${tap.pitch}`);
+        // Back in at the end, and back at its swim after.
+        assert.ok(!at(g.back).airborne);
+        assert.ok(Math.abs(at(g.to - g.from).base + 4) < 1e-6);
+        const run = glideRun(g);
+        assert.ok(run > 8 && run < 50, `run ${run}`);
+        assert.deepEqual(leapSplashes(g).length, 3);
+    }
 });

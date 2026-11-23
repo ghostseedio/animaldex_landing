@@ -1,5 +1,5 @@
 {
- "about": "ARK-FISH (2026-11-23): the water animals that leave the water, and only those whose own stored text says so (production species_field_guide: species_spotlight, interesting_facts, signature_traits; read-only, quoted exactly). Rows: style, bouts per Ark day (mean), leaps per bout [min, max], the deciding quote, its field. Bouts and burst sizes are estimates from the quote's frequency words (often, regularly, several times in a row, long periods): flagged 'estimate'. Leaps that the text ties to a catch (an arowana's insect-catching leap, a great white's breach on prey, an orca's tail slaps on herring) or to being hooked (a mako) are left out: a leap here never implies a meal. Atlantic Salmon leaps only at a waterfall or weir (its text), and none is in its reach on the Ark today (it lives at sea), so it never leaps yet.",
+ "about": "ARK-FISH (2026-11-23): the water animals that leave the water, and only those whose own stored text says so (production species_field_guide: species_spotlight, interesting_facts, signature_traits; read-only, quoted exactly). Rows: style, bouts per Ark day (mean), leaps per bout [min, max], the deciding quote, its field. Bouts and burst sizes are estimates from the quote's frequency words (often, regularly, several times in a row, long periods): flagged 'estimate'. Leaps that the text ties to a catch (an arowana's insect-catching leap, a great white's breach on prey, an orca's tail slaps on herring) or to being hooked (a mako) are left out: a leap here never implies a meal. Atlantic Salmon leaps only at a waterfall or weir (its text), and none is in its reach on the Ark today (it lives at sea), so it never leaps yet. SEA-VISIBLE (2026-11-23): the right whale's sail and the flyingfish's glide shown after the picture check (no rows held). The glide's shape: out at about 10 m/s, low over the water (half a metre to a metre and a bit), one tail-tap half way (its lower tail lobe, 'longer than the upper', its signature_traits, sculling in the water: 'taxiing', Davenport 1994, Rev. Fish Biol. Fish. 4: 184-214), on, back in: estimates. The sail: head down near upright, the tail stock and flukes a quarter of its length over the water: estimate.",
  "species": {
   "flathead-grey-mullet": [
    "leap",
@@ -111,9 +111,5 @@
    "At weirs and waterfalls, fish heading upstream hurl themselves clear of the water to climb the drop, trying again after each failure.",
    "interesting_facts"
   ]
- },
- "held": {
-  "southern-right-whale": "2026-11-23 picture check: with the camera on it, nothing of the whale shows above the water during the sail; held until the pose is fixed and seen.",
-  "tropical-two-wing-flyingfish": "2026-11-23 picture check: the open-ocean fish is not drawn at the glide's time even when chosen; held until a glide is seen."
  }
 }
