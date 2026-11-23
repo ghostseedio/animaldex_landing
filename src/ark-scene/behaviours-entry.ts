@@ -27,7 +27,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number; /** sig2-small: the slot it is placed at (a place on the island: a flower for a moth), else 90. */ slot?: number; /** sig2-small: the species' own activity (the profile's), else diurnal as the harness always had it. */ activity?: string};
-type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group" | "recipe" | "micro"; /** (recipe) the recipe's episode to find, and the row to give the first cast when its table has not got it yet ("recipe.weight[,...]"). */ recipe?: string; inject?: string; /** (recipe, micro) how far in body lengths, the camera's azimuth off its side and its polar angle. */ lengths?: number; azimuth?: number; polar?: number; /** (recipe) the first of the cast to frame. */ pick?: number};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group" | "recipe" | "micro" | "flight"; /** (recipe) the recipe's episode to find, and the row to give the first cast when its table has not got it yet ("recipe.weight[,...]"). */ recipe?: string; inject?: string; /** (recipe, micro) how far in body lengths, the camera's azimuth off its side and its polar angle. */ lengths?: number; azimuth?: number; polar?: number; /** (recipe) the first of the cast to frame. */ pick?: number};
 
 const SCENES: Record<string, Scene> = {
     // Signature behaviours, wave 2, the small bodies (`behaviours-small.ts`).
@@ -146,6 +146,11 @@ const SCENES: Record<string, Scene> = {
     mi_leopard: {zone: "grassland", hours: 21, kind: "micro", lengths: 6, cast: [{slug: "leopard-gecko", name: "Leopard Gecko", n: 6}]},
     mi_lava: {zone: "grassland", hours: 11, kind: "micro", lengths: 6, cast: [{slug: "brazilian-lava-lizard", name: "Brazilian Lava Lizard", n: 6}]},
     mi_bocage: {zone: "grassland", hours: 11, kind: "micro", lengths: 6, cast: [{slug: "bocages-wall-lizard", name: "Bocage's Wall Lizard", n: 6}]},
+    // Lane SIG-OTHER: territory, patrol and display flights (`sally_chase`, `patrol_low`, `display_flight`): a male in his episode, followed (`flightWatch`).
+    sally: {zone: "river_lake", hours: 10, kind: "flight", cast: [{slug: "scarlet-skimmer", name: "Scarlet Skimmer", n: 14}]},
+    sallyb: {zone: "woodland", hours: 10, kind: "flight", cast: [{slug: "red-admiral", name: "Red Admiral", n: 14}]},
+    patrol: {zone: "grassland", hours: 10, kind: "flight", cast: [{slug: "fox-moth", name: "Fox Moth", n: 14}]},
+    display: {zone: "woodland", hours: 10, kind: "flight", cast: [{slug: "common-wood-pigeon", name: "Common Wood Pigeon", n: 24}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]},
     // Decision 434: the dung users at a herd's fresh marks (`dung.ts` dungVisitPose).
@@ -443,6 +448,44 @@ async function main() {
             const recipes = (debug as unknown as {scene: {getObjectByName: (n: string) => {children: Array<{type: string; geometry: {drawRange: {count: number}}}>} | undefined}}).scene.getObjectByName("ark-recipes");
             const drops = recipes?.children.find((c) => c.type === "Points")?.geometry.drawRange.count ?? -1;
             return `drops ${drops} beat ${pose?.beat ?? "-"} act ${pose?.act?.recipe ?? "-"} ${shake} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
+        },
+        /**
+         * Lane SIG-OTHER: the world run on (a second at a time, up to `limit` s) until one of the cast is in an act of `recipe`, then
+         * that animal followed: `n` frames `step` s apart, each framed from `lengths` of its body away. Returns the frames' notes.
+         */
+        flightWatch: async (recipe: string, limit: number) => {
+            const acting = () => debug.entries().find((e) => (((e as unknown as {sched?: {pose?: {act?: {recipe?: string} | null}}}).sched?.pose?.act?.recipe) ?? null) === recipe);
+            let waited = 0;
+            while (!acting() && waited < limit) {
+                for (let i = 0; i < 10; i++) {
+                    fake!.perf += 100;
+                    fake!.date += 100;
+                    await frames(1);
+                }
+                waited++;
+            }
+            const found = acting();
+            return found ? {id: found.animal.id, waited} : {id: null, waited};
+        },
+        /** Lane SIG-OTHER: one frame of the animal in its act: the world run on `seconds`, the camera on it from `distance` m. */
+        flightFrame: async (id: string, seconds: number, distance: number, azimuth: number) => {
+            for (let i = 0; i < Math.round(seconds * 10); i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const e = debug.entries().find((x) => x.animal.id === id) as unknown as {sched?: {pose?: {act?: {recipe?: string; block?: string; state?: string} | null; x?: number; z?: number; base?: number; y?: number; aloft?: boolean}}};
+            const pose = e?.sched?.pose;
+            const at = handle.locate(id);
+            const controls = (debug as unknown as {controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}});
+            controls.controls.minDistance = Math.min(controls.controls.minDistance, distance);
+            controls.camera.near = Math.min(0.03, distance / 25);
+            controls.camera.updateProjectionMatrix();
+            if (at) for (let i = 0; i < 3; i++) {
+                handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance, polar: 1.25, azimuth});
+                await frames(1);
+            }
+            return `act ${pose?.act?.recipe ?? "-"} block ${pose?.act?.block ?? "-"} state ${pose?.act?.state ?? "-"} at ${at ? `${at.x.toFixed(1)}, ${at.y.toFixed(2)}, ${at.z.toFixed(1)}` : "-"} aloft ${pose?.aloft ? "yes" : "no"}`;
         },
         /**
          * 3.3 batch (A): the predator (the second cast) stood `gap` body lengths of the first cast's animal from it, or

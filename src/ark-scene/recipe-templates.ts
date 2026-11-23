@@ -987,6 +987,61 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             ],
             loop: 0
         }),
+        // MARK: Territory and display flights (lane SIG-OTHER, 2026-11-20: `data/ark/signature-recipes-other.json`)
+        T({
+            id: "sally_chase",
+            label: "holds a perch and darts out after what passes, then comes back to it (territorial males: dragonflies, butterflies, bees, flies)",
+            kind: "stay",
+            goal: "perch",
+            replaces: ["perch", "rest", "watch", "bask", "fly"],
+            doing: "idle",
+            hours: "day",
+            sex: "male",
+            often: 0.6,
+            steps: [
+                {b: "perch", s: [5, 14]},
+                {b: "take_off", to: "up", h: 0.5},
+                {b: "fly", to: "air", r: 5, fast: true},
+                {b: "fly", to: "air", r: 3, fast: true},
+                {b: "fly", to: "anchor"}
+            ],
+            loop: 0
+        }),
+        T({
+            id: "patrol_low",
+            label: "patrols low back and forth over its ground, looking for a female (males: moths, butterflies, wasps)",
+            kind: "stay",
+            goal: "here",
+            replaces: ["rest", "groom", "perch", "bask", "watch", "idle"],
+            doing: "fly",
+            hours: "day",
+            sex: "male",
+            steps: [
+                {b: "fly", to: "air", r: 6, near: "here"},
+                {b: "fly", to: "air", r: 6, near: "here"},
+                {b: "fly", to: "air", r: 6, near: "here"}
+            ],
+            tail: [{b: "fly", to: "anchor"}],
+            loop: 0
+        }),
+        T({
+            id: "display_flight",
+            label: "a display flight: climbs steeply from its perch, then glides down in a wide arc (doves and pigeons)",
+            kind: "stay",
+            goal: "perch",
+            replaces: ["perch", "rest", "watch", "fly"],
+            doing: "fly",
+            hours: "day",
+            season: "mating",
+            sex: "male",
+            steps: [
+                {b: "perch", s: [4, 10]},
+                {b: "take_off", to: "up", h: 9},
+                {b: "fly", to: "air", r: 12},
+                {b: "fly", to: "anchor"}
+            ],
+            loop: 0
+        }),
         // MARK: Nests and digging
         T({id: "incubate_sit", label: "sits on its eggs on the nest", kind: "stay", goal: "nest", replaces: [], doing: "rest", steps: [{b: "incubate", s: [60, 78]}]}),
         T({id: "molehills", label: "pushes up molehills round its burrow (they fade)", kind: "mark", goal: "here", replaces: [], doing: "burrow", steps: []}),

@@ -44,11 +44,12 @@ const seeded: Record<string, {plans: string[]; weight: number}> = {};
 const replaced = new Set<string>();
 const heldWhy = new Map<string, string>();
 for (const f of files) {
-    const j = JSON.parse(fs.readFileSync(path.join(root, "data/ark", f), "utf8")) as {additions: Addition[]; templates?: Record<string, {plans: string[]; weight: number}>; replaces?: Array<{slug: string; recipe: string}>; held?: Array<{slug: string; recipe: string; reason: string}>};
+    const j = JSON.parse(fs.readFileSync(path.join(root, "data/ark", f), "utf8")) as {additions: Addition[]; templates?: Record<string, {plans: string[]; weight: number}>; replaces?: Array<{slug: string; recipe: string}>; held?: Array<{slug: string; recipe: string; reason: string}> | Record<string, string>};
     additions.push(...j.additions);
     Object.assign(seeded, j.templates ?? {});
     for (const r of j.replaces ?? []) replaced.add(`${r.slug} ${r.recipe}`);
-    for (const h of j.held ?? []) heldWhy.set(`${h.slug} ${h.recipe}`, h.reason);
+    // (A lane's held catalogue rows by name, which are not wave-1 rows, are its own list: only the wave-1 rows' are read here.)
+    if (Array.isArray(j.held)) for (const h of j.held) heldWhy.set(`${h.slug} ${h.recipe}`, h.reason);
 }
 // sig2 (mammals): how a species sleeps with its kind, and where its source is kept.
 const sleepPath = path.join(root, "src/ark-scene/sleep.json");
@@ -78,6 +79,10 @@ const NEW: Record<string, {plans: string[]; weight: number}> = {
     // sig2 (mammals): a stone hammer (macaques, capuchins) and a worm drawn out of the leaf litter (a ferret-badger).
     stone_hammer: {plans: ["primate"], weight: 3},
     worm_dig: {plans: ["quadruped"], weight: 4},
+    // (Lane SIG-OTHER: territory and display flights.)
+    sally_chase: {plans: ["flying_insect"], weight: 5},
+    patrol_low: {plans: ["flying_insect"], weight: 4},
+    display_flight: {plans: ["walking_bird", "flying_bird"], weight: 6},
     ...seeded
 };
 for (const [id, seed] of Object.entries(NEW)) {
