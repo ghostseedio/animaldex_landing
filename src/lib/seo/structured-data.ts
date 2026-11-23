@@ -1,6 +1,7 @@
 import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
 import {socialProfileUrlList} from "@/lib/social-links";
 import {getAbsoluteAssetUrl, getAbsoluteUrl, getSiteUrl} from "@/lib/site";
+import {ogImagePath} from "@/lib/og/og-image";
 
 /**
  * schema.org builders shared by the pages (SEO lane S3, 2026-11-12). Each
@@ -60,7 +61,8 @@ export function animalDexAppJsonLd(input: {description: string; image?: string; 
         description: input.description,
         url: `${site}/`,
         operatingSystem: "iOS, Android",
-        applicationCategory: "EducationApplication",
+        // Google's SoftwareApplication list spells it "EducationalApplication"; "EducationApplication" is not on it.
+        applicationCategory: "EducationalApplication",
         installUrl: [appStoreUrl, googlePlayUrl],
         downloadUrl: [appStoreUrl, googlePlayUrl],
         ...(input.image ? {image: getAbsoluteAssetUrl(input.image)} : {}),
@@ -69,6 +71,25 @@ export function animalDexAppJsonLd(input: {description: string; image?: string; 
         offers: {"@type": "Offer", price: "0", priceCurrency: "USD"},
         publisher: organizationRef()
     };
+}
+
+/**
+ * `author` and `publisher` for an Article: the organisation by @id with its URL,
+ * and the publisher with its logo (Google's Article guidance recommends both;
+ * 350 of 1,053 sampled live pages had an author with no url, Nov 2026).
+ */
+export function articleAuthorship(): {author: JsonLd; publisher: JsonLd} {
+    return {author: organizationRef(), publisher: {...organizationRef(), logo: brandLogoUrl()}};
+}
+
+/**
+ * A page's generated share card (1200×630) as an absolute URL for JSON-LD
+ * `image` / `thumbnailUrl`. robots.txt allows /api/og/; every other /api path
+ * (the species artwork redirect among them) is disallowed, so Google cannot
+ * fetch an image named there.
+ */
+export function ogCardImageUrl(kind: string, ...slug: string[]): string {
+    return getAbsoluteAssetUrl(ogImagePath(kind, ...slug));
 }
 
 export type BreadcrumbItem = {name: string; path: string};

@@ -15,6 +15,8 @@ import {getSpeciesBySlug} from "@/data/species";
 import {englishOnlyLanguageAlternates} from "@/lib/content-metadata";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {withOgCard} from "@/lib/og/og-image";
+import {templateSafeTitle} from "@/lib/brand-title";
+import {articleAuthorship, ogCardImageUrl} from "@/lib/seo/structured-data";
 
 type AnimalHybridDetailPageProps = {
     params: {
@@ -45,7 +47,7 @@ export async function generateMetadata({params}: AnimalHybridDetailPageProps): P
     }
 
     return withOgCard({
-        title: `${entry.title}: How It Might Look and Behave`,
+        title: templateSafeTitle(`${entry.title}: How It Might Look and Behave`),
         description: entry.quickAnswer,
         keywords: entry.searchIntents,
         alternates: englishOnlyLanguageAlternates(`${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`),
@@ -57,7 +59,8 @@ export async function generateMetadata({params}: AnimalHybridDetailPageProps): P
             url: getLocalePath(locale, `${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`)
         },
         twitter: {
-            card: "summary",
+            // The share card is 1200×630: the large card shows it whole.
+            card: "summary_large_image",
             title: `${entry.title} | AnimalDex`,
             description: entry.quickAnswer
         }
@@ -90,8 +93,8 @@ export default async function AnimalHybridDetailPage({params}: AnimalHybridDetai
             url: pageUrl,
             dateModified: entry.updatedAt,
             inLanguage: locale,
-            author: {"@type": "Organization", name: "AnimalDex"},
-            publisher: {"@type": "Organization", name: "AnimalDex"},
+            image: ogCardImageUrl("hybrid", entry.slug),
+            ...articleAuthorship(),
             keywords: entry.searchIntents.join(", ")
         },
         {
