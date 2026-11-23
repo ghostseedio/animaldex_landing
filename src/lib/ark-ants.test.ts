@@ -164,7 +164,7 @@ test("army ants: a raid out from the bivouac, a swarm front, then the bivouac mo
 test("live log: the colony's line in the reader's words, once per episode; every locale has the keys", () => {
     const words = {live: (en as {ark: {live: unknown}}).ark.live, replay: (en as unknown as {ark: {replay: unknown}}).ark.replay} as unknown as ArkLiveText;
     assert.equal(antText("antTrailFound", "Ghost Ant", "Field Cricket", words, "en"), "A trail of Ghost Ants found a dead Field Cricket");
-    assert.equal(antText("antTend", "Ghost Ant", "Green Peach Aphid", words, "en"), "Ghost Ants are collecting honeydew from a Green Peach Aphid");
+    assert.equal(antText("antTend", "Ghost Ant", "Green Peach Aphid", words, "en"), "Ghost Ants are collecting honeydew from the Green Peach Aphid");
     assert.equal(antText("antLeaves", "Leafcutter Ant", null, words, "en"), "Leafcutter Ants are carrying leaves along their highway");
     const german = {live: (de as {ark: {live: unknown}}).ark.live} as unknown as ArkLiveText;
     assert.equal(antText("antRaid", "Eciton-Wanderameise", null, german, "de"), "Eciton-Wanderameise: Raubzug in breiter Front");

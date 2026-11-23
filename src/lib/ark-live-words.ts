@@ -167,7 +167,7 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     pouchFry: "{animal}: {count} young released from the father's pouch",
     split: "{animal}: a new one split off its parent",
     antTrailFound: "A trail of {animals} found a dead {other}",
-    antTend: "{animals} are collecting honeydew from {aOther}",
+    antTend: "{animals} are collecting honeydew from the {other}",
     antLeaves: "{animals} are carrying leaves along their highway",
     antSeeds: "{animals} are carrying seeds home",
     antRaid: "{animals} are raiding in a broad swarm",
