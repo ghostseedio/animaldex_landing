@@ -238,6 +238,12 @@ Rules:
 
 ## 6. Card and live log
 
+**Built (2026-11-23, flows on only):** the card's now line and its log read the flow's own step (`flowStatus`, in the
+reader's `ark.flow` words), and the live log's doing lines say the flow step's activity (`flowActivity`), so a sparrow's
+card, log and pose agree. No fake events (decision 489): background food never names an animal ("an insect", "a
+worm" would be a catch the engine never made); only plant and other non-animal foods are named ("eating seeds"), and a
+dug-up cache is named only from the server's cache food. Animal prey is named only on a server kill or escape.
+
 - **Card "Now:"** is the step's line. Server-backed: "Stalking a Bank Vole", "Pouncing on a Bank Vole", "Caught a Bank
   Vole", "Missed: the Wood Mouse got away", "Hiding a Bank Vole for later", "Eating meat from its keeper",
   "Displaying". Background food: "Eating an insect", "Grazing · eating grass · patch 3", "Drinking nectar". Neutral:
