@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: lerakott ikra, és a hím megtermékenyítette",
             "amplexus": "{animal}: egy pár amplexusban, és lerakott pete",
             "pouchFry": "{animal}: az apa költőzacskójából kikelt utódok: {count}",
-            "split": "{animal}: egy új egyed vált le a szülőjéről"
+            "split": "{animal}: egy új egyed vált le a szülőjéről",
+            "giftMeal": "{aAnimal}: egy látogató megetette",
+            "giftShelter": "{aPrey}: biztonságban {aPredator} elől egy látogató menedékében",
+            "giftNest": "{aAnimal}: párzás, egy látogató fészeksegítségével"
         },
         "card": {
             "now": "Most: {activity}",
@@ -1081,6 +1084,35 @@
             "wild": "Vad",
             "town": "Város",
             "arkYear": "1 Bárka-év"
+        },
+        "care": {
+            "title": "Látogatók gondoskodása",
+            "meal": "Egy étkezés",
+            "shelter": "Menedék",
+            "nest": "Fészeksegítség",
+            "fedBy": "Megetette: {who}",
+            "shelteredBy": "Menedéket adott: {who}",
+            "nestBy": "Fészeksegítség tőle: {who}",
+            "you": "te",
+            "aVisitor": "egy látogató",
+            "fuller": "jóllakott {time}",
+            "safe": "biztonságban {time}",
+            "helping": "segít {time}",
+            "stoppedHunt": "meghiúsított egy vadászatot",
+            "nestUsed": "segített a kicsinyeknél",
+            "onItsWay": "úton van",
+            "mealDoes": "Jóllakott {time}",
+            "shelterDoes": "Biztonság egy vadászattól {time}",
+            "nestDoes": "Nagyobb esély utódokra {time}",
+            "credits": "{n} kredit",
+            "send": "Küldés {n} kreditért",
+            "cancel": "Mégse",
+            "sent": "Elküldve. Ha nem tud segíteni, visszakapod a kreditjeidet.",
+            "noCredits": "Ehhez több kredit kell.",
+            "notNow": "Most nem lehetséges.",
+            "limit": "Mára már a legtöbb gondoskodást adtad.",
+            "tooNew": "A gondoskodás akkor nyílik meg, ha a fiókod egyhetes és van egy kártyája.",
+            "failed": "Nem sikerült elküldeni. Próbáld újra."
         },
         "lifeHelp": {
             "button": "Mit jelent az életsáv",

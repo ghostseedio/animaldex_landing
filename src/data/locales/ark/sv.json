@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: ägg lagda, och hanen befruktade dem",
             "amplexus": "{animal}: ett par i amplexus, och rom lagd",
             "pouchFry": "{animal}: {count} ungar släppta ur faderns ruvpung",
-            "split": "{animal}: en ny delade sig från sin förälder"
+            "split": "{animal}: en ny delade sig från sin förälder",
+            "giftMeal": "{aAnimal}: matad av en besökare",
+            "giftShelter": "{aPrey}: trygg för {aPredator} i en besökares skydd",
+            "giftNest": "{aAnimal}: parade sig, med en besökares bohjälp"
         },
         "card": {
             "now": "Nu: {activity}",
@@ -1081,6 +1084,35 @@
             "wild": "Vild",
             "town": "Stad",
             "arkYear": "1 Ark-år"
+        },
+        "care": {
+            "title": "Omsorg från besökare",
+            "meal": "En måltid",
+            "shelter": "Skydd",
+            "nest": "Bohjälp",
+            "fedBy": "Matad av {who}",
+            "shelteredBy": "Skyddad av {who}",
+            "nestBy": "Bohjälp från {who}",
+            "you": "dig",
+            "aVisitor": "en besökare",
+            "fuller": "mätt i {time}",
+            "safe": "trygg i {time}",
+            "helping": "hjälper i {time}",
+            "stoppedHunt": "den stoppade en jakt",
+            "nestUsed": "den hjälpte med ungar",
+            "onItsWay": "på väg",
+            "mealDoes": "Mätt i {time}",
+            "shelterDoes": "Skyddad mot en jakt i {time}",
+            "nestDoes": "Bättre chans till ungar i {time}",
+            "credits": "{n} krediter",
+            "send": "Skicka för {n} krediter",
+            "cancel": "Avbryt",
+            "sent": "Skickat. Om det inte kan hjälpa får du tillbaka dina krediter.",
+            "noCredits": "Du behöver fler krediter för detta.",
+            "notNow": "Inte möjligt just nu.",
+            "limit": "Du har gett mest omsorg för i dag.",
+            "tooNew": "Omsorg öppnas när ditt konto är en vecka gammalt och har ett kort.",
+            "failed": "Kunde inte skicka. Försök igen."
         },
         "lifeHelp": {
             "button": "Vad livsstapeln betyder",

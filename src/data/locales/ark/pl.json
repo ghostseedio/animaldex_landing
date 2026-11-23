@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: złożone ikra, a samiec ją zapłodnił",
             "amplexus": "{animal}: para w ampleksusie i złożony skrzek",
             "pouchFry": "{animal}: z torby ojca wyszło młodych: {count}",
-            "split": "{animal}: nowy osobnik oddzielił się od rodzica"
+            "split": "{animal}: nowy osobnik oddzielił się od rodzica",
+            "giftMeal": "{aAnimal}: nakarmione przez odwiedzającego",
+            "giftShelter": "{aPrey}: bezpieczne przed {aPredator} w schronieniu od odwiedzającego",
+            "giftNest": "{aAnimal}: gody, z pomocą odwiedzającego przy gnieździe"
         },
         "card": {
             "now": "Teraz: {activity}",
@@ -1081,6 +1084,35 @@
             "wild": "Dzika",
             "town": "Miasto",
             "arkYear": "1 rok na Arce"
+        },
+        "care": {
+            "title": "Opieka od odwiedzających",
+            "meal": "Posiłek",
+            "shelter": "Schronienie",
+            "nest": "Pomoc przy gnieździe",
+            "fedBy": "Nakarmione przez {who}",
+            "shelteredBy": "Schronione przez {who}",
+            "nestBy": "Pomoc przy gnieździe od {who}",
+            "you": "ciebie",
+            "aVisitor": "odwiedzającego",
+            "fuller": "syte przez {time}",
+            "safe": "bezpieczne przez {time}",
+            "helping": "pomaga przez {time}",
+            "stoppedHunt": "udaremniło jedno polowanie",
+            "nestUsed": "pomogło przy młodych",
+            "onItsWay": "w drodze",
+            "mealDoes": "Syte przez {time}",
+            "shelterDoes": "Bezpieczne przed jednym polowaniem przez {time}",
+            "nestDoes": "Większa szansa na młode przez {time}",
+            "credits": "{n} kredytów",
+            "send": "Wyślij za {n} kredytów",
+            "cancel": "Anuluj",
+            "sent": "Wysłano. Jeśli nie może pomóc, kredyty wrócą do ciebie.",
+            "noCredits": "Potrzebujesz więcej kredytów.",
+            "notNow": "Teraz nie jest to możliwe.",
+            "limit": "Na dziś dałeś już najwięcej opieki.",
+            "tooNew": "Opieka otwiera się, gdy twoje konto ma tydzień i kartę.",
+            "failed": "Nie udało się wysłać. Spróbuj ponownie."
         },
         "lifeHelp": {
             "button": "Co oznacza pasek życia",
