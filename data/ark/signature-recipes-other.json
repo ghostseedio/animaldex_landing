@@ -9,7 +9,8 @@
    "behaviour": "display flight: climbs steeply, claps wings, glides down",
    "field": "facts",
    "quote": "In display flight a male climbs steeply, claps its wings, then glides down.",
-   "id": "96f373a1-0287-4366-b768-457c0d5b5ebd"
+   "id": "96f373a1-0287-4366-b768-457c0d5b5ebd",
+   "line": "{aAnimal} is climbing steeply over the trees, then gliding down"
   },
   {
    "slug": "eurasian-collared-dove",
@@ -18,7 +19,8 @@
    "behaviour": "male's display flight: rises steeply then glides down on spread wings",
    "field": "sexes",
    "quote": "The male does most of the cooing and performs the display flight, rising steeply and gliding down on spread wings.",
-   "id": "9384ab45-04f6-4c2f-b16d-165eb62ac9e4"
+   "id": "9384ab45-04f6-4c2f-b16d-165eb62ac9e4",
+   "line": "{aAnimal} is rising steeply, then gliding down on spread wings"
   },
   {
    "slug": "spotted-dove",
@@ -27,7 +29,8 @@
    "behaviour": "display flight: climbs steeply with wing claps, glides down in an arc with tail fanned",
    "field": "story",
    "quote": "A displaying male climbs steeply with loud wing claps, then glides down in a wide arc with his tail fanned.",
-   "id": "155a02f3-b759-41e8-a58e-57d2d8eb4c74"
+   "id": "155a02f3-b759-41e8-a58e-57d2d8eb4c74",
+   "line": "{aAnimal} is climbing steeply, then gliding down in a wide arc"
   },
   {
    "slug": "common-rose",

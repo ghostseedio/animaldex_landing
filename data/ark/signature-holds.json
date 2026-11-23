@@ -1,5 +1,5 @@
 {
- "about": "Signature behaviours held after their picture strips were looked at (lane SIG2, 2026-11-23): each row stays in its own data file and is never drawn or told in the log until a fix shows it clearly. Read by scripts/ark-signature-recipes.mts. Strips: ~/AnimalDex-work/sig2/. SIG3 (2026-11-23): seven tree and ground huddles released, and the Russian and Sulcata tortoises' dig_burrow (the SIG2 harness had looked for a recipe named `dig_burrow~tortoise`, which no template has) after the sleep layer seated a huddling group at its leader's roost (strips ~/AnimalDex-work/sig3/mam/).",
+ "about": "Signature behaviours held after their picture strips were looked at (lane SIG2, 2026-11-23): each row stays in its own data file and is never drawn or told in the log until a fix shows it clearly. Read by scripts/ark-signature-recipes.mts. Strips: ~/AnimalDex-work/sig2/. SIG3 (2026-11-23): seven tree and ground huddles released, and the Russian and Sulcata tortoises' dig_burrow (the SIG2 harness had looked for a recipe named `dig_burrow~tortoise`, which no template has) after the sleep layer seated a huddling group at its leader's roost (strips ~/AnimalDex-work/sig3/mam/). SIG3 tranche 2: the doves' display_flight released (a `sky` target over the treetops; strips ~/AnimalDex-work/sig3/t2/).",
  "held": [
   {
    "slug": "common-marmoset",
@@ -340,21 +340,6 @@
    "slug": "slender-skimmer",
    "recipe": "hawk_insects",
    "reason": "a true micro dragonfly is off the behaviour schedule: its hawking never plays, so no sentence for it"
-  },
-  {
-   "slug": "common-wood-pigeon",
-   "recipe": "display_flight",
-   "reason": "the harness waited 900 s on the schedule for a male in the act and found none: never seen, so never checked for ground contact or a readable climb SIG3: with the row injected (wood pigeon, woodland), the episode is perch, take-off and straight home: the climb's `fly` to open air finds no target from a woodland perch (the air resolver keeps clear of crowns), so no climb or glide to look at."
-  },
-  {
-   "slug": "eurasian-collared-dove",
-   "recipe": "display_flight",
-   "reason": "the harness waited 900 s on the schedule for a male in the act and found none: never seen, so never checked for ground contact or a readable climb SIG3: with the row injected (wood pigeon, woodland), the episode is perch, take-off and straight home: the climb's `fly` to open air finds no target from a woodland perch (the air resolver keeps clear of crowns), so no climb or glide to look at."
-  },
-  {
-   "slug": "spotted-dove",
-   "recipe": "display_flight",
-   "reason": "the harness waited 900 s on the schedule for a male in the act and found none: never seen, so never checked for ground contact or a readable climb SIG3: with the row injected (wood pigeon, woodland), the episode is perch, take-off and straight home: the climb's `fly` to open air finds no target from a woodland perch (the air resolver keeps clear of crowns), so no climb or glide to look at."
   }
  ]
 }
