@@ -133,8 +133,10 @@ export class TownBatch {
     /**
      * `parts`: each chunk's geometry for this layer (the same attributes in each; the ground's indexed). Their arrays are
      * copied in and may be let go after. `release`: the batch's own arrays let go once on the GPU (nothing reads them).
+     * `keepPositions` (with `release`): its positions kept on the page, the rest let go: the seat pass (`seat/solids.ts`)
+     * reads what is drawn by its triangles (SIG4: the zoo's solids).
      */
-    constructor(parts: readonly TownBatchPart[], material: Material, name: string, options: {castShadow: boolean; receiveShadow: boolean; release?: boolean}) {
+    constructor(parts: readonly TownBatchPart[], material: Material, name: string, options: {castShadow: boolean; receiveShadow: boolean; release?: boolean; keepPositions?: boolean}) {
         let vertices = 0;
         let indices = 0;
         let triangles = 0;
@@ -181,8 +183,8 @@ export class TownBatch {
         this.mesh.computeBoundingSphere();
         this.mesh.computeBoundingBox();
         if (options.release) {
-            for (const attributeName of Object.keys(geometry.attributes)) (geometry.attributes[attributeName] as BufferAttribute).onUpload(releaseArray);
-            geometry.index?.onUpload(releaseArray);
+            for (const attributeName of Object.keys(geometry.attributes)) if (!(options.keepPositions && attributeName === "position")) (geometry.attributes[attributeName] as BufferAttribute).onUpload(releaseArray);
+            if (!options.keepPositions) geometry.index?.onUpload(releaseArray);
         }
     }
 

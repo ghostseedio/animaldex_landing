@@ -3,25 +3,26 @@
  *
  * The town's meshes let their vertex arrays go once on the GPU (phone heap, 62e24d4c: the zoo's solids and foliage, the
  * town's chunks, the library's trees and logs, the zoo halls' insides, the garden rooms). The seat pass (`seat/solids.ts`
- * DrawnSolids) reads what is drawn by its triangles, so it found nothing there: a bongo stood 21 cm into a termite
- * mound, a squirrel walked through a log, a horse slept standing inside a shelter.
+ * DrawnSolids) reads what is drawn by its triangles, so it found nothing there: animals stood, walked and slept inside
+ * the zoo's sheds, perches and rockwork, the logs, the garden rooms.
  *
  * The same scenery is already in memory as shapes, the town's colliders (`colliders.ts`, from `solids.ts` townSolids:
  * circles, boxes and segments, each with a foot and a top; the prebuild worker's, so nothing is worked out again on the
- * page). Here each becomes a closed prism (a log a lying cylinder, a mound a cone's
- * frustum), gathered into one small indexed geometry per town chunk. The meshes sit on a layer the camera never draws
+ * page). Here each becomes a closed prism (a log a lying cylinder, a mound a cone's frustum), gathered into one small
+ * indexed geometry per town chunk. The meshes sit on a layer the camera never draws
  * and their material is not visible, so they cost no draw call and no shader; the seat pass walks the scene by object
  * visibility and labels, so it reads them as built (HARD) solids. The seat audit's probe passes over them
  * (`userData.solidProxy`): it measures against what is drawn.
  *
- * Left out: the rocks (drawn as instances that keep their arrays: `rock-instances.ts`, read as they are), the ponds
- * (water, not a seat), and anything a small body goes into (`gap` > 0: bushes, bramble patches, flower beds).
+ * Which solids: `proxied` below. The zoo's own solid batch keeps its positions instead (`render/index.ts`), so the
+ * pass reads its rockwork, sheds, perches, banks and ground cover exactly as drawn.
  */
 
 import {BufferAttribute, BufferGeometry, Group, Mesh, MeshBasicMaterial} from "three";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import type {Collider} from "@/ark-scene/collide/colliders";
+import {ZOO_HOUSE_TYPES} from "@/ark-scene/islands/town/tanks";
 
 /** The layer the proxies are on: never the camera's (it draws layer 0; 30 and 31 are the streamer's and the held rigs'). */
 export const SOLID_PROXY_LAYER = 29;
@@ -142,16 +143,22 @@ function cylinder(b: Builder, ax: number, ay: number, az: number, bx: number, by
 }
 
 /**
- * The town solids among the town's colliders (`colliders.ts` solidCollider: `town:` and the solid's own id, `solids.ts`),
- * the ones the seat pass reads from a proxy: not a rock (drawn as instances it reads), not a pond (water), not one a small
- * body goes into (`gap`).
+ * The town solids among the town's colliders (`colliders.ts` solidCollider: `town:` and the solid's own id, `solids.ts`)
+ * whose drawn meshes let their arrays go: the deadwood and the flower beds (the town's chunks), the garden rooms
+ * (`pet-homes.ts`), the zoo halls' furnishings (`zoo-houses.ts` inside), and in the open enclosures the library's logs
+ * and climbing trees (`render/assets.ts`). The rest of an open enclosure is the zoo's solid batch, whose positions are
+ * kept (`render/index.ts`): the seat pass reads it as drawn, and a prism over it would only be coarser. Never a rock
+ * (drawn as instances the pass reads), a pond (water), or one a small body goes into (`gap`).
  */
-const SOLID_IDS = ["town:zoo:", "town:deadwood:", "town:bed:", "town:garden-room:"];
+const SOLID_IDS = ["town:deadwood:", "town:bed:", "town:garden-room:"];
+const HALL = new RegExp(`^town:zoo:(${Array.from(ZOO_HOUSE_TYPES).join("|")})-`);
 export function proxied(c: Collider): boolean {
     if (c.gap > 0 || c.kind === "pond" || !(c.y1 > c.y0 + 0.02)) return false;
-    if (!SOLID_IDS.some((p) => c.id.startsWith(p))) return false;
-    // (A termite mound is a "rock" to the walkers; the rockwork itself is drawn as instances.)
-    return c.kind !== "rock" || isMound(c);
+    if (c.kind === "rock" && !isMound(c)) return false;
+    if (SOLID_IDS.some((p) => c.id.startsWith(p))) return true;
+    if (!c.id.startsWith("town:zoo:")) return false;
+    // (A hall's: all of it. An open enclosure's: its library logs and climbing trees.)
+    return HALL.test(c.id) || c.id.includes("/log-") || c.id.includes("/trunk-");
 }
 
 const isMound = (c: Collider) => c.id.includes("/mound-");

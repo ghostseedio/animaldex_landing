@@ -10,7 +10,8 @@ import test from "node:test";
 import {Camera, Scene} from "three";
 import {townColliderList} from "@/ark-scene/islands/town/colliders";
 import {townSolids} from "@/ark-scene/islands/town/solids";
-import {launchEnclosures} from "@/ark-scene/islands/town/areas";
+import {launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
+import {ZOO_HOUSE_TYPES} from "@/ark-scene/islands/town/tanks";
 import {buildSolidProxies, proxied, SOLID_PROXY_LAYER} from "@/ark-scene/islands/town/render/solid-proxies";
 import {DrawnSolids, ALL, HARD, solidClass, solidLabel, type SolidHit} from "@/ark-scene/seat/solids";
 
@@ -19,13 +20,33 @@ const origin = {x: 480, z: -320};
 const colliders = townColliderList(open, origin);
 const chosen = colliders.filter(proxied);
 
-test("every town solid that is not a rock, a pond or soft has its proxy", () => {
-    const expected = townSolids(open).filter((s) => s.gap === 0 && s.kind !== "rock" && s.kind !== "pond" && s.top > s.base + 0.02);
+test("a proxy for every town solid whose drawn arrays are let go, none for the zoo batch's own", () => {
+    const halls = zooLayout(open).enclosures.filter((e) => ZOO_HOUSE_TYPES.has(e.type)).map((e) => `zoo:${e.id}/`);
+    const expected = townSolids(open).filter((s) => {
+        if (s.gap > 0 || s.kind === "pond" || (s.kind === "rock") || !(s.top > s.base + 0.02)) return false;
+        if (!s.id.startsWith("zoo:")) return true;
+        // (An open enclosure's are the zoo's solid batch, kept: only its library logs and climbing trees; a hall's all.)
+        return halls.some((h) => s.id.startsWith(h)) || s.kind === "log" && s.id.includes("/log-") || s.kind === "trunk" && s.id.includes("/trunk-");
+    });
     assert.ok(expected.length > 100, `${expected.length} solids`);
-    assert.equal(chosen.length, expected.length);
     assert.deepEqual(new Set(chosen.map((c) => c.id)), new Set(expected.map((s) => `town:${s.id}`)));
+    assert.equal(chosen.length, expected.length);
     // (Never a fence, a house or a habitat item: those are other things' colliders; never one a small body goes into.)
     assert.ok(chosen.every((c) => c.gap === 0 && c.kind !== "fence" && !c.id.startsWith("town:habitat:")));
+});
+
+test("the zoo's solid batch keeps its positions for the seat pass (the rest of its arrays let go)", async () => {
+    const {TownBatch} = await import("@/ark-scene/islands/town/render/batches");
+    const {BufferAttribute, BufferGeometry, MeshBasicMaterial} = await import("three");
+    const part = new BufferGeometry();
+    part.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 1, 0, 0, 0, 0, 1]), 3));
+    part.setAttribute("color", new BufferAttribute(new Float32Array(9), 3));
+    const batch = new TownBatch([{chunk: 0, geometry: part}], new MeshBasicMaterial(), "zoo:solid", {castShadow: false, receiveShadow: false, release: true, keepPositions: true});
+    const geometry = batch.mesh.geometry;
+    // (What the renderer does once each is on the GPU.)
+    for (const name of Object.keys(geometry.attributes)) (geometry.attributes[name] as unknown as {onUploadCallback: () => void}).onUploadCallback.call(geometry.attributes[name]);
+    assert.ok(geometry.getAttribute("position").array.length >= 9);
+    assert.equal(geometry.getAttribute("color").array.length, 0);
 });
 
 test("the proxies are never drawn and are read as built solids", () => {
