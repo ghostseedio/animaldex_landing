@@ -1211,6 +1211,21 @@ export function paceClip(speed: number, clips: readonly RigClipData[], current?:
     return faster.reduce((best, c) => (off(c) < off(best) ? c : best));
 }
 
+/** A bed walker's run: on above this many times its walk's own pace, off below `BED_RUN_OFF` (SPECIES-ANIM-B2). */
+export const BED_RUN_ON = 1.5;
+export const BED_RUN_OFF = 1.3;
+
+/**
+ * A bed walker's gait in the water (a crab on the seabed: waterMotion "walk") when it has both a walk and a run: the
+ * run above `BED_RUN_ON` times the walk's own pace, kept until it falls below `BED_RUN_OFF` times, so a steady pace near
+ * the edge (whose eased speed wobbles a little) does not flicker between the two. Without a pace on either: the walk.
+ */
+export function bedGaitClip(speed: number, walk: RigClipData, run: RigClipData, current?: string | null): RigClipData {
+    const pace = walk.ground_speed ?? 0;
+    if (!(pace > 0) || !((run.ground_speed ?? 0) > 0)) return walk;
+    return speed > pace * (current === run.name ? BED_RUN_OFF : BED_RUN_ON) ? run : walk;
+}
+
 /**
  * Every visible animal's gait, rigged or not: where it was drawn, how far through its step cycle (by the distance it
  * covers: a cycle, two steps, every 0.6 body lengths), and its pace (m/s, eased over about 0.3 s so a stepped path

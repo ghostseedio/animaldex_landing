@@ -406,3 +406,16 @@ test("rig caps: letting go leaves room for the species rigged at once", () => {
         assert.equal(rigRoom(c, kept), true);
     }
 });
+
+test("a bed walker runs above 1.5x its walk's pace and walks again only below 1.3x (no flicker at a steady pace)", async () => {
+    const {bedGaitClip} = await import("@/ark-scene/rig-player");
+    const walk = {name: "walk", ground_speed: 0.4} as never;
+    const run = {name: "run", ground_speed: 0.95} as never;
+    assert.equal(bedGaitClip(0.58, walk, run, "walk").name, "walk", "under 1.5x: walk");
+    assert.equal(bedGaitClip(0.62, walk, run, "walk").name, "run", "over 1.5x: run");
+    // Around the edge, either way, it keeps what it plays: 0.55 to 0.6 is inside the band.
+    for (const speed of [0.6, 0.55, 0.59, 0.53, 0.6]) assert.equal(bedGaitClip(speed, walk, run, "run").name, "run", `${speed} running`);
+    for (const speed of [0.6, 0.55, 0.59, 0.53, 0.6]) assert.equal(bedGaitClip(speed, walk, run, "walk").name, "walk", `${speed} walking`);
+    assert.equal(bedGaitClip(0.5, walk, run, "run").name, "walk", "under 1.3x: back to the walk");
+    assert.equal(bedGaitClip(2, walk, {name: "run", ground_speed: 0} as never, "walk").name, "walk", "a run with no pace never plays");
+});
