@@ -413,6 +413,20 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     let carerPostsFor: Promise<readonly CarerPost[]> | null = null;
     /** The town's animals by id (a tank resident's slug and zone for its band). */
     const townAnimals = new Map<string, ArkAnimal>();
+    // SIG3 (the aquarium's pile): the tanks' residents, who take turns in their caves (`tanks.ts` caveTurn); one list
+    // for every tank, made again when the placements change.
+    let roster: {of: Map<string, TownPlace>; list: Array<{id: string; tank: string; model_slug: string; zone: string; length: number}>} | null = null;
+    const tankRoster = () => {
+        if (roster?.of !== towned) {
+            const list: Array<{id: string; tank: string; model_slug: string; zone: string; length: number}> = [];
+            towned.forEach((info, id) => {
+                const animal = info.tank ? townAnimals.get(id) : undefined;
+                if (animal) list.push({id, tank: info.tank!.id, model_slug: animal.model_slug, zone: animal.zone, length: displayLength(animal)});
+            });
+            roster = {of: towned, list};
+        }
+        return roster.list;
+    };
     let sampler: {key: string; sampler: ArkWorldSampler} | null = null;
     let collidersMemo: {key: string; set: ColliderSet} | null = null;
     /** p3 (solid): a zoo resident's body radius, for its bound (`clearWithin`). */
@@ -656,7 +670,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const plan = modelBase(animal.model_slug)?.plan ?? null;
             // p3 (solid): off the aquarium hall's rocks but through its caves (`hall-rocks.ts`).
             const body = tankBody(animal.model_slug, plan, length);
-            const pose = clearOfHallRocks(tank, tankPose(tank, animal, length, height, plan, clock), body.length, body.width, height);
+            const pose = clearOfHallRocks(tank, tankPose(tank, animal, length, height, plan, clock, tankRoster()), body.length, body.width, height);
             return {x: pose.x + origin.x, z: pose.z + origin.z, yaw: pose.yaw, pitch: pose.pitch, base: pose.base, spec: pose.spec};
         },
         zooSwing: (animal, length, spot, epoch, awake) => {
