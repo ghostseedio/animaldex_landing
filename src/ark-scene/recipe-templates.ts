@@ -12,6 +12,7 @@
  */
 
 import {GROUP_TEMPLATES} from "@/ark-scene/behaviour-group-templates";
+import {REPTILE_TEMPLATES} from "@/ark-scene/recipe-templates-reptiles";
 
 /**
  * Where a step goes:
@@ -81,6 +82,8 @@ export type Template = {
     hours?: "day" | "night" | "dawn_dusk" | "dusk" | "any";
     /** Only in its mating or nesting season (where the data has one). "tunnel": in its nesting months where stored, a little all year where not (a kingfisher digs its tunnel). */
     season?: "mating" | "nesting" | "tunnel";
+    /** (Lane SIG2-REPTILES) A nesting template, for a species whose text names no months: how much it runs all year (the others: never). */
+    unstored?: number;
     /** How often it takes a slot it could, relative to its weight (1 when absent): a fishing flight out and back is a
      *  now-and-then thing, not every forage. */
     often?: number;
@@ -1094,6 +1097,8 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
 
 // Group life (lane SIG-GROUP): the group acts' templates (`behaviour-group.ts`).
 for (const t of GROUP_TEMPLATES) TEMPLATES[t.id] = t;
+// (Lane SIG2-REPTILES: the reptile and turtle variants, `recipe-templates-reptiles.ts`.)
+for (const template of REPTILE_TEMPLATES) TEMPLATES[template.id] = template;
 
 /** Land-water crossings: the way in, the way out, and what follows (the schedule's enter and exit legs). */
 export const ENTRY_STYLES = ["wade", "slide", "slip", "dive", "launch"] as const;

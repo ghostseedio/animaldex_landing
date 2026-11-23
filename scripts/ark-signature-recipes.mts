@@ -28,7 +28,22 @@ const dry = process.argv.includes("--dry");
 const tablePath = path.join(root, "src/ark-scene/recipes.json");
 const table = JSON.parse(fs.readFileSync(tablePath, "utf8")) as {species: Record<string, string>};
 const full = JSON.parse(fs.readFileSync(path.join(root, "data/ark/behaviour-recipes.json"), "utf8")) as {species: Array<{slug: string; plan: string}>};
-const additions = (JSON.parse(fs.readFileSync(path.join(root, "data/ark/signature-recipes.json"), "utf8")) as {additions: Array<{slug: string; name: string; recipe: string; field?: string; quote?: string; nest?: string}>}).additions;
+// (Every `data/ark/signature-recipes*.json`: the first wave's, and a lane's own: its `additions`, and its `templates`, the
+// plans and the weight of a template the table has no users of yet, or the plans a reviewed variant is drawn for.)
+type Addition = {slug: string; name: string; recipe: string; field?: string; quote?: string; nest?: string; line?: string};
+const files = fs.readdirSync(path.join(root, "data/ark")).filter((f) => /^signature-recipes.*\.json$/.test(f)).sort();
+const additions: Addition[] = [];
+const seeded: Record<string, {plans: string[]; weight: number}> = {};
+// (`replaces`: held rows another file's addition now shows another way, not listed as held; `held`: rows held again, with why.)
+const replaced = new Set<string>();
+const heldWhy = new Map<string, string>();
+for (const f of files) {
+    const j = JSON.parse(fs.readFileSync(path.join(root, "data/ark", f), "utf8")) as {additions: Addition[]; templates?: Record<string, {plans: string[]; weight: number}>; replaces?: Array<{slug: string; recipe: string}>; held?: Array<{slug: string; recipe: string; reason: string}>};
+    additions.push(...j.additions);
+    Object.assign(seeded, j.templates ?? {});
+    for (const r of j.replaces ?? []) replaced.add(`${r.slug} ${r.recipe}`);
+    for (const h of j.held ?? []) heldWhy.set(`${h.slug} ${h.recipe}`, h.reason);
+}
 // sig2 (mammals): how a species sleeps with its kind, and where its source is kept.
 const sleepPath = path.join(root, "src/ark-scene/sleep.json");
 const sleepTable = JSON.parse(fs.readFileSync(sleepPath, "utf8")) as {species: Record<string, string>};
@@ -54,7 +69,8 @@ const NEW: Record<string, {plans: string[]; weight: number}> = {
     dip_lay: {plans: ["flying_insect"], weight: 6},
     // sig2 (mammals): a stone hammer (macaques, capuchins) and a worm drawn out of the leaf litter (a ferret-badger).
     stone_hammer: {plans: ["primate"], weight: 3},
-    worm_dig: {plans: ["quadruped"], weight: 4}
+    worm_dig: {plans: ["quadruped"], weight: 4},
+    ...seeded
 };
 for (const [id, seed] of Object.entries(NEW)) {
     for (const plan of seed.plans) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
@@ -68,12 +84,18 @@ const NEEDS_GENERATOR = new Set(["nest_build"]);
 const HUNTS = new Set(["perch_plunge", "air_plunge", "talon_grab", "wade_spear", "bill_sweep", "pouch_scoop", "surface_dive", "chase_fish", "river_fish", "pounce", "hawk_insects", "aerial_hawk", "hover_drop", "bat_hawk", "bat_trawl"]);
 
 let added = 0;
+let superseded = 0;
 const skipped: string[] = [];
 const already: string[] = [];
 const birds = loadBirds(root);
 for (const a of additions) {
     // (A bird row wave 2 handles: it is shown by its own bird recipe, below.)
     if (birdHandles(birds.rows, a.slug, a.recipe)) continue;
+    // (An original row another file shows another way: its replacement is what is applied.)
+    if (replaced.has(`${a.slug} ${a.recipe}`)) {
+        superseded++;
+        continue;
+    }
     const row = table.species[a.slug];
     const plan = planOf.get(a.slug);
     if (row === undefined || !plan) {
@@ -106,7 +128,7 @@ for (const a of additions) {
     }
     if (recipesOf(row).some((r) => r.id === a.recipe)) {
         // (A mammal's own nest the generator found itself still needs the flag: the props do not draw it.)
-        if (a.nest) {
+        if (a.nest && a.recipe === "nest_build") {
             const f = row.split("|");
             while (f.length < 8) f.push("");
             if (!f[4]) f[4] = a.nest;
@@ -116,23 +138,26 @@ for (const a of additions) {
         already.push(`${a.slug} ${a.recipe}`);
         continue;
     }
-    if (HUNTS.has(a.recipe) && recipesOf(row).some((r) => HUNTS.has(r.id))) {
+    // (A variant `pounce~lizard` is a way of hunting like its plain recipe: judged as it, `recipe-templates-reptiles.ts`.)
+    const hunts = (id: string) => HUNTS.has(id.split("~")[0]);
+    if (hunts(a.recipe) && recipesOf(row).some((r) => hunts(r.id))) {
         skipped.push(`${a.slug} ${a.recipe}: it already hunts its own way`);
         continue;
     }
     const generated = NEEDS_GENERATOR.has(a.recipe) && !a.nest;
     if (generated || !plans.get(a.recipe)?.has(plan)) {
-        skipped.push(`${a.slug} ${a.recipe}: ${generated ? "needs the generator" : `no ${plan} uses it`}`);
+        skipped.push(`${a.slug} ${a.recipe}: ${heldWhy.get(`${a.slug} ${a.recipe}`) ?? (generated ? "needs the generator" : `no ${plan} uses it`)}`);
         continue;
     }
     const fields = row.split("|");
     fields[0] = [fields[0], `${a.recipe}.${usual(a.recipe)}`].filter(Boolean).join(",");
-    // (A nest of its own, where the generator found none: kind:material+material; flag `o`: the props do not draw it, the recipe does.)
+    // (A nest of its own, where the generator found none: kind:material+material; flag `o`: the props do not draw it, the recipe does.
+    // A nest guard's site, sig2 reptiles: the generic nest field for a species whose row has none, so the schedule can place a nest for it.)
     if (a.nest && !fields[4]) fields[4] = a.nest;
     while (fields.length < 8) fields.push("");
     // (No longer only its plan's defaults.)
     if (fields[7]) fields[7] = fields[7].replace("d", "");
-    if (a.nest && !fields[7].includes("o")) fields[7] += "o";
+    if (a.nest && a.recipe === "nest_build" && !fields[7].includes("o")) fields[7] += "o";
     table.species[a.slug] = fields.join("|");
     added++;
 }
@@ -153,6 +178,6 @@ if (!dry) {
     fs.writeFileSync(sleepStylesPath, `${JSON.stringify(sleepStyles, null, 1)}\n`);
     fs.writeFileSync(linesPath, JSON.stringify(lines));
 }
-console.log(JSON.stringify({additions: additions.length, added, already: already.length, skipped: skipped.length, birds: {rows: birds.rows.length, added: birdReport.added.length, already: birdReport.already.length, missing: birdReport.missing.length, sleepRows: birdSleep, lines: birdLines, notShown: birds.notShown.map((n) => `${n.slug} ${n.was}`)}}, null, 1));
+console.log(JSON.stringify({additions: additions.length, added, already: already.length, superseded, skipped: skipped.length, birds: {rows: birds.rows.length, added: birdReport.added.length, already: birdReport.already.length, missing: birdReport.missing.length, sleepRows: birdSleep, lines: birdLines, notShown: birds.notShown.map((n) => `${n.slug} ${n.was}`)}}, null, 1));
 if (skipped.length) console.log(skipped.join("\n"));
 if (birdReport.missing.length) console.log(birdReport.missing.join("\n"));

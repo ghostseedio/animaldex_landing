@@ -105,7 +105,7 @@ for (const name of scenes) {
         if (m.type() === "error") errors.push(m.text().slice(0, 300));
         if (m.text().startsWith("[behaviours]")) console.log(name, m.text().slice(0, 600));
     });
-    await page.goto(`${base}?scene=${name}&quality=high${arg("grass", "") === "0" ? "&grass=0" : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
+    await page.goto(`${base}?scene=${name}&quality=high${arg("grass", "") === "0" ? "&grass=0" : ""}${arg("query", "") ? `&${arg("query", "")}` : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
     try {
         await page.waitForFunction(() => window.__behaviours || window.__behavioursError, null, {timeout: 300000});
     } catch (error) {
@@ -145,6 +145,80 @@ for (const name of scenes) {
         const cols = 4;
         execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(times.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
         summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
+    if (name.startsWith("rt_")) {
+        // Reptile signatures (lane SIG2-REPTILES): the recipe's episode of the cast, found from the schedule: a frame at the
+        // middle of each of its steps (the long holds at their start and end too), each framed close from the animal's side.
+        const found = await page.evaluate(() => window.__behaviours.episode());
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const episode = (found ?? [])[Number(arg("pick", "0"))];
+        if (!episode) {
+            console.log(name, "no episode of the recipe in the search window", JSON.stringify(found));
+            summary[name] = {errors: ["no episode"]};
+            await context.close();
+            continue;
+        }
+        console.log(name, "episode", JSON.stringify({id: episode.id.slice(-3), t0: episode.t0, t1: episode.t1, keys: episode.keys.map((k) => `${k.b} ${(k.t1 - k.t0).toFixed(1)}s${k.caught === null ? "" : k.caught ? " caught" : " missed"}`)}));
+        let moments = [];
+        for (const k of episode.keys) {
+            if (k.b === "turn") continue;
+            const d = k.t1 - k.t0;
+            if (d > 9) moments.push([k.t0 + 1.2, `${k.b} start`], [k.t0 + d / 2, `${k.b} middle`], [k.t1 - 1.2, `${k.b} end`]);
+            else if (d > 3) moments.push([k.t0 + d * 0.25, `${k.b} early`], [k.t0 + d * 0.75, `${k.b} late`]);
+            else moments.push([k.t0 + d / 2, k.b]);
+        }
+        const cap = Number(arg("max", "16"));
+        if (moments.length > cap) moments = Array.from({length: cap}, (_, i) => moments[Math.round((i * (moments.length - 1)) / (cap - 1))]);
+        const labels = [];
+        for (let i = 0; i < moments.length; i++) {
+            const [at, label] = moments[i];
+            const note = await page.evaluate(async ([id, at, lengths, azimuth, polar]) => window.__behaviours.recipeShot(id, at, lengths, azimuth, polar), [episode.id, at, Number(arg("lengths", "0")) || null, arg("azimuth", "") === "" ? undefined : Number(arg("azimuth", "")), arg("polar", "") === "" ? undefined : Number(arg("polar", ""))]);
+            await page.evaluate((t) => (document.getElementById("note").textContent = t), `${name}  ${label} (+${(at - episode.t0).toFixed(1)} s)`);
+            labels.push(`${String(i).padStart(2, "0")} ${label} (+${(at - episode.t0).toFixed(1)} s): ${note}`);
+            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        const rows = Math.ceil(moments.length / 4);
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=4x${rows}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), episode: {id: episode.id, t0: episode.t0, t1: episode.t1}, shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
+    if (name.startsWith("mi_")) {
+        // Reptile signatures (lane SIG2-REPTILES): a small clinger's sit-and-wait bout (`micro-ambush.ts`): the first of the cast with one,
+        // framed close from in front of its wall or from its side on a rock, at the bout's moments (s from the dash's start).
+        const found = await page.evaluate(() => window.__behaviours.microBouts());
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        if (!found) {
+            console.log(name, "no bout in four minutes");
+            summary[name] = {errors: ["no bout"]};
+            await context.close();
+            continue;
+        }
+        const bout = found.bouts[0];
+        console.log(name, "bout", JSON.stringify({id: found.id.slice(-3), length: found.length, bout}));
+        const moments = [[bout.tv + 0.6, "the insect settles"], [bout.td - 0.6, "waiting"], [bout.td + 0.2, "the dash"], [bout.td + 0.5, "the snap begins"], [bout.td + 0.85, "the snap"], [bout.td + 1.25, "eating"], [bout.td + 2.6, "turning"], [bout.td + 3.2, "walking back"], [bout.te - 0.1, "back, turned"], [bout.te + 4, "still on its spot"]];
+        const labels = [];
+        for (let i = 0; i < moments.length; i++) {
+            const [at, label] = moments[i];
+            const note = await page.evaluate(async ([id, at, lengths]) => window.__behaviours.microShot(id, at, lengths), [found.id, at, Number(arg("lengths", "0")) || null]);
+            await page.evaluate((t) => (document.getElementById("note").textContent = t), `${name}  ${label} (td ${(at - bout.td).toFixed(2)} s)`);
+            labels.push(`${String(i).padStart(2, "0")} ${label} (td ${(at - bout.td).toFixed(2)} s): ${note}`);
+            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", "scale=640:-1,tile=4x3:padding=4:color=black", "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), bout, shots: labels};
         console.log(name, labels.join("\n"));
         if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
         await context.close();

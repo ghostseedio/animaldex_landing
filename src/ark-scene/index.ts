@@ -280,6 +280,7 @@ import {ForestScene} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): l
 // 3.3 batch (D): the escapes and the dragonflies' dips
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
 import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
+import {AMBUSH_RECIPE, ambushHours, ambushNow, inAmbushHours, type AmbushNow} from "@/ark-scene/micro-ambush";
 // 3.3 batch (B): the birds' own moves (mobbing dive)
 import {Mobbing, mobFoeFits, type MobHost} from "@/ark-scene/mobbing";
 // Group life (lane SIG-GROUP): species that live in groups by their own text though their profile says otherwise.
@@ -3809,7 +3810,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {along: crawl.along, turn: crawl.turn};
     };
 
-    const microPose = (entry: Entry, time: number): Pose => {
+    /** Lane SIG2-REPTILES: a clinger that hunts by sit-and-wait: its hunt now (`micro-ambush.ts`), or null out of its hours (the species' recipe row says it does). */
+    const ambushers = new Map<string, "night" | "day" | null>();
+    const microAmbushOf = (entry: Entry): AmbushNow | null => {
+        const slug = entry.animal.model_slug;
+        let kind = ambushers.get(slug);
+        if (kind === undefined) ambushers.set(slug, (kind = speciesRecipes(slug).has.has(AMBUSH_RECIPE) ? ambushHours(slug) : null));
+        if (!kind || entry.rest > 0.5 || !inAmbushHours(kind, hoursNow())) return null;
+        const place = entry.place;
+        return ambushNow(entry.animal.id, entry.animal.name, entry.trueLength, worldMs() / 1000, (along) => surfacePoint(place.micro!, entry.animal.zone, along));
+    };
+
+    const microPose = (entry: Entry, time: number, ambush: AmbushNow | null = null): Pose => {
         // ARK-WEBS: a web spinner on its web, once its web is hung.
         const web = webPoseOf(entry);
         if (web) return {x: web.x, z: web.z, base: web.y, yaw: Math.atan2(web.tx, web.tz), pitch: 0, roll: 0, afloat: true, surface: web};
@@ -3828,10 +3840,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let along = reducedMotion ? 0 : reach * out * awake;
         let turn = reducedMotion || !reach ? 0 : Math.PI * smoothTurn(u) * awake;
         // Its rig in (close by): it crawls at its walk's own ground speed (feet planted), out and back with pauses.
-        const crawled = reach && !reducedMotion ? crawlStep(entry, reach, along, turn) : null;
+        const crawled = reach && !reducedMotion && !ambush ? crawlStep(entry, reach, along, turn) : null;
         if (crawled) {
             along = crawled.along;
             turn = crawled.turn;
+        }
+        // Lane SIG2-REPTILES: in its hunting hours it sits on its spot and hunts from it (its crawl starts again from its cycle after).
+        if (ambush) {
+            along = ambush.along;
+            turn = ambush.turn;
+            entry.crawl = null;
         }
         const point = surfacePoint(micro, entry.animal.zone, along);
         // On a leaf, bark or a branch of a tree in the wind: moved with it as the tree's shader moves it (graphics' `attachSway`).
@@ -5202,7 +5220,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.recipeAct = laying.act;
                 return {x: laying.x, z: laying.z, base: laying.y, yaw: laying.yaw, pitch: laying.pitch, roll: 0, afloat: true};
             }
-            const resting = microPose(entry, reducedMotion ? 0 : time);
+            // Lane SIG2-REPTILES: a small gecko or lizard that hunts by sit-and-wait (`micro-ambush.ts`), in its hours: still on its spot, a dash and a snap now and then.
+            const ambush = scheduleOn && !reducedMotion ? microAmbushOf(entry) : null;
+            entry.recipeAct = ambush?.act ?? null;
+            const resting = microPose(entry, reducedMotion ? 0 : time, ambush);
             // (Signature wave 2, birds: a house bird's roost at dusk: its kind's crowd round the spot it is drawn at.)
             if (!entry.recipeFlock && scheduleOn && !reducedMotion) entry.recipeFlock = microRoost(entry.animal.model_slug, {x: resting.x, y: resting.base, z: resting.z}, worldMs() / 1000, hoursNow(), entry.length);
             return resting;
@@ -6020,6 +6041,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (laid.since !== undefined) dipRipples.note(a.id, `${laid.episode}#${Math.round(epoch - laid.since)}`, laid.since, {x: c.pose.x, y: (dipTops.get(a.id) ?? waterTopAt(c.pose.x, c.pose.z)) + 0.004, z: c.pose.z}, c.entry.trueLength, epoch);
                 const ownLine = signatureLineOf(a.model_slug, laid.recipe);
                 if (ownLine) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: laid.recipe, episode: laid.episode, block: laid.block, fish: false, line: ownLine});
+            }
+            // Lane SIG2-REPTILES: a small gecko or lizard hunting by sit-and-wait (off the schedule, `micro-ambush.ts`), in its species' own sentence.
+            if (c.entry.recipeAct?.recipe === AMBUSH_RECIPE && c.visible && c.distance < 40) {
+                const sat = c.entry.recipeAct;
+                const a = c.entry.animal;
+                const ownLine = signatureLineOf(a.model_slug, AMBUSH_RECIPE);
+                if (ownLine) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: AMBUSH_RECIPE, episode: sat.episode, block: sat.block, fish: false, line: ownLine});
             }
             if (!own?.pose || c.distance > 90) continue;
             const act = (own.pose as RecipePose).act;
