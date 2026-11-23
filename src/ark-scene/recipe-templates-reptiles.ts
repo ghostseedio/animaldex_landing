@@ -75,10 +75,8 @@ export const REPTILE_TEMPLATES: Template[] = [
         replaces: ["groom", "rest", "drink", "hide"],
         doing: "rest",
         hours: "day",
-        steps: [
-            {b: "walk", to: "ground", near: "here", r: 1.2},
-            {b: "bury", s: [30, 55]}
-        ]
+        // (SIG3: on the water's edge itself, the damp bank: it walked 1.2 m up off it onto the dry grass to settle.)
+        steps: [{b: "bury", s: [30, 55]}]
     }),
     // A skink foraging through the leaf litter: a few steps, its nose in the litter, on a little, again (its body flat).
     T({
