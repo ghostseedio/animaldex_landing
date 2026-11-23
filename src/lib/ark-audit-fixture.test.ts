@@ -42,8 +42,9 @@ test("adding species moves almost no one: dropping 36 species leaves the others'
     b.forEach((place, id) => {
         if (JSON.stringify(a.get(id)) !== JSON.stringify(place)) moved++;
     });
-    // (A probe chain one of them sat in, or a predator whose next slot it took: a handful, never the zone.)
-    assert.ok(moved <= b.size * 0.02, `${moved} of ${b.size} moved`);
+    // (A probe chain one of them sat in, or a predator whose next odd slot it took, and that predator's group: about 2%,
+    // never the zone. The rank-based fixture moved 25%: 1,321 of 5,328 for #112's 36 species.)
+    assert.ok(moved <= b.size * 0.03, `${moved} of ${b.size} moved`);
 });
 
 test("adjacent: a predator stands just after its prey, among that prey's other hunters", () => {
