@@ -168,7 +168,7 @@ test("nav labels match the published category names", () => {
     assert.equal(en.nav.getTheApp, "Get the app");
     assert.equal(en.nav.adviceFatigue, "Advice fatigue");
     assert.equal(en.nav.howItWorks, "How it works");
-    assert.equal(en.nav.findYourAnimals, "Find your animals");
+    assert.equal(en.nav.findYourAnimals, "Browse animals");
     assert.equal(en.nav.aiAndSafety, "AI & safety");
     assert.equal(en.nav.footerGroups.help, "Help");
     assert.equal(en.nav.footerGroups.product, "AnimalDex");
