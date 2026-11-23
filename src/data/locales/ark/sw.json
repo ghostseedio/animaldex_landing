@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} ameibuka kupumua",
                 "calling": "{aAnimal} anaita",
                 "bathing": "{aAnimal} anaoga",
-                "feeding": "Wakati wa kumlisha {aAnimal}"
+                "feeding": "Wakati wa kumlisha {aAnimal}",
+                "leapt": "{aAnimal} ameruka nje ya maji",
+                "glided": "{aAnimal} ameteleza juu ya maji",
+                "sailing": "{aAnimal} ameinua mkia wake upeponi"
             }
         },
         "hunt": {

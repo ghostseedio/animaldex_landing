@@ -108,6 +108,7 @@ import {floatOver} from "@/ark-scene/water-float"; // p3 (zoofix)
 import {breathAt, depthSeed, fitInWater, floatPitch, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, waterSurfaceAt, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {tripBreath} from "@/ark-scene/breath-trip";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
+import {leapAt, leapBoutsIn, leapPose, leapSpec, leapSplashes, type LeapStyle} from "@/ark-scene/water-leaps";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
 import {ARK_SCENE_MODULES, type ArkSceneModule} from "@/ark-scene/scene-modules";
@@ -2827,6 +2828,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         momentsAt = entries.every((e) => !e.sched || e.sched.wired) ? performance.now() : -Infinity;
         return list;
     };
+    /** ARK-FISH: the leap kinds' log words. */
+    const LEAP_MOMENT: Record<LeapStyle, "leapt" | "glided" | "sailing" | null> = {leap: "leapt", falls: "leapt", twist: "leapt", spin: "leapt", roll: null, glide: "glided", sail: "sailing"};
+    /** A leap bout that begins in the window, by the window's seeded order (the same for every viewer), or null. */
+    const leapMomentIn = (w: number, from: number, to: number, subjects: readonly MomentSubject[]): ArkHappening | null => {
+        let best: {order: number; entry: Entry; at: number; kind: "leapt" | "glided" | "sailing"} | null = null;
+        for (const s of subjects) {
+            const entry = findEntry(s.id);
+            if (!entry || !entry.depth || entry.state.asleep) continue;
+            const spec = leapSpec(entry.animal.model_slug);
+            const kind = spec ? LEAP_MOMENT[spec.style] : null;
+            if (!spec || !kind) continue;
+            const bout = leapBoutsIn(entry.animal.id, entry.animal.model_slug, entry.trueLength, from, to)[0];
+            if (!bout) continue;
+            const order = hash32("ark-leap", w, entry.animal.id);
+            if (!best || order < best.order) best = {order, entry, at: bout.from, kind};
+        }
+        if (!best) return null;
+        const a = best.entry.animal;
+        return {id: `now:leap:${a.id}:${Math.round(best.at)}`, kind: best.kind, activity: "swimming", animalId: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, count: 1, at: best.at};
+    };
     const happening = (after: number | null): {window: number; moments: ArkHappening[]} => {
         const done = Math.floor(worldMs() / 1000 / MOMENT_WINDOW_SECONDS) - 1;
         if (!world || reducedMotion || !scheduleOn) return {window: done, moments: []};
@@ -2843,7 +2864,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }).map((subject) => ({subject, at: start})) : [];
             const moment = pickMoment(w, subjects, forays);
             const entry = moment ? findEntry(moment.animalId) : null;
-            if (!moment || !entry) continue;
+            if (!moment || !entry) {
+                // ARK-FISH: else a leap out of the water that begins in the window (its kind's own text; behaviour, never a catch).
+                const leap = leapMomentIn(w, start, start + MOMENT_WINDOW_SECONDS, subjects);
+                if (leap) moments.push(leap);
+                continue;
+            }
             const a = entry.animal;
             // (One animal starting a recipe its species has its own sentence for: said in those words.)
             const sentence = moment.recipe && moment.count <= 1 ? signatureLineOf(a.model_slug, moment.recipe) : null;
@@ -4004,6 +4030,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** Splashes on the water (a moment's beats), as rings that spread and fade. */
     const ripples: Array<{x: number; z: number; start: number}> = [];
+    /** ARK-FISH: the rings of a leap's break-out and re-entry (epoch s, the shared clock), sized to the animal as drawn. */
+    const leapRings: Array<{x: number; y: number; z: number; start: number; size: number}> = [];
+    const leapSplashed = new Set<string>();
 
     /** A cross-layer moment's pose (cosmetic), or null once it is over. */
     const momentAt = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose | null => {
@@ -6520,6 +6549,32 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
                 // (At the sea's level now: the column rises and falls with the tide, `tideFit`.)
                 where.base = tideFit(where.water, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
+                // ARK-FISH: a leap out of the water (only a kind whose own text says it leaves the water: `water-leaps.ts`),
+                // laid over its swim at the height it is drawn at. Seeded by its id and the engine's tick: every viewer
+                // sees the same leap. Behaviour only: nothing is caught, logged as a meal or changed in its bars.
+                if (where.water.motion === "swim" && !reducedMotion && !entry.act && !entry.moment && !entry.visitor && !entry.state.asleep && leapSpec(animal.model_slug)) {
+                    const epoch = worldMs() / 1000;
+                    const step = leapAt(animal.id, animal.model_slug, entry.trueLength, epoch);
+                    if (step) {
+                        const drawnLength = entry.length * sizeUp;
+                        const surface = where.water.surface ?? ARK_ENVIRONMENT.seaLevel.value;
+                        const leap = leapPose(step, epoch - step.from, where.base, surface, modelHeight, drawnLength, drawnLength / Math.max(entry.trueLength, 0.01));
+                        where.base = leap.base;
+                        where.pitch = leap.pitch;
+                        where.roll += leap.roll;
+                        where.x += Math.sin(where.yaw) * leap.ahead;
+                        where.z += Math.cos(where.yaw) * leap.ahead;
+                        leapSplashes(step).forEach((after, i) => {
+                            const key = `${animal.id}|${step.from}|${i}`;
+                            if (epoch < step.from + after || epoch > step.from + after + 2 || leapSplashed.has(key)) return;
+                            leapSplashed.add(key);
+                            if (leapSplashed.size > 400) leapSplashed.delete(leapSplashed.values().next().value as string);
+                            leapRings.push({x: where.x, y: surface, z: where.z, start: epoch, size: Math.max(drawnLength, 0.3)});
+                            const spray = step.style === "sail" || step.style === "roll" ? 3 : 6;
+                            for (let k = 0; k < spray; k++) dust.add({x: where.x + (k % 2 ? 1 : -1) * k * 0.05 * drawnLength, y: surface + 0.05, z: where.z, size: Math.max(drawnLength * 0.35, 0.4), kind: "bubble"}, now);
+                        });
+                    }
+                }
             } else if (where.edge) {
                 // (Lane MA3: into the water or out of it, settled to its float line as far as its slide has gone, at the height it is drawn at.)
                 const fitted = tideFit(where.edge.spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
@@ -7256,6 +7311,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 continue;
             }
             ringList.push({x: ripples[i].x, y: 0.03, z: ripples[i].z, radius: 0.4 + age * 1.7, color: ARRIVAL, alpha: 0.9 * (1 - age / 2.4) ** 1.5});
+        }
+        // ARK-FISH: a leap's rings, two spreading out from where it broke the surface (they read at phone distance: sized to it).
+        if (leapRings.length) {
+            const epoch = worldMs() / 1000;
+            for (let i = leapRings.length - 1; i >= 0; i--) {
+                const ring = leapRings[i];
+                const age = epoch - ring.start;
+                if (age > 3 || age < 0) {
+                    leapRings.splice(i, 1);
+                    continue;
+                }
+                ringList.push({x: ring.x, y: ring.y + 0.03, z: ring.z, radius: ring.size * (0.4 + age * 0.9), color: ARRIVAL, alpha: 0.95 * (1 - age / 3) ** 1.4});
+                if (age > 0.5) ringList.push({x: ring.x, y: ring.y + 0.03, z: ring.z, radius: ring.size * (0.3 + (age - 0.5) * 0.7), color: ARRIVAL, alpha: 0.7 * (1 - (age - 0.5) / 2.5) ** 1.4});
+            }
         }
         // 3.3 batch (D): and the rings of a laying dragonfly's taps.
         if (dipRipples.size) dipRipples.each(epochNow, (x, y, z, radius, alpha) => ringList.push({x, y, z, radius, color: ARRIVAL, alpha}));

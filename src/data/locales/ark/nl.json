@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} kwam boven om te ademen",
                 "calling": "{aAnimal} roept",
                 "bathing": "{aAnimal} neemt een bad",
-                "feeding": "{aAnimal} krijgt eten"
+                "feeding": "{aAnimal} krijgt eten",
+                "leapt": "{aAnimal} sprong uit het water",
+                "glided": "{aAnimal} zweefde over het water",
+                "sailing": "{aAnimal} houdt zijn staart omhoog in de wind"
             }
         },
         "hunt": {

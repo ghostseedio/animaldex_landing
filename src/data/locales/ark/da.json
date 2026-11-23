@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} kom op for at trække vejret",
                 "calling": "{aAnimal} kalder",
                 "bathing": "{aAnimal} bader",
-                "feeding": "Fodringstid for {aAnimal}"
+                "feeding": "Fodringstid for {aAnimal}",
+                "leapt": "{aAnimal} sprang op af vandet",
+                "glided": "{aAnimal} svævede hen over vandet",
+                "sailing": "{aAnimal} holder halen op i vinden"
             }
         },
         "hunt": {

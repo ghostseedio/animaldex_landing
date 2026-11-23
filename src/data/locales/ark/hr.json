@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} izranja po zrak",
                 "calling": "{aAnimal} doziva",
                 "bathing": "{aAnimal} se kupa",
-                "feeding": "Vrijeme hranjenja: {aAnimal}"
+                "feeding": "Vrijeme hranjenja: {aAnimal}",
+                "leapt": "{aAnimal} je iskočio iz vode",
+                "glided": "{aAnimal} je klizio iznad vode",
+                "sailing": "{aAnimal} drži rep podignut u vjetru"
             }
         },
         "hunt": {

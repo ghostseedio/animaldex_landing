@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} kom upp för att andas",
                 "calling": "{aAnimal} ropar",
                 "bathing": "{aAnimal} badar",
-                "feeding": "Matdags för {aAnimal}"
+                "feeding": "Matdags för {aAnimal}",
+                "leapt": "{aAnimal} hoppade upp ur vattnet",
+                "glided": "{aAnimal} gled fram över vattnet",
+                "sailing": "{aAnimal} håller stjärten uppe i vinden"
             }
         },
         "hunt": {

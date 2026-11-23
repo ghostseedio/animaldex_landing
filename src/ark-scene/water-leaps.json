@@ -1,0 +1,16 @@
+{
+  "about": "ARK-FISH (2026-11-23): the water animals that leave the water, and only those whose own stored text says so (production species_field_guide: species_spotlight, interesting_facts, signature_traits; read-only, quoted exactly). Rows: style, bouts per Ark day (mean), leaps per bout [min, max], the deciding quote, its field. Bouts and burst sizes are estimates from the quote's frequency words (often, regularly, several times in a row, long periods): flagged 'estimate'. Leaps that the text ties to a catch (an arowana's insect-catching leap, a great white's breach on prey, an orca's tail slaps on herring) or to being hooked (a mako) are left out: a leap here never implies a meal. Atlantic Salmon leaps only at a waterfall or weir (its text), and none is in its reach on the Ark today (it lives at sea), so it never leaps yet.",
+  "species": {
+    "flathead-grey-mullet": ["leap", 6, [1, 3], "Mullet often leap clear of the water, singly or in whole shoals, and the reason for this behaviour is still debated.", "interesting_facts"],
+    "atlantic-tarpon": ["leap", 2, [1, 2], "They are famous for dramatic leaps above the water.", "interesting_facts"],
+    "indo-pacific-tarpon": ["leap", 2, [1, 2], "Megalops cyprinoides is known for its shiny scales and incredible leaping ability.", "interesting_facts"],
+    "thresher-shark": ["leap", 0.5, [1, 1], "It can also leap clear of the water.", "species_spotlight"],
+    "spotted-eagle-ray": ["leap", 2, [1, 3], "it regularly launches itself clear of the surface, sometimes several times in a row.", "species_spotlight"],
+    "tropical-two-wing-flyingfish": ["glide", 4, [1, 2], "Swimming hard at the surface, it breaks out of the water and glides on stiff, outspread pectorals, commonly for tens of metres.", "species_spotlight"],
+    "dusky-dolphin": ["twist", 3, [3, 6], "Acrobatic leaps and twists above cold coastal water", "signature_traits"],
+    "spinner-dolphin": ["spin", 3, [2, 5], "Spinner Dolphins can rotate multiple times in a single leap.", "interesting_facts"],
+    "commersons-dolphin": ["roll", 4, [2, 4], "it swims in fast, darting bursts, often turning and rolling at the surface.", "species_spotlight"],
+    "southern-right-whale": ["sail", 1, [1, 1], "Whales sometimes hold their flukes up in the wind for long periods, a behaviour watchers call sailing.", "interesting_facts"],
+    "atlantic-salmon": ["falls", 4, [1, 3], "At weirs and waterfalls, fish heading upstream hurl themselves clear of the water to climb the drop, trying again after each failure.", "interesting_facts"]
+  }
+}

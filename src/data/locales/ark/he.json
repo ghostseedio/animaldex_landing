@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} עלה לנשום",
                 "calling": "{aAnimal} משמיע קול",
                 "bathing": "{aAnimal} מתרחץ",
-                "feeding": "זמן האכלה: {aAnimal}"
+                "feeding": "זמן האכלה: {aAnimal}",
+                "leapt": "{aAnimal} זינק מעל המים",
+                "glided": "{aAnimal} דאה מעל המים",
+                "sailing": "{aAnimal} מחזיק את הזנב למעלה ברוח"
             }
         },
         "hunt": {

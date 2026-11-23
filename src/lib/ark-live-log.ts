@@ -322,7 +322,7 @@ export type ArkLiveLogOptions = {
 export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 12_000, seenLife: 9_000, nowLife: 10_000, groupWindow: 10_000, gap: 1_500, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6, maxSoftQueue: 8};
 
 /** The kinds the record keeps first when a burst is bigger than the log: the rare and the sad before the many. */
-const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, wildGone: 1, meal: 1, crisis: 2, starved: 2, death: 3, gone: 3, revived: 3, saved: 3, toCare: 4, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, hunting: 7, eggs: 7, playing: 7, toWater: 7, home: 7, flock: 7, group: 7, doing: 7, breathing: 7, calling: 7, bathing: 7, feeding: 7, more: 8};
+const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, wildGone: 1, meal: 1, crisis: 2, starved: 2, death: 3, gone: 3, revived: 3, saved: 3, toCare: 4, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, hunting: 7, eggs: 7, playing: 7, toWater: 7, home: 7, flock: 7, group: 7, doing: 7, breathing: 7, calling: 7, bathing: 7, feeding: 7, leapt: 7, glided: 7, sailing: 7, more: 8};
 
 /**
  * The log's state: the lines on screen and the items waiting. `push` takes new items, `step` lets the next one
@@ -506,6 +506,9 @@ function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "
             case "calling":
             case "bathing":
             case "feeding":
+            case "leapt":
+            case "glided":
+            case "sailing":
                 return times(fillArkWords(now[line.kind], {aAnimal}));
             case "playing":
                 return times(fillArkWords(now.playing, {animal: line.animal}));
