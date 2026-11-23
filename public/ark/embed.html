@@ -97,11 +97,16 @@
 <script>
   // The Ark's code by this page's deploy (decision 360): the CDN lets a phone keep ./ark-scene.js for 4 hours, and a
   // new page with the old code broke Ark Lite (2026-11-15: setFounders missing, an empty page). This page is never
-  // cached and its Last-Modified is the image's build time, so each deploy asks for its own code and workers; the
-  // same deploy's stay cached. (No header: the time now, so fresh every load, never stale.) Since 2026-11-17 the versioned
+  // cached, so each deploy asks for its own code and workers; the same code's stay cached. Since 2026-11-17 the versioned
   // address is also what the server lets a browser keep for good (`immutable`, next.config.js) and a bare one is asked
   // again every time; the scene reads this same `ARK_CODE_V` for the workers it starts itself (src/ark-scene/code-version.ts).
-  window.ARK_CODE_V = "?v=" + (Date.parse(document.lastModified) || Date.now());
+  // The version is the build's code hash (public/ark/ark-version.txt), which the image's build stamps into ARK_BUILT_V
+  // (scripts/build-ark-bundle.mjs, ARK_STAMP_EMBED=1 in the Dockerfile). Not the page's Last-Modified any more: a cached
+  // `COPY public` layer kept embed.html's old time while the code was rebuilt (2026-11-23: 01:51 vs 03:42), so two
+  // deploys shared one `?v=` and a phone kept the old immutable code. Unstamped (a local build, a harness): the page's
+  // Last-Modified, and with no header the time now (fresh every load, never stale).
+  var ARK_BUILT_V = "";
+  window.ARK_CODE_V = "?v=" + (ARK_BUILT_V || Date.parse(document.lastModified) || Date.now());
   (function () {
     var link = document.createElement("link");
     link.rel = "preload";

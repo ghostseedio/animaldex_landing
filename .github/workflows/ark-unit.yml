@@ -26,8 +26,12 @@ jobs:
           DATABASE_CONTRACT_OPTIONAL: "1"
       - name: Ark bundles (the apps' Ark page needs public/ark/ark-ui.js and ark-ui.css; the build fails without them)
         run: |
-          npm run build:ark
+          ARK_STAMP_EMBED=1 npm run build:ark
           for f in public/ark/ark-scene.js public/ark/ark-ui.js public/ark/ark-ui.css; do test -s "$f" || { echo "missing $f"; exit 1; }; done
+          # The image's stamp (Dockerfile ARK_STAMP_EMBED=1): embed.html asks for this build's code version.
+          v="$(tr -d '[:space:]' < public/ark/ark-version.txt)"
+          grep -q "var ARK_BUILT_V = \"${v}\";" public/ark/embed.html || { echo "embed.html is not stamped with ${v}"; exit 1; }
+          git checkout -- public/ark/embed.html
       - name: Lint
         run: npm run lint
       - name: Types (the known .svg module error is ignored; anything else fails)

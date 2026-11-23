@@ -318,6 +318,14 @@ jobs:
           # (built by `prebuild`, gitignored): without it the panel is blank.
           expect_status "/ark/embed.html" 200
           expect_status "/ark/ark-scene.js" 200
+          # The panel asks for this image's Ark code: its stamped version is the build's (ark-version.txt), not a file time.
+          ark_v="$(curl -sS "${PROXY[@]}" "http://127.0.0.1:${HOST_PORT}/ark/ark-version.txt" | tr -d '[:space:]')"
+          embed_v="$(curl -sS "${PROXY[@]}" "http://127.0.0.1:${HOST_PORT}/ark/embed.html" | sed -n 's/.*var ARK_BUILT_V = "\([^"]*\)";.*/\1/p')"
+          echo "ark-version.txt=${ark_v} embed.html ARK_BUILT_V=${embed_v}"
+          if [ -z "$ark_v" ] || [ "$embed_v" != "$ark_v" ]; then
+            echo "::error::embed.html's Ark code version (${embed_v:-none}) is not the build's (${ark_v:-none})"
+            exit 1
+          fi
           expect_status "/ark" 200
           # Trial Loops: the hub must ship server-rendered posters. Next 13.5's minifier once
           # blanked them silently (the renderer catches and returns null), so check the markup.
