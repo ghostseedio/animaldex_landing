@@ -202,7 +202,7 @@ test("a cave holds one body at a time: its residents take turns, and each of the
             const key = `${t.id}|${cave.lx}|${cave.lz}`;
             inCave.set(key, (inCave.get(key) ?? 0) + 1);
         }
-        for (const n of inCave.values()) most = Math.max(most, n);
+        inCave.forEach((n) => (most = Math.max(most, n)));
     }
     assert.equal(most, 1, "one body resting in a cave at a time");
     assert.ok(hid.size >= 10, `${hid.size} residents rested in a cave over the samples`);
