@@ -169,7 +169,7 @@
   {
    "slug": "indonesian-blue-tongued-skink",
    "recipe": "probe_feed",
-   "reason": "its probe frames draw it floating on top of a plant's leaves SIG3 tranche 4: re-measured: it probes 1.0-1.1 m above the ground (walks up onto the plants), not in the leaf litter."
+   "reason": "its probe frames draw it floating on top of a plant's leaves SIG3 tranche 4: re-measured: it probes 1.0-1.1 m above the ground (walks up onto the plants), not in the leaf litter. Superseded (SIG3 tranche 4) by probe_feed~lizard: the same foraging with its body flat on the ground."
   },
   {
    "slug": "mugger-crocodile",

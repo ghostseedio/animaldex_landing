@@ -49,6 +49,12 @@
     "lizard"
    ],
    "weight": 5
+  },
+  "probe_feed~lizard": {
+   "plans": [
+    "lizard"
+   ],
+   "weight": 5
   }
  },
  "replaces": [
@@ -127,6 +133,10 @@
   {
    "slug": "tropical-house-gecko",
    "recipe": "pounce"
+  },
+  {
+   "slug": "indonesian-blue-tongued-skink",
+   "recipe": "probe_feed"
   }
  ],
  "additions": [
@@ -201,7 +211,7 @@
   {
    "slug": "indonesian-blue-tongued-skink",
    "name": "Indonesian Blue-tongued Skink",
-   "recipe": "probe_feed",
+   "recipe": "probe_feed~lizard",
    "behaviour": "forages through leaf litter; shelters in midday heat",
    "field": "sleep",
    "quote": "It basks in the morning to warm up, then forages through leaf litter, and shelters at night and in the hottest hours under logs, in burrows or in deep litter."

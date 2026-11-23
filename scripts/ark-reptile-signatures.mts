@@ -43,7 +43,7 @@ const PLAN: Plan[] = [
     {slug: "galapagos-tortoise", behaviour: "sleeps half-submerged in mud wallows", recipe: "wallow~turtle", line: "{aAnimal} is settling half-submerged into a mud wallow"},
     // MARK: A sea turtle and a lizard on the forest floor
     {slug: "hawksbill-sea-turtle", behaviour: "probes beak into coral crevices for sponges", recipe: "probe_feed~turtle"},
-    {slug: "indonesian-blue-tongued-skink", behaviour: "forages through leaf litter; shelters in midday heat", recipe: "probe_feed", line: "{aAnimal} is foraging through the leaf litter"},
+    {slug: "indonesian-blue-tongued-skink", behaviour: "forages through leaf litter; shelters in midday heat", recipe: "probe_feed~lizard", line: "{aAnimal} is foraging through the leaf litter"},
     // MARK: Nests on the bank, and nests guarded
     {slug: "mugger-crocodile", behaviour: "digs nest hole in sandy bank", recipe: "beach_nest~bank"},
     {slug: "amboina-sailfin-lizard", behaviour: "female buries eggs in bank nest", recipe: "beach_nest~bank", line: "{aAnimal} is digging a shallow nest on the bank and burying its eggs"},
@@ -69,6 +69,8 @@ const TEMPLATES = {
     "dig_burrow~nest": {plans: ["turtle"], weight: 5},
     "wallow~turtle": {plans: ["turtle"], weight: 5},
     "probe_feed~turtle": {plans: ["turtle"], weight: 5},
+    // (SIG3: the skink's own, its body flat: the plain probe's bill tip stood it on its nose.)
+    "probe_feed~lizard": {plans: ["lizard"], weight: 5},
     "beach_nest~bank": {plans: ["lizard"], weight: 5},
     "incubate_sit~reptile": {plans: ["lizard"], weight: 5},
     dig_burrow: {plans: ["turtle"], weight: 5},
