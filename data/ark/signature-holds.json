@@ -129,7 +129,7 @@
   {
    "slug": "southern-mole-cricket",
    "recipe": "molehills",
-   "reason": "only a dark hole patch; the cricket is not visible"
+   "reason": "no mound or dig ever plays (the cricket is not micro-placed there, no act in 60 s); the harness close-up shows only its own dark 2.6 cm body from 5 cm above, grass drawn through it, which reads as a black disk, not a behaviour"
   },
   {
    "slug": "giant-mud-crab",
@@ -144,7 +144,7 @@
   {
    "slug": "european-hornet",
    "recipe": "night_hawk",
-   "reason": "at night the insect at the light is a tiny purple moth-like shape: not readable as a hornet"
+   "reason": "at night the insect at the light is a tiny purple shape, not readable as a hornet (the glowing bar across the harness's first frame is the lamp post's lit shaft by the camera; lamp posts are not built in islands mode, so it is harness only)"
   },
   {
    "slug": "american-bullfrog",

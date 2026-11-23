@@ -34,10 +34,10 @@ Held rows stay in their data files and are named in `data/ark/signature-holds.js
 | border_spar | carpenter-ant | 2 cm ants: the boxing is not readable at any harness distance |
 | claw_spar | mangrove-crab | the crabs are not in the frame (a rock pool's rim fills it) |
 | spider_dance | pantropical-jumping-spider, peterss-jumping-spider, two-striped-telamonia | the spider leaves the frame during the dance (grass blades or an empty wall): unreadable |
-| molehills | southern-mole-cricket | only a dark hole patch; the cricket is not visible |
+| molehills | southern-mole-cricket | no mound or dig ever plays (the cricket is not micro-placed there, no act in 60 s); the harness close-up shows only its own dark 2.6 cm body from 5 cm above, grass drawn through it, which reads as a black disk, not a behaviour |
 | bank_burrow | giant-mud-crab | the dig is a small pitch on an open sandy bed under water: no burrow or bank reads |
 | wrestle | golden-stag-beetle | the beetles are not in the frame; a stone fills the corner |
-| night_hawk | european-hornet | at night the insect at the light is a tiny purple moth-like shape: not readable as a hornet |
+| night_hawk | european-hornet | at night the insect at the light is a tiny purple shape, not readable as a hornet (the glowing bar across the harness's first frame is the lamp post's lit shaft by the camera; lamp posts are not built in islands mode, so it is harness only) |
 | wrestle | american-bullfrog | the two bullfrogs are drawn through each other while wrestling |
 | sit_snap | chinese-mantis, orchid-mantis, stick-mantis, red-assassin-bug, minute-pirate-bug, giant-house-spider, tiger-wolf-spider | the micro animal is not in the frame (leaves or an empty wall): the toad's sit_snap reads, these could not be checked |
 | dig_burrow | vampire-crab | the crab is not visible in the dig frames |
