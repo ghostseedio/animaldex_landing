@@ -1,60 +1,25 @@
 {
- "about": "Signature behaviours held after their picture strips were looked at (lane SIG2, 2026-11-23): each row stays in its own data file and is never drawn or told in the log until a fix shows it clearly. Read by scripts/ark-signature-recipes.mts. Strips: ~/AnimalDex-work/sig2/.",
+ "about": "Signature behaviours held after their picture strips were looked at (lane SIG2, 2026-11-23): each row stays in its own data file and is never drawn or told in the log until a fix shows it clearly. Read by scripts/ark-signature-recipes.mts. Strips: ~/AnimalDex-work/sig2/. SIG3 (2026-11-23): seven tree and ground huddles released, and the Russian and Sulcata tortoises' dig_burrow (the SIG2 harness had looked for a recipe named `dig_burrow~tortoise`, which no template has) after the sleep layer seated a huddling group at its leader's roost (strips ~/AnimalDex-work/sig3/mam/).",
  "held": [
-  {
-   "slug": "ring-tailed-lemur",
-   "recipe": "sleep:huddle",
-   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
-  },
-  {
-   "slug": "tufted-capuchin",
-   "recipe": "sleep:huddle",
-   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
-  },
-  {
-   "slug": "bolivian-squirrel-monkey",
-   "recipe": "sleep:huddle",
-   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
-  },
   {
    "slug": "common-marmoset",
    "recipe": "sleep:huddle",
-   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
-  },
-  {
-   "slug": "coppery-titi-monkey",
-   "recipe": "sleep:huddle",
-   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
-  },
-  {
-   "slug": "stump-tailed-macaque",
-   "recipe": "sleep:huddle",
-   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
+   "reason": "SIG3 (members now seated at their leader's limb): the 0.23 m marmosets sit where the limb meets the trunk and are drawn half inside the wood"
   },
   {
    "slug": "long-tailed-macaque",
    "recipe": "sleep:huddle",
-   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
+   "reason": "SIG3 (members now seated at their leader's limb): the five stand in a single file along the limb (walking pose), two beside it in the air from behind: a queue, not a huddle at the branch's end"
   },
   {
    "slug": "barbary-macaque",
    "recipe": "sleep:huddle",
-   "reason": "four drawn inside each other (gap 0) on a cliff face, a fifth 6 m off: a merged blob, not a huddle"
+   "reason": "four drawn inside each other (gap 0) on a cliff face, a fifth 6 m off: a merged blob, not a huddle (unchanged by SIG3: the leader's cliff spot, not a map roost)"
   },
   {
    "slug": "sugar-glider",
    "recipe": "sleep:huddle",
-   "reason": "drawn 4-23 m apart (mean gap 11.9 m for a 0.19 m body)"
-  },
-  {
-   "slug": "guinea-pig",
-   "recipe": "sleep:huddle",
-   "reason": "drawn 2.6-11.7 m apart (mean gap 6.65 m for a 0.24 m body)"
-  },
-  {
-   "slug": "collared-peccary",
-   "recipe": "sleep:huddle",
-   "reason": "mean gap 0.92 m for a 0.88 m body: spread out, not pressed together as the sentence says"
+   "reason": "SIG3: the frames now read as a huddle (gaps 0.1-0.4 body lengths), but its stored sentence says only that it sleeps in hollows by day and moves in groups at night: no sleeping together in its own text"
   },
   {
    "slug": "kuhls-pipistrelle-bat",
@@ -202,16 +167,6 @@
    "reason": "the tortoise tips nose-down with its legs working but no pit or soil shows; the last frame sinks it into the grass"
   },
   {
-   "slug": "russian-tortoise",
-   "recipe": "dig_burrow",
-   "reason": "no dig_burrow episode in the harness's search window"
-  },
-  {
-   "slug": "sulcata-tortoise",
-   "recipe": "dig_burrow",
-   "reason": "no dig_burrow episode in the harness's search window"
-  },
-  {
    "slug": "aldabra-giant-tortoise",
    "recipe": "wallow~turtle",
    "reason": "the 'bury' block stands it on dry grass, no mud or water: not a wallow (the Galapagos episode has no act at all)"
@@ -264,42 +219,42 @@
   {
    "slug": "oriental-garden-lizard",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
   },
   {
    "slug": "brazilian-lava-lizard",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
   },
   {
    "slug": "bocages-wall-lizard",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
   },
   {
    "slug": "leopard-gecko",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
   },
   {
    "slug": "common-house-gecko",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
   },
   {
    "slug": "common-wall-gecko",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
   },
   {
    "slug": "mediterranean-house-gecko",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
   },
   {
    "slug": "tropical-house-gecko",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
   },
   {
    "slug": "brilliant-blue",
@@ -389,17 +344,17 @@
   {
    "slug": "common-wood-pigeon",
    "recipe": "display_flight",
-   "reason": "the harness waited 900 s on the schedule for a male in the act and found none: never seen, so never checked for ground contact or a readable climb"
+   "reason": "the harness waited 900 s on the schedule for a male in the act and found none: never seen, so never checked for ground contact or a readable climb SIG3: with the row injected (wood pigeon, woodland), the episode is perch, take-off and straight home: the climb's `fly` to open air finds no target from a woodland perch (the air resolver keeps clear of crowns), so no climb or glide to look at."
   },
   {
    "slug": "eurasian-collared-dove",
    "recipe": "display_flight",
-   "reason": "the harness waited 900 s on the schedule for a male in the act and found none: never seen, so never checked for ground contact or a readable climb"
+   "reason": "the harness waited 900 s on the schedule for a male in the act and found none: never seen, so never checked for ground contact or a readable climb SIG3: with the row injected (wood pigeon, woodland), the episode is perch, take-off and straight home: the climb's `fly` to open air finds no target from a woodland perch (the air resolver keeps clear of crowns), so no climb or glide to look at."
   },
   {
    "slug": "spotted-dove",
    "recipe": "display_flight",
-   "reason": "the harness waited 900 s on the schedule for a male in the act and found none: never seen, so never checked for ground contact or a readable climb"
+   "reason": "the harness waited 900 s on the schedule for a male in the act and found none: never seen, so never checked for ground contact or a readable climb SIG3: with the row injected (wood pigeon, woodland), the episode is perch, take-off and straight home: the climb's `fly` to open air finds no target from a woodland perch (the air resolver keeps clear of crowns), so no climb or glide to look at."
   }
  ]
 }

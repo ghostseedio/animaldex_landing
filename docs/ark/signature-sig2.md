@@ -101,3 +101,22 @@ Held rows stay in their data files and are named in `data/ark/signature-holds.js
 
 - Micro insects (sally_chase, patrol_low, hawk_insects, sit_snap, spider_dance) need the micro layer to put them on a schedule, or a harness view that finds them; the gecko sit-and-wait needs v2 placement to make geckos micro.
 - The tree sleepers need the sleep layer to seat a troop on one branch; the reptile nest and wallow variants need a pit or mud mark under the body.
+
+## SIG3 (2026-11-23): first tranche
+
+The sleep layer now seats a huddling (or piling) group member at its leader's roost even when the v2 map gave it a
+place of its own (`behaviour-schedule.ts` rawRoostOf): five guinea pigs had each slept in their own worm hole 2.6-11.7
+body lengths apart, the tree sleepers each on their own branch. A roost's row or cluster keeps its own perches. Strips:
+`~/AnimalDex-work/sig3/mam/sleep-*-strip.jpg`, `tree3-sheet.jpg` (`scripts/ark-sig2-mammals-clips.mjs`).
+
+| Released | Frames (gap to the nearest, body lengths) |
+|---|---|
+| guinea-pig, collared-peccary | 0.55-0.99 on the ground, as the shipped sheep (0.53-0.94) |
+| ring-tailed-lemur, tufted-capuchin, coppery-titi-monkey, stump-tailed-macaque, bolivian-squirrel-monkey | 0.2-0.5 on one limb (one awake member further off) |
+
+Still held, with the new why in `signature-holds.json`: long-tailed macaque (single file along the limb, standing),
+common marmoset (drawn half inside the trunk), Barbary macaque (unchanged blob), sugar glider (its text names no
+sleeping together), the lizards' and geckos' `pounce~lizard` (a fake insect catch; the real way is the `dash` hunt act on
+a server meal), the doves' `display_flight` (no open-air target from a woodland perch). The long-tailed macaque's,
+marmoset's, Barbary macaque's, squirrel monkey's, titi's and stump-tail's huddles were already in `sleep.json` from the
+generator's own reading of their sleep text; this change is what makes them read.
