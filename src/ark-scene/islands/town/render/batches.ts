@@ -263,9 +263,10 @@ export function townBatchEnabled(band: number, layerOrder: number, revealed: num
 
 /** `BufferAttribute.onUpload`: drop the CPU copy once the GPU has it (three's own pattern for static geometry). */
 function releaseArray(this: {array: ArrayLike<number>}) {
-    // (Kept for the seat audit, development only: `scripts/ark-seat-audit.mjs` reads every drawn triangle near an
-    // animal, and with the copies gone a bird on a town tree's limb measured 8 m over the ground below it.)
-    if (process.env.NODE_ENV !== "production" && (globalThis as {__arkKeepArrays?: boolean}).__arkKeepArrays) return;
+    // (Set aside for the seat audit's probe, development only: `scripts/ark-seat-audit.mjs` reads every drawn triangle
+    // near an animal, and with the copies gone a bird on a town tree's limb measured 8 m over the ground below it. Set
+    // aside, not kept on the attribute: the scene's own seat pass reads the attribute, and must see what it sees live.)
+    if (process.env.NODE_ENV !== "production" && (globalThis as {__arkKeepArrays?: boolean}).__arkKeepArrays) ((globalThis as {__arkKeptArrays?: WeakMap<object, ArrayLike<number>>}).__arkKeptArrays ??= new WeakMap()).set(this, this.array);
     // (Empty, but of the same type: BatchedMesh reads `index.array.BYTES_PER_ELEMENT` every frame for its draw offsets, so a 16-bit
     // index let go as a Float32Array drew the ground white.)
     this.array = new (this.array.constructor as new (length: number) => ArrayLike<number>)(0);
