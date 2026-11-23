@@ -4,12 +4,12 @@
   {
    "slug": "common-marmoset",
    "recipe": "sleep:huddle",
-   "reason": "SIG3 (members now seated at their leader's limb): the 0.23 m marmosets sit where the limb meets the trunk and are drawn half inside the wood"
+   "reason": "SIG3 (members now seated at their leader's limb): the 0.23 m marmosets sit where the limb meets the trunk and are drawn half inside the wood SIG3 tranche 2: tried seating the members along the limb (the map point's tangent) out from the leader: the group's sleeping bodies are then drawn onto the same spot (gaps 0.01-0.08 body lengths for lemur, capuchin, stump-tail), so it was reverted; the marmoset's and long-tailed macaque's leaders sleep on a point whose roost carries no limb heading, and their frames were unchanged."
   },
   {
    "slug": "long-tailed-macaque",
    "recipe": "sleep:huddle",
-   "reason": "SIG3 (members now seated at their leader's limb): the five stand in a single file along the limb (walking pose), two beside it in the air from behind: a queue, not a huddle at the branch's end"
+   "reason": "SIG3 (members now seated at their leader's limb): the five stand in a single file along the limb (walking pose), two beside it in the air from behind: a queue, not a huddle at the branch's end SIG3 tranche 2: tried seating the members along the limb (the map point's tangent) out from the leader: the group's sleeping bodies are then drawn onto the same spot (gaps 0.01-0.08 body lengths for lemur, capuchin, stump-tail), so it was reverted; the marmoset's and long-tailed macaque's leaders sleep on a point whose roost carries no limb heading, and their frames were unchanged."
   },
   {
    "slug": "barbary-macaque",
@@ -29,12 +29,12 @@
   {
    "slug": "long-tailed-macaque",
    "recipe": "stone_hammer",
-   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at"
+   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours."
   },
   {
    "slug": "tufted-capuchin",
    "recipe": "stone_hammer",
-   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at"
+   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours."
   },
   {
    "slug": "javan-ferret-badger",
@@ -44,12 +44,12 @@
   {
    "slug": "eastern-gray-squirrel",
    "recipe": "nest_build",
-   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb)"
+   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb) SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours."
   },
   {
    "slug": "red-squirrel",
    "recipe": "nest_build",
-   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb)"
+   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb) SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours."
   },
   {
    "slug": "desert-cottontail",
@@ -214,42 +214,42 @@
   {
    "slug": "oriental-garden-lizard",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad). SIG3 tranche 2 (22:00 WIB, hunting at full since 21:41): no gecko or lizard has a server meal or escape yet (0 ever, though their food links have insect prey aboard); the `dash` act's harness frames (freeze, dash, eat) read for the house gecko, not cleanly for the wolf spider. Not made live until a real gecko meal is seen to drive it."
   },
   {
    "slug": "brazilian-lava-lizard",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad). SIG3 tranche 2 (22:00 WIB, hunting at full since 21:41): no gecko or lizard has a server meal or escape yet (0 ever, though their food links have insect prey aboard); the `dash` act's harness frames (freeze, dash, eat) read for the house gecko, not cleanly for the wolf spider. Not made live until a real gecko meal is seen to drive it."
   },
   {
    "slug": "bocages-wall-lizard",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad). SIG3 tranche 2 (22:00 WIB, hunting at full since 21:41): no gecko or lizard has a server meal or escape yet (0 ever, though their food links have insect prey aboard); the `dash` act's harness frames (freeze, dash, eat) read for the house gecko, not cleanly for the wolf spider. Not made live until a real gecko meal is seen to drive it."
   },
   {
    "slug": "leopard-gecko",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad). SIG3 tranche 2 (22:00 WIB, hunting at full since 21:41): no gecko or lizard has a server meal or escape yet (0 ever, though their food links have insect prey aboard); the `dash` act's harness frames (freeze, dash, eat) read for the house gecko, not cleanly for the wolf spider. Not made live until a real gecko meal is seen to drive it."
   },
   {
    "slug": "common-house-gecko",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad). SIG3 tranche 2 (22:00 WIB, hunting at full since 21:41): no gecko or lizard has a server meal or escape yet (0 ever, though their food links have insect prey aboard); the `dash` act's harness frames (freeze, dash, eat) read for the house gecko, not cleanly for the wolf spider. Not made live until a real gecko meal is seen to drive it."
   },
   {
    "slug": "common-wall-gecko",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad). SIG3 tranche 2 (22:00 WIB, hunting at full since 21:41): no gecko or lizard has a server meal or escape yet (0 ever, though their food links have insect prey aboard); the `dash` act's harness frames (freeze, dash, eat) read for the house gecko, not cleanly for the wolf spider. Not made live until a real gecko meal is seen to drive it."
   },
   {
    "slug": "mediterranean-house-gecko",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad). SIG3 tranche 2 (22:00 WIB, hunting at full since 21:41): no gecko or lizard has a server meal or escape yet (0 ever, though their food links have insect prey aboard); the `dash` act's harness frames (freeze, dash, eat) read for the house gecko, not cleanly for the wolf spider. Not made live until a real gecko meal is seen to drive it."
   },
   {
    "slug": "tropical-house-gecko",
    "recipe": "pounce~lizard",
-   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad)."
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason SIG3: and the template's snap takes an ambient insect (catch: insect, a catch the engine never made: no fake events, decisions 489/491); the honest way is the `dash` hunt act on a real server meal (hunt-acts.json maps all eight to `dash`, not yet in LIVE_HUNT_ACTS). In the day harness the dash never starts either: its run fails the minute turn budget (the turn home after the dash plus the slot's last turn over 5.4 rad). SIG3 tranche 2 (22:00 WIB, hunting at full since 21:41): no gecko or lizard has a server meal or escape yet (0 ever, though their food links have insect prey aboard); the `dash` act's harness frames (freeze, dash, eat) read for the house gecko, not cleanly for the wolf spider. Not made live until a real gecko meal is seen to drive it."
   },
   {
    "slug": "brilliant-blue",

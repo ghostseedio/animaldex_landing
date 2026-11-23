@@ -121,3 +121,13 @@ sleeping together), the lizards' and geckos' `pounce~lizard` (a fake insect catc
 a server meal), the doves' `display_flight` (no open-air target from a woodland perch). The long-tailed macaque's,
 marmoset's, Barbary macaque's, squirrel monkey's, titi's and stump-tail's huddles were already in `sleep.json` from the
 generator's own reading of their sleep text; this change is what makes them read.
+
+## SIG3 (2026-11-23): second tranche
+
+- **Doves' display_flight (released, 3 rows: wood pigeon, collared dove, spotted dove).** The old open-air target needed clear air under the crowns, so a dove perched in woodland never found one. A new `sky` target picks a point ahead of the bird and rises above whatever is highest on the way there (ground, flight floor, canopy top). The template is now perch, take off, climb steeply over the trees, glide down in a wide arc, return. It is exempt from the turn budget (`airTurns`). Each dove has its own English line.
+- **Aldabra giant tortoise dig_burrow~nest (released).** Variant ids such as `dig_burrow~nest` now leave the dug-soil mark too (`recipeBase` in `index.ts`). Line: "{aAnimal} is digging a nest in the soil to lay its eggs".
+- **Leopard tortoise nest and wallow~turtle: still held.** The leopard tortoise's episode stops after one dig, and the tortoise sinks into the grass. The wallow's hollow mark now draws, but it sits on dry grass with no mud.
+- **House gecko pounce~lizard via `dash`: not made live.** At 22:00 WIB, with hunting fully on since 21:41, the server has no meal or escape by any gecko or lizard, although their food links have insect prey aboard. The harness frames (freeze, dash, eat) read for the gecko, but `dash` stays out of `LIVE_HUNT_ACTS` until a real gecko meal is seen to drive it. When that happens, gate it to `plan === "reptile"`. The wolf spider's dash has position jumps.
+- **Marmoset and long-tailed macaque huddles: still held.** Their leaders sleep on v2 map points that carry no limb heading, so the marmosets end up inside the trunk and the macaques stand in single file. Seating the members along the map tangent made the other huddles' bodies coincide, so it was reverted.
+- **SIG2-reason rows re-run:** nest_build (squirrels) and stone_hammer (long-tailed macaque, tufted capuchin) still find no episode in 24 Ark hours with the hold removed. beach_nest~bank is still crawl/turn/walk. All stay held.
+- **Rows held but already in the table, so still live:** the marmoset, long-tailed and Barbary macaque huddles, the golden stag beetle's wrestle and the slender skimmer's hawk_insects. A hold only keeps a new row out; it does not remove one.
