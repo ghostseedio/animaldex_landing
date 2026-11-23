@@ -78,7 +78,67 @@ const MOTION_BODY = `
         bodyGain = (whole - 1.0) / 254.0;
     }
     float height = clamp((mp.y - motionBottom) / max(motionTop - motionBottom, 0.001), 0.0, 1.0);
-    if (motionPower > 0.0 && motionKind > 0.5 && motionKind < 1.5) {
+    if (motionPower > 0.0 && motionFin > 2.5) {
+        // Soft bodies (locomotion/swim.ts softBody, its reference): 3 a jelly's bell, 4 an octopus's arms, 5 a squid's
+        // fins and mantle jet. motionHead is the shape (the bell's share of the height, the arms' root along the length).
+        float amp = motionTip * motionGain * bodyGain;
+        float j = motionHead;
+        float H = max(motionTop - motionBottom, 0.001);
+        float Lz = max(2.0 * (motionMidZ - motionRear), 0.001);
+        float ym = 0.5 * (motionTop + motionBottom);
+        if (motionFin < 3.5) {
+            float hb = 1.0 - j;
+            float u = beat / 6.28318;
+            float fu = fract(u);
+            float c = fu < 0.3 ? smoothstep(0.0, 0.3, fu) : 1.0 - smoothstep(0.3, 1.0, fu);
+            float bell = smoothstep(hb - 0.04, hb + 0.04, height);
+            float rim = 1.0 - clamp((height - hb) / max(j, 0.01), 0.0, 1.0);
+            float rz = mp.z - motionMidZ;
+            float k = amp * c * bell * (0.35 + 0.65 * rim);
+            float dist = clamp((hb - height) / max(hb, 0.01), 0.0, 1.0);
+            float fl = fract(u - dist * motionWavesL2 * 0.5);
+            float cl = fl < 0.3 ? smoothstep(0.0, 0.3, fl) : 1.0 - smoothstep(0.3, 1.0, fl);
+            float k2 = amp * cl * (1.0 - bell) * (1.0 - dist) * 0.8;
+            float ang = atan(rz, mp.x);
+            float sway = amp * 0.12 * H * pow(dist, 1.5);
+            float run = dist * motionWavesL2 * 6.28318;
+            mp.x = mp.x * (1.0 - k - k2) + sway * sin(beat - run + ang * 2.0);
+            rz = rz * (1.0 - k - k2) + 0.7 * sway * cos(beat + 1.1 - run + ang * 2.0);
+            mp.y = motionTop - (motionTop - mp.y) * (1.0 + 0.5 * amp * c * bell) - j * H * 0.5 * amp * cl * (1.0 - bell) * (1.0 - 0.5 * dist);
+            mp.z = motionMidZ + rz;
+        } else {
+            float zj = motionRear + j * Lz;
+            if (motionFin < 4.5) {
+                float fw = max(mp.z - zj, 0.0);
+                float d = length(vec2(mp.x, fw)) / Lz;
+                float w = smoothstep(0.08, 0.45, d) * smoothstep(zj - 0.06 * Lz, zj + 0.02 * Lz, mp.z);
+                float ph = beat - d * motionWavesL2 * 6.28318 + atan(mp.x, fw + 0.001) * 2.0;
+                mp.y += amp * Lz * pow(w, 1.5) * sin(ph);
+                float th = amp * 1.5 * w * sin(ph + 1.3);
+                float dx = mp.x;
+                float dz = mp.z - zj;
+                mp.x = dx * cos(th) - dz * sin(th);
+                mp.z = zj + dx * sin(th) + dz * cos(th);
+                float q = clamp((zj - mp.z) / max(zj - motionRear, 0.001), 0.0, 1.0);
+                float breath = 1.0 + 0.25 * amp * q * sin(beat);
+                mp.x *= breath;
+                mp.y = ym + (mp.y - ym) * breath;
+            } else {
+                float span = max(motionSpan, 0.001);
+                float fin = smoothstep(0.35, 0.9, abs(mp.x) / span) * (1.0 - smoothstep(zj - 0.05 * Lz, zj, mp.z));
+                mp.y += amp * span * 1.2 * pow(fin, 1.5) * sin(2.0 * beat - (zj - mp.z) / Lz * motionWavesL2 * 6.28318);
+                float fj = fract(beat / 6.28318);
+                float cj = fj < 0.3 ? smoothstep(0.0, 0.3, fj) : 1.0 - smoothstep(0.3, 1.0, fj);
+                float mantle = (1.0 - smoothstep(zj - 0.15 * Lz, zj, mp.z)) * (1.0 - fin);
+                float jet = 0.8 * amp * cj * mantle;
+                float arms = smoothstep(zj, zj + 0.25 * Lz, mp.z);
+                mp.x *= 1.0 - jet - 0.3 * amp * cj * arms;
+                mp.y = ym + (mp.y - ym) * (1.0 - jet);
+                mp.y += amp * 0.3 * Lz * arms * arms * sin(beat - (mp.z - zj) / Lz * 4.0);
+                mp.x += amp * 0.2 * Lz * arms * arms * sin(beat + 1.0 - (mp.z - zj) / Lz * 3.0);
+            }
+        }
+    } else if (motionPower > 0.0 && motionKind > 0.5 && motionKind < 1.5) {
         float env = motionHead + (1.0 - motionHead) * pow(along, motionPower);
         float wave = beat - along * motionWavesL2 * 6.28318;
         float size = motionGain * bodyGain;

@@ -22,7 +22,8 @@ import {
     type FlightSpec
 } from "@/ark-scene/locomotion/flight";
 import {decodeFlight, decodeStyleRow, locoStyle, locoStyleSlugs} from "@/ark-scene/locomotion/styles";
-import {readWaveChannel, swimBend, swimSurfaceGuard, SWIM_SURFACE_CLEAR, swimCycles, swimEnvelope, swimHeadroom, swimPaces, SWIM, SWIM_DISPLAY_HZ, tailBeatHz, waveChannel, newSwimMemory} from "@/ark-scene/locomotion/swim";
+import {l2BodyUniforms} from "@/ark-scene/locomotion/l2-scene";
+import {bellPulse, readWaveChannel, softBody, type SoftBox, SOFT_BODY_FIN, swimBend, swimSurfaceGuard, SWIM_SURFACE_CLEAR, swimCycles, swimEnvelope, swimHeadroom, swimPaces, SWIM, SWIM_DISPLAY_HZ, tailBeatHz, waveChannel, newSwimMemory} from "@/ark-scene/locomotion/swim";
 import {LEGLESS, leglessCycles, leglessMode, leglessPoint, leglessShape, leglessSlip, newLeglessMemory, sidewindYaw} from "@/ark-scene/locomotion/legless";
 import {arkBody} from "@/ark-scene/stats";
 import {MOTION_L2_THRESHOLDS} from "@/lib/ark-motion-l2-thresholds";
@@ -289,6 +290,81 @@ test("L2: each swimming mode bends where it should (eels whole body, tuna only t
         assert.ok(Math.abs(back.gain - gain) < 0.003);
     }
     assert.equal(readWaveChannel(0), null);
+});
+
+// MARK: Soft bodies (jellies, octopuses, squids)
+
+test("L2: soft bodies: the generator's rows key a jelly's bell, an octopus's arms and a squid's fins and jet", () => {
+    assert.equal(locoStyle("moon-jellyfish").swim, "medusoid");
+    assert.ok(Math.abs(locoStyle("moon-jellyfish").swimShape! - 0.17) < 1e-9, "the bell's share from the model");
+    assert.equal(locoStyle("common-octopus").swim, "octopod");
+    assert.equal(locoStyle("giant-squid").swim, "teuthoid");
+    assert.equal(locoStyle("flamboyant-cuttlefish").swim, "teuthoid");
+    // Floats, polyps, comb jellies and corals keep the talking model's own pulse or sway.
+    for (const slug of ["portuguese-man-o-war", "by-the-wind-sailor", "blue-button-jelly", "common-hydra", "sea-gooseberry"]) assert.equal(locoStyle(slug).swim, null, slug);
+    assert.equal(decodeStyleRow("||me0.25|").swimShape, 0.25);
+    assert.equal(decodeStyleRow("||sc|").swimShape, null);
+    const behaviour = {plan: "jellyfish", motion: {kind: "pulse", amplitude: 0.07, period: 3}} as unknown as Parameters<typeof l2BodyUniforms>[1];
+    const u = l2BodyUniforms("moon-jellyfish", behaviour);
+    if (u) {
+        assert.equal(u.motionFin, SOFT_BODY_FIN.bell);
+        assert.ok(Math.abs(u.motionHead - 0.17) < 1e-9);
+    }
+});
+
+test("L2 metric: a jelly's bell contracts quickly and relaxes slowly, its top fixed; the tentacles follow late", () => {
+    assert.equal(bellPulse(0), 0);
+    assert.ok(Math.abs(bellPulse(0.3) - 1) < 1e-9);
+    assert.ok(bellPulse(0.15) > bellPulse(0.65), "the power stroke is the quick third");
+    const box: SoftBox = {rear: -0.5, mid: 0, bottom: -1, top: 1, span: 0.5};
+    const rim: [number, number, number] = [0.5, 1 - 2 * 0.3, 0];
+    const top: [number, number, number] = [0, 1, 0];
+    const peak = 0.3 * 2 * Math.PI;
+    assert.ok(softBody("medusoid", rim, peak, box)[0] < 0.5 * (1 - 0.6 * SWIM.medusoid.tip), "the rim drawn in");
+    const t = softBody("medusoid", top, peak, box);
+    assert.ok(Math.abs(t[1] - 1) < 1e-9 && Math.abs(t[0]) < 1e-9, "the bell's top stays");
+    // At rest (a beat's start) nothing moves but the trailing sway of the tentacles.
+    const atRest = softBody("medusoid", rim, 0, box);
+    assert.ok(Math.abs(atRest[0] - 0.5) < 1e-9 && Math.abs(atRest[1] - rim[1]) < 1e-9);
+    // The tentacles' squeeze peaks after the bell's.
+    const tentacle: [number, number, number] = [0.3, -0.5, 0];
+    let best = 0;
+    let at = 0;
+    for (let i = 0; i < 100; i++) {
+        const d = 0.3 - softBody("medusoid", tentacle, (i / 100) * 2 * Math.PI, box)[0];
+        if (d > best) [best, at] = [d, i / 100];
+    }
+    assert.ok(at > 0.3, `the tentacles' squeeze at ${at} of the beat`);
+});
+
+test("L2 metric: an octopus's arm tips move most, its mantle barely; a squid's fin edges ripple, the mantle jets", () => {
+    const box: SoftBox = {rear: -0.5, mid: 0, bottom: -0.2, top: 0.2, span: 0.4};
+    const travel = (style: "octopod" | "teuthoid", p: [number, number, number]) => {
+        let most = 0;
+        for (let i = 0; i < 64; i++) {
+            const q = softBody(style, p, (i / 64) * 2 * Math.PI, box);
+            most = Math.max(most, Math.hypot(q[0] - p[0], q[1] - p[1], q[2] - p[2]));
+        }
+        return most;
+    };
+    const tip = travel("octopod", [0.1, 0, 0.45]);
+    const root = travel("octopod", [0.02, 0, 0.05]);
+    const mantle = travel("octopod", [0, 0.1, -0.4]);
+    assert.ok(tip > 4 * root && tip > 4 * mantle && tip > 0.02, `tip ${tip}, root ${root}, mantle ${mantle}`);
+    const fin = travel("teuthoid", [0.38, 0, -0.35]);
+    const midline = travel("teuthoid", [0, 0.15, -0.35]);
+    assert.ok(fin > 2 * midline, `fin ${fin}, mantle top ${midline}`);
+    // The jet narrows the mantle once a beat.
+    const side: [number, number, number] = [0.1, 0, -0.1];
+    assert.ok(softBody("teuthoid", side, 0.3 * 2 * Math.PI, box)[0] < side[0] * (1 - 0.5 * SWIM.teuthoid.tip));
+    // Every soft body is periodic in the beat (the body channel's phase wraps each beat: no jump).
+    for (const style of ["medusoid", "octopod", "teuthoid"] as const) {
+        for (const p of [[0.3, 0.1, 0.4], [0.38, -0.1, -0.35], [0.2, -0.15, 0.1]] as Array<[number, number, number]>) {
+            const a = softBody(style, p, 0, box);
+            const b = softBody(style, p, 2 * Math.PI, box);
+            assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 1e-9, `${style} wraps`);
+        }
+    }
 });
 
 // MARK: Water surface

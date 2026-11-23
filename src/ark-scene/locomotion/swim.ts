@@ -14,6 +14,15 @@
  *   flaps of the wing-like fins;
  * - cetacean and sirenian: up and down, the flukes.
  *
+ * Soft bodies (no body wave: `body`, drawn by the near shader's own branch, `softBody` below is its reference):
+ * - medusoid (jellyfish): the bell pulses: a quick contraction (the bell narrows and lengthens along its axis, the
+ *   rim drawn in) and a slower relaxation, about a third of the cycle in the power stroke (Colin & Costello 2002;
+ *   Gemmell 2013, Aurelia ~0.5-1 Hz); the tentacles and oral arms follow the rim late and trail;
+ * - octopod (octopuses, the vampire squid, the nautilus): the arms wave, each by its distance from the mantle (the
+ *   tips most), a wave running out along them, each arm on its own phase; the mantle breathes slowly;
+ * - teuthoid (squids, cuttlefish, the ram's horn squid): the fins ripple front to back along the mantle (Hoar 1994:
+ *   fins carry slow swimming), twice a beat, and once a beat the mantle contracts in a jet, the arms drawn together.
+ *
  * The rate: a beat carries the body a stride of 0.4 (eels) to 0.9 (tuna, dolphins) body lengths (Bainbridge 1958:
  * speed ∝ tail-beat rate; Videler 1993), so f = f_hold + speed / (stride · L). Played by the distance swum
  * (`swimCycles`), a burst beats faster by itself and a still fish only fins.
@@ -40,6 +49,9 @@ export type SwimParams = {
     maxHz: number;
     /** A ray's fins: the wave runs along the fin's edge (`wave`) or the fin flaps as a wing (`flap`). */
     fin?: "wave" | "flap";
+    /** A soft body (`softBody`): a jelly's bell, an octopus's arms, a squid's fins and mantle jet; its default shape. */
+    body?: "bell" | "arms" | "jet";
+    shape?: number;
 };
 
 export const SWIM: Readonly<Record<SwimStyle, SwimParams>> = {
@@ -53,8 +65,18 @@ export const SWIM: Readonly<Record<SwimStyle, SwimParams>> = {
     rajiform: {axis: "y", head: 0.1, power: 2, waves: 1.3, stride: 0.45, tip: 0.1, hold: 0.25, maxHz: 3, fin: "wave"},
     mobuliform: {axis: "y", head: 0.05, power: 2, waves: 0.35, stride: 0.9, tip: 0.32, hold: 0.15, maxHz: 1.5, fin: "flap"},
     cetacean: {axis: "y", head: 0.04, power: 3, waves: 0.6, stride: 0.85, tip: 0.1, hold: 0.08, maxHz: 3},
-    sirenian: {axis: "y", head: 0.05, power: 2.5, waves: 0.55, stride: 0.55, tip: 0.08, hold: 0.06, maxHz: 1.2}
+    sirenian: {axis: "y", head: 0.05, power: 2.5, waves: 0.55, stride: 0.55, tip: 0.08, hold: 0.06, maxHz: 1.2},
+    // (Soft bodies: `tip` is the pulse's or the wave's size, `waves` how far the wave runs along the arms or tentacles;
+    // `head`, `power` unused. A pulse carries a jelly about a third of its length; an octopus hovering waves its arms
+    // slowly; a squid's beat is its jet, the fins rippling twice a beat, 1-3 Hz cruising. Only whole multiples of the
+    // beat: the body channel's phase wraps every beat.)
+    medusoid: {axis: "x", head: 0, power: 1, waves: 1.2, stride: 0.35, tip: 0.22, hold: 0.6, maxHz: 1.6, body: "bell", shape: 0.3},
+    octopod: {axis: "x", head: 0, power: 1, waves: 1.0, stride: 0.5, tip: 0.14, hold: 0.3, maxHz: 1.5, body: "arms", shape: 0.5},
+    teuthoid: {axis: "x", head: 0, power: 1, waves: 1.5, stride: 0.6, tip: 0.1, hold: 0.5, maxHz: 1.5, body: "jet", shape: 0.72}
 };
+
+/** The shader's mode per soft body (`motionFin` 3, 4, 5; 0-2 are the rays' fins). */
+export const SOFT_BODY_FIN: Readonly<Record<"bell" | "arms" | "jet", number>> = {bell: 3, arms: 4, jet: 5};
 
 /** The fastest beat shown (Hz): six or more frames a beat at 60 fps. */
 export const SWIM_DISPLAY_HZ = 8;
@@ -80,7 +102,7 @@ export function tailBeatHz(speedBLs: number, style: SwimStyle): number {
  */
 export function swimPaces(lengthM: number, style: SwimStyle): {cruiseBLs: number; burstBLs: number; cruise: number; burst: number} {
     const L = Math.max(lengthM, 0.01);
-    const fast = style === "thunniform" ? 1.5 : style === "ostraciiform" || style === "labriform" ? 0.6 : style === "sirenian" ? 0.5 : 1;
+    const fast = style === "thunniform" ? 1.5 : style === "ostraciiform" || style === "labriform" ? 0.6 : style === "sirenian" ? 0.5 : style === "medusoid" ? 0.15 : style === "octopod" ? 0.5 : 1;
     const cruise = clamp(1.1 * L ** 0.45 * fast, 0.08, 4);
     const burst = cruise * clamp(4 * L ** -0.2, 1.8, 6);
     return {cruiseBLs: cruise / L, burstBLs: burst / L, cruise, burst};
@@ -93,6 +115,86 @@ export function swimPaces(lengthM: number, style: SwimStyle): {cruiseBLs: number
 export function swimBend(style: SwimStyle, s: number, phase: number, gain = 1): number {
     const p = SWIM[style];
     return p.tip * gain * swimEnvelope(style, s) * Math.sin(2 * Math.PI * (phase - clamp(s, 0, 1) * p.waves));
+}
+
+/** The model's box the soft-body shader reads (the near material's motion uniforms: `motionUniforms`). */
+export type SoftBox = {rear: number; mid: number; bottom: number; top: number; span: number};
+
+const smooth = (a: number, b: number, x: number) => {
+    const t = clamp((x - a) / (b - a), 0, 1);
+    return t * t * (3 - 2 * t);
+};
+
+/** A jelly's pulse over one beat (0..1 of the cycle): a quick contraction (0 -> 1 in 0.3), a slow relaxation. */
+export function bellPulse(u: number): number {
+    const f = u - Math.floor(u);
+    return f < 0.3 ? smooth(0, 0.3, f) : 1 - smooth(0.3, 1, f);
+}
+
+/**
+ * A soft body's point moved (model space), at `beat` radians, `gain` its size (the channel's gain): the reference the
+ * near shader's GLSL mirrors (`animal-material.ts` MOTION_BODY, `motionFin` 3-5) and the tests measure.
+ */
+export function softBody(style: SwimStyle, p: [number, number, number], beat: number, box: SoftBox, gain = 1, shape?: number | null): [number, number, number] {
+    const prm = SWIM[style];
+    if (!prm.body) return p;
+    let [x, y, z] = p;
+    const amp = prm.tip * gain;
+    const j = shape ?? prm.shape ?? 0.5;
+    const H = Math.max(box.top - box.bottom, 1e-3);
+    const Lz = Math.max(2 * (box.mid - box.rear), 1e-3);
+    const ym = (box.top + box.bottom) / 2;
+    if (prm.body === "bell") {
+        const h = (y - box.bottom) / H;
+        const hb = 1 - j;
+        const u = beat / (2 * Math.PI);
+        const c = bellPulse(u);
+        const bell = smooth(hb - 0.04, hb + 0.04, h);
+        const rim = 1 - clamp((h - hb) / Math.max(j, 0.01), 0, 1);
+        let rz = z - box.mid;
+        const k = amp * c * bell * (0.35 + 0.65 * rim);
+        const dist = clamp((hb - h) / Math.max(hb, 0.01), 0, 1);
+        const cl = bellPulse(u - dist * prm.waves * 0.5);
+        const k2 = amp * cl * (1 - bell) * (1 - dist) * 0.8;
+        const ang = Math.atan2(rz, x);
+        const sway = amp * 0.12 * H * dist ** 1.5;
+        x = x * (1 - k - k2) + sway * Math.sin(beat - dist * prm.waves * 2 * Math.PI + ang * 2);
+        rz = rz * (1 - k - k2) + 0.7 * sway * Math.cos(beat + 1.1 - dist * prm.waves * 2 * Math.PI + ang * 2);
+        y = box.top - (box.top - y) * (1 + 0.5 * amp * c * bell) - j * H * 0.5 * amp * cl * (1 - bell) * (1 - 0.5 * dist);
+        z = box.mid + rz;
+        return [x, y, z];
+    }
+    const zj = box.rear + j * Lz;
+    if (prm.body === "arms") {
+        const fw = Math.max(z - zj, 0);
+        const d = Math.hypot(x, fw) / Lz;
+        const w = smooth(0.08, 0.45, d) * smooth(zj - 0.06 * Lz, zj + 0.02 * Lz, z);
+        const ph = beat - d * prm.waves * 2 * Math.PI + Math.atan2(x, fw + 0.001) * 2;
+        y += amp * Lz * w ** 1.5 * Math.sin(ph);
+        const th = amp * 1.5 * w * Math.sin(ph + 1.3);
+        const dx = x;
+        const dz = z - zj;
+        x = dx * Math.cos(th) - dz * Math.sin(th);
+        z = zj + dx * Math.sin(th) + dz * Math.cos(th);
+        const q = clamp((zj - z) / Math.max(zj - box.rear, 1e-3), 0, 1);
+        const breath = 1 + 0.25 * amp * q * Math.sin(beat);
+        x *= breath;
+        y = ym + (y - ym) * breath;
+        return [x, y, z];
+    }
+    // jet
+    const span = Math.max(box.span, 1e-3);
+    const fin = smooth(0.35, 0.9, Math.abs(x) / span) * (1 - smooth(zj - 0.05 * Lz, zj, z));
+    y += amp * span * 1.2 * fin ** 1.5 * Math.sin(2 * beat - ((zj - z) / Lz) * prm.waves * 2 * Math.PI);
+    const cj = bellPulse(beat / (2 * Math.PI));
+    const mantle = (1 - smooth(zj - 0.15 * Lz, zj, z)) * (1 - fin);
+    const J = 0.8 * amp * cj * mantle;
+    const arms = smooth(zj, zj + 0.25 * Lz, z);
+    x *= 1 - J - 0.3 * amp * cj * arms;
+    y = ym + (y - ym) * (1 - J);
+    y += amp * 0.3 * Lz * arms * arms * Math.sin(beat - ((z - zj) / Lz) * 4);
+    x += amp * 0.2 * Lz * arms * arms * Math.sin(beat + 1 - ((z - zj) / Lz) * 3);
+    return [x, y, z];
 }
 
 /** Per animal, per viewer (visual only): beats swum so far. */
@@ -116,10 +218,13 @@ export function swimCycles(memory: SwimMemory, style: SwimStyle, distance: numbe
     return memory;
 }
 
-/** The wave's size for a speed (body lengths a second): half its full swing when it holds still, full from cruise up. */
+/** The wave's size for a speed (body lengths a second): half its full swing when it holds still (a soft body three
+ * quarters), full from cruise up. */
 export function swimGain(speedBLs: number, style: SwimStyle, lengthM: number): number {
     const cruise = swimPaces(lengthM, style).cruiseBLs;
-    return 0.45 + 0.55 * clamp(speedBLs / Math.max(cruise, 0.02), 0, 1);
+    // (A soft body keeps most of its pulse or wave holding still: a jelly pulses, an octopus's arms wave, at rest.)
+    const still = SWIM[style].body ? 0.75 : 0.45;
+    return still + (1 - still) * clamp(speedBLs / Math.max(cruise, 0.02), 0, 1);
 }
 
 // MARK: The body channel (`arkLook.w`)

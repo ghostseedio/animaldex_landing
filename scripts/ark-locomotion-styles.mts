@@ -187,10 +187,92 @@ const SWIM_FAMILY: Array<[RegExp, string, string]> = [
     [/^(Dasyatidae|Potamotrygonidae|Rajidae|Urolophidae|Torpedinidae|Gymnuridae)$/, "rj", "rajiform: a wave runs front to back along the fin's edge"],
     [/^(Trichechidae|Dugongidae)$/, "si", "sirenian: slow up-and-down beats of the paddle tail"]
 ];
+// MARK: Soft bodies (cephalopods, jellies)
+
+/** The talking model's vertex positions (its GLB in `<ark dir>/../assets`, uncompressed), for a jelly's bell. */
+function modelPositions(slug: string): Float32Array[] | null {
+    const file = path.join(arkDir, "..", "assets", `${slug}.glb`);
+    if (!fs.existsSync(file)) return null;
+    const buf = fs.readFileSync(file);
+    const jsonLen = buf.readUInt32LE(12);
+    const gltf = JSON.parse(buf.subarray(20, 20 + jsonLen).toString("utf8"));
+    const binStart = 20 + jsonLen + 8;
+    const out: Float32Array[] = [];
+    for (const mesh of gltf.meshes ?? []) {
+        for (const prim of mesh.primitives ?? []) {
+            const acc = gltf.accessors[prim.attributes?.POSITION];
+            if (!acc || acc.componentType !== 5126 || acc.type !== "VEC3") return null;
+            const view = gltf.bufferViews[acc.bufferView];
+            const stride = view.byteStride ?? 12;
+            const pts = new Float32Array(acc.count * 3);
+            const at = binStart + (view.byteOffset ?? 0) + (acc.byteOffset ?? 0);
+            for (let i = 0; i < acc.count; i++) for (let k = 0; k < 3; k++) pts[i * 3 + k] = buf.readFloatLE(at + i * stride + k * 4);
+            out.push(pts);
+        }
+    }
+    return out.length ? out : null;
+}
+
+/**
+ * A jelly's bell, as a share of its height from the top: down to its rim, where the bell stops widening (below it
+ * the tentacles and oral arms hang). Null without the model; 0.3 when no rim shows in the top 70%.
+ */
+function bellShare(slug: string): number | null {
+    const parts = modelPositions(slug);
+    if (!parts) return null;
+    let lo = Infinity;
+    let hi = -Infinity;
+    let cz = 0;
+    let n = 0;
+    for (const p of parts) for (let i = 0; i < p.length; i += 3) {
+        lo = Math.min(lo, p[i + 1]);
+        hi = Math.max(hi, p[i + 1]);
+        cz += p[i + 2];
+        n++;
+    }
+    cz /= Math.max(n, 1);
+    const SLICES = 40;
+    const widest = new Array(SLICES).fill(0);
+    for (const p of parts) for (let i = 0; i < p.length; i += 3) {
+        const s = Math.min(SLICES - 1, Math.floor(((hi - p[i + 1]) / Math.max(hi - lo, 1e-6)) * SLICES));
+        widest[s] = Math.max(widest[s], Math.hypot(p[i], p[i + 2] - cz));
+    }
+    // The rim: the first slice from the top that the next two are no wider than (within 1 %: the bell stops widening), to the end
+    // of a flat run there (within 1 %).
+    const limit = Math.round(SLICES * 0.7);
+    let rim = -1;
+    for (let s = 2; s < limit && rim < 0; s++) if (widest[s] >= 0.99 * widest[s + 1] && widest[s] >= 0.99 * widest[s + 2]) rim = s;
+    if (rim < 0) return 0.3;
+    while (rim + 1 < limit && Math.abs(widest[rim + 1] - widest[rim]) <= 0.01 * widest[rim]) rim++;
+    return Math.min(Math.max((rim + 1) / SLICES, 0.1), 0.7);
+}
+
+/** Cnidarian medusae that swim by pulsing the bell (not the floats: Porpitidae, Physaliidae; not the polyps). */
+const MEDUSA_CLASSES = new Set(["Scyphozoa", "Cubozoa", "Hydrozoa"]);
+const NOT_MEDUSA = /^(Porpitidae|Physaliidae|Hydridae)$/;
+const SQUID_ORDERS = new Set(["Oegopsida", "Myopsida", "Sepiida", "Sepiolida", "Spirulida", "Idiosepida"]);
+const ARM_ORDERS = new Set(["Octopoda", "Vampyromorpha", "Nautilida"]);
+
+function softOf(row: Row): {code: string; why: string} | null {
+    const cls = row.class_name ?? "";
+    const order = row.order_name ?? "";
+    const family = row.family_name ?? "";
+    const slug = row.slug!;
+    if (cls === "Cephalopoda" && SQUID_ORDERS.has(order)) return {code: "sq", why: `${order} (${family}): fins ripple along the mantle, the mantle jets, the arms trail`};
+    if (cls === "Cephalopoda" && ARM_ORDERS.has(order)) return {code: "oc", why: `${order} (${family}): the arms wave out from the mantle${order === "Nautilida" ? " (the nautilus's tentacles)" : ""}`};
+    if (MEDUSA_CLASSES.has(cls) && !NOT_MEDUSA.test(family)) {
+        const bell = bellShare(slug);
+        return {code: bell === null ? "me" : `me${bell.toFixed(2).replace(/0$/, "")}`, why: `${cls} medusa (${family}): the bell pulses${bell === null ? "" : `, the bell the top ${Math.round(bell * 100)}% of the model's height (down to its rim, where it stops widening)`}`};
+    }
+    return null;
+}
+
 function swimOf(row: Row, tplan: string | null): {code: string; why: string} | null {
     const family = row.family_name ?? "";
     const order = row.order_name ?? "";
     const slug = row.slug!;
+    const soft = softOf(row);
+    if (soft) return soft;
     if (order === "Cetacea" || (tplan === "cetacean" && order !== "Sirenia" && order !== "Acipenseriformes")) return {code: "ce", why: `cetacean (${family}): up-and-down fluke beats`};
     for (const [re, code, why] of SWIM_FAMILY) if (re.test(family)) return {code, why: `${family}: ${why}`};
     if (/sea-krait|sea-snake/.test(slug)) return {code: "an", why: "sea snake: anguilliform with a paddle tail"};
@@ -245,7 +327,7 @@ const sorted = Object.keys(compact).sort();
 fs.mkdirSync(path.join(root, "src/ark-scene/locomotion"), {recursive: true});
 fs.writeFileSync(
     path.join(root, "src/ark-scene/locomotion/styles.json"),
-    `{"about":"Generated by scripts/ark-locomotion-styles.mts (reasons per species: data/ark/locomotion-styles.json). Rows: flight|ground|swim|legless. flight: c continuous, g flap-glide, b flap-bound, s soar (then the beat factor on the bird size allometry, 1 when absent); h hover (birds: hummingbirds; insects then their Hz); t bat; f flutter (butterflies, moths); w whir (other insects, then their Hz); a trailing d: it stoops or plunge-dives. ground (birds): h hop, w walk, a waddle, r run, b head-bob. swim: an anguilliform, sc subcarangiform, ca carangiform, th thunniform, os fin-driven, lb labriform, ff flatfish, rj rajiform, mb mobuliform, ce cetacean, si sirenian. legless: la lateral undulation, sw sidewinding, re rectilinear when slow, pe peristalsis, gl glide. Decoded by locomotion/styles.ts.",\n"species":{\n${sorted.map((slug) => `${JSON.stringify(slug)}:${JSON.stringify(compact[slug])}`).join(",\n")}\n}}\n`
+    `{"about":"Generated by scripts/ark-locomotion-styles.mts (reasons per species: data/ark/locomotion-styles.json). Rows: flight|ground|swim|legless. flight: c continuous, g flap-glide, b flap-bound, s soar (then the beat factor on the bird size allometry, 1 when absent); h hover (birds: hummingbirds; insects then their Hz); t bat; f flutter (butterflies, moths); w whir (other insects, then their Hz); a trailing d: it stoops or plunge-dives. ground (birds): h hop, w walk, a waddle, r run, b head-bob. swim: an anguilliform, sc subcarangiform, ca carangiform, th thunniform, os fin-driven, lb labriform, ff flatfish, rj rajiform, mb mobuliform, ce cetacean, si sirenian; soft bodies: me medusoid (a jelly's bell pulse; then the bell's share of the height), oc octopod (the arms wave), sq teuthoid (fin ripple and mantle jet). legless: la lateral undulation, sw sidewinding, re rectilinear when slow, pe peristalsis, gl glide. Decoded by locomotion/styles.ts.",\n"species":{\n${sorted.map((slug) => `${JSON.stringify(slug)}:${JSON.stringify(compact[slug])}`).join(",\n")}\n}}\n`
 );
 fs.mkdirSync(path.join(root, "data/ark"), {recursive: true});
 fs.writeFileSync(path.join(root, "data/ark/locomotion-styles.json"), JSON.stringify({generated_from: "the behaviour lane's live export (taxonomy, field-guide text), the rig v2 detail (plans), the Ark models' talking plans", tally, species: Object.fromEntries(sorted.map((slug) => [slug, full[slug]]))}, null, 1) + "\n");

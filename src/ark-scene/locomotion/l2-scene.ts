@@ -17,7 +17,7 @@ import type {TalkingBehaviour} from "@/lib/talking-models/behaviour";
 import {clipBakeOf, flightGate, flightRigFrame, flightSpecOf, landingNow, newFlightMemory, type ClipBake, type FlightGateInput, type FlightMemory, type FlightRigFrame, type FlightRigInput, type FlightSpec} from "@/ark-scene/locomotion/flight";
 import {LEGLESS, leglessCycles, leglessMode, newLeglessMemory, sidewindYaw, type LeglessMemory} from "@/ark-scene/locomotion/legless";
 import {locoStyle, type LocoStyle} from "@/ark-scene/locomotion/styles";
-import {newSwimMemory, SWIM, swimCycles, type L2BodyUniforms, swimGain, swimSurfaceGuard, tailBeatHz, waveChannel, type SwimMemory} from "@/ark-scene/locomotion/swim";
+import {newSwimMemory, SOFT_BODY_FIN, SWIM, swimCycles, type L2BodyUniforms, swimGain, swimSurfaceGuard, tailBeatHz, waveChannel, type SwimMemory} from "@/ark-scene/locomotion/swim";
 import {chainDriver, flightDriver, OPEN_WING_RIGS} from "@/ark-scene/locomotion/l2-drivers";
 import {registerLocoDriver} from "@/ark-scene/locomotion/layer";
 import {galumphDriver, saltationDriver} from "@/ark-scene/locomotion/land-drivers";
@@ -50,8 +50,15 @@ export {L2_BODY_NONE} from "@/ark-scene/locomotion/swim";
 export function l2BodyUniforms(slug: string, behaviour: TalkingBehaviour | null | undefined): L2BodyUniforms | null {
     if (!l2On()) return null;
     const kind = behaviour?.motion?.kind;
-    if (kind !== "swim" && kind !== "flap") return null;
     const style = locoStyle(slug, behaviour?.plan ?? null);
+    // A soft body (a jelly's bell, an octopus's arms, a squid's fins and jet: `swim.ts` softBody) replaces the talking
+    // model's own pulse or sway, whatever kind that was.
+    const soft = style.swim ? SWIM[style.swim].body : undefined;
+    if (soft) {
+        const p = SWIM[style.swim!];
+        return {motionHead: style.swimShape ?? p.shape ?? 0.5, motionPower: 1, motionTip: p.tip, motionLift: 0, motionStretch: 0, motionFin: SOFT_BODY_FIN[soft], motionWavesL2: p.waves, motionAxisL2: 0};
+    }
+    if (kind !== "swim" && kind !== "flap") return null;
     const width = behaviour?.extent ? Math.abs(behaviour.extent.max[0] - behaviour.extent.min[0]) : 0.2;
     const straight = clamp((0.4 - width) / 0.2, 0.35, 1);
     if (style.swim) {
@@ -142,7 +149,8 @@ export function l2SwimRate(motion: L2Motion, speedBLs: number, clipSeconds: numb
 export function l2SurfaceGuard(motion: L2Motion, base: number, height: number, length: number, pitch: number, sea: number): number {
     if (!l2On()) return base;
     const style = motion.style.swim;
-    if (!style) return base;
+    // (A soft body has no fluke to lift and keeps the depth it had before its style.)
+    if (!style || SWIM[style].body) return base;
     return swimSurfaceGuard(base, height, length, style, pitch, sea);
 }
 
