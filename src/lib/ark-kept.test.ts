@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {existsSync, readFileSync} from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import {ARK_KEPT_OFF, ARK_LAYING_KINDS, ARK_NEUTER_SHARE, arkKeptLines, arkKeptUnit, decodeArkKeptFlags, isArkLeftKind} from "@/lib/ark-kept";
+import {ARK_KEPT_OFF, ARK_LAYING_KINDS, ARK_NEUTER_DEFAULT, ARK_NEUTER_SHARE, arkKeptLines, arkKeptUnit, arkNeutered, decodeArkKeptFlags, decodeArkNeuterDraw, isArkLeftKind} from "@/lib/ark-kept";
 import {arkKindSeries, arkSeriesStats, decodeArkHistory} from "@/lib/ark-population-history";
 import {ARK_LANGUAGES} from "@/lib/ark-languages";
 
@@ -36,6 +36,34 @@ test("kept lines: the draw is the engine's (kept.ts unitOf) and the tables match
     if (!existsSync(engine)) return;
     const text = readFileSync(engine, "utf8");
     for (const [kind, share] of Object.entries(ARK_NEUTER_SHARE)) assert.ok(new RegExp(`"${kind}": pet\\("[^"]+", ${share},`).test(text), kind);
+});
+
+test("neuter by region: the stored draw wins; none stored takes the default share; off keeps the flat share", () => {
+    const on = (neutered: boolean | null) => ({on: true, neutered});
+    assert.deepEqual(arkKeptLines(animal({}), ON, false, on(true)), ["neutered"]);
+    assert.deepEqual(arkKeptLines(animal({}), ON, false, on(false)), []);
+    assert.deepEqual(arkKeptLines(animal({}), ARK_KEPT_OFF, false, on(true)), [], "human use off: never");
+    assert.deepEqual(arkKeptLines(animal({area: "zoo"}), ON, false, on(true)), [], "never in the zoo");
+    for (let i = 0; i < 3000; i++) {
+        const id = `00000000-0000-4000-8000-${i.toString(16).padStart(12, "0")}`;
+        assert.equal(arkNeutered(CAT, id, on(null)), arkKeptUnit(`neuter|${id}`) < ARK_NEUTER_DEFAULT[CAT]);
+        assert.equal(arkNeutered(CAT, id), arkKeptUnit(`neuter|${id}`) < ARK_NEUTER_SHARE[CAT]);
+    }
+    // The engine's NEUTER_DEFAULT and the SQL check's known units (migration 20261229120000).
+    assert.equal(arkKeptUnit("neuter|00000000-0000-4000-8000-000000000000"), 0.8983671215828508);
+    assert.equal(arkKeptUnit("neuter|c54e5eca-48bc-4b31-bef6-7f69515e76f7"), 0.7678862630855292);
+    const engine = path.join(process.env.HOME ?? "", "AnimalDex-work/wt/kept-neuter-region/supabase/functions/_shared/ark-ecology/kept.ts");
+    if (existsSync(engine)) {
+        const text = readFileSync(engine, "utf8");
+        for (const [kind, share] of Object.entries(ARK_NEUTER_DEFAULT)) assert.ok(new RegExp(`"${kind}": ${share},`).test(text), kind);
+    }
+});
+
+test("neuter by region: the card's read is decoded to a boolean or nothing", () => {
+    assert.deepEqual(decodeArkNeuterDraw(null), {on: false, neutered: null});
+    assert.deepEqual(decodeArkNeuterDraw({on: false, neutered: true}), {on: false, neutered: null});
+    assert.deepEqual(decodeArkNeuterDraw({on: true, neutered: "yes"}), {on: true, neutered: null});
+    assert.deepEqual(decodeArkNeuterDraw({on: true, neutered: false, country: "GB"}), {on: true, neutered: false});
 });
 
 test("kept: the switches' read and the ways an animal leaves alive", () => {

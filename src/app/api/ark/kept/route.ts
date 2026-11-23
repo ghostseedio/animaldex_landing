@@ -10,7 +10,29 @@ export const dynamic = "force-dynamic";
  * migration 20261223120000). Public booleans, the same for everyone; `{kept: null}` until the function exists (the card then
  * says nothing that depends on them). Cached for minutes.
  */
-export async function GET() {
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * GET ?animal=<id>: that animal's stored neutering draw (`voyage_kept_neutered_v1`, KEPT-NEUTER-REGION, migration
+ * 20261229120000): `{neuter: {on, neutered}}`, a boolean only (the capture country is never read or sent). `{neuter: null}`
+ * until the function exists (the card then keeps the flat share).
+ */
+async function neuterDraw(animal: string) {
+    const supabase = createSupabasePublicClient();
+    if (!supabase || !UUID.test(animal)) return NextResponse.json({neuter: null}, {headers: {"Cache-Control": "no-store"}});
+    const {data, error} = await supabase.rpc("voyage_kept_neutered_v1", {p_animal: animal});
+    if (error) {
+        if (!isMissingArkFunction(error)) console.warn("[ark] voyage_kept_neutered_v1 failed", error.message.slice(0, 200));
+        return NextResponse.json({neuter: null}, {headers: {"Cache-Control": isMissingArkFunction(error) ? "public, s-maxage=300" : "no-store"}});
+    }
+    const row = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+    const neuter = row ? {on: row.on === true, neutered: typeof row.neutered === "boolean" ? row.neutered : null} : null;
+    return NextResponse.json({neuter}, {headers: {"Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"}});
+}
+
+export async function GET(request: Request) {
+    const animal = new URL(request.url).searchParams.get("animal");
+    if (animal !== null) return neuterDraw(animal);
     const supabase = createSupabasePublicClient();
     if (!supabase) return NextResponse.json({kept: null}, {headers: {"Cache-Control": "no-store"}});
     const {data, error} = await supabase.rpc("voyage_kept_populations_v1");

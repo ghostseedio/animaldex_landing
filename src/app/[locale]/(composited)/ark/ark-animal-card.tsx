@@ -1,7 +1,7 @@
 "use client";
 
 import {arkIsHuman} from "@/lib/ark-human";
-import {ARK_KEPT_OFF, arkKeptLines, isArkLeftKind, readArkKeptFlags, type ArkKeptFlags} from "@/lib/ark-kept";
+import {ARK_KEPT_OFF, ARK_NEUTER_DEFAULT, ARK_NEUTER_OFF, ARK_NEUTER_SHARE, arkKeptLines, isArkLeftKind, readArkKeptFlags, readArkNeuterDraw, type ArkKeptFlags, type ArkNeuterDraw} from "@/lib/ark-kept";
 import React, {Suspense, lazy, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
@@ -497,7 +497,19 @@ function ArkLifeStory({animal, life, state, facts, words, locale, rest = null}: 
             live = false;
         };
     }, [keptPlace]);
-    const kept = arkKeptLines(animal, keptFlags, facts.born);
+    // Neuter by region: a kept pet's stored draw, asked for only while human use is on (a boolean, never where it was caught).
+    const [neuterDraw, setNeuterDraw] = useState<ArkNeuterDraw>(ARK_NEUTER_OFF);
+    const petKind = animal.kind_species_profile_id || animal.species_profile_id;
+    const askDraw = keptPlace && animal.area !== "zoo" && keptFlags.humanUse && (petKind in ARK_NEUTER_SHARE || petKind in ARK_NEUTER_DEFAULT);
+    useEffect(() => {
+        if (!askDraw) return;
+        let live = true;
+        void readArkNeuterDraw(animal.id).then((draw) => live && setNeuterDraw(draw));
+        return () => {
+            live = false;
+        };
+    }, [askDraw, animal.id]);
+    const kept = arkKeptLines(animal, keptFlags, facts.born, askDraw ? neuterDraw : ARK_NEUTER_OFF);
     const rows: Array<[string, React.ReactNode]> = [];
     if (facts.generation !== null) rows.push([w.generation, facts.generation > 0 ? fillArkWords(w.generationBorn, {n: facts.generation}) : w.generationArrived]);
     // (An arrival's days aboard are not its age: the life block says that, from its lifespan.)
