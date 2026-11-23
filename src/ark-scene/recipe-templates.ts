@@ -32,7 +32,7 @@ import {SMALL_TEMPLATES} from "@/ark-scene/recipe-small";
  * - meet, meet_far, meet_side: a pair's meeting point (touching; a few body lengths apart; side by side);
  * - away: back off from the other in a pair.
  */
-export type Target = "anchor" | "here" | "water" | "over_water" | "shallows" | "edge" | "ground" | "air" | "up" | "prey" | "nest" | "material" | "beach" | "meet" | "meet_far" | "meet_side" | "away";
+export type Target = "anchor" | "here" | "water" | "over_water" | "shallows" | "edge" | "ground" | "air" | "up" | "prey" | "nest" | "material" | "beach" | "meet" | "meet_far" | "meet_side" | "away" | "sky";
 
 /** Ambient prey only (never a catalogue animal). */
 export type PreyKind = "fish" | "insect" | "worm" | "shellfish" | "nut" | "seed";
@@ -43,7 +43,7 @@ export type TemplateStep = {
     /** Seconds (a hold's length; a travel's bounds round its distance at its own pace). */
     s?: [number, number];
     to?: Target;
-    /** Metres up (over_water, up) or out (ground, air, shallows, material). */
+    /** Metres up (over_water, up; sky: over the crowns, rocks and ground along its way) or out (ground, air, shallows, material). */
     h?: number;
     r?: number;
     /** Targets near "here" rather than the anchor. */
@@ -1034,13 +1034,16 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             hours: "day",
             season: "mating",
             sex: "male",
+            // (SIG3: the climb and the glide are over the treetops, `sky`: from a perch in a wood no open air under the crowns
+            // was ever in reach, and the episode was a take-off and straight back. Its turns are a flight's, as a swoop's.)
+            airTurns: true,
             steps: [
                 {b: "perch", s: [4, 10]},
-                {b: "take_off", to: "up", h: 9},
-                {b: "fly", to: "air", r: 12},
+                {b: "take_off", to: "up", h: 0.5},
+                {b: "fly", to: "sky", near: "here", r: 2, h: 7},
+                {b: "fly", to: "sky", near: "here", r: 14, h: 3},
                 {b: "fly", to: "anchor"}
-            ],
-            loop: 0
+            ]
         }),
         // MARK: Nests and digging
         T({id: "incubate_sit", label: "sits on its eggs on the nest", kind: "stay", goal: "nest", replaces: [], doing: "rest", steps: [{b: "incubate", s: [60, 78]}]}),

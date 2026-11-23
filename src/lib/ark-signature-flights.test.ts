@@ -53,8 +53,12 @@ test("the templates: a male's, by day, made of blocks the scene has; a display o
     assert.equal(TEMPLATES.display_flight.season, "mating");
     assert.deepEqual(TEMPLATES.sally_chase.steps.map((s) => s.b), ["perch", "take_off", "fly", "fly", "fly"]);
     assert.equal(TEMPLATES.sally_chase.steps[1].h, 0.5);
-    assert.ok((TEMPLATES.display_flight.steps[1].h ?? 0) >= 8, "a steep climb");
-    assert.deepEqual(TEMPLATES.display_flight.steps.map((s) => s.b), ["perch", "take_off", "fly", "fly"]);
+    // (SIG3: the climb and the glide over the treetops, `sky`: from a perch in a wood, open air under the crowns was never in reach.)
+    assert.deepEqual(TEMPLATES.display_flight.steps.map((s) => s.b), ["perch", "take_off", "fly", "fly", "fly"]);
+    assert.deepEqual(TEMPLATES.display_flight.steps.map((s) => s.to), [undefined, "up", "sky", "sky", "anchor"]);
+    assert.ok((TEMPLATES.display_flight.steps[2].h ?? 0) >= 6, "a steep climb over the crowns");
+    assert.ok(TEMPLATES.display_flight.airTurns);
+    for (const slug of ["common-wood-pigeon", "eurasian-collared-dove", "spotted-dove"]) assert.ok(!isHeld(slug, "display_flight"), slug);
     assert.ok(BLOCKS.take_off.aloft && BLOCKS.take_off.curve === "rise");
 });
 

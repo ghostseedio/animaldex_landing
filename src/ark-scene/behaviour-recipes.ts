@@ -1272,6 +1272,19 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             }
             return null;
         }
+        case "sky": {
+            // (SIG3, a display flight: up over the treetops, the rocks and the ground under its whole way there, `h` clear of
+            // the highest of them: a wood pigeon's climb from its perch in a crown, then its glide in a wide arc.)
+            const floorAt = (x: number, z: number) => Math.max(ground(x, z), sampler.flightFloor?.(x, z) ?? -Infinity, sampler.canopyTop?.(x, z) ?? -Infinity);
+            const reach = Math.max(step.r ?? 6, 0.5);
+            const a = heading + (random() - 0.5) * Math.PI * 0.9;
+            const r = reach * (0.6 + 0.4 * random());
+            const x = origin.x + Math.sin(a) * r;
+            const z = origin.z + Math.cos(a) * r;
+            let top = -Infinity;
+            for (let j = 0; j <= 10; j++) top = Math.max(top, floorAt(pos.x + ((x - pos.x) * j) / 10, pos.z + ((z - pos.z) * j) / 10));
+            return {x, y: Math.max(top, pos.y) + (step.h ?? 3), z};
+        }
         case "nest": {
             const nest = nestOrigin(ctx);
             return nest ?? null;
