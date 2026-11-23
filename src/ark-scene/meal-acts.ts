@@ -39,6 +39,11 @@ export type MealCatch = {
     /** Its walking pace (m/s). */
     walk: number;
     /**
+     * Held on a web (ARK-WEBS, `hunt-acts.ts` runWeb): the spider feeds at its hub where the catch ended, the bundle of
+     * silk at its mouth (drawn by the webs: the prey itself stays hidden); no carry, no drink, its rest where it is.
+     */
+    web?: {surface: {nx: number; ny: number; nz: number; tx: number; ty: number; tz: number}; /** false: eaten unwrapped (a funnel weaver's), seen at its mouth. */ wrapped?: boolean} | null;
+    /**
      * Where its mouth is on its drawn model (m from its origin: ahead, to its right, up), when the scene knows (the
      * model's foremost point: a coiled python's head is not half its length ahead). Absent: half its length ahead.
      */
@@ -127,7 +132,7 @@ export function mealScript(plan: MealPlan, c: MealCatch): MealScript {
     const walk = Math.max(c.walk, 0.2);
     // A drink, when water is near (it walks there).
     let drink: MealScript["drink"] = null;
-    if (plan.drinkSeconds > 0 && c.water && !c.predatorSwims && Math.hypot(c.water.x - feed.x, c.water.z - feed.z) <= DRINK_REACH) {
+    if (plan.drinkSeconds > 0 && c.water && !c.predatorSwims && !c.web && Math.hypot(c.water.x - feed.x, c.water.z - feed.z) <= DRINK_REACH) {
         const d = Math.hypot(c.water.x - feed.x, c.water.z - feed.z);
         const walkFor = Math.min(Math.max(d / walk, 1.5), 30);
         drink = {at: {x: c.water.x, z: c.water.z, yaw: d > 0.1 ? heading(c.water.x - feed.x, c.water.z - feed.z) : feed.yaw}, walkFrom: t, from: t + walkFor, to: t + walkFor + plan.drinkSeconds};
@@ -136,7 +141,7 @@ export function mealScript(plan: MealPlan, c: MealCatch): MealScript {
     // The rest: a few body lengths off to one side (back from the water when it drank), lying up.
     const from = drink ? drink.at : feed;
     const bearing = drink ? drink.at.yaw + Math.PI + side * 0.6 : feed.yaw + side * (1.7 + 0.6 * random());
-    const at = plan.restSeconds > 0 && !c.predatorSwims ? clearSpot(from, bearing, Math.max(p.length * 2.5, 1.5), c.clear) : {x: from.x, z: from.z};
+    const at = plan.restSeconds > 0 && !c.predatorSwims && !c.web ? clearSpot(from, bearing, Math.max(p.length * 2.5, 1.5), c.clear) : {x: from.x, z: from.z};
     const restWalk = Math.hypot(at.x - from.x, at.z - from.z) / walk;
     const restYaw = restWalk > 0.05 ? heading(at.x - from.x, at.z - from.z) + side * 0.8 : from.yaw;
     const rest = {at: {x: at.x, z: at.z, yaw: restYaw}, walkFrom: t, from: t + Math.min(restWalk, 20), to: t + Math.min(restWalk, 20) + plan.restSeconds};
@@ -154,8 +159,8 @@ export type MealPose = ActPose & {doing: MealDoing};
 export function predatorAt(s: MealScript, u: number): MealPose {
     const c = s.c;
     const p = c.predator;
-    const base = (x: number, z: number) => (c.predatorSwims ? p.base : c.ground(x, z));
-    const pose = (x: number, z: number, yaw: number, state: string, pitch: number, speed: number, doing: MealDoing, y?: number): MealPose => ({x, z, base: y ?? base(x, z), yaw, pitch, roll: 0, scale: 1, dim: 0, hidden: false, state, speed, doing});
+    const base = (x: number, z: number) => (c.predatorSwims || c.web ? p.base : c.ground(x, z));
+    const pose = (x: number, z: number, yaw: number, state: string, pitch: number, speed: number, doing: MealDoing, y?: number): MealPose => ({x, z, base: y ?? base(x, z), yaw, pitch: c.web ? 0 : pitch, roll: 0, scale: 1, dim: 0, hidden: false, state, speed, doing, ...(c.web ? {surface: c.web.surface} : {})});
     if (u < s.carry) {
         // Up with it (or down from its strike) and onto dry ground.
         const k = smooth(u / s.carry);
@@ -166,7 +171,7 @@ export function predatorAt(s: MealScript, u: number): MealPose {
     }
     if (u < s.feedTo) {
         const v = u - s.feedFrom;
-        if (s.plan.style === "swallow") return {...swallowPose(s, v), doing: "eating"};
+        if (s.plan.style === "swallow" && !c.web) return {...swallowPose(s, v), doing: "eating"};
         const beat = feedBeatAt(s.bouts, v);
         // A big cat lies prone over it, the prey between its forepaws (its rig's lying pose), looking up now and then.
         if (s.plan.posture.feed === "prone") return pose(s.feed.x, s.feed.z, s.feed.yaw + beat.look * 0.6, "rest", 0, 0, "eating");
@@ -229,6 +234,8 @@ function swallowPose(s: MealScript, v: number): ActPose {
  */
 export function preyAt(s: MealScript, u: number, atCatch: ActPose, carcassEnd: number): ActPose {
     const q = s.c.prey;
+    // (On a web: wrapped in silk, the bundle the webs draw; the prey itself is not seen again.)
+    if (s.c.web) return {...atCatch, hidden: s.c.web.wrapped !== false || u >= s.ends - 2, dim: 0, scale: 1, state: "lie", speed: 0};
     const lying = (k: number): ActPose => ({x: s.carcass.x, z: s.carcass.z, base: s.carcass.base, yaw: s.carcass.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: "lie", speed: 0, lying: s.side * k});
     if (u < s.carry && s.c.kind !== "swoop") return {...lying(Math.min(u / 0.4, 1)), x: s.c.prey.x, z: s.c.prey.z, lying: s.side * 0.9 * Math.min(u / 0.4, 1)};
     if (u < s.carry) {

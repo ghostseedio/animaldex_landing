@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{aPredator} s'ha menjat {animal}",
             "caught": "{aPredator} ha atrapat {aPrey}",
+            "webCaught": "{aPredator} ha atrapat {aPrey} a la seva teranyina",
             "dormant": "{animals}: ha començat el son d'hivern",
             "woke": "{animals}: s'ha acabat el son d'hivern",
             "escaped": "{aPrey} s'ha escapat de {aPredator}",

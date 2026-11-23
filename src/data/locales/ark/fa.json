@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} را {aPredator} خورد",
             "caught": "{aPredator} {aPrey} را شکار کرد",
+            "webCaught": "{aPredator} {aPrey} را در تارش گرفتار کرد",
             "dormant": "{animals} به خواب زمستانی رفتند",
             "woke": "{animals} دوباره بیدار شدند",
             "escaped": "{aPrey} از دست {aPredator} فرار کرد",

@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}被{aPredator}吃掉了",
             "caught": "{aPredator}抓住了{aPrey}",
+            "webCaught": "{aPredator}用網抓住了{aPrey}",
             "dormant": "{animals}開始冬眠了",
             "woke": "{animals}又醒來了",
             "escaped": "{aPrey}從{aPredator}身邊逃走了",

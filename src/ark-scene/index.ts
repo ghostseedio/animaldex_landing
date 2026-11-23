@@ -188,6 +188,7 @@ import {
 import {arkThriveOf} from "@/ark-scene/thrive";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {huntChoice} from "@/ark-scene/hunt-acts";
+import {catchAt} from "@/ark-scene/web-catch";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, bodyLengthsPerSecond, runFactor, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {attachedOn, tripPhase} from "@/ark-scene/collide/attach";
@@ -1152,7 +1153,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let spiderWebsLoading = false;
     const webNoted = new Map<string, boolean>();
     const webPoseOf = (entry: Entry): SurfacePoint | null => {
-        if (!/spider|weaver|widow/.test(entry.animal.model_slug) || entry.visitor) return null;
+        // (The slugs of the web spinners aboard: ARK-WEBS 2026-11-23 added the Silver Argiope's and the Triangulate
+        // Combfoot's, 16 live animals that had no web; their webs are their stored names' own, `spider-webs.ts`.)
+        if (!/spider|weaver|widow|argiope|combfoot/.test(entry.animal.model_slug) || entry.visitor) return null;
         if (!spiderWebs) {
             if (!spiderWebsLoading) {
                 spiderWebsLoading = true;
@@ -5305,6 +5308,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const act = entry.act;
             // (Lying on its side after a catch, `meal-acts.ts`: rolled over, lowered onto the ground where it is drawn.)
             const lying = act.lying ? Math.sign(act.lying) * LYING_ROLL * Math.min(Math.abs(act.lying), 1) : 0;
+            // ARK-WEBS: a catch on its web (the web's shake, the silk bundle), and the spider drawn along the silk.
+            if (act.webCatch && spiderWebs) spiderWebs.act(entry.animal.id, catchAt(act.webCatch.run.g, act.webCatch.run.times, act.webCatch.run.seed, act.webCatch.t, act.webCatch.run.miss), worldMs() / 1000, Math.max(act.webCatch.run.g.preyLength ?? 0.012, 0.004));
+            else if (act.surface && spiderWebs) spiderWebs.feeding(entry.animal.id, worldMs() / 1000);
+            if (act.surface) return {x: act.x, z: act.z, base: act.base, yaw: act.yaw, pitch: 0, roll: 0, afloat: true, surface: {x: act.x, y: act.base, z: act.z, ...act.surface}};
             return {x: act.x, z: act.z, base: act.base, yaw: act.yaw, pitch: act.pitch, roll: act.roll + lying, afloat: act.base < -0.02 || act.base > Math.max(heightAt(act.x, act.z), 0) + 0.3};
         }
         // ARK-JUNGLE: a carried young rides its mother as she is drawn this frame (up a trunk, swinging, in flight).
@@ -9547,7 +9554,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const aerial = (e: Entry) => ((e.sched?.profile ?? behaviourProfile(e.animal.model_slug, library.get(e.animal.model_slug)?.behaviour?.plan ?? null)).move === "fly" || FLYERS.has(e.animal.model_slug)) && ZONE_SITES[e.animal.zone]?.kind !== "sea";
         const placed = mealEncounter(act);
         const wetAt = (at: {x: number; z: number} | undefined, own: boolean) => (at ? heightAt(at.x, at.z) < -0.05 : own);
-        const hunt = huntChoice({slug: predator.animal.model_slug, plan: model?.behaviour?.plan ?? null, predatorLength: predator.length, preyLength: prey.length, predatorWater: wetAt(placed?.predator, Boolean(predatorWater)), preyWater: wetAt(placed?.prey, Boolean(preyWater)), predatorAerial: aerial(predator), preyAerial: aerial(prey), flee: fleeGeneric});
+        const chosen = huntChoice({slug: predator.animal.model_slug, plan: model?.behaviour?.plan ?? null, predatorLength: predator.length, preyLength: prey.length, predatorWater: wetAt(placed?.predator, Boolean(predatorWater)), preyWater: wetAt(placed?.prey, Boolean(preyWater)), predatorAerial: aerial(predator), preyAerial: aerial(prey), flee: fleeGeneric});
+        // ARK-WEBS: a catch the engine says was in the spider's web (`encounter.web`, behind web_traps) is played on its web
+        // as drawn; any other meal of a web spider, or with its web not hung here, is the generic chase.
+        // (Any web spider's, with its web hung: an orb's, a tangle's, a funnel weaver's sheet: its own act is replaced.)
+        const webFit = act.web || act.encounter?.web ? spiderWebs?.catchGeometry(predator.animal.id, `${act.prey.id}#${act.at}`) ?? null : null;
+        const webAt = webFit ? {...webFit, preyLength: prey.length} : null;
+        const hunt: typeof chosen = webAt ? {act: "web", kind: "glide"} : chosen?.act === "web" ? null : chosen;
         const kind = hunt?.kind ?? generic;
         // The chase (L7, `acts.ts`): with both sides' speeds, the prey's way of fleeing, the ground or water each may cross.
         const chaser = (entry: Entry): ActBody => ({...bodyOf(entry), speedStat: entry.stats.speed, gait: entry.sched?.profile.gait ?? null, slug: entry.animal.model_slug});
@@ -9565,7 +9578,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const chaseGround = (x: number, z: number) => !world || (world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.3) && !collideBlocked(x, z, 0.3));
         const seed = `${act.prey.id}#${act.at}`;
         const withMeal = kind !== "cutaway";
-        const stage = mealStage(kind, bodies.predator, bodies.prey, {seed, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter), meal: withMeal, hunt: hunt?.act ?? null});
+        const stage = mealStage(kind, bodies.predator, bodies.prey, {seed, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter), meal: withMeal, hunt: hunt?.act ?? null, web: webAt});
         if (!withMeal) return {kind, stage, bodies, script: null, plan: null, catchInfo: null};
         const plan = mealPlan(mealSideOf(predator, predatorWater), mealSideOf(prey, preyWater), seed);
         const at = stage.catchAt ?? stage.seconds;
@@ -9578,8 +9591,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             predatorSwims,
             ground: (x, z) => Math.max(heightAt(x, z), -0.3),
             clear: (x, z) => heightAt(x, z) >= 0.02 && chaseGround(x, z),
-            water: plan.drinkSeconds > 0 ? waterEdgeNear(q.x, q.z) : null,
-            walk: Math.max(moveSpeed(predator.animal, predator.length) * 0.5, 0.3)
+            water: plan.drinkSeconds > 0 && !webAt ? waterEdgeNear(q.x, q.z) : null,
+            walk: Math.max(moveSpeed(predator.animal, predator.length) * 0.5, 0.3),
+            ...(webAt && p.surface ? {web: {surface: p.surface, wrapped: webAt.wrap !== false}} : {})
         };
         const script = mealScript(plan, {...catchInfo, kind, predator: {x: p.x, z: p.z, base: p.base, yaw: p.yaw, length: bodies.predator.length, height: bodies.predator.height}, prey: {x: q.x, z: q.z, base: q.base, yaw: q.yaw, length: bodies.prey.length, height: bodies.prey.height}});
         return {kind, stage, bodies, script, plan, catchInfo};
@@ -10071,7 +10085,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const fleeGeneric = preyFleeStyle({preySlug: prey.animal.model_slug, preyPlan: planOf(prey), preyWater, preyFlies: escapeFlies(prey), speedStat: prey.stats.speed});
             const aerialOf = (e: Entry) => ((e.sched?.profile ?? behaviourProfile(e.animal.model_slug, planOf(e))).move === "fly" || FLYERS.has(e.animal.model_slug)) && ZONE_SITES[e.animal.zone]?.kind !== "sea";
             const wetAt = (at: {x: number; z: number} | undefined, own: boolean) => (at ? heightAt(at.x, at.z) < -0.05 : own);
-            const hunt = huntChoice({slug: predator.animal.model_slug, plan: planOf(predator), predatorLength: predator.length, preyLength: prey.length, predatorWater: wetAt(act.encounter?.predator, predatorWater), preyWater: wetAt(act.encounter?.prey, preyWater), predatorAerial: aerialOf(predator), preyAerial: aerialOf(prey), flee: fleeGeneric});
+            const chosen = huntChoice({slug: predator.animal.model_slug, plan: planOf(predator), predatorLength: predator.length, preyLength: prey.length, predatorWater: wetAt(act.encounter?.predator, predatorWater), preyWater: wetAt(act.encounter?.prey, preyWater), predatorAerial: aerialOf(predator), preyAerial: aerialOf(prey), flee: fleeGeneric});
+            // ARK-WEBS: a web spider's miss on its web as drawn is not acted here (no ground chase for a spider that sits in
+            // its web); with no web hung, the generic chase as before.
+            if (chosen?.act === "web" && spiderWebs?.web(predator.animal.id)) return null;
+            const hunt = chosen?.act === "web" ? null : chosen;
             const kind = hunt?.kind ?? generic;
             if (kind === "cutaway") return null;
             const ground = (x: number, z: number) => Math.max(heightAt(x, z), -0.3);

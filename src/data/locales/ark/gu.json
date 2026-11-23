@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} ને {aPredator} ખાઈ ગયું",
             "caught": "{aPredator} એ {aPrey} ને પકડ્યું",
+            "webCaught": "{aPredator} એ પોતાના જાળામાં {aPrey} ને પકડ્યું",
             "dormant": "{animals} ની શિયાળાની ઊંઘ શરૂ થઈ",
             "woke": "{animals} ની શિયાળાની ઊંઘ પૂરી થઈ",
             "escaped": "{aPrey} {aPredator} થી બચી ગયું",

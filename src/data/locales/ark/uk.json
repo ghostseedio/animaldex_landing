@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}: з'їдено, мисливець — {aPredator}",
             "caught": "{aPredator} ловить здобич: {aPrey}",
+            "webCaught": "{aPredator} ловить у павутину здобич: {aPrey}",
             "dormant": "{animals}: почалася зимова сплячка",
             "woke": "{animals}: зимова сплячка закінчилася",
             "escaped": "{aPrey}: вдалося втекти, мисливець — {aPredator}",

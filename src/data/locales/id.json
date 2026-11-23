@@ -4664,6 +4664,7 @@
       "withHearts": "{line} · {hearts}",
       "eatenBy": "{animal} dimakan oleh {aPredator}",
       "caught": "{aPredator} menangkap {aPrey}",
+      "webCaught": "{aPredator} menangkap {aPrey} di jaringnya",
       "dormant": "{animals} mulai tidur musim dingin",
       "woke": "{animals} sudah bangun lagi",
       "escaped": "{aPrey} lolos dari {aPredator}",

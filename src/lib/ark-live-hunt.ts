@@ -42,7 +42,7 @@ export function arkLiveMealsFrom(meals: readonly ArkHuntingMeal[], events: reado
     for (const meal of meals) {
         const row = events.find((e) => e.kind === "meal" && e.animal?.id === meal.predator && e.other?.id === meal.prey);
         if (!row?.animal || !row.other) continue;
-        out.push({kind: "meal", at: row.at, predator: row.animal, prey: row.other, phrase: row.phrase, extinct: false, encounter: meal.encounter});
+        out.push({kind: "meal", at: row.at, predator: row.animal, prey: row.other, phrase: row.phrase, extinct: false, encounter: meal.encounter, ...(row.web || meal.encounter?.web ? {web: true as const} : {})});
     }
     return out;
 }

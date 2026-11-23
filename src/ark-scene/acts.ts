@@ -75,6 +75,10 @@ export type ActPose = {
     lying?: number;
     /** What the card says it is doing while drawn so (`ark.activity.*`): a meal's eating, on its way to water, drinking, resting, a scavenger. */
     meal?: "hunting" | "eating" | "toWater" | "drinking" | "resting" | "scavenging" | "birthing" | "sleeping";
+    /** On a spider's web (`hunt-acts.ts` runWeb): its back's and head's ways, so it is drawn along the silk. */
+    surface?: {nx: number; ny: number; nz: number; tx: number; ty: number; tz: number};
+    /** A web's catch (the hunter's pose only): the run and the seconds into it, for the web's shake and the silk bundle. */
+    webCatch?: {run: import("@/ark-scene/hunt-acts").WebRun; t: number};
 };
 
 export type ActBody = {
@@ -265,6 +269,8 @@ export type ChaseOptions = {
     meal?: boolean;
     /** The hunter's own way of hunting (`hunt-acts.ts`), where its species has one that fits this pair; absent: the generic chase. */
     hunt?: HuntAct | null;
+    /** The spider's web as drawn, for a `web` act (`spider-webs-draw.ts` catchGeometry). */
+    web?: import("@/ark-scene/web-catch").CatchGeometry | null;
 };
 
 function rng(seed: string): () => number {
@@ -737,7 +743,7 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody, opt
         };
     }
     // The hunter's own way (`hunt-acts.ts`) where its species has one that fits; else the generic chase below.
-    const own = options.hunt ? huntRun({act: options.hunt, predator, prey, seed: options.seed ?? `${predator.x.toFixed(2)},${prey.x.toFixed(2)}`, flee: options.flee ?? "run", miss: false, gap: 0, exact: Boolean(options.exact), meal: Boolean(options.meal), clear: options.clear, water: options.water, ground: groundAt, paces: {sprint: chasePace(predator, "sprint"), flee: chasePace(prey, "flee"), stalk: chasePace(predator, "stalk"), dive: chasePace(predator, "dive")}}) : null;
+    const own = options.hunt ? huntRun({act: options.hunt, predator, prey, seed: options.seed ?? `${predator.x.toFixed(2)},${prey.x.toFixed(2)}`, flee: options.flee ?? "run", miss: false, gap: 0, exact: Boolean(options.exact), meal: Boolean(options.meal), clear: options.clear, water: options.water, ground: groundAt, paces: {sprint: chasePace(predator, "sprint"), flee: chasePace(prey, "flee"), stalk: chasePace(predator, "stalk"), dive: chasePace(predator, "dive")}, web: options.web ?? null}) : null;
     const run = own ?? (kind === "swoop" ? swoopChase(predator, prey, options) : landOrWaterChase(kind, predator, prey, options));
     // The frame: everything both of them cover, side on (the scene's camera takes the bearing).
     let minX = Infinity;
@@ -760,7 +766,8 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody, opt
     const extent = Math.max(maxX - minX, maxZ - minZ, (maxY - minY) * 1.4);
     const pose = (body: ActBody, list: Sample[]) => (t: number): ActPose => {
         const s = sampleAt(list, t);
-        return {x: s.x, z: s.z, base: s.y, yaw: s.yaw, pitch: s.pitch, roll: s.roll ?? 0, scale: s.scale ?? 1, dim: s.dim ?? 0, hidden: Boolean(s.hidden), state: s.state, speed: s.v};
+        const surface = (s as {surface?: ActPose["surface"]}).surface;
+        return {x: s.x, z: s.z, base: s.y, yaw: s.yaw, pitch: s.pitch, roll: s.roll ?? 0, scale: s.scale ?? 1, dim: s.dim ?? 0, hidden: Boolean(s.hidden), state: s.state, speed: s.v, ...(surface ? {surface} : {}), ...(own?.web && list === run.pred ? {webCatch: {run: own.web, t}} : {})};
     };
     return {
         kind,

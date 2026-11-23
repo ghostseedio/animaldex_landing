@@ -12,6 +12,7 @@ import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import type {ArkAct, ArkEventAnimal} from "@/lib/ark-life";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {setAllHuntActs} from "@/ark-scene/hunt-acts";
+import {Raycaster, Vector3, type Object3D} from "three";
 
 // (The harness films every act, the ones not live yet too: decision 456.)
 setAllHuntActs(true);
@@ -20,7 +21,7 @@ const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/publi
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
 
 type Raw = (typeof fixture)["animals"][number];
-type Cast = {slug: string; name: string};
+type Cast = {slug: string; name: string; /** Its stored scientific name, where the scene reads it (a spider's web). */ sci?: string};
 type Scene = {zone: string; hours: number; predator: Cast; prey: Cast; /** How far off the camera stands (m): a few of the hunter's lengths. */ distance: number; /** The prey stands this far from the hunter (m) at the encounter, when set. */ gap?: number; /** The hunter starts in the water, at its edge nearest the prey (a crocodilian). */ water?: boolean; /** The camera's angles (radians), where the default view is blocked by the scene. */ azimuth?: number; polar?: number};
 
 const SCENES: Record<string, Scene> = {
@@ -35,6 +36,11 @@ const SCENES: Record<string, Scene> = {
     mantis: {zone: "grassland", hours: 10, predator: {slug: "chinese-mantis", name: "Chinese Mantis"}, prey: {slug: "house-cricket", name: "House Cricket"}, distance: 0.8, gap: 1.2},
     toad: {zone: "grassland", hours: 10, predator: {slug: "american-toad", name: "American Toad"}, prey: {slug: "two-spotted-cricket", name: "Two-spotted Cricket"}, distance: 0.7, gap: 1.2},
     web: {zone: "grassland", hours: 10, predator: {slug: "orb-weaver-spider", name: "Orb-weaver Spider"}, prey: {slug: "house-fly", name: "House Fly"}, distance: 0.4, gap: 0.5},
+    // ARK-WEBS: on the web as drawn (an orb among the woodland's plants; a comb-footed spider's tangle (Parasteatoda, aboard in the town's gardens)): a honey bee,
+    // a fly.
+    orb: {zone: "woodland", hours: 10, predator: {slug: "orb-weaver-spider", name: "Orb-weaver Spider", sci: "Araneidae"}, prey: {slug: "western-honey-bee", name: "Western Honey Bee"}, distance: 0.5, gap: 0.5},
+    sheet: {zone: "farm_garden", hours: 10, predator: {slug: "barn-funnel-weaver", name: "Barn Funnel Weaver", sci: "Tegenaria domestica"}, prey: {slug: "house-fly", name: "House Fly"}, distance: 0.4, gap: 0.5},
+    cobweb: {zone: "farm_garden", hours: 10, predator: {slug: "common-house-spider", name: "Common House Spider", sci: "Parasteatoda tepidariorum"}, prey: {slug: "house-fly", name: "House Fly"}, distance: 0.4, gap: 0.5},
     // wade, peck, lurk
     heron: {zone: "river_lake", hours: 9, predator: {slug: "grey-heron", name: "Grey Heron"}, prey: {slug: "rainbow-trout", name: "Rainbow Trout"}, distance: 4, gap: 7},
     blackbird: {zone: "grassland", hours: 9, predator: {slug: "common-blackbird", name: "Common Blackbird"}, prey: {slug: "common-earthworm", name: "Common Earthworm"}, distance: 1.1, gap: 3},
@@ -76,7 +82,7 @@ async function main() {
     const template = fixture.animals[0];
     const casts = [scene.predator, scene.prey];
     const animals: Raw[] = [];
-    casts.forEach((c, k) => animals.push({...template, id: castId(k, 0), species_profile_id: speciesId(k), name: c.name, scientific_name: c.name, model_slug: c.slug, zone: scene.zone, activity: "diurnal", sociality: null, slot: 90 + k, slot_rank: 0} as Raw));
+    casts.forEach((c, k) => animals.push({...template, id: castId(k, 0), species_profile_id: speciesId(k), name: c.name, scientific_name: c.sci ?? c.name, model_slug: c.slug, zone: scene.zone, activity: "diurnal", sociality: null, slot: 90 + k, slot_rank: 0} as Raw));
     const snapshot = decodeArkSnapshot({...fixture, animals});
     if (!snapshot) throw new Error("fixture did not decode");
     let ready = false;
@@ -102,6 +108,72 @@ async function main() {
     await wait(800);
     const predatorId = castId(0, 0);
     const preyId = castId(1, 0);
+    // ARK-WEBS: a web scene waits for the spider's web to be hung (fitted near the camera), so its catch plays on it.
+    type Webs = {web: (id: string) => {hub: {x: number; y: number; z: number}; normal: {x: number; y: number; z: number}; radius: number} | null};
+    const webs = () => (window as unknown as {__arkWebs?: Webs}).__arkWebs ?? null;
+    const webScene = name === "orb" || name === "cobweb" || name === "sheet";
+    if (webScene) {
+        const spot = handle.locate(predatorId);
+        if (spot) handle.setView({target: {x: spot.x, y: spot.y, z: spot.z}, distance: 2, polar: 0.8, azimuth: 0.7});
+        // A tangle or a sheet needs a corner, an eave or a wall's foot (spider-webs.ts): where the fixture's slot has none,
+        // the harness looks for the nearest spot that has one (its kind's own site rule, `explain().fits`) and hangs it there.
+        // Its web needs its kind's site (an orb between shrubs, a tangle in a corner or under an eave, a sheet at a wall's
+        // foot: spider-webs.ts); the fixture's slot may have none, or only high in a tree's crown where leaves hide it. The
+        // harness looks outward from the slot for the nearest spot where its kind's own rule hangs a web low enough to see
+        // (hub under 1.6 m above the ground), and hangs it there.
+        if (spot) {
+            type Dev = {explain: (id: string) => {fits: boolean} | null; rehome: (id: string, home: {x: number; y: number; z: number}) => void; web: (id: string) => {hub: {x: number; y: number; z: number}} | null};
+            const dev = () => webs() as unknown as Dev | null;
+            const until = realPerfNow() + 60_000;
+            // (Frames only, the clock held: the shots are timed from t0.)
+            while (realPerfNow() < until && !dev()) await frames(2);
+            if (!dev()) throw new Error("the webs never loaded (no spider drawn near the camera)");
+            // (The webs layer drops out while no spider is drawn near the camera: wait for it back.)
+            const live = async () => {
+                const by3 = realPerfNow() + 15_000;
+                while (realPerfNow() < by3 && !dev()) await frames(2);
+                const d = dev();
+                if (!d) throw new Error("the webs layer went away and never came back");
+                return d;
+            };
+            let found: {x: number; y: number; z: number} | null = null;
+            let tried = 0;
+            search: for (let r = 0; r <= 45 && tried < 40; r += 1.5) {
+                const n = Math.max(1, Math.round((2 * Math.PI * r) / 1.5));
+                for (let i = 0; i < n && tried < 40; i++) {
+                    const x = spot.x + Math.sin((i / n) * Math.PI * 2) * r;
+                    const z = spot.z + Math.cos((i / n) * Math.PI * 2) * r;
+                    const ground = Math.max(handle.heightAt(x, z), 0);
+                    const home = {x, y: ground, z};
+                    (await live()).rehome(predatorId, home);
+                    if (!(await live()).explain(predatorId)?.fits) continue;
+                    tried++;
+                    handle.setView({target: home, distance: 2, polar: 0.8, azimuth: 0.7});
+                    const by2 = realPerfNow() + 4000;
+                    while (realPerfNow() < by2 && !dev()?.web(predatorId)) await frames(2);
+                    const hung = dev()?.web(predatorId) ?? null;
+                    if (hung && hung.hub.y - ground < 1.6) {
+                        found = home;
+                        break search;
+                    }
+                }
+            }
+            console.log("[hunt] site", JSON.stringify(found), "tried", tried);
+            if (found) {
+                (await live()).rehome(predatorId, found);
+                handle.setView({target: found, distance: 2, polar: 0.8, azimuth: 0.7});
+            }
+        }
+        const by = realPerfNow() + 60_000;
+        let t = t0 - 2;
+        while (realPerfNow() < by && !webs()?.web(predatorId)) {
+            t += 0.5;
+            await setAt(t);
+            await wait(30);
+        }
+        console.log("[hunt] web", JSON.stringify(webs()?.web(predatorId) ? {hub: webs()!.web(predatorId)!.hub, radius: webs()!.web(predatorId)!.radius} : null));
+        if (!webs()?.web(predatorId)) throw new Error("no web hung for the spider");
+    }
     const hunter = handle.locate(predatorId);
     const quarry = handle.locate(preyId);
     if (!hunter || !quarry) throw new Error("cast not placed");
@@ -126,10 +198,11 @@ async function main() {
             }
         }
     }
-    const encounter = {t: t0, predator: from, prey: {x: quarry.x, z: quarry.z, r: 0.5}};
+    // (ARK-WEBS: the web scenes' records are the engine's web catches, `encounter.web`.)
+    const encounter = {t: t0, predator: from, prey: {x: quarry.x, z: quarry.z, r: 0.5}, ...(name === "orb" || name === "cobweb" ? {web: true} : {})};
     if (mode === "catch") {
         // (A record's act begins 75 s after its row (`ark-act-hold.ts`): the row is dated so that it begins at the step.)
-        const act: Extract<ArkAct, {kind: "meal"}> = {kind: "meal", at: new Date((t0 - 75) * 1000).toISOString(), predator: record(scene.predator, predatorId, 0), prey: record(scene.prey, preyId, 1), phrase: null, extinct: false, encounter};
+        const act: Extract<ArkAct, {kind: "meal"}> = {kind: "meal", at: new Date((t0 - 75) * 1000).toISOString(), predator: record(scene.predator, predatorId, 0), prey: record(scene.prey, preyId, 1), phrase: null, extinct: false, encounter, ...(webScene ? {web: true as const} : {})};
         handle.setMeals?.([act]);
     } else {
         handle.addEscapes?.([{key: `escape:${name}`, prey: preyId, predator: predatorId, t0, encounter}]);
@@ -149,6 +222,7 @@ async function main() {
         const e = debug.entries().find((x) => x.animal.id === id);
         return e?.act ? `${String(e.act.state ?? "-")}${e.act.hidden ? " hidden" : ""}` : "-";
     };
+    const webViews = new Map<string, {polar: number; azimuth: number}>();
     const strikeAt: number | null = (mode === "catch" ? debug.meals()[0]?.catchAt : debug.escapes()[0]?.missAt) ?? null;
     const api = {
         info: () => {
@@ -166,7 +240,22 @@ async function main() {
             }
             const a = handle.locate(predatorId);
             const b = handle.locate(preyId);
-            if (a && b) {
+            // ARK-WEBS: a web's catch is framed on the web itself, square to its face, at the scene's distance.
+            const hung = webScene ? webs()?.web(predatorId) ?? null : null;
+            if (hung) {
+                const d0 = distance ?? scene.distance;
+                const rig = debug as unknown as {controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}};
+                rig.controls.minDistance = Math.min(rig.controls.minDistance, d0);
+                rig.camera.near = Math.min(0.01, d0 / 30);
+                rig.camera.updateProjectionMatrix();
+                // (Between the hub and where the spider is now: the catch point is in the frame when it runs out to it.)
+                const target = a ? {x: (hung.hub.x + a.x) / 2, y: (hung.hub.y + a.y) / 2, z: (hung.hub.z + a.z) / 2} : {x: hung.hub.x, y: hung.hub.y - hung.radius * 0.2, z: hung.hub.z};
+                // (Once per scene and distance: the clearest side, by rays from each candidate camera to the web; leaves and
+                // stems between the camera and the web ruled it out.)
+                const key = d0.toFixed(3);
+                if (!webViews.has(key)) webViews.set(key, clearestWebView(hung.normal, target, d0, (debug as unknown as {scene: Object3D}).scene, azimuth));
+                handle.setView({target, distance: d0, ...webViews.get(key)!});
+            } else if (a && b) {
                 // Readable catch frames: around the strike (1.5 s either side) the camera holds on the hunter at the scene's
                 // own distance (a few of its lengths), whatever the gap, so the catch fills the frame; before it, both are
                 // framed with a margin in the scene's own scale (it was a flat +1 m and +0.2 m: a spider's catch was a dot).
@@ -192,11 +281,42 @@ async function main() {
                 handle.setView(view);
             }
             await frames(3);
-            return `+${s.toFixed(1)} s   hunter: ${stateOf(predatorId)}   prey: ${stateOf(preyId)}`;
+            const at = (v: {x: number; y: number; z: number} | null) => (v ? `(${v.x.toFixed(2)},${v.y.toFixed(2)},${v.z.toFixed(2)})` : "-");
+            return `+${s.toFixed(1)} s   hunter: ${stateOf(predatorId)} ${webScene ? at(handle.locate(predatorId)) : ""}  prey: ${stateOf(preyId)} ${webScene ? at(handle.locate(preyId)) : ""}`;
         },
         handle
     };
     (window as unknown as {__hunt: typeof api}).__hunt = api;
+}
+
+/**
+ * ARK-WEBS harness: the camera angle that sees the web's hub with nothing in the way: square to an upright web's face
+ * (either side), or a tangle or sheet from a little above the side, then turned a little at a time; each candidate is tested with a ray from the
+ * camera to the hub against what the scene draws (the webs and anything within 6 cm of the hub excepted).
+ */
+function clearestWebView(n: {x: number; y: number; z: number}, target: {x: number; y: number; z: number}, dist: number, scene: Object3D, fallback: number): {polar: number; azimuth: number} {
+    const flat = Math.hypot(n.x, n.z);
+    const face = flat > 0.3 ? Math.atan2(n.x, n.z) : fallback;
+    const polars = flat > 0.3 ? [1.3, 1.1, 1.45, 0.9] : [1.0, 0.8, 1.2, 0.6];
+    const turns = [0, 0.3, -0.3, 0.6, -0.6, Math.PI, Math.PI + 0.3, Math.PI - 0.3, Math.PI + 0.6, Math.PI - 0.6];
+    const ray = new Raycaster();
+    const to = new Vector3(target.x, target.y, target.z);
+    const skip = (o: Object3D) => /spider-web/.test(o.name);
+    const meshes: Object3D[] = [];
+    scene.traverse((o) => {
+        if ((o as {isMesh?: boolean}).isMesh && o.visible && !skip(o)) meshes.push(o);
+    });
+    for (const polar of polars) {
+        for (const turn of turns) {
+            const az = face + turn;
+            const from = new Vector3(target.x + Math.sin(polar) * Math.sin(az) * dist, target.y + Math.cos(polar) * dist, target.z + Math.sin(polar) * Math.cos(az) * dist);
+            ray.set(from, to.clone().sub(from).normalize());
+            ray.far = dist - 0.06;
+            ray.near = 0;
+            if (ray.intersectObjects(meshes, false).length === 0) return {polar, azimuth: az};
+        }
+    }
+    return {polar: polars[0], azimuth: face};
 }
 
 main().catch((error) => {

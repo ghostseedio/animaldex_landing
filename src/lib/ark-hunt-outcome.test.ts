@@ -42,3 +42,19 @@ test("a hunt's outcome: past the window a meal is a plain meal; one hunt, one ou
     assert.equal(outcomes.note([meal("m3", "L1")], 2000).items[0].hunted, undefined, "its next meal is another hunt's");
     assert.equal(caughtText({...meal("m4", "L1"), hunted: true, hearts: 2}, english), null);
 });
+
+test("ARK-WEBS: a meal the server says was caught in a web is said so, in every language, hunted or not", () => {
+    const log = new ArkLiveLog({gap: 0, seenGap: 0});
+    log.push([item({id: "w1", key: "meal:house-spider:house-fly", kind: "meal", animal: "Common House Spider", other: "House Fly", web: true, focus: focus("S1")})], 0);
+    log.step(0);
+    const line = log.lines.find((l) => l.kind === "meal")!;
+    assert.equal(caughtText(line, english), "A Common House Spider caught a House Fly in its web");
+    assert.equal(caughtText({...line, web: undefined}, english), null);
+    const dir = path.join(__dirname, "..", "data", "locales");
+    const files = ["en.json", "id.json", ...require("node:fs").readdirSync(path.join(dir, "ark")).map((f: string) => path.join("ark", f))];
+    assert.equal(files.length, 45);
+    for (const f of files) {
+        const live = JSON.parse(readFileSync(path.join(dir, f), "utf8")).ark.live;
+        assert.ok(typeof live.webCaught === "string" && live.webCaught.includes("{aPredator}") && live.webCaught.includes("{aPrey}"), f);
+    }
+});

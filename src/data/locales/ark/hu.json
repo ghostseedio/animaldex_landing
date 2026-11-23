@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}: elkapta {aPredator}",
             "caught": "{aPredator} zsákmányt ejtett: {aPrey}",
+            "webCaught": "{aPredator} hálójába akadt: {aPrey}",
             "dormant": "{animals}: elkezdődött a téli álom",
             "woke": "{animals}: véget ért a téli álom",
             "escaped": "{aPrey} elmenekült, üldözője: {aPredator}",

@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}: το έφαγε {aPredator}",
             "caught": "{aPredator} έπιασε {aPrey}",
+            "webCaught": "{aPredator} έπιασε {aPrey} στον ιστό του",
             "dormant": "{animals}: άρχισε η χειμερία νάρκη",
             "woke": "{animals}: τελείωσε η χειμερία νάρκη",
             "escaped": "{aPrey}: ξέφυγε, το κυνηγούσε {aPredator}",

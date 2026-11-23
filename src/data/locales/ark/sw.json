@@ -413,6 +413,7 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} aliliwa na {aPredator}",
             "caught": "{aPredator} alimkamata {aPrey}",
+            "webCaught": "{aPredator} alimnasa {aPrey} kwenye utando wake",
             "dormant": "{animals} wameanza usingizi wa majira ya baridi",
             "woke": "{animals} wameamka tena",
             "escaped": "{aPrey} alimtoroka {aPredator}",
