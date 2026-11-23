@@ -608,6 +608,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * that ends in a miss, then the prey's limp for a while (`live-escapes.ts`).
      */
     addEscapes?: (escapes: Array<{key: string; prey: string; predator: string; t0: number; encounter?: unknown}>) => void;
+    /** SIG-EVENTS: saved signature moves; each animal plays its recipe in its fitting slots from `from` to `to` (epoch s). */
+    addSignatureCues?: (cues: Array<{animalId: string; recipe: string; from: number; to: number}>) => void;
     /**
      * The kinds asleep through their dormant season now (the server's `voyage_dormant_v1`: species ids; AnimalDex
      * decision 370): their animals are in their dens, out of sight, and their cards say sleeping. An empty list ends it.

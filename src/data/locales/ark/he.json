@@ -416,6 +416,8 @@
             "dormant": "{animals}: שנת החורף התחילה",
             "woke": "{animals}: שנת החורף נגמרה",
             "escaped": "{aPrey} ברח מפני {aPredator}",
+            "cacheRehidden": "{aAnimal} מחביא שוב את המזון שלו אחרי שראו אותו",
+            "cacheStolen": "{aThief} חשף מזון שהחביא {aOwner}",
             "revived": "{animal} חזר",
             "revivedYoung": "{animal} חזר, שוב בוגר צעיר",
             "released": "{aAnimal} שוחרר לטבע",

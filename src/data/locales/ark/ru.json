@@ -416,6 +416,8 @@
             "dormant": "{animals}: началась зимняя спячка",
             "woke": "{animals}: зимняя спячка закончилась",
             "escaped": "{aPrey}: удалось убежать, охотник — {aPredator}",
+            "cacheRehidden": "{aAnimal} перепрятывает свою еду, потому что его заметили",
+            "cacheStolen": "{aThief} откопал еду, которую спрятал {aOwner}",
             "revived": "{animal} вернулся",
             "revivedYoung": "{animal} вернулся снова молодым взрослым",
             "released": "Выпуск на волю: {aAnimal}",

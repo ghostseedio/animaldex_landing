@@ -416,6 +416,8 @@
             "dormant": "{animals}: začal sa zimný spánok",
             "woke": "{animals}: zimný spánok sa skončil",
             "escaped": "{aPrey}: podarilo sa ujsť, lovil {aPredator}",
+            "cacheRehidden": "{aAnimal} znova skrýva svoju potravu, lebo ho niekto videl",
+            "cacheStolen": "{aThief} vyhrabal potravu, ktorú skryl {aOwner}",
             "revived": "{animal} je späť",
             "revivedYoung": "{animal} je späť, znova mladý dospelý",
             "released": "Vypustenie do voľnej prírody: {aAnimal}",

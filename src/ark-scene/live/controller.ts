@@ -33,6 +33,7 @@ import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt
 import {crisisText, recordItems} from "@/ark-scene/live/crisis-lines"; // E4 (the crisis layer)
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
+import {cacheEventItems, cacheEventText, signatureCues, signatureEventItems, signatureEventText} from "@/ark-scene/live/signature-events"; // SIG-EVENTS: saved signature moves
 import {richItems, richNotes} from "@/ark-scene/live/rich-lines"; // decision 434
 import {careItems, careNotes} from "@/ark-scene/live/care-lines"; // GIFTS-CARE, decision 387
 import {forestDeathRecords, forestItems, forestText} from "@/ark-scene/live/forest-lines"; // p5 (humans)
@@ -203,7 +204,7 @@ export class ArkLive {
             })();
             if (stored === "1" || stored === "0") collapsed = stored === "1";
         }
-        this.lineText = (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? releaseText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? crisisText(line, this.text) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale);
+        this.lineText = (line) => signatureEventText(line, this.text, this.locale) ?? cacheEventText(line, this.text) ?? signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? releaseText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? crisisText(line, this.text) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale);
         this.crisesAt = performance.now();
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
@@ -509,6 +510,18 @@ export class ArkLive {
             if (notes.length) this.options.scene()?.noteRecord?.(notes);
         } catch {
             // (A scene without animal logs: the log says them all the same.)
+        }
+        // Saved signature moves (SIG-EVENTS, `signature-events.ts`): said for everyone, and the animal plays its recipe in view.
+        const moves = signatureEventItems(raw, from, (key) => this.said.has(key)).concat(cacheEventItems(raw, from, (key) => this.said.has(key)));
+        for (const item of moves) this.remember(item.id);
+        if (moves.length) this.push(moves);
+        const cues = signatureCues(raw, from);
+        if (cues.length) {
+            try {
+                this.options.scene()?.addSignatureCues?.(cues);
+            } catch {
+                // (A scene without it: the log says it all the same.)
+            }
         }
         // Release to the Wild (P1-8): a zoo animal that now lives free (`release-lines.ts`).
         const freed = releaseItems(raw, from, (key) => this.said.has(key));

@@ -47,6 +47,9 @@ export type ArkLiveWords = {
     woke?: string;
     /** A prey animal that got away from a predator's attempt (decision 373): "{aPrey} got away from {aPredator}". */
     escaped?: string;
+    /** SIG-EVENTS signature_caches: a corvid moved the cache it was watched making; another found and took a cache. */
+    cacheRehidden?: string;
+    cacheStolen?: string;
     /** A meal that ends a hunt seen setting out: "A Lion caught a Plains Zebra". */
     caught?: string;
     /** Release to the Wild (AnimalDex P1-8): "{aAnimal} was released into the wild" (`release-lines.ts`). */
@@ -128,6 +131,8 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     dormant: "{animals} have gone into their winter sleep",
     woke: "{animals} are awake again",
     escaped: "{aPrey} got away from {aPredator}",
+    cacheRehidden: "{aAnimal} is re-hiding its food after being watched",
+    cacheStolen: "{aThief} dug up food that {aOwner} had hidden",
     revived: "{animal} is back",
     revivedYoung: "{animal} is back, a young adult again",
     released: "{aAnimal} was released into the wild",

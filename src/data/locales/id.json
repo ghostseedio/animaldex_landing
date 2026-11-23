@@ -4667,6 +4667,8 @@
       "dormant": "{animals} mulai tidur musim dingin",
       "woke": "{animals} sudah bangun lagi",
       "escaped": "{aPrey} lolos dari {aPredator}",
+      "cacheRehidden": "{aAnimal} menyembunyikan lagi makanannya setelah terlihat",
+      "cacheStolen": "{aThief} menggali makanan yang disembunyikan {aOwner}",
       "revived": "{animal} sudah kembali",
       "revivedYoung": "{animal} sudah kembali, kembali menjadi dewasa muda",
       "released": "{aAnimal} dilepas ke alam liar",

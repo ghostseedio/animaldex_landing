@@ -416,6 +416,8 @@
             "dormant": "{animals}: è iniziato il letargo",
             "woke": "{animals}: il letargo è finito",
             "escaped": "{aPrey} è sfuggito a {aPredator}",
+            "cacheRehidden": "{aAnimal} nasconde di nuovo il suo cibo dopo essere stato osservato",
+            "cacheStolen": "{aThief} ha dissotterrato il cibo nascosto da {aOwner}",
             "revived": "{animal} è tornato",
             "revivedYoung": "{animal} è tornato, di nuovo giovane adulto",
             "released": "Liberazione in natura: {aAnimal}",

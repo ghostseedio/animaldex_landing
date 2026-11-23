@@ -416,6 +416,8 @@
             "dormant": "{animals}: ha començat el son d'hivern",
             "woke": "{animals}: s'ha acabat el son d'hivern",
             "escaped": "{aPrey} s'ha escapat de {aPredator}",
+            "cacheRehidden": "{aAnimal} torna a amagar el seu menjar després que l'hagin vist",
+            "cacheStolen": "{aThief} ha desenterrat menjar que {aOwner} havia amagat",
             "revived": "{animal} ha tornat",
             "revivedYoung": "{animal} ha tornat, jove adult de nou",
             "released": "Alliberament a la natura: {aAnimal}",

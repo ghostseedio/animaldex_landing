@@ -416,6 +416,8 @@
             "dormant": "{animals}が冬眠に入りました",
             "woke": "{animals}が冬眠から目を覚ましました",
             "escaped": "{aPrey}が{aPredator}から逃げきりました",
+            "cacheRehidden": "{aAnimal}が見られていたため、食べ物を隠し直しています",
+            "cacheStolen": "{aThief}が{aOwner}の隠した食べ物を掘り出しました",
             "revived": "{animal}が戻ってきました",
             "revivedYoung": "{animal}が若い成体に戻って帰ってきました",
             "released": "{aAnimal}が野生に放されました",

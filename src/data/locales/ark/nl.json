@@ -416,6 +416,8 @@
             "dormant": "{animals}: de winterslaap is begonnen",
             "woke": "{animals}: weer wakker",
             "escaped": "{aPrey} is ontsnapt aan {aPredator}",
+            "cacheRehidden": "{aAnimal} verstopt zijn voedsel opnieuw nadat het werd bekeken",
+            "cacheStolen": "{aThief} groef voedsel op dat {aOwner} had verstopt",
             "revived": "{animal} is terug",
             "revivedYoung": "{animal} is terug, weer jong volwassen",
             "released": "{aAnimal} werd vrijgelaten in het wild",

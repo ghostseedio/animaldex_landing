@@ -416,6 +416,8 @@
             "dormant": "{animals} kış uykusuna yattı",
             "woke": "{animals} yeniden uyandı",
             "escaped": "{aPrey} kaçıp kurtuldu, kovalayan: {aPredator}",
+            "cacheRehidden": "{aAnimal} görüldüğü için yiyeceğini yeniden saklıyor",
+            "cacheStolen": "{aThief}, {aOwner} tarafından saklanan yiyeceği kazıp çıkardı",
             "revived": "{animal} geri döndü",
             "revivedYoung": "{animal} yeniden genç bir yetişkin olarak döndü",
             "released": "{aAnimal} doğaya salındı",

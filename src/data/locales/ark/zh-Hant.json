@@ -416,6 +416,8 @@
             "dormant": "{animals}開始冬眠了",
             "woke": "{animals}又醒來了",
             "escaped": "{aPrey}從{aPredator}身邊逃走了",
+            "cacheRehidden": "{aAnimal}被看到後，正在把食物重新藏起來",
+            "cacheStolen": "{aThief}挖出了{aOwner}藏起來的食物",
             "revived": "{animal}回來了",
             "revivedYoung": "{animal}回來了，又是年輕的成年個體",
             "released": "{aAnimal}被野放了",
