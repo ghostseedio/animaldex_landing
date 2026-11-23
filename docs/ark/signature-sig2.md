@@ -131,6 +131,7 @@ generator's own reading of their sleep text; this change is what makes them read
 - **Marmoset and long-tailed macaque huddles: still held.** Their leaders sleep on v2 map points that carry no limb heading, so the marmosets end up inside the trunk and the macaques stand in single file. Seating the members along the map tangent made the other huddles' bodies coincide, so it was reverted.
 - **SIG2-reason rows re-run:** nest_build (squirrels) and stone_hammer (long-tailed macaque, tufted capuchin) still find no episode in 24 Ark hours with the hold removed. beach_nest~bank is still crawl/turn/walk. All stay held.
 - **Rows held but already in the table, so still live:** the marmoset, long-tailed and Barbary macaque huddles, the golden stag beetle's wrestle and the slender skimmer's hawk_insects. A hold only keeps a new row out; it does not remove one.
+
 ## SIG3 (2026-11-23): third tranche
 
 - **Held rows that were live and read wrong, now switched off:**
