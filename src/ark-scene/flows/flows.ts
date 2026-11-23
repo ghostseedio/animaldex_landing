@@ -493,6 +493,98 @@ function soloLine(step: FlowStep): string {
     }
 }
 
+// MARK: The lines in the other 44 languages (src/data/locales: ark.flow)
+
+/**
+ * The card's lines without the food's name, for the other languages (`ark.flow` in every locale file; English's copy is
+ * this table). The English page keeps its lines with the food named (`stepCard`); a translation names no food, since the
+ * foods are the engine's English phrases.
+ */
+export const FLOW_WORDS_EN = {
+    sleep: "Sleeping", settle: "Settling down to sleep", wake: "Waking up", material: "Gathering nest material", moving: "Moving", moveOn: "Moving on",
+    searchGraze: "Looking for good grazing", searchBrowse: "Looking for leaves to browse", searchSight: "Looking for food", searchListen: "Listening for prey",
+    searchWatch: "Crouched, watching for prey", searchSitwait: "Standing still, watching for prey", searchWeb: "Waiting on its web", searchFlowers: "Looking for flowers",
+    searchProbe: "Probing for food", searchScent: "Following a scent", searchSwim: "Searching the water",
+    stalk: "Stalking its prey", web: "Prey hit its web", eye: "Eyeing its prey", wrap: "Running out to wrap its prey", strike: "Striking at its prey",
+    pounce: "Pouncing on its prey", goFor: "Going for its prey", missed: "Missed: its prey got away", missDropped: "Missed: it dropped its prey", missWeb: "Missed: its prey broke free",
+    caught: "Caught its prey", foundCache: "Dug up its cache", found: "Found food", eat: "Eating", nectar: "Drinking nectar", pollen: "Gathering pollen",
+    carry: "Carrying its catch off to store it", bury: "Burying food for later", hide: "Hiding food for later", hoard: "Storing food for later",
+    larder: "Storing food in its larder", impale: "Spiking food on a thorn for later", dance: "Dancing to show the others the way", rest: "Resting",
+    digest: "Resting after its meal", groom: "Grooming", toWater: "Heading to water", wary: "Checking for danger at the water", drink: "Drinking",
+    keptWait: "Waiting for its keeper", keptEat: "Eating from its keeper", display: "Displaying", court: "Courting", mate: "With its mate", build: "Building its nest",
+    visiting: "Visiting flowers", grazing: "Grazing", browsing: "Browsing", filter: "Filter-feeding", foraging: "Foraging",
+    trip: "trip {n}", flowersSoFar: "flowers visited: {n}", patch: "patch {n}", goodPatch: "looking for a good patch", spots: "spots searched: {n}", lookingFood: "looking for food", eating: "eating"
+} as const;
+export type FlowWordKey = keyof typeof FLOW_WORDS_EN;
+export type FlowWords = Partial<Record<FlowWordKey, string>>;
+
+const SEARCH_KEY: Record<string, FlowWordKey> = {
+    graze: "searchGraze", browse: "searchBrowse", sight: "searchSight", listen: "searchListen", watch: "searchWatch", sitwait: "searchSitwait",
+    web: "searchWeb", flowers: "searchFlowers", probe: "searchProbe", scent: "searchScent", swim: "searchSwim"
+};
+const CACHE_KEY: Record<string, FlowWordKey> = {bury: "bury", hide: "hide", hoard: "hoard", larder: "larder", impale: "impale"};
+
+/** A step's card line in a language (`words`: its `ark.flow`; English fills a missing key); null words = English with food. */
+export function stepLineIn(step: FlowStep, words: FlowWords | null): string {
+    if (!words) return stepLine(step);
+    const card = stepCardIn(step, words);
+    return card.progress ? `${card.line} · ${card.progress}` : card.line;
+}
+
+/** `stepCard` without the food's name, in a language. */
+export function stepCardIn(step: FlowStep, words: FlowWords): {line: string; progress: string | null} {
+    const say = (key: FlowWordKey, n?: number) => (words[key] ?? FLOW_WORDS_EN[key]).replace("{n}", String(n ?? ""));
+    const b = step.bout;
+    if (b && step.kind !== "digest" && step.kind !== "dance" && step.kind !== "rest") {
+        switch (b.kind) {
+            case "nest":
+                return {line: say("build"), progress: say("trip", b.n)};
+            case "flowers":
+                return {line: say("visiting"), progress: say("flowersSoFar", b.visits + 1)};
+            case "graze":
+            case "browse":
+                return {line: say(b.kind === "graze" ? "grazing" : "browsing"), progress: b.n ? `${say("eating")} · ${say("patch", b.n)}` : say("goodPatch")};
+            case "filter":
+                return {line: say("filter"), progress: b.n ? say("eating") : null};
+            case "forage":
+                return {line: say("foraging"), progress: b.n ? say("eating") : b.visits > 1 ? say("spots", b.visits) : say("lookingFood")};
+        }
+    }
+    return {line: say(soloKey(step)), progress: null};
+}
+
+function soloKey(step: FlowStep): FlowWordKey {
+    const f = step.food;
+    switch (step.kind) {
+        case "sleep": return "sleep";
+        case "settle": return "settle";
+        case "wake": return "wake";
+        case "search": return step.detail === "material" ? "material" : step.detail === "mate" ? "moving" : SEARCH_KEY[step.detail ?? "sight"] ?? "searchSight";
+        case "movePatch": return "moveOn";
+        case "stalk": return step.detail === "web" ? "web" : step.detail === "sitwait" ? "eye" : "stalk";
+        case "attempt": return step.detail === "web" ? "wrap" : step.detail === "sitwait" ? "strike" : step.detail === "listen" || step.detail === "watch" ? "pounce" : "goFor";
+        case "nearMiss": return step.detail === "dropped" ? "missDropped" : step.detail === "web" ? "missWeb" : "missed";
+        case "catch": return "caught";
+        case "found": return step.detail === "cache" ? "foundCache" : "found";
+        case "eat": return f?.eat === "nectar" ? "nectar" : f?.eat === "pollen" ? "pollen" : "eat";
+        case "carry": return "carry";
+        case "cache": return CACHE_KEY[step.detail ?? "hide"] ?? "hide";
+        case "dance": return "dance";
+        case "rest": return "rest";
+        case "digest": return "digest";
+        case "groom": return "groom";
+        case "toWater": return "toWater";
+        case "wary": return "wary";
+        case "drink": return "drink";
+        case "keptWait": return "keptWait";
+        case "keptEat": return "keptEat";
+        case "display": return "display";
+        case "court": return "court";
+        case "mate": return "mate";
+        case "build": return "build";
+    }
+}
+
 function capital(text: string): string {
     return text ? text[0].toUpperCase() + text.slice(1) : text;
 }

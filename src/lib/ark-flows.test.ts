@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import table from "@/ark-scene/flows/flow-params.json";
-import {CARD_RETURN_SECONDS, cardRuns, FLOW_TICK_SECONDS, flowStepAt, flowSteps, forgetFlows, stepCard, stepLine, stepMoment, tickOf, tickSteps, type FlowServer, type FlowSubject} from "@/ark-scene/flows/flows";
+import {CARD_RETURN_SECONDS, cardRuns, FLOW_TICK_SECONDS, FLOW_WORDS_EN, flowStepAt, flowSteps, forgetFlows, stepCard, stepLine, stepLineIn, stepMoment, tickOf, tickSteps, type FlowServer, type FlowSubject, type FlowWords} from "@/ark-scene/flows/flows";
+import {readdirSync, readFileSync} from "node:fs";
+import path from "node:path";
 import {foodWordsOf, type FlowParams} from "@/ark-scene/flows/params";
 import {islandHours} from "@/lib/ark-clock";
 
@@ -179,4 +181,21 @@ test("flows: a nest's trips and a bee's flowers are one card line with progress"
     assert.match(stepLine(nest[nest.length - 1]), /^Building its nest · trip \d+, carrying grass$/);
     const bee = flowSteps(subject("western-honey-bee", {version: "bee"}, "bee"), T0, T0 + 3600).filter((s) => s.bout?.kind === "flowers");
     assert.ok(bee.length > 4 && bee.every((s) => stepCard(s).line === "Visiting flowers"));
+});
+
+test("the flow lines are in all 45 locales, every key, with their {n}; a translated line names no food", () => {
+    const root = path.join(__dirname, "..", "data", "locales");
+    const files = [path.join(root, "en.json"), path.join(root, "id.json"), ...readdirSync(path.join(root, "ark")).filter((f) => f.endsWith(".json")).map((f) => path.join(root, "ark", f))];
+    assert.equal(files.length, 45);
+    for (const file of files) {
+        const flow = JSON.parse(readFileSync(file, "utf8")).ark.flow as Record<string, string>;
+        for (const [key, english] of Object.entries(FLOW_WORDS_EN)) {
+            assert.ok(flow[key], `${file}: ${key}`);
+            assert.equal(flow[key].includes("{n}"), english.includes("{n}"), `${file}: ${key}`);
+        }
+    }
+    const de = JSON.parse(readFileSync(path.join(root, "ark", "de.json"), "utf8")).ark.flow as FlowWords;
+    const step = {kind: "catch", from: 0, to: 10, pose: "still", server: true, food: {eat: "a European Rabbit", the: "the European Rabbit"}} as unknown as Parameters<typeof stepLine>[0];
+    assert.equal(stepLineIn(step, de), "Hat seine Beute gefangen");
+    assert.equal(stepLineIn(step, null), stepLine(step));
 });
