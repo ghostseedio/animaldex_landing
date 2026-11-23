@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal}이(가) 숨 쉬러 수면에 올라왔어요",
                 "calling": "{aAnimal}이(가) 울고 있어요",
                 "bathing": "{aAnimal}이(가) 목욕하고 있어요",
-                "feeding": "{aAnimal}의 먹이 시간이에요"
+                "feeding": "{aAnimal}의 먹이 시간이에요",
+                "leapt": "{aAnimal}이(가) 물 밖으로 뛰어올랐어요",
+                "glided": "{aAnimal}이(가) 물 위를 활공했어요",
+                "sailing": "{aAnimal}이(가) 바람에 꼬리를 들고 있어요"
             }
         },
         "hunt": {

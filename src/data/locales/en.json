@@ -4772,7 +4772,10 @@
         "breathing": "{aAnimal} came up for air",
         "calling": "{aAnimal} is calling",
         "bathing": "{aAnimal} is bathing",
-        "feeding": "Feeding time for {aAnimal}"
+        "feeding": "Feeding time for {aAnimal}",
+        "leapt": "{aAnimal} leapt clear of the water",
+        "glided": "{aAnimal} glided over the water",
+        "sailing": "{aAnimal} is holding its tail up in the wind"
       }
     },
     "hunt": {

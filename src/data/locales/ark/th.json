@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} โผล่ขึ้นมาหายใจ",
                 "calling": "{aAnimal} กำลังส่งเสียงร้อง",
                 "bathing": "{aAnimal} กำลังอาบน้ำ",
-                "feeding": "ได้เวลาให้อาหาร {aAnimal}"
+                "feeding": "ได้เวลาให้อาหาร {aAnimal}",
+                "leapt": "{aAnimal} กระโดดพ้นน้ำ",
+                "glided": "{aAnimal} ร่อนเหนือผิวน้ำ",
+                "sailing": "{aAnimal} ชูหางขึ้นรับลม"
             }
         },
         "hunt": {

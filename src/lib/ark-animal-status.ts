@@ -577,6 +577,10 @@ export type ArkActivityLogWords = {
     calling: string;
     bathing: string;
     feeding: string;
+    /** ARK-FISH: a leap out of the water, a flyingfish's glide, a right whale's flukes held up in the wind ("sailing"). */
+    leapt: string;
+    glided: string;
+    sailing: string;
 };
 
 /** `ark.card` in the locale files: the tap card's lines and bars. */
@@ -680,7 +684,10 @@ export const ARK_ACTIVITY_ENGLISH: ArkActivityWords = {
         breathing: "{aAnimal} came up for air",
         calling: "{aAnimal} is calling",
         bathing: "{aAnimal} is bathing",
-        feeding: "Feeding time for {aAnimal}"
+        feeding: "Feeding time for {aAnimal}",
+        leapt: "{aAnimal} leapt clear of the water",
+        glided: "{aAnimal} glided over the water",
+        sailing: "{aAnimal} is holding its tail up in the wind"
     }
 };
 

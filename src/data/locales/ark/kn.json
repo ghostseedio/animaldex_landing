@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} ಉಸಿರಾಡಲು ಮೇಲೆ ಬಂದಿತು",
                 "calling": "{aAnimal} ಕೂಗುತ್ತಿದೆ",
                 "bathing": "{aAnimal} ಸ್ನಾನ ಮಾಡುತ್ತಿದೆ",
-                "feeding": "{aAnimal} ಗೆ ಆಹಾರ ನೀಡುವ ಸಮಯ"
+                "feeding": "{aAnimal} ಗೆ ಆಹಾರ ನೀಡುವ ಸಮಯ",
+                "leapt": "{aAnimal} ನೀರಿನಿಂದ ಮೇಲಕ್ಕೆ ಜಿಗಿಯಿತು",
+                "glided": "{aAnimal} ನೀರಿನ ಮೇಲೆ ಜಾರಿ ಹಾರಿತು",
+                "sailing": "{aAnimal} ಗಾಳಿಯಲ್ಲಿ ಬಾಲವನ್ನು ಮೇಲೆತ್ತಿದೆ"
             }
         },
         "hunt": {

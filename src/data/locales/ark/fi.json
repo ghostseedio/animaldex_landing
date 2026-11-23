@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} nousi pintaan hengittämään",
                 "calling": "{aAnimal} ääntelee",
                 "bathing": "{aAnimal} kylpee",
-                "feeding": "Ruokinta-aika: {aAnimal}"
+                "feeding": "Ruokinta-aika: {aAnimal}",
+                "leapt": "{aAnimal} hyppäsi ilmaan vedestä",
+                "glided": "{aAnimal} liiti veden yllä",
+                "sailing": "{aAnimal} pitää pyrstöään pystyssä tuulessa"
             }
         },
         "hunt": {

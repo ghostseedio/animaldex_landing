@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} đã ngoi lên thở",
                 "calling": "{aAnimal} đang cất tiếng kêu",
                 "bathing": "{aAnimal} đang tắm",
-                "feeding": "{aAnimal} đến giờ được cho ăn"
+                "feeding": "{aAnimal} đến giờ được cho ăn",
+                "leapt": "{aAnimal} đã nhảy vọt khỏi mặt nước",
+                "glided": "{aAnimal} đã lướt trên mặt nước",
+                "sailing": "{aAnimal} đang giơ đuôi lên trước gió"
             }
         },
         "hunt": {

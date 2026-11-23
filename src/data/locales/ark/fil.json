@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} ang umahon para huminga",
                 "calling": "{aAnimal} ang tumatawag",
                 "bathing": "{aAnimal} ang naliligo",
-                "feeding": "{aAnimal} ang pinapakain"
+                "feeding": "{aAnimal} ang pinapakain",
+                "leapt": "{aAnimal} ang tumalon palabas ng tubig",
+                "glided": "{aAnimal} ang dumausdos sa ibabaw ng tubig",
+                "sailing": "{aAnimal} ang nakataas ang buntot sa hangin"
             }
         },
         "hunt": {

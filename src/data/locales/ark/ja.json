@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal}が息継ぎに浮上しました",
                 "calling": "{aAnimal}が鳴いています",
                 "bathing": "{aAnimal}が水浴びをしています",
-                "feeding": "{aAnimal}のえさの時間です"
+                "feeding": "{aAnimal}のえさの時間です",
+                "leapt": "{aAnimal}が水面から跳び上がりました",
+                "glided": "{aAnimal}が水面の上を滑空しました",
+                "sailing": "{aAnimal}が尾びれを風に掲げています"
             }
         },
         "hunt": {

@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} feljött levegőért",
                 "calling": "{aAnimal} hangot ad",
                 "bathing": "{aAnimal} fürdik",
-                "feeding": "{aAnimal} etetési ideje"
+                "feeding": "{aAnimal} etetési ideje",
+                "leapt": "{aAnimal} kiugrott a vízből",
+                "glided": "{aAnimal} a víz fölött siklott",
+                "sailing": "{aAnimal} a szélbe tartja a farkát"
             }
         },
         "hunt": {

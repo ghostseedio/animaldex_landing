@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} sa vynára po vzduch",
                 "calling": "{aAnimal} volá",
                 "bathing": "{aAnimal} sa kúpe",
-                "feeding": "Čas kŕmenia: {aAnimal}"
+                "feeding": "Čas kŕmenia: {aAnimal}",
+                "leapt": "{aAnimal} vyskočil z vody",
+                "glided": "{aAnimal} plachtil nad vodou",
+                "sailing": "{aAnimal} drží chvost zdvihnutý vo vetre"
             }
         },
         "hunt": {

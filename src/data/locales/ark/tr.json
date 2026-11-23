@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} nefes almak için yüzeye çıktı",
                 "calling": "{aAnimal} sesleniyor",
                 "bathing": "{aAnimal} yıkanıyor",
-                "feeding": "{aAnimal} için yemek zamanı"
+                "feeding": "{aAnimal} için yemek zamanı",
+                "leapt": "{aAnimal} sudan dışarı sıçradı",
+                "glided": "{aAnimal} suyun üzerinde süzüldü",
+                "sailing": "{aAnimal} kuyruğunu rüzgâra kaldırmış"
             }
         },
         "hunt": {

@@ -4805,7 +4805,10 @@
         "breathing": "{aAnimal} naik untuk bernapas",
         "calling": "{aAnimal} sedang bersuara",
         "bathing": "{aAnimal} sedang mandi",
-        "feeding": "Waktu makan untuk {aAnimal}"
+        "feeding": "Waktu makan untuk {aAnimal}",
+        "leapt": "{aAnimal} melompat keluar dari air",
+        "glided": "{aAnimal} melayang di atas air",
+        "sailing": "{aAnimal} mengangkat ekornya ke arah angin"
       }
     },
     "hunt": {

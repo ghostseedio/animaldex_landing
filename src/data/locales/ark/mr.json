@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} श्वास घेण्यासाठी वर आला",
                 "calling": "{aAnimal} हाक देत आहे",
                 "bathing": "{aAnimal} अंघोळ करत आहे",
-                "feeding": "{aAnimal} च्या खाण्याची वेळ"
+                "feeding": "{aAnimal} च्या खाण्याची वेळ",
+                "leapt": "{aAnimal} पाण्यातून बाहेर उडी मारली",
+                "glided": "{aAnimal} पाण्यावरून सरकत गेला",
+                "sailing": "{aAnimal} वाऱ्यात शेपटी वर धरून आहे"
             }
         },
         "hunt": {

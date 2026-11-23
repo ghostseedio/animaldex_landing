@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} برای نفس کشیدن بالا آمد",
                 "calling": "{aAnimal} در حال صدا زدن است",
                 "bathing": "{aAnimal} در حال آب‌تنی است",
-                "feeding": "وقت غذادهی به {aAnimal} است"
+                "feeding": "وقت غذادهی به {aAnimal} است",
+                "leapt": "{aAnimal} از آب بیرون پرید",
+                "glided": "{aAnimal} بر فراز آب سُر خورد",
+                "sailing": "{aAnimal} دُمش را در باد بالا نگه داشته است"
             }
         },
         "hunt": {

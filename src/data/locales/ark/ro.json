@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} a ieșit la suprafață să respire",
                 "calling": "{aAnimal} strigă",
                 "bathing": "{aAnimal} face baie",
-                "feeding": "Ora mesei pentru {aAnimal}"
+                "feeding": "Ora mesei pentru {aAnimal}",
+                "leapt": "{aAnimal} a sărit din apă",
+                "glided": "{aAnimal} a planat deasupra apei",
+                "sailing": "{aAnimal} își ține coada ridicată în vânt"
             }
         },
         "hunt": {

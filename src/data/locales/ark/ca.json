@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} puja a respirar",
                 "calling": "{aAnimal} crida",
                 "bathing": "{aAnimal} es banya",
-                "feeding": "Hora de menjar per a {aAnimal}"
+                "feeding": "Hora de menjar per a {aAnimal}",
+                "leapt": "{aAnimal} ha saltat fora de l'aigua",
+                "glided": "{aAnimal} ha planat per sobre de l'aigua",
+                "sailing": "{aAnimal} té la cua alçada al vent"
             }
         },
         "hunt": {

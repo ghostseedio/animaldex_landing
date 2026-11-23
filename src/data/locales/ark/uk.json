@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal} виринає подихати",
                 "calling": "{aAnimal} подає голос",
                 "bathing": "{aAnimal} купається",
-                "feeding": "Час годування: {aAnimal}"
+                "feeding": "Час годування: {aAnimal}",
+                "leapt": "{aAnimal} вистрибує з води",
+                "glided": "{aAnimal} пролітає над водою",
+                "sailing": "{aAnimal} тримає хвіст піднятим на вітрі"
             }
         },
         "hunt": {

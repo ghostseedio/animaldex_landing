@@ -554,7 +554,10 @@
                 "breathing": "{aAnimal}浮上水面換氣",
                 "calling": "{aAnimal}正在鳴叫",
                 "bathing": "{aAnimal}正在洗澡",
-                "feeding": "{aAnimal}的餵食時間到了"
+                "feeding": "{aAnimal}的餵食時間到了",
+                "leapt": "{aAnimal}躍出了水面",
+                "glided": "{aAnimal}貼著水面滑翔",
+                "sailing": "{aAnimal}正把尾巴高高舉在風中"
             }
         },
         "hunt": {

@@ -554,7 +554,10 @@
                 "breathing": "صعد {aAnimal} ليتنفس",
                 "calling": "{aAnimal} يُطلق نداءه",
                 "bathing": "{aAnimal} يستحم",
-                "feeding": "حان وقت إطعام {aAnimal}"
+                "feeding": "حان وقت إطعام {aAnimal}",
+                "leapt": "قفز {aAnimal} خارج الماء",
+                "glided": "انساب {aAnimal} فوق الماء",
+                "sailing": "{aAnimal} يرفع ذيله في الريح"
             }
         },
         "hunt": {
