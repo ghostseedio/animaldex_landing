@@ -108,7 +108,7 @@ export type ArkBeat = "walk" | "run" | "fly" | "glide" | "swim" | "enter_water" 
 export type TripMode = "ground" | "air" | "water" | "surface" | "stay";
 type LegMode = TripMode | "enter" | "exit" | "pause" | "shadow";
 
-export type Spot = {x: number; y: number; z: number; /** The surface's normal there (up on the ground). */ nx: number; ny: number; nz: number; point: string | null; /** The way it faces when it is left there (a slot's finish), when known. */ yaw?: number};
+export type Spot = {x: number; y: number; z: number; /** The surface's normal there (up on the ground). */ nx: number; ny: number; nz: number; point: string | null; /** The way it faces when it is left there (a slot's finish), when known. */ yaw?: number; /** A map place's own heading along its surface (a limb's way along it, unit; `map/place.ts`). */ along?: [number, number, number]; /** The way it settles facing there, the place's own (a huddle side by side across its limb), over its arrival's. */ heading?: number};
 
 export type Leg = {
     /** A pause: the way it faces (the way it came; a pause from a point to itself has no direction of its own). */
@@ -907,6 +907,12 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
     const known = byAnimal.get(animal);
     if (known) return known;
     let spot = rawRoostOf(world, profile, animal);
+    // (SIG3: a huddle's leader on a raised place faces across its limb too, the way its group will.)
+    const social = sleepStyle(profile.slug).social;
+    if ((social === "huddle" || social === "pile") && spot.heading === undefined && spot.point && raised(world, spot)) {
+        const heading = limbFacing(world, spot);
+        if (heading !== undefined) spot = {...spot, heading};
+    }
     if (world.nav.colliders && !aquatic(profile)) {
         if (!perchFits(world, profile, animal, spot)) {
             const foot = world.nav.nearest(spot.x, spot.z, "walk", 0.5, 3, maxSlopeOf(animal), bodyReachOf(animal, profile.slug));
@@ -999,6 +1005,17 @@ function denDry(world: ScheduleWorld, x: number, z: number): boolean {
     return true;
 }
 
+/** The way a huddle faces on its raised place: the sampler's point's own (across its limb), else across a map limb. */
+function limbFacing(world: ScheduleWorld, spot: Spot): number | undefined {
+    const at = spot.point ? RAISED_TAGS.map((tag) => world.sampler.attachPoints(tag, {x: spot.x, z: spot.z, r: 0.3}).find((p) => p.id === spot.point)).find(Boolean) : undefined;
+    return at ? at.yaw : spot.along ? acrossLimb(spot.along) : undefined;
+}
+
+/** Facing across a limb whose way along is `along` (the side its seat is on: one way for every one of a huddle). */
+function acrossLimb(along: [number, number, number]): number {
+    return Math.atan2(along[0], along[2]) + Math.PI / 2;
+}
+
 function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
     const group = animal.group;
     // (A flock whose text has it sleeping together, huddled or in a row, roosts as a group too: `sleep.ts`.)
@@ -1015,7 +1032,10 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
             // (The point's id keeps the tag it was made with, not always the schedule's: a limb is a branch.)
             const at = RAISED_TAGS.map((tag) => world.sampler.attachPoints(tag, {x: lead.x, z: lead.z, r: 0.3}).find((p) => p.id === lead.point)).find(Boolean);
             const off = roostOffset(profile.slug, group.rank, Math.max(animal.length, group.leader.length), at?.yaw ?? 0);
-            if (off) return {...lead, x: lead.x + off.dx, y: lead.y + off.dy, z: lead.z + off.dz};
+            // (SIG3: a huddle faces the way its leader does, across the limb: arriving each from its own side, they sat facing
+            // every way, five long-tailed macaques nose to tail in single file. Its seats stay where they were: put along a
+            // map limb's own heading, lemurs past its end were drawn two on one spot.)
+            if (off) return {...lead, x: lead.x + off.dx, y: lead.y + off.dy, z: lead.z + off.dz, ...(huddles ? {heading: at ? at.yaw : lead.heading} : {})};
         }
         if (!lead.point || !raised(world, lead)) {
             const angle = group.rank * 2.39996;
@@ -2018,7 +2038,7 @@ function arrivalYaw(animal: ScheduleAnimal, slot: number, now: Intent, before: S
     const roll = rng(hashString(still ? `${animal.id}#yaw#at#${Math.round(to.x * 2)},${Math.round(to.z * 2)}` : `${animal.id}#yaw#${slot}`))();
     const from = before && !still ? before : animal.home;
     const away = Math.hypot(to.x - from.x, to.z - from.z);
-    return now.face ?? (away > 0.5 ? Math.atan2(to.x - from.x, to.z - from.z) + (roll - 0.5) * (from === before ? 0.3 : 1.2) : roll * Math.PI * 2);
+    return now.face ?? to.heading ?? (away > 0.5 ? Math.atan2(to.x - from.x, to.z - from.z) + (roll - 0.5) * (from === before ? 0.3 : 1.2) : roll * Math.PI * 2);
 }
 
 /** Where its last slots were going (the nearest of the four before with a goal), or null. Pure in (id, slot). */

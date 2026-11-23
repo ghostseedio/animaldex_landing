@@ -73,7 +73,8 @@ test("a species whose sleep text says nothing of roosting with its kind roosts w
     assert.equal(sleepStyle("house-sparrow").social, "row");
     assert.equal(sleepStyle("guinea-pig").social, "huddle");
     // (A species whose own sleep text already says how keeps what it says.)
-    for (const slug of ["common-marmoset", "ring-tailed-lemur"]) assert.notEqual(sleepStyle(slug).social, "apart", slug);
+    // (The common marmoset's huddle is held, SIG3 tranche 3, `signature-holds.json`: it sleeps apart until it reads.)
+    for (const slug of ["ring-tailed-lemur"]) assert.notEqual(sleepStyle(slug).social, "apart", slug);
 });
 
 test("windows are pure, seeded by the group and the period, and fall inside it", () => {

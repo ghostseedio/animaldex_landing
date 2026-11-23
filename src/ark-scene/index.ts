@@ -596,6 +596,8 @@ type Entry = {
     rig?: RigState | null;
     /** Chosen for a rig this frame (within the caps). */
     rigOn?: boolean;
+    /** Whether the scene means its rig to be drawn (1) or faded out (0: asleep on a rig with no sleep clip, a visitor, in the air on a rig that does not fly), set once its rig is in; for the visual CI's wait (`rigState`). */
+    rigTarget?: 0 | 1;
     /**
      * Its behaviour schedule (`behaviour-schedule.ts`): its profile, its home, the trip it is on and where that puts it
      * now. Null for animals the schedule doesn't move (small animals at their microhabitats, burrowers, the visitor).
@@ -4125,7 +4127,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const slug = entry.animal.model_slug;
         const micro = entry.place.micro!;
         const epoch = worldMs() / 1000;
-        const pair = microPartnerOf(entry, epoch);
+        // (SIG3: a pair's act only with the other really beside it: cluster neighbours crawl metres apart, and two stag
+        // beetles "wrestling" 7-10 m from each other read as nothing. Both drawn, within four of the larger's lengths.)
+        const partner = microPartnerOf(entry, epoch);
+        const mate = partner ? findEntry(partner.id) : null;
+        const near = Boolean(mate && entry.middle && mate.middle && Math.hypot(entry.middle.x - mate.middle.x, entry.middle.z - mate.middle.z) <= 4 * Math.max(entry.trueLength, mate.trueLength, 0.02));
+        const pair = near ? partner : null;
         const input = {id: entry.animal.id, slug, epoch, hours: hoursNow(), length: entry.trueLength, soil: soilSpot(micro.spot), flower: flowerSpot(micro.attach?.tag), resting: entry.rest > 0.5, pair};
         const now = microActAt(input);
         if (now) microLast.set(input.id, {t0: now.t0, t1: now.t1});
@@ -5726,6 +5733,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const rigFor = (entry: Entry, model: SpeciesModel, where: Pose, modelScale: number, dt: number): RigModel | null => {
         const slug = entry.animal.model_slug;
         entry.sleepClipped = false;
+        entry.rigTarget = undefined;
         const rig = rigs.get(slug);
         const turned = (d: number) => ((Math.round(d) % 360) + 360) % 360;
         if (!rig || model.placeholder || turned(rig.facingDeg) !== turned(model.facing)) {
@@ -5747,6 +5755,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // rig only stood there playing its idle.
         const sleepsOff = Boolean(entry.sleepNow?.down) && !entry.act && grounded && !sleepClipOf(rig, entry.sleepNow!.posture);
         const target = entry.rigOn && !entry.visitor && (grounded || flies) && !sleepsOff ? 1 : 0;
+        entry.rigTarget = target;
         const peeking = (entry.peek ?? -1) >= 0;
         if (!peeking) state.weight = Math.min(Math.max(state.weight + Math.min(Math.max(target - state.weight, -dt / RIG_BLEND_SECONDS), dt / RIG_BLEND_SECONDS), 0), 1);
         rigHere.set(where.x, where.base, where.z);
@@ -6678,16 +6687,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             // The muzzles of the grazers biting and the bodies of the walkers nearest the camera, for the grass to bend at (`grass-press.ts`).
             const biting = (c: (typeof candidates)[number]) => c.entry.sched!.pose?.beat === "bite" || c.entry.sched!.pose?.beat === "chew";
+            // (SIG3: and an animal digging where it stands, the soil it works cleared round it: a leopard tortoise at its nest
+            // pit, held still, sank from sight into the tall grass.)
+            const digging = (c: (typeof candidates)[number]) => (c.entry.sched!.pose as RecipePose | null | undefined)?.act?.state === "dig";
             setGrassPress(
                 // (Where a meal pressed the grass flat, `meal-traces.ts`: nearest the camera first, like the rest.)
                 // 3.3 fix (breeding taps): and round a clutch a laid line's tap drew, first.
                 (liveClutch?.spot ? [liveClutch.spot] : []).concat(pressedByMeals(cameraPosition)).concat(candidates
-                    .filter((c) => c.visible && c.distance < 40 && c.entry.sched && !c.entry.sched.pose?.aloft && !c.pose.afloat && (biting(c) || c.entry.sched.pose?.moving))
+                    .filter((c) => c.visible && c.distance < 40 && c.entry.sched && !c.entry.sched.pose?.aloft && !c.pose.afloat && (biting(c) || c.entry.sched.pose?.moving || digging(c)))
                     .sort((a, b) => a.distance - b.distance)
                     .map((c) =>
                         biting(c)
                             ? {x: c.pose.x + Math.sin(c.pose.yaw) * c.entry.length * 0.5, y: c.pose.base, z: c.pose.z + Math.cos(c.pose.yaw) * c.entry.length * 0.5, radius: Math.max(c.entry.length * 0.18, 0.08)}
-                            : {x: c.pose.x, y: c.pose.base, z: c.pose.z, radius: Math.max(c.entry.length * 0.35, 0.1)}
+                            : {x: c.pose.x, y: c.pose.base, z: c.pose.z, radius: Math.max(c.entry.length * (digging(c) ? 0.75 : 0.35), 0.1)}
                     ))
             );
             stepRecipeScene(candidates, now, epochNow);

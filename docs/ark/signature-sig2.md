@@ -131,3 +131,17 @@ generator's own reading of their sleep text; this change is what makes them read
 - **Marmoset and long-tailed macaque huddles: still held.** Their leaders sleep on v2 map points that carry no limb heading, so the marmosets end up inside the trunk and the macaques stand in single file. Seating the members along the map tangent made the other huddles' bodies coincide, so it was reverted.
 - **SIG2-reason rows re-run:** nest_build (squirrels) and stone_hammer (long-tailed macaque, tufted capuchin) still find no episode in 24 Ark hours with the hold removed. beach_nest~bank is still crawl/turn/walk. All stay held.
 - **Rows held but already in the table, so still live:** the marmoset, long-tailed and Barbary macaque huddles, the golden stag beetle's wrestle and the slender skimmer's hawk_insects. A hold only keeps a new row out; it does not remove one.
+
+## SIG3 (2026-11-23): third tranche
+
+- **Held rows that were live and read wrong, now switched off:**
+  - **Golden stag beetle wrestle.** The pair its cluster gives were 7.5–10 m apart, "wrestling" across the clearing. A micro animal's pair act (`micro-acts.ts`) now plays only when the other one is drawn within four of the larger's body lengths.
+  - **Marmoset and Barbary macaque huddles.** A held `sleep:<social>` row now takes the generator's huddle out of the sleep layer too (`ark-signature-recipes.mts`), so each sleeps a little apart.
+  - **Slender skimmer hawk_insects.** Left as it is: a micro dragonfly is off the schedule, so its hawking never plays.
+- **A huddle faces one way across its limb.** A raised sleep point now carries a heading for a huddle: the sampler point's own facing, or across a v2 map limb (the map point's tangent, kept on the Spot as `along`). Leader and members settle to it (`arrivalYaw` reads the place's `heading`).
+  - **Long-tailed macaque huddle released.** The five sit side by side across their branch; they used to sit nose to tail in single file.
+  - Capuchins, stump-tails and squirrel monkeys now face one way too.
+  - Seating the huddle along the map limb itself was tried and reverted: lemurs past the limb's end were drawn two on one spot.
+  - **Marmoset still held.** The five sit round a thick sloping limb, some under it.
+- **Leopard tortoise nest dig released.** Its height off the ground does not change while it digs (0.21 m digging, 0.23 m walking). The "sink" came from the strip's camera sitting inside the grass. The grass press now also takes an animal digging in place, which clears its patch. Line: "{aAnimal} is digging a nest in the soil for its eggs". Its episode is the dig alone: its slot ends before the laying.
+- **Gecko dash:** due for a re-check at about 22:00 WIB on 2026-11-24, after a day of real hunting. No meal is faked.

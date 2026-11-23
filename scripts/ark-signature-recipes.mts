@@ -205,6 +205,21 @@ for (const a of additions) {
     say();
     added++;
 }
+// (SIG3: a held sleep row is taken out of the sleep layer too: the generator found the huddle in the species' own text, so a
+// hold that says it reads wrong has to switch it off, not only keep a second copy out. Each sleeps a little apart instead.)
+for (const [key, reason] of holds) {
+    const [slug, recipe] = key.split(" ");
+    if (!recipe?.startsWith("sleep:")) continue;
+    const f = (sleepTable.species[slug] ?? "").split("|");
+    if (f.length < 3 || f[2] !== recipe.slice("sleep:".length)) continue;
+    f[2] = "";
+    sleepTable.species[slug] = f.join("|").replace(/\|+$/, "");
+    const style = sleepStyles.species.find((x) => x.slug === slug);
+    if (style) {
+        style.social = "apart";
+        style.src.social = {rule: `held (signature-holds.json): ${reason.slice(0, 160)}`};
+    }
+}
 // Wave 2, birds: the recipes (and the nests and flags the rows' sentences give), the roosts' sleep, the log lines.
 const birdReport = applyBirdRecipes(table, birds.rows);
 const birdSleep = applyBirdSleep(sleepTable, sleepStyles as unknown as {species: Array<Record<string, unknown>>}, birds.rows);
