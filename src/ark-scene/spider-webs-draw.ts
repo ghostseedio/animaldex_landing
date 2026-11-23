@@ -36,8 +36,8 @@ export const DRAWN_WITHIN = 24;
 export const FADE_FROM = 9;
 /** Webs drawn at once (the nearest). */
 export const MAX_WEBS = 16;
-/** The silk bundles drawn at once (the record's catches only: the owner, 2026-11-23, "no fake events"). */
-const MAX_BUGS = 8;
+/** The silk bundles' parts drawn at once (three a bundle; the record's catches only: the owner, 2026-11-23, "no fake events"). */
+const MAX_BUGS = 24;
 /** Fitting's share of a frame (ms). */
 const FIT_BUDGET_MS = 1.5;
 
@@ -661,6 +661,10 @@ const Q = new Quaternion();
 const S = new Vector3();
 const P = new Vector3();
 const UP = new Vector3(0, 1, 0);
+const FWD = new Vector3(0, 0, 1);
+const AXIS = new Vector3();
+const SPIN = new Quaternion();
+const OFF = new Vector3();
 const COL = new Color();
 const M = new Matrix4();
 const W = new Matrix4();
@@ -1093,7 +1097,9 @@ export function catchGeometry(web: FittedWeb, seed: string): CatchGeometry {
     }
     const end = web.ends.length ? web.ends[Math.floor(u * web.ends.length) % web.ends.length] : add(web.hub, web.up, web.radius);
     const at = add(web.hub, sub(end, web.hub), 0.5 + 0.35 * v);
-    return {hub: web.hub, at, normal: {x: 0, y: 1, z: 0}, rest: norm(web.up)};
+    // A funnel weaver runs out over its sheet, bites and drags its prey back into the funnel unwrapped (Foelix 2011, ch. 5;
+    // Agelenidae rarely wrap): no silk bundle.
+    return {hub: web.hub, at, normal: {x: 0, y: 1, z: 0}, rest: norm(web.up), wrap: false};
 }
 
 export type WebsStats = {spiders: number; fitted: number; drawn: number; threads: number; fitMs: number; fitMaxMs: number};
@@ -1176,7 +1182,7 @@ export class SpiderWebs {
         this.mesh.frustumCulled = false;
         this.mesh.visible = false;
         this.mesh.renderOrder = 2;
-        this.bugs = new InstancedMesh(new SphereGeometry(0.5, 8, 6), new MeshLambertMaterial({color: 0xffffff}), MAX_BUGS);
+        this.bugs = new InstancedMesh(new SphereGeometry(0.5, 8, 6), new MeshLambertMaterial({color: 0xffffff, emissive: 0x8a857a}), MAX_BUGS);
         this.bugs.name = "spider-web-catches";
         this.bugs.frustumCulled = false;
         this.bugs.count = 0;
@@ -1345,9 +1351,33 @@ export class SpiderWebs {
             const f = c.frame;
             // (The insect itself is the caught animal, drawn by the scene from its act.) The silk bundle, growing white round it as it is wrapped.
             if (f.bundle && f.bundle.size > 0.02) {
-                // (A wrapped bundle is the prey's own size, a little shorter for its legs folded in: Foelix 2011 fig. 5.15.)
-                const L = c.length * 0.75;
-                put(f.bundle, L * 0.6 * f.bundle.size, L * 0.6 * f.bundle.size, L * f.bundle.size, f.prey.spin, 0xf4f2ea);
+                // A silk-wrapped insect: an elongated, slightly lumpy off-white parcel of the prey's own shape (head, thorax,
+                // abdomen under the silk), a little shorter than the prey for its legs and wings folded in (Foelix 2011,
+                // ch. 5: the wrapped prey "mummy"). Laid along the spider's way to it, turning as it is wrapped.
+                // (Silk reads pale even in the shade: the material's own glow, `emissive`.)
+                const L = c.length * 0.8 * f.bundle.size;
+                AXIS.set(f.spider.tx, f.spider.ty, f.spider.tz);
+                if (AXIS.lengthSq() < 1e-6) AXIS.set(0, -1, 0);
+                AXIS.normalize();
+                Q.setFromUnitVectors(FWD, AXIS);
+                SPIN.setFromAxisAngle(AXIS, f.prey.spin);
+                Q.premultiply(SPIN);
+                const parts: Array<[number, number, number, number]> = [
+                    // [along the axis, width, length, colour]
+                    [0, 0.42, 0.62, 0xefe9da],
+                    [0.34, 0.33, 0.34, 0xf7f3ea],
+                    [-0.33, 0.38, 0.4, 0xe8e1cf]
+                ];
+                for (const [along, w, l, colour] of parts) {
+                    if (n >= MAX_BUGS) break;
+                    OFF.copy(FWD).multiplyScalar(along * L).applyQuaternion(Q);
+                    P.set(f.bundle.x + OFF.x, f.bundle.y + OFF.y, f.bundle.z + OFF.z);
+                    S.set(w * L, w * L * 0.9, l * L);
+                    MAT.compose(P, Q, S);
+                    this.bugs.setMatrixAt(n, MAT);
+                    this.bugs.setColorAt(n, COL.setHex(colour));
+                    n++;
+                }
             }
         }
         this.bugs.count = n;
@@ -1412,6 +1442,15 @@ export class SpiderWebs {
         geometry.setIndex(new BufferAttribute(index, 1));
         this.mesh.geometry.dispose();
         this.mesh.geometry = geometry;
+    }
+
+    /** Development (the hunt harness): try its web at another home, fitted again from the next frame. */
+    rehome(id: string, home: V3): void {
+        const s = this.spiders.get(id);
+        if (!s) return;
+        if (this.fitting?.id === id) this.fitting = null;
+        Object.assign(s, {home, web: null, tries: 0, triedAt: -Infinity, job: null});
+        this.slots = this.slots.filter((x) => x.id !== id);
     }
 
     /** Development: what is drawn round a spider's home (the probes read it). */

@@ -23,7 +23,7 @@ const arg = (name, fallback) => {
     return at > 0 && process.argv[at + 1] && !process.argv[at + 1].startsWith("--") ? process.argv[at + 1] : fallback;
 };
 const out = path.resolve(arg("out", path.join(root, ".ark-golden", "hunt-shots")));
-const ALL = ["cat", "fox", "tiger", "jumper", "gecko", "wolf", "mantis", "toad", "web", "orb", "cobweb", "heron", "blackbird", "croc", "owl", "kestrel", "osprey", "kingfisher", "kite", "skimmer", "swallow"];
+const ALL = ["cat", "fox", "tiger", "jumper", "gecko", "wolf", "mantis", "toad", "web", "orb", "cobweb", "sheet", "heron", "blackbird", "croc", "owl", "kestrel", "osprey", "kingfisher", "kite", "skimmer", "swallow"];
 const wanted = arg("scenes", "all");
 const scenes = wanted === "all" ? ALL : wanted.split(",").map((s) => s.replace(/^hunt-/, "")).filter(Boolean);
 const modes = arg("modes", "catch,miss").split(",");
@@ -56,7 +56,9 @@ try {
 const summary = {};
 for (const name of scenes) {
     for (const mode of modes) {
-        const key = `${name}-${mode}`;
+        // (--distance D: every shot from D m, the key suffixed: a phone's viewing distance against the close-up.)
+        const distArg = process.argv.includes("--distance") ? Number(process.argv[process.argv.indexOf("--distance") + 1]) : null;
+        const key = `${name}-${mode}${distArg ? `-d${distArg}` : ""}`;
         // (--phone: a phone's portrait screen, as the page is mostly seen.)
         const context = await browser.newContext(process.argv.includes("--phone") ? {viewport: {width: 390, height: 844}, deviceScaleFactor: 2} : {viewport: {width: 1000, height: 640}});
         const page = await context.newPage();
@@ -99,10 +101,10 @@ for (const name of scenes) {
         const labels = [];
         for (let i = 0; i < uniq.length; i++) {
             const note = await page.evaluate(async (s) => {
-                const text = await window.__hunt.shot(s);
+                const text = await window.__hunt.shot(s[0], s[1] ?? undefined);
                 document.getElementById("note").textContent = text;
                 return text;
-            }, uniq[i]);
+            }, [uniq[i], distArg]);
             labels.push(`${String(i).padStart(2, "0")} ${note}`);
             await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 85});
         }

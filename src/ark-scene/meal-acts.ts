@@ -42,7 +42,7 @@ export type MealCatch = {
      * Held on a web (ARK-WEBS, `hunt-acts.ts` runWeb): the spider feeds at its hub where the catch ended, the bundle of
      * silk at its mouth (drawn by the webs: the prey itself stays hidden); no carry, no drink, its rest where it is.
      */
-    web?: {surface: {nx: number; ny: number; nz: number; tx: number; ty: number; tz: number}} | null;
+    web?: {surface: {nx: number; ny: number; nz: number; tx: number; ty: number; tz: number}; /** false: eaten unwrapped (a funnel weaver's), seen at its mouth. */ wrapped?: boolean} | null;
     /**
      * Where its mouth is on its drawn model (m from its origin: ahead, to its right, up), when the scene knows (the
      * model's foremost point: a coiled python's head is not half its length ahead). Absent: half its length ahead.
@@ -235,7 +235,7 @@ function swallowPose(s: MealScript, v: number): ActPose {
 export function preyAt(s: MealScript, u: number, atCatch: ActPose, carcassEnd: number): ActPose {
     const q = s.c.prey;
     // (On a web: wrapped in silk, the bundle the webs draw; the prey itself is not seen again.)
-    if (s.c.web) return {...atCatch, hidden: true, dim: 0, scale: 1, state: "lie", speed: 0};
+    if (s.c.web) return {...atCatch, hidden: s.c.web.wrapped !== false || u >= s.ends - 2, dim: 0, scale: 1, state: "lie", speed: 0};
     const lying = (k: number): ActPose => ({x: s.carcass.x, z: s.carcass.z, base: s.carcass.base, yaw: s.carcass.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: "lie", speed: 0, lying: s.side * k});
     if (u < s.carry && s.c.kind !== "swoop") return {...lying(Math.min(u / 0.4, 1)), x: s.c.prey.x, z: s.c.prey.z, lying: s.side * 0.9 * Math.min(u / 0.4, 1)};
     if (u < s.carry) {

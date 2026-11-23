@@ -610,7 +610,9 @@ function runWeb(i: HuntInput, g: CatchGeometry): HuntRun {
         P.push({x: sp.x, y: sp.y, z: sp.z, yaw: yawOf(sp.tx, sp.tz), v: 0, state: sp.state === "run" ? "run" : sp.state === "rest" ? "freeze" : "strike", pitch: 0, surface: {nx: sp.nx, ny: sp.ny, nz: sp.nz, tx: sp.tx, ty: sp.ty, tz: sp.tz}});
         const q = f.prey;
         // (Held: it struggles, rolled to and fro; being wrapped, turned over and over and smaller in the silk.)
-        Q.push({x: q.x, y: q.y - i.prey.height * 0.4, z: q.z, yaw: i.prey.yaw + q.spin, v: 0, state: q.flying ? "fly" : "run", pitch: 0, roll: Math.sin(k * DT * 13) * 0.35 * q.struggle, hidden: q.hidden, scale: f.bundle ? 1 - 0.4 * f.bundle.size : 1, dim: 0});
+        // (Its body on the silk: a few millimetres below the thread, never a body's height (a chaser's height has a floor);
+        // held, it lies on the web's face (`surface`), so the scene draws it where the silk is, not on the ground below.)
+        Q.push({x: q.x, y: q.y - Math.min(i.prey.height * 0.4, i.prey.length * 0.25, 0.006), z: q.z, yaw: i.prey.yaw + q.spin, v: 0, state: q.flying ? "fly" : "run", pitch: 0, roll: Math.sin(k * DT * 13) * 0.35 * q.struggle, hidden: q.hidden, scale: f.bundle ? 1 - 0.4 * f.bundle.size : 1, dim: 0, ...(q.flying ? {} : {surface: {nx: sp.nx, ny: sp.ny, nz: sp.nz, tx: sp.tx, ty: sp.ty, tz: sp.tz}})});
     }
     for (const list of [P, Q]) {
         for (let k = 1; k < list.length; k++) list[k].v = Math.hypot(list[k].x - list[k - 1].x, list[k].y - list[k - 1].y, list[k].z - list[k - 1].z) / DT;

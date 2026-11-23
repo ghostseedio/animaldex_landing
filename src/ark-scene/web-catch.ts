@@ -22,7 +22,7 @@
 export type V3 = {x: number; y: number; z: number};
 
 /** Where a catch happens on a web: its hub, the point the insect is held at, the web's face (normal) and the way in. */
-export type CatchGeometry = {hub: V3; at: V3; normal: V3; /** The spider's head way at the hub (orb: down). */ rest: V3; /** The prey's length (m), for its silk bundle. */ preyLength?: number};
+export type CatchGeometry = {hub: V3; at: V3; normal: V3; /** The spider's head way at the hub (orb: down). */ rest: V3; /** The prey's length (m), for its silk bundle. */ preyLength?: number; /** false: bitten and dragged home unwrapped (a funnel weaver's sheet). */ wrap?: boolean};
 
 /** The catch's moments (s from its start). */
 export type CatchTimes = {stuck: number; run: number; bite: number; wrap: number; haul: number; home: number; feedTo: number};
@@ -61,7 +61,7 @@ export function catchTimes(g: CatchGeometry, seed: string, feedFor = 20): CatchT
     const run = stuck + 1.6 + 1.2 * unitOf(`${seed}#feel`);
     const bite = run + runFor;
     const wrap = bite + 0.55;
-    const haul = wrap + 2.2;
+    const haul = wrap + (g.wrap === false ? 0.4 : 2.2);
     const home = haul + runFor * 1.5;
     return {stuck, run, bite, wrap, haul, home, feedTo: home + feedFor};
 }
@@ -120,7 +120,8 @@ export function catchAt(g: CatchGeometry, times: CatchTimes, seed: string, t: nu
     }
     // 3. The bite.
     if (t < times.wrap) return {spider: {...near, ...head(toAt), state: "bite"}, prey: {...g.at, struggle: struggle(t) * 0.6, flying: false, hidden: false, spin: 0}, bundle: null, shake, phase: "bite"};
-    // 4. The wrap: the prey turned in its legs, the silk building to a white bundle.
+    // 4. The wrap: the prey turned in its legs, the silk building to a white bundle (a funnel weaver: only a moment held).
+    if (t < times.haul && g.wrap === false) return {spider: {...near, ...head(toAt), state: "bite"}, prey: {...g.at, struggle: 0, flying: false, hidden: false, spin: 0}, bundle: null, shake: 0, phase: "wrap"};
     if (t < times.haul) {
         const k = (t - times.wrap) / (times.haul - times.wrap);
         const a = k * Math.PI * 5;
@@ -133,10 +134,12 @@ export function catchAt(g: CatchGeometry, times: CatchTimes, seed: string, t: nu
         const k = smooth((t - times.haul) / (times.home - times.haul));
         const p = lerp3(near, g.hub, k);
         const b = lerp3(g.at, {x: g.hub.x + toAt.x * 0.012, y: g.hub.y + toAt.y * 0.012, z: g.hub.z + toAt.z * 0.012}, k);
+        if (g.wrap === false) return {spider: {...p, ...head(toAt), state: "run"}, prey: {...b, struggle: 0, flying: false, hidden: false, spin: 0}, bundle: null, shake: 0, phase: "haul"};
         return {spider: {...p, ...head({x: -toAt.x, y: -toAt.y, z: -toAt.z}), state: "run"}, prey: {...b, struggle: 0, flying: false, hidden: true, spin: 0}, bundle: {...b, size: 1}, shake: 0, phase: "haul"};
     }
     const b = {x: g.hub.x + toAt.x * 0.012, y: g.hub.y + toAt.y * 0.012, z: g.hub.z + toAt.z * 0.012};
     const eating = t < times.feedTo;
     const left = eating ? 1 : 1 - smooth((t - times.feedTo) / 3);
+    if (g.wrap === false) return {spider: {...g.hub, ...head(toAt), state: eating ? "eat" : "rest"}, prey: {...b, struggle: 0, flying: false, hidden: !eating, spin: 0}, bundle: null, shake: 0, phase: eating ? "feed" : "done"};
     return {spider: {...g.hub, ...head(toAt), state: eating ? "eat" : "rest"}, prey: {...b, struggle: 0, flying: false, hidden: true, spin: 0}, bundle: left > 0.01 ? {...b, size: left} : null, shake: 0, phase: eating ? "feed" : "done"};
 }

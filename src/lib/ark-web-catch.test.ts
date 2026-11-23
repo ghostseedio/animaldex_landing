@@ -46,3 +46,16 @@ test("a miss: the insect breaks free and flies off; the spider never reaches it 
     }
     assert.equal(catchAt(g, times, "m", times.bite + 2.5, true).prey.flying, true);
 });
+
+test("the read's web catch: a town meal's trap, a wild meal's encounter.web; any other meal is not one", async () => {
+    const {decodeArkEvents} = await import("./ark-life");
+    const spider = {id: "s1", name: "Common House Spider", species_profile_id: "sp", model_slug: "common-house-spider", zone: "farm_garden"};
+    const fly = {id: "f1", name: "House Fly", species_profile_id: "fl", model_slug: "house-fly", zone: "farm_garden"};
+    const events = decodeArkEvents({events: [
+        {id: 1, kind: "meal", at: "2026-11-25T10:00:00Z", animal: spider, other: fly, trap: "web"},
+        {id: 2, kind: "meal", at: "2026-11-25T10:01:00Z", animal: spider, other: fly, encounter: {predator: {x: 0, z: 0}, prey: {x: 0.2, z: 0, r: 1}, web: true}},
+        {id: 3, kind: "meal", at: "2026-11-25T10:02:00Z", animal: spider, other: fly},
+        {id: 4, kind: "arrival", at: "2026-11-25T10:03:00Z", animal: spider, trap: "web"}
+    ]}, null);
+    assert.deepEqual(events.map((e) => e.web ?? null), [true, true, null, null]);
+});

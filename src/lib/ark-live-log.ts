@@ -153,7 +153,7 @@ export function arkLiveServerItems(events: readonly ArkEvent[]): ArkLiveItem[] {
             case "meal": {
                 if (!animal || !event.other) break;
                 const hearts = eatenLives.get(event.other.id);
-                items.push({id: event.id, kind: "meal", source: "server", key: `meal:${speciesOf(animal)}:${speciesOf(event.other)}${hearts !== undefined ? `:h${event.other.id}` : ""}`, animal: animal.name, other: event.other.name, count: 1, eggs: null, ...(hearts !== undefined ? {hearts} : {}), ...(event.encounter?.web ? {web: true} : {}), focus: focusOn(animal)});
+                items.push({id: event.id, kind: "meal", source: "server", key: `meal:${speciesOf(animal)}:${speciesOf(event.other)}${hearts !== undefined ? `:h${event.other.id}` : ""}`, animal: animal.name, other: event.other.name, count: 1, eggs: null, ...(hearts !== undefined ? {hearts} : {}), ...(event.web ? {web: true} : {}), focus: focusOn(animal)});
                 break;
             }
             case "death_old":

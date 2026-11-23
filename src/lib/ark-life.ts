@@ -142,6 +142,11 @@ export type ArkEvent = {
     way?: string;
     /** ARK-LOG-FOOD: where it happened (the animal's island and area then); absent on an older event. `animal` already carries it. */
     place?: ArkEventPlace;
+    /**
+     * ARK-WEBS: a `meal` the engine says was caught in the hunter's web (behind `web_traps`): the read's `trap: "web"` (a
+     * town catch, AnimalDex 20261229130000), or its encounter's `web` (a wild one).
+     */
+    web?: true;
 };
 
 export type ArkEventLives = {heartsLeft: number; returnsDay: number | null; final: boolean; ageReset: boolean; cause: "eaten" | "starved" | "died_old" | null};
@@ -325,6 +330,7 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             // (A `fed` row's too: a step that worked fed its person's animals, AnimalDex docs/ark/step-feeds.md.)
             source: kind === "arrival" || kind === "fed" ? arkArrivalSource(row.source ?? payload.source) : null,
             ...(encounter ? {encounter} : {}),
+            ...(kind === "meal" && (encounter?.web || row.trap === "web" || payload.trap === "web") ? {web: true as const} : {}),
             ...(lives ? {lives} : {}),
             ...(way && (kind === "mated" || kind === "birth") ? {way} : {}),
             ...(place ? {place} : {})
@@ -349,7 +355,7 @@ export type ArkAct =
     /** An egg-layer laid a clutch (A9): a nest or clutch appears beside it. `eggs` when the server counts them. */
     | {kind: "laid"; at: string; animal: ArkEventAnimal; eggs: number | null; nest: string; parents: string[]}
     /** `encounter`: under encounter hunting, where the hunter found its prey (the chase runs between those places). */
-    | {kind: "meal"; at: string; predator: ArkEventAnimal; prey: ArkEventAnimal; phrase: string | null; extinct: boolean; encounter?: ArkMealEncounter}
+    | {kind: "meal"; at: string; predator: ArkEventAnimal; prey: ArkEventAnimal; phrase: string | null; extinct: boolean; encounter?: ArkMealEncounter; /** ARK-WEBS: caught in its web (`ArkEvent.web`). */ web?: true}
     /** Old age, or (`starved`) long hunger: acted out quietly, it lies still and fades, never a chase. */
     | {kind: "death"; at: string; animal: ArkEventAnimal; cause: "old" | "starved"; extinct: boolean}
     | {kind: "extinction"; at: string; species: string};
@@ -414,7 +420,7 @@ export function planArkReplay(events: ArkEvent[], maxActs = ARK_REPLAY_MAX_ACTS)
             case "meal": {
                 summary.meals++;
                 if (!event.animal || !event.other) break;
-                const act = {kind: "meal" as const, at: event.at, predator: event.animal, prey: event.other, phrase: event.phrase, extinct: false, ...(event.encounter ? {encounter: event.encounter} : {})};
+                const act = {kind: "meal" as const, at: event.at, predator: event.animal, prey: event.other, phrase: event.phrase, extinct: false, ...(event.encounter ? {encounter: event.encounter} : {}), ...(event.web ? {web: true as const} : {})};
                 endedBy.set(event.other.species_profile_id || event.other.model_slug, act);
                 acts.push(act);
                 break;
