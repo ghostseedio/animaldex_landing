@@ -262,7 +262,12 @@ Rules:
 
 ## 7. The real costs of searching (engine; AnimalDex branch `flow-costs`, flag `flow_costs`, OFF)
 
-Design only. Engine changes land one at a time after hunting goes live (about 25 Nov), each with the 5-seed sim.
+Engine changes land one at a time after hunting goes live (about 25 Nov), each with the 5-seed sim. **Built first
+(2026-11-23, AnimalDex branch `flow-costs`, `docs/ark/flow-costs.md`):** meals from real metabolism. A hunter's meal
+interval and hunger time come from its field metabolic rate (Nagy et al. 1999; Brown et al. 2004 for other
+ectotherms) and a typical catch, at its catalogue share of its diet and under a daily intake cap, and every miss
+(`escaped`) costs it energy. The live intervals (median 646 Ark days) left spiders, fish and tool users almost never
+hungry. The rest of this section is still design.
 
 - **Per engine step** (`encounter.ts` step, `STEPS_PER_ARK_DAY`), for each awake wild animal:
   - **search effort** `e`: 0 to 1, the share of the step spent searching. It rises with hunger and is the guild's
