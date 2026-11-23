@@ -41,6 +41,7 @@
  * circle the porch light at night.
  */
 
+import {recipeBase} from "@/ark-scene/recipe-templates-reptiles";
 import {flowActivity, flowsOn, flowStatus, setFlowWords} from "@/ark-scene/flows/scene-adapter";
 import {
     ACESFilmicToneMapping,
@@ -6391,7 +6392,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const recipes = speciesRecipes(c.entry.animal.model_slug).recipes;
             let near = recipeNear.get(c.entry.animal.id);
             if (!near || epoch - near.at > 1 || epoch < near.at) {
-                const digs = recipes.some((r) => MARKING.has(r.id));
+                // (A variant, `dig_burrow~nest`, `wallow~turtle`, `beach_nest~bank`, marks and coats as its plain recipe: SIG3.)
+                const digs = recipes.some((r) => MARKING.has(recipeBase(r.id)));
                 // Its nest (this branch's drawing, until the props lane's are wired; a sitter's at the wired site).
                 const sourced = nestSourceOf(c.entry.animal.id, epoch);
                 // (sig2, mammals: a nest of its own the props do not draw is drawn here whichever way the props are wired.)
@@ -6403,7 +6405,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     at: epoch,
                     marks: digs ? recipeMarks(world, own.profile, own.animal, epoch, scheduleHours, c.entry.animal.activity) : [],
                     nest: site && stage > 0 ? {id: c.entry.animal.id, x: site.x, y: site.y, z: site.z, size: Math.min(Math.max(own.animal.length * 0.9, 0.12), 1.4), stage, material: species.nest?.materials[0] ?? "twigs"} : null,
-                    coat: recipes.some((r) => COATING.has(r.id)) ? recipeCoat(world, own.profile, own.animal, epoch, scheduleHours, c.entry.animal.activity) : null
+                    coat: recipes.some((r) => COATING.has(recipeBase(r.id))) ? recipeCoat(world, own.profile, own.animal, epoch, scheduleHours, c.entry.animal.activity) : null
                 };
                 recipeNear.set(c.entry.animal.id, near);
             }

@@ -136,7 +136,8 @@
    "recipe": "dig_burrow~nest",
    "behaviour": "female lays eggs in soil nest and leaves",
    "field": "young",
-   "quote": "Females lay eggs in soil nests"
+   "quote": "Females lay eggs in soil nests",
+   "line": "{aAnimal} is digging a nest in the soil to lay its eggs"
   },
   {
    "slug": "leopard-tortoise",
