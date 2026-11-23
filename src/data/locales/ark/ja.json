@@ -929,6 +929,8 @@
             "noneNearby": "近くにいない",
             "noneAboard": "ここにはいない",
             "dung": "ふん",
+            "hosts": "宿主から栄養を得る",
+            "hostsNone": "宿主は乗っていない",
             "keptFed": "飼育員が餌をあげている",
             "keptSafe": "天敵から安全",
             "more": "ほか{n}",

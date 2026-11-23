@@ -929,6 +929,8 @@
             "noneNearby": "근처에 없음",
             "noneAboard": "여기에 없음",
             "dung": "똥",
+            "hosts": "숙주에게서 먹이를 얻음",
+            "hostsNone": "숙주가 타고 있지 않음",
             "keptFed": "사육사가 먹이를 줌",
             "keptSafe": "포식자로부터 안전",
             "more": "외 {n}마리",

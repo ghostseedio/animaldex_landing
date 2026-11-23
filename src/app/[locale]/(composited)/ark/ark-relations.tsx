@@ -9,7 +9,7 @@ import {arkHuntingRegion, isArkFoodChainSlug} from "@/lib/ark-food-chain";
 import {arkTimeLeftFetch} from "@/lib/ark-time-left-facts";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkIconUrl} from "@/ark-scene/placeholder-icon";
-import {ARK_RELATION_LINES_EVENT, ARK_RELATIONS_ENGLISH, arkFoodChainRows, type ArkFoodChainKind, ARK_RELATION_KINDS, ARK_RELATION_STYLE, arkRelationLinesOn, arkRelations, arkRelationShown, arkSetRelationLinesOn, type ArkRelationKind, type ArkRelations, type ArkRelationsWords} from "@/lib/ark-relations";
+import {ARK_RELATION_LINES_EVENT, ARK_RELATIONS_ENGLISH, arkFoodChainRows, arkHostRows, type ArkFoodChainKind, ARK_RELATION_KINDS, ARK_RELATION_STYLE, arkRelationLinesOn, arkRelations, arkRelationShown, arkSetRelationLinesOn, type ArkRelationKind, type ArkRelations, type ArkRelationsWords} from "@/lib/ark-relations";
 import type {ArkRelationLinesHandle} from "@/ark-scene/relation-lines";
 
 function RelationIcon({kind}: {kind: ArkRelationKind}) {
@@ -150,6 +150,8 @@ export default function ArkRelationsPanel({animal, snapshot, scene, words, local
     const nearest = new Map<string, number>();
     for (const kind of ["predator", "prey"] as const) for (const t of value[kind].all) if (!nearest.has(t.kind)) nearest.set(t.kind, t.distance);
     const chain = arkFoodChainRows(links, value);
+    // Decision 482: a host-fed kind (a parasite) is fed through its hosts aboard, the engine's own link.
+    const hostRows = value.kept ? null : arkHostRows(links, animal, snapshot?.animals ?? []);
     // Decision 434: a dung user's food, from its stored microhabitats (the scene's), unless the read already says it.
     const dung = !kept && !chain.ambient.some((phrase) => /dung|droppings/i.test(phrase)) && Boolean(scene()?.eatsDung?.(slug, animal.zone));
     const toggle = (next: boolean) => {
@@ -174,11 +176,11 @@ export default function ArkRelationsPanel({animal, snapshot, scene, words, local
         );
     };
     // The first few kinds of each row that are in its region now (else the first few), the rest behind "+N".
-    const capped = (row: "eats" | "eatenBy", kinds: ArkFoodChainKind[]) => {
+    const capped = (row: "eats" | "eatenBy" | "hosts", kinds: ArkFoodChainKind[], beyond = 0) => {
         const open = chainOpen === `${animal.id}|${row}`;
         const nearby = kinds.filter((kind) => kind.here > 0);
         const shown = open ? kinds : (nearby.length ? nearby : kinds).slice(0, CHAIN_KINDS);
-        const more = kinds.length - shown.length;
+        const more = kinds.length - shown.length + (open ? 0 : beyond);
         return (
             <>
                 {shown.map(kindIcon)}
@@ -190,7 +192,7 @@ export default function ArkRelationsPanel({animal, snapshot, scene, words, local
             </>
         );
     };
-    const focused = focusKind ? [...chain.eats, ...chain.eatenBy].find((kind) => kind.id === focusKind) ?? null : null;
+    const focused = focusKind ? [...chain.eats, ...chain.eatenBy, ...(hostRows?.kinds ?? [])].find((kind) => kind.id === focusKind) ?? null : null;
     // Its mates and the eggs, one icon per animal (each selects that animal).
     const one = (kind: ArkRelationKind) => {
         const {shown, more} = arkRelationShown(value[kind]);
@@ -237,6 +239,15 @@ export default function ArkRelationsPanel({animal, snapshot, scene, words, local
                             {dung ? <span data-testid="ark-card-eats-dung" className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] text-ink-200">{w.dung}</span> : null}
                         </>
                     )) : null}
+                    {hostRows ? (
+                        <div role="group" aria-label={w.hosts} data-relation="hosts" data-testid="ark-card-hosts" className="flex min-w-0 items-center gap-1.5">
+                            <span className="flex shrink-0 items-center gap-1 pe-0.5 text-[11px] font-semibold text-ink-300">
+                                <RelationIcon kind="prey" />
+                                <span>{w.hosts}</span>
+                            </span>
+                            {hostRows.kinds.length ? capped("hosts", hostRows.kinds, hostRows.more) : <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] text-ink-200">{w.hostsNone}</span>}
+                        </div>
+                    ) : null}
                     {chain.eatenBy.length ? group("eatenBy", "predator", w.eatenBy, capped("eatenBy", chain.eatenBy)) : null}
                     {others.map((kind) => group(kind, kind, w[kind], one(kind)))}
                 </div>

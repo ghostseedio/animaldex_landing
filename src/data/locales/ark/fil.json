@@ -929,6 +929,8 @@
             "noneNearby": "Walang malapit",
             "noneAboard": "Wala rito",
             "dung": "dumi ng hayop",
+            "hosts": "Kumakain mula sa mga host nito",
+            "hostsNone": "Wala sa mga host nito ang sakay",
             "keptFed": "Pinapakain ng tagapag-alaga",
             "keptSafe": "Ligtas sa maninila",
             "more": "+{n} pa",

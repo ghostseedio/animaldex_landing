@@ -76,7 +76,20 @@ export type ArkFoodChainEntry = {
      * "plankton"). The table is service-role only today, so the food-chain read cannot send it; the card shows it when sent.
      */
     ambient?: string[];
+    /**
+     * A host-fed kind (decision 482: parasites and other blood or host feeders, `voyage_species_traits.hosts`, A10): the
+     * engine feeds it while any of its hosts is aboard (`rules.ts` hostAboard: anywhere aboard, by kind), and it never harms
+     * them, so they are not prey. Absent: not host-fed. `aboard` is its host kinds aboard now, most aboard first, cut to
+     * `ARK_FOOD_CHAIN_HOSTS_SENT`; `more` the host kinds aboard left out; `phrase` the stored sentences (`hosts_phrase`).
+     */
+    hosts?: {phrase: string | null; aboard: ArkFoodChainSpecies[]; more: number};
 };
+
+/** A host-fed kind's hosts sent with its entry (the busiest; the rest counted in `hosts.more`). */
+export const ARK_FOOD_CHAIN_HOSTS_SENT = 40;
+
+/** A `voyage_species_traits` row as read for the hosts (species, hosts and their phrase only). */
+export type ArkFoodChainHostsRow = {species_profile_id?: unknown; hosts?: unknown; hosts_phrase?: unknown};
 
 /** A `voyage_food_links` row as read (decision 244: species, link and phrase columns only). */
 export type ArkFoodChainRow = {
@@ -225,7 +238,7 @@ const bySize = (a: ArkFoodChainSpecies, b: ArkFoodChainSpecies) => b.aboard - a.
  * predator or as prey (either may be read for it; rows about other pairs are
  * ignored). `page` names a species' indexed page by its slug, or null.
  */
-export function arkFoodChainEntry(rows: ArkFoodChainRow[], aboard: ArkFoodChainAboard, kind: string, page: (slug: string) => string | null): ArkFoodChainEntry | null {
+export function arkFoodChainEntry(rows: ArkFoodChainRow[], aboard: ArkFoodChainAboard, kind: string, page: (slug: string) => string | null, hostRows: ArkFoodChainHostsRow[] = []): ArkFoodChainEntry | null {
     const own = aboard.rows.get(kind);
     if (!own) return null;
     const species = speciesOf(own, kind, page);
@@ -266,7 +279,28 @@ export function arkFoodChainEntry(rows: ArkFoodChainRow[], aboard: ArkFoodChainA
     const eatenBy = neverPrey
         ? []
         : Array.from(predators.values()).map((entry) => entry.item).sort((a, b) => bySize(a.predator, b.predator));
-    return {species, eats, eatenBy, kept, neverPrey};
+    const hosts = kept ? null : arkFoodChainHosts(hostRows, aboard, kind, page);
+    return hosts ? {species, eats, eatenBy, kept, neverPrey, hosts} : {species, eats, eatenBy, kept, neverPrey};
+}
+
+/**
+ * A host-fed kind's hosts aboard (decision 482), from its `voyage_species_traits` row: the kind's own row (the engine's
+ * `groupTraits(kinOf(...))`), else the first of its looks with hosts. Null when it is not host-fed (hosts NULL or empty:
+ * nothing to feed on, so its card says what it eats as before). Each host counts as its kind aboard (A1), never its own.
+ */
+export function arkFoodChainHosts(hostRows: ArkFoodChainHostsRow[], aboard: ArkFoodChainAboard, kind: string, page: (slug: string) => string | null): ArkFoodChainEntry["hosts"] | null {
+    const usableRows = hostRows.filter((row) => Array.isArray(row.hosts) && row.hosts.length > 0);
+    const row = usableRows.find((r) => uuid(r.species_profile_id) === kind) ?? usableRows.find((r) => arkFoodChainKind(aboard, uuid(r.species_profile_id)) === kind);
+    if (!row) return null;
+    const kinds = new Map<string, ArkFoodChainSpecies>();
+    for (const host of row.hosts as unknown[]) {
+        const hostKind = arkFoodChainKind(aboard, uuid(host));
+        const hostRow = hostKind ? aboard.rows.get(hostKind) : undefined;
+        if (!hostKind || !hostRow || hostKind === kind || kinds.has(hostKind)) continue;
+        kinds.set(hostKind, speciesOf(hostRow, hostKind, page));
+    }
+    const all = Array.from(kinds.values()).sort(bySize);
+    return {phrase: words(row.hosts_phrase), aboard: all.slice(0, ARK_FOOD_CHAIN_HOSTS_SENT), more: Math.max(0, all.length - ARK_FOOD_CHAIN_HOSTS_SENT)};
 }
 
 /** How many species aboard a species' entry links to, either way (for picking what to feature). */

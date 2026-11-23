@@ -929,6 +929,8 @@
             "noneNearby": "Nessuno vicino",
             "noneAboard": "Nessuno qui",
             "dung": "sterco",
+            "hosts": "Si nutre dei suoi ospiti",
+            "hostsNone": "Nessuno dei suoi ospiti a bordo",
             "keptFed": "Nutrito dai custodi",
             "keptSafe": "Al sicuro dai predatori",
             "more": "+{n} altri",

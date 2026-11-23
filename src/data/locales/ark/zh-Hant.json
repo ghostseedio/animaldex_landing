@@ -929,6 +929,8 @@
             "noneNearby": "附近沒有",
             "noneAboard": "此處沒有",
             "dung": "糞便",
+            "hosts": "以宿主為食",
+            "hostsNone": "船上沒有牠的宿主",
             "keptFed": "由飼育員餵養",
             "keptSafe": "免受捕食者威脅",
             "more": "還有 {n} 隻",

@@ -929,6 +929,8 @@
             "noneNearby": "Žiadny nablízku",
             "noneAboard": "Tu žiadny",
             "dung": "trus",
+            "hosts": "Živí sa na svojich hostiteľoch",
+            "hostsNone": "Na palube nie je žiadny jeho hostiteľ",
             "keptFed": "Kŕmia ho chovatelia",
             "keptSafe": "V bezpečí pred predátormi",
             "more": "+{n} ďalších",

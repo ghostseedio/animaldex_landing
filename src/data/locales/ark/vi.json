@@ -929,6 +929,8 @@
             "noneNearby": "Không có gần đây",
             "noneAboard": "Không có ở đây",
             "dung": "phân động vật",
+            "hosts": "Sống nhờ vật chủ của nó",
+            "hostsNone": "Không có vật chủ nào của nó trên tàu",
             "keptFed": "Người chăm sóc cho ăn",
             "keptSafe": "An toàn trước kẻ săn mồi",
             "more": "Thêm +{n}",

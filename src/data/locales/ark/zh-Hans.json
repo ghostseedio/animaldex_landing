@@ -929,6 +929,8 @@
             "noneNearby": "附近没有",
             "noneAboard": "此处没有",
             "dung": "粪便",
+            "hosts": "以宿主为食",
+            "hostsNone": "船上没有它的宿主",
             "keptFed": "由饲养员喂养",
             "keptSafe": "免受捕食者威胁",
             "more": "还有 {n} 只",

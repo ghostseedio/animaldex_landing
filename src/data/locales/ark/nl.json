@@ -929,6 +929,8 @@
             "noneNearby": "Geen in de buurt",
             "noneAboard": "Geen hier",
             "dung": "mest",
+            "hosts": "Voedt zich met zijn gastheren",
+            "hostsNone": "Geen van zijn gastheren aan boord",
             "keptFed": "Gevoerd door verzorgers",
             "keptSafe": "Veilig voor roofdieren",
             "more": "+{n} meer",

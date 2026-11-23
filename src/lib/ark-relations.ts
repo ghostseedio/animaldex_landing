@@ -234,6 +234,26 @@ export function arkFoodChainRows(entry: ArkFoodChainEntry | null, relations: Ark
     return {eats: Array.from(eats.values()).sort(order), ambient, eatenBy: eatenBy.sort(order)};
 }
 
+/**
+ * A host-fed kind's hosts on the card (decision 482): its host kinds aboard (`entry.hosts`, the engine's own A10 link:
+ * fed while any is aboard, anywhere), each with how many are in the tapped animal's region now. Null when it is not
+ * host-fed or is kept. No lines: a host is fed on, never hunted.
+ */
+export function arkHostRows(entry: ArkFoodChainEntry | null, selected: ArkAnimal, animals: readonly ArkAnimal[]): {kinds: ArkFoodChainKind[]; more: number} | null {
+    const hosts = entry?.hosts;
+    const region = arkHuntingRegion(selected);
+    if (!hosts || region === null) return null;
+    const ids = new Set(hosts.aboard.map((host) => host.id.toLowerCase()));
+    const here = new Map<string, number>();
+    for (const other of animals) {
+        const kind = kindOf(other);
+        if (ids.has(kind) && arkHuntingRegion(other) === region) here.set(kind, (here.get(kind) ?? 0) + 1);
+    }
+    const kinds = hosts.aboard.map((host) => ({id: host.id.toLowerCase(), slug: host.slug, name: host.name, here: here.get(host.id.toLowerCase()) ?? 0}));
+    kinds.sort((a, b) => b.here - a.here || a.name.localeCompare(b.name));
+    return {kinds, more: Math.max(0, hosts.more)};
+}
+
 /** The nearest few of a list (the drawn lines), and how many more there are. */
 export function arkRelationShown(list: ArkRelationList, most = ARK_RELATION_LINES_PER_KIND): {shown: ArkRelationTarget[]; more: number} {
     return {shown: list.all.slice(0, most), more: Math.max(0, list.all.length - most)};
@@ -257,6 +277,9 @@ export type ArkRelationsWords = {
     noneAboard: string;
     /** Decision 434: a dung user's food on its Eats line. */
     dung: string;
+    /** Decision 482: a host-fed kind's row (its hosts aboard), and its words when none is aboard. */
+    hosts: string;
+    hostsNone: string;
     /** A kept animal's chain: fed by its keepers, safe from predators. */
     keptFed: string;
     keptSafe: string;
@@ -280,6 +303,8 @@ export const ARK_RELATIONS_ENGLISH: ArkRelationsWords = {
     noneNearby: "None nearby",
     noneAboard: "None aboard here",
     dung: "dung",
+    hosts: "Feeds on its hosts",
+    hostsNone: "None of its hosts aboard",
     keptFed: "Fed by its keepers",
     keptSafe: "Safe from predators",
     more: "+{n} more",

@@ -929,6 +929,8 @@
             "noneNearby": "Ei lähellä",
             "noneAboard": "Ei täällä",
             "dung": "lanta",
+            "hosts": "Elää isännistään",
+            "hostsNone": "Yksikään sen isännistä ei ole aluksella",
             "keptFed": "Hoitajat ruokkivat",
             "keptSafe": "Turvassa pedoilta",
             "more": "+{n} lisää",

@@ -929,6 +929,8 @@
             "noneNearby": "Brak w pobliżu",
             "noneAboard": "Brak tutaj",
             "dung": "odchody",
+            "hosts": "Żywi się swoimi żywicielami",
+            "hostsNone": "Żadnego z jego żywicieli nie ma na pokładzie",
             "keptFed": "Karmią go opiekunowie",
             "keptSafe": "Bezpieczny od drapieżników",
             "more": "+{n} więcej",
