@@ -24,12 +24,12 @@
   {
    "slug": "long-tailed-macaque",
    "recipe": "stone_hammer",
-   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours."
+   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4: with the row put back, 0 stone_hammer trips in 24 Ark hours for 4 animals (no rock goal where they live)."
   },
   {
    "slug": "tufted-capuchin",
    "recipe": "stone_hammer",
-   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours."
+   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4: with the row put back, 0 stone_hammer trips in 24 Ark hours for 4 animals (no rock goal where they live)."
   },
   {
    "slug": "javan-ferret-badger",
@@ -39,12 +39,12 @@
   {
    "slug": "eastern-gray-squirrel",
    "recipe": "nest_build",
-   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb) SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours."
+   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb) SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4 (rows put back, 24 Ark hours): 315 episodes, every one 'scan, climb': it climbs down from the drey's limb 15 m up for material and its slot runs out before the pick-up, the climb back up taking the rest (no carry, no place, no nest ever reads)."
   },
   {
    "slug": "red-squirrel",
    "recipe": "nest_build",
-   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb) SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours."
+   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb) SIG3 tranche 2: re-run with the rows put back: still no episode in 24 Ark hours. SIG3 tranche 4: with the row put back, no nest_build trip at all in its harness month; and its drey sits 20 m up a branch, as the grey squirrel's (whose episodes end at the climb down for material)."
   },
   {
    "slug": "desert-cottontail",
@@ -109,7 +109,7 @@
   {
    "slug": "american-bullfrog",
    "recipe": "wrestle",
-   "reason": "the two bullfrogs are drawn through each other while wrestling"
+   "reason": "the two bullfrogs are drawn through each other while wrestling SIG3 tranche 4: the pair fight 0.12 m apart (0.14-0.15 m frogs), both facing the same way, one's head in the other's rump; a wider meet (0.55 of a length from the middle, tried) only parts them: they still do not face each other, so it is not a wrestle."
   },
   {
    "slug": "chinese-mantis",
@@ -174,7 +174,7 @@
   {
    "slug": "indonesian-blue-tongued-skink",
    "recipe": "probe_feed",
-   "reason": "its probe frames draw it floating on top of a plant's leaves"
+   "reason": "its probe frames draw it floating on top of a plant's leaves SIG3 tranche 4: re-measured: it probes 1.0-1.1 m above the ground (walks up onto the plants), not in the leaf litter."
   },
   {
    "slug": "mugger-crocodile",

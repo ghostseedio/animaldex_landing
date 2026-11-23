@@ -160,11 +160,16 @@ async function main() {
 
     if (scene.kind === "recipe") {
         // The first episode of the recipe whose block has a key worth framing: found with the engine's own functions.
+        const tally = {trips: 0, episodes: 0, shapes: {} as Record<string, number>};
         search: for (const a of ctx.animals) {
             for (const trip of trips(ctx, a, scene.date + (scene.recipe === "nest_build" ? 0 : 0), scene.within ?? 24)) {
                 if (trip.recipe !== scene.recipe) continue;
                 const ep: Episode | null = tripEpisode(ctx.world, trip);
+                tally.trips++;
                 if (!ep) continue;
+                tally.episodes++;
+                const shape = ep.keys.map((k) => k.block.id).join(">");
+                tally.shapes[shape] = (tally.shapes[shape] ?? 0) + 1;
                 const key = ep.keys.find((k) => k.block.id === scene.block && (scene.block !== "pull" || k.catch?.ok));
                 if (!key) continue;
                 const first = ep.keys[0];
@@ -182,7 +187,7 @@ async function main() {
             api.nest = {site, stage: nestStageAt(scene.slug, scene.date + 86400 * 3)};
         }
         // (The moment's view: from the animal itself, a little back, side on.)
-        console.log("[sig2] moment", moment ? moment.note : "none");
+        console.log("[sig2] moment", moment ? moment.note : "none", JSON.stringify(tally));
     }
     api.moment = moment;
     /** One picture of the recipe moment: the world at `epoch`, the camera on the actor (or its nest) from `distance`. */
