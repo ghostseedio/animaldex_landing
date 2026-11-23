@@ -336,8 +336,8 @@ import {pickFigure, preferTap, type Projector} from "@/ark-scene/tap-pick";
 import {keptToBringOut, nearKeptDue, NEAR_KEPT_VIEW, NEAR_ZOO_MAX, NEAR_ZOO_MAX_LOW, NEAR_ZOO_VIEW, sameIds} from "@/ark-scene/near-kept";
 /** ARK-ANIM: how far a rig drawn standing may go down into the ground as it sleeps (m; it cannot fold its legs). */
 const RIG_STANDING_SINK = 0.02;
-/** SIG3: how far a wallowing tortoise's shell sinks into the mud, of its drawn height (20–30% reads as a wallow). */
-const WALLOW_SINK = 0.25;
+/** SIG3: how far a wallowing tortoise's shell sinks into the mud, of its drawn height (a third reads as sitting in it). */
+const WALLOW_SINK = 0.35;
 // 3.3 fix: a perched animal's reactions keep it on its perch (the schedule's own "raised": 0.4 m over the ground).
 const PERCH_ABOVE = 0.4;
 
@@ -1107,6 +1107,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // ambient fish and flockmates (`recipe-scene.ts`); the poses are the schedule's.
     const recipeScene = new RecipeScene();
     scene.add(recipeScene.root);
+    recipeScene.ground = (x, z) => {
+        const n = groundNormalAt(x, z);
+        return {y: heightAt(x, z), nx: n.nx, ny: n.ny, nz: n.nz};
+    };
     // The reef lane's ambient schools: a chase or a plunge goes after the nearest one (`setFishSource`).
     setFishSource((pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
     /** Its seeded sex's size (`behaviour-recipes.ts` sexLook: a stag bigger than a hind; the species' mean stays). */
@@ -7204,7 +7208,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
                 euler.set(where.pitch, where.yaw, where.roll);
                 rotation.setFromEuler(euler);
-                // (SIG3: a tortoise wallowing at the water's edge, `wallow~turtle`'s bury: its shell sunk a quarter of its
+                // (SIG3: a tortoise wallowing at the water's edge, `wallow~turtle`'s bury: its shell sunk a third of its
                 // height into the mud, settling in over its first seconds and up again at the end. Grounding stood it back
                 // on the bank, level as it walks: the pose's own sink is not carried over a stand.)
                 const wallowAct = stand ? (entry.sched?.pose as RecipePose | null | undefined)?.act : null;

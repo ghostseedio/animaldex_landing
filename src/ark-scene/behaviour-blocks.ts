@@ -49,7 +49,8 @@ export type BlockDef = {
     /** Near-only: particles (at the start of the step unless `fxAt` says the end), a mark left on the ground. */
     fx?: "splash" | "dirt" | "dust" | "mud" | "chips" | "bubbles" | "sand" | "spray" | "shake";
     fxAt?: "start" | "end" | "during";
-    mark?: "hole" | "mound" | "hollow" | "pit";
+    /** (`mud`: a wallow's, set by the recipe, `behaviour-recipes.ts` marksOf; no block names it.) */
+    mark?: "hole" | "mound" | "hollow" | "pit" | "mud";
 };
 
 const B = (def: BlockDef) => def;

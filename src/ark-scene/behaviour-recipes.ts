@@ -2507,8 +2507,9 @@ export function marksOf(world: ScheduleWorld, trips: Trip[], epoch: number, kit:
             if (!key.block.mark || key.t0 > epoch) continue;
             // A burrow's spoil heap and a dust bath's hollow; a turtle's covered pit is a mound.
             const base = recipeBase(episode.recipe);
-            const kind = base === "dig_burrow" || base === "burrow_dig" || base === "bank_burrow" || (base === "beach_nest" && i > 2) ? "mound" : key.block.mark;
-            out.push({id: `${episode.id}#${i}`, kind, x: key.from.x, y: key.from.y, z: key.from.z, size: Math.max(episode.length * (kind === "hollow" ? 0.9 : 0.5), 0.06), from: key.t0, to: key.t0 + MARK_SECONDS});
+            // (SIG3: a wallow's is its patch of wet mud, wider than the body settled in it.)
+            const kind = base === "dig_burrow" || base === "burrow_dig" || base === "bank_burrow" || (base === "beach_nest" && i > 2) ? "mound" : base === "wallow" ? "mud" : key.block.mark;
+            out.push({id: `${episode.id}#${i}`, kind, x: key.from.x, y: key.from.y, z: key.from.z, size: Math.max(episode.length * (kind === "mud" ? 1.4 : kind === "hollow" ? 0.9 : 0.5), 0.06), from: key.t0, to: key.t0 + MARK_SECONDS});
         }
     }
     return out;
