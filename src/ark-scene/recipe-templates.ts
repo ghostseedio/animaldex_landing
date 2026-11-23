@@ -14,6 +14,7 @@
 import {GROUP_TEMPLATES} from "@/ark-scene/behaviour-group-templates";
 import {REPTILE_TEMPLATES} from "@/ark-scene/recipe-templates-reptiles";
 import {SMALL_TEMPLATES} from "@/ark-scene/recipe-small";
+import {DOMESTIC_TEMPLATES} from "@/ark-scene/recipe-templates-domestic";
 
 /**
  * Where a step goes:
@@ -1160,6 +1161,8 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
 for (const t of GROUP_TEMPLATES) TEMPLATES[t.id] = t;
 // (Lane SIG2-REPTILES: the reptile and turtle variants, `recipe-templates-reptiles.ts`.)
 for (const template of REPTILE_TEMPLATES) TEMPLATES[template.id] = template;
+// (Lane SIG5: the most-seen species' own acts, `recipe-templates-domestic.ts`.)
+for (const template of DOMESTIC_TEMPLATES) TEMPLATES[template.id] = template;
 
 /** Land-water crossings: the way in, the way out, and what follows (the schedule's enter and exit legs). */
 export const ENTRY_STYLES = ["wade", "slide", "slip", "dive", "launch"] as const;
