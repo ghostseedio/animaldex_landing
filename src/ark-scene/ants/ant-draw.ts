@@ -70,7 +70,20 @@ import {
 
 export type AntTier = "high" | "medium" | "low" | "lite";
 /** Ants drawn at most, per tier. */
-export const ANT_BUDGET: Record<AntTier, number> = {high: 2600, medium: 1600, low: 800, lite: 300};
+/** One shared pool of ants (and their loads), allocated at the tier's size only while a colony is in view close up, freed
+ * after a few seconds with none: no per-colony buffers. A phone (low) draws at most 256 at once. */
+export const ANT_BUDGET: Record<AntTier, number> = {high: 1024, medium: 512, low: 256, lite: 128};
+/** Frames with no colony close up before the pool is freed (a few seconds). */
+const POOL_IDLE_FRAMES = 240;
+
+interface AntPool {
+    size: number;
+    ants: InstancedMesh;
+    aFront: InstancedBufferAttribute;
+    aBack: InstancedBufferAttribute;
+    leaves: InstancedMesh;
+    blobs: InstancedMesh;
+}
 
 export type AntHost = {
     groundY: (x: number, z: number) => number;
@@ -149,11 +162,17 @@ const twoTone = (material: MeshStandardMaterial) => {
 
 export class AntColonies {
     readonly group = new Group();
-    private readonly ants: InstancedMesh;
-    private readonly aFront: InstancedBufferAttribute;
-    private readonly aBack: InstancedBufferAttribute;
-    private readonly leaves: InstancedMesh;
-    private readonly blobs: InstancedMesh;
+    private pool: AntPool | null = null;
+    private idle = 0;
+    private readonly antGeo: BufferGeometry;
+    private readonly antMaterial: MeshStandardMaterial;
+    private readonly leafGeo = new BoxGeometry(0.02, 0.9, 0.8);
+    private readonly blobGeo = new IcosahedronGeometry(0.5, 0);
+    private readonly leafMaterial = new MeshStandardMaterial({color: 0xffffff, roughness: 0.7, side: DoubleSide});
+    private readonly blobMaterial = new MeshStandardMaterial({color: 0xffffff, roughness: 0.6});
+    private budget = 0;
+    private readonly sink: AntSink = (x, y, z, tx, ty, tz, ux, uy, uz, scale, load, front, back) => this.push(x, y, z, tx, ty, tz, ux, uy, uz, scale, load, front, back);
+    private readonly finder = new Float32Array(9);
     private colonies: ColonyState[] = [];
     private membersKey = "";
     private foods: AntFood[] = [];
@@ -168,33 +187,46 @@ export class AntColonies {
     private stats = {drawn: 0, colonies: 0, trails: 0, ms: 0};
 
     constructor(private readonly host: AntHost) {
-        const max = ANT_BUDGET.high;
-        const material = new MeshStandardMaterial({roughness: 0.55, metalness: 0.05});
-        twoTone(material);
-        this.materials.push(material);
-        this.ants = new InstancedMesh(antGeometry(), material, max);
-        this.aFront = new InstancedBufferAttribute(new Float32Array(max * 3), 3).setUsage(DynamicDrawUsage) as InstancedBufferAttribute;
-        this.aBack = new InstancedBufferAttribute(new Float32Array(max * 3), 3).setUsage(DynamicDrawUsage) as InstancedBufferAttribute;
-        this.ants.geometry.setAttribute("aFront", this.aFront);
-        this.ants.geometry.setAttribute("aBack", this.aBack);
-        this.ants.instanceMatrix.setUsage(DynamicDrawUsage);
-        this.ants.frustumCulled = false;
-        this.ants.count = 0;
-        const leafMaterial = new MeshStandardMaterial({color: 0xffffff, roughness: 0.7, side: DoubleSide});
-        this.materials.push(leafMaterial);
-        const leaf = new BoxGeometry(0.02, 0.9, 0.8);
-        this.leaves = new InstancedMesh(leaf, leafMaterial, Math.floor(max / 2));
-        this.leaves.instanceMatrix.setUsage(DynamicDrawUsage);
-        this.leaves.frustumCulled = false;
-        this.leaves.count = 0;
-        const blobMaterial = new MeshStandardMaterial({color: 0xffffff, roughness: 0.6});
-        this.materials.push(blobMaterial);
-        this.blobs = new InstancedMesh(new IcosahedronGeometry(0.5, 0), blobMaterial, Math.floor(max / 2));
-        this.blobs.instanceMatrix.setUsage(DynamicDrawUsage);
-        this.blobs.frustumCulled = false;
-        this.blobs.count = 0;
-        this.group.add(this.ants, this.leaves, this.blobs);
+        this.antMaterial = new MeshStandardMaterial({roughness: 0.55, metalness: 0.05});
+        twoTone(this.antMaterial);
+        this.materials.push(this.antMaterial, this.leafMaterial, this.blobMaterial);
+        this.antGeo = antGeometry();
         this.group.name = "ark-ants";
+    }
+
+    /** The shared pool at the tier's size (made when a colony first comes into view close up; remade on a tier change). */
+    private ensurePool(): AntPool {
+        const size = ANT_BUDGET[this.tier];
+        if (this.pool && this.pool.size === size) return this.pool;
+        this.freePool();
+        // The ant geometry is shared; each pool gets its own copy so its instanced colours are its own.
+        const geo = this.antGeo.clone();
+        const ants = new InstancedMesh(geo, this.antMaterial, size);
+        const aFront = new InstancedBufferAttribute(new Float32Array(size * 3), 3).setUsage(DynamicDrawUsage) as InstancedBufferAttribute;
+        const aBack = new InstancedBufferAttribute(new Float32Array(size * 3), 3).setUsage(DynamicDrawUsage) as InstancedBufferAttribute;
+        geo.setAttribute("aFront", aFront);
+        geo.setAttribute("aBack", aBack);
+        ants.instanceMatrix.setUsage(DynamicDrawUsage);
+        const half = Math.max(16, size >> 1);
+        const leaves = new InstancedMesh(this.leafGeo, this.leafMaterial, half);
+        const blobs = new InstancedMesh(this.blobGeo, this.blobMaterial, half);
+        for (const m of [ants, leaves, blobs]) {
+            m.instanceMatrix.setUsage(DynamicDrawUsage);
+            m.frustumCulled = false;
+            m.count = 0;
+        }
+        this.group.add(ants, leaves, blobs);
+        this.pool = {size, ants, aFront, aBack, leaves, blobs};
+        return this.pool;
+    }
+
+    private freePool() {
+        const p = this.pool;
+        if (!p) return;
+        this.group.remove(p.ants, p.leaves, p.blobs);
+        p.ants.geometry.dispose();
+        for (const m of [p.ants, p.leaves, p.blobs]) m.dispose();
+        this.pool = null;
     }
 
     setTier(tier: AntTier, reduced: boolean) {
@@ -296,8 +328,21 @@ export class AntColonies {
         const at = this.reduced ? Math.floor(epoch / 60) * 60 : epoch;
         this.count = this.leafCount = this.blobCount = 0;
         let trails = 0;
-        const budget = ANT_BUDGET[this.tier];
-        const sink: AntSink = (x, y, z, tx, ty, tz, ux, uy, uz, scale, load, front, back) => this.push(x, y, z, tx, ty, tz, ux, uy, uz, scale, load, front, back, budget);
+        // The pool only while some colony is in view close up (freed a few seconds after the last).
+        let anyClose = false;
+        for (const c of this.colonies) {
+            const reachView = Math.min(Math.max(viewDistance * 1.3, 0.12), 6);
+            if (viewDistance < c.kind.length * 700 && Math.hypot(c.nest.x - target.x, c.nest.z - target.z) <= c.kind.reach + reachView + 1) {
+                anyClose = true;
+                break;
+            }
+        }
+        if (anyClose) this.idle = 0;
+        else if (this.pool && ++this.idle > POOL_IDLE_FRAMES) this.freePool();
+        const pool = anyClose ? this.ensurePool() : null;
+        this.budget = pool ? pool.size : 0;
+        const budget = this.budget;
+        const sink = this.sink;
         const ground = this.host.groundY;
         for (const c of this.colonies) {
             const near = Math.hypot(c.nest.x - target.x, c.nest.z - target.z);
@@ -310,14 +355,19 @@ export class AntColonies {
             c.plan = trailNow(c, this.foodsOf(c), at);
             if (c.plan) trails++;
             // The trail's line: a scent line close up; a leafcutters' cleared highway further.
-            for (const p of Array.from(c.paths.values())) if (p.ribbon) p.ribbon.visible = false;
-            if (c.plan) {
-                const p = this.pathOf(c, c.plan.food);
-                const show = kind.form === "leafcut" ? viewDistance < 30 : viewDistance < kind.length * 250;
-                if (p.ribbon && show) {
-                    p.ribbon.visible = true;
-                    if (kind.form !== "leafcut") (p.ribbon.material as MeshStandardMaterial).opacity = 0.05 + 0.2 * c.plan.strength;
+            // The line only while it is shown (made then, freed when it is not): the ants themselves show the trail.
+            const show = c.plan !== null && (kind.form === "leafcut" ? viewDistance < 30 : viewDistance < kind.length * 250) && near < kind.reach + reachView + 1;
+            c.paths.forEach((p, key) => {
+                if (p.ribbon && (!show || key !== c.plan!.food.key)) {
+                    this.dropRibbon(p.ribbon);
+                    p.ribbon = null;
                 }
+            });
+            if (show && c.plan) {
+                const p = this.pathOf(c, c.plan.food);
+                if (!p.ribbon) p.ribbon = this.makeRibbon(c, p.path);
+                p.ribbon.visible = true;
+                if (kind.form !== "leafcut") (p.ribbon.material as MeshStandardMaterial).opacity = 0.02 + 0.06 * c.plan.strength;
             }
             if (kind.form === "column") {
                 c.raid = raidNow(c, this.foods, at, ground);
@@ -334,7 +384,7 @@ export class AntColonies {
             if (c.plan && awake) {
                 const p = this.pathOf(c, c.plan.food);
                 trailWorkers(c, c.plan, p.path, at, view, rain, feet, sink);
-                const o = new Float32Array(9);
+                const o = this.finder;
                 if (finderAt(c.plan, p.path, at, kind.speed, o)) sink(o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7], o[8], kind.length, c.plan.food.kind === "carcass" ? LOAD_PIECE : LOAD_NONE, kind.front, kind.back);
             }
             // Searchers: fewer while a trail draws the foragers; a few by the nest while it sleeps.
@@ -354,19 +404,21 @@ export class AntColonies {
             const edge = rivalEdge(a, b);
             if (edge && this.host.awake(a.activity, at) && this.host.awake(b.activity, at)) standoff(a, b, edge, at, {x: target.x, z: target.z, r: Math.min(Math.max(viewDistance * 1.3, 0.12), 6)}, ground, sink);
         }
-        this.ants.count = this.count;
-        this.leaves.count = this.leafCount;
-        this.blobs.count = this.blobCount;
-        this.ants.instanceMatrix.needsUpdate = true;
-        this.aFront.needsUpdate = true;
-        this.aBack.needsUpdate = true;
-        this.leaves.instanceMatrix.needsUpdate = true;
-        if (this.leaves.instanceColor) this.leaves.instanceColor.needsUpdate = true;
-        this.blobs.instanceMatrix.needsUpdate = true;
-        if (this.blobs.instanceColor) this.blobs.instanceColor.needsUpdate = true;
-        this.ants.visible = this.count > 0;
-        this.leaves.visible = this.leafCount > 0;
-        this.blobs.visible = this.blobCount > 0;
+        if (pool) {
+            pool.ants.count = this.count;
+            pool.leaves.count = this.leafCount;
+            pool.blobs.count = this.blobCount;
+            pool.ants.instanceMatrix.needsUpdate = true;
+            pool.aFront.needsUpdate = true;
+            pool.aBack.needsUpdate = true;
+            pool.leaves.instanceMatrix.needsUpdate = true;
+            if (pool.leaves.instanceColor) pool.leaves.instanceColor.needsUpdate = true;
+            pool.blobs.instanceMatrix.needsUpdate = true;
+            if (pool.blobs.instanceColor) pool.blobs.instanceColor.needsUpdate = true;
+            pool.ants.visible = this.count > 0;
+            pool.leaves.visible = this.leafCount > 0;
+            pool.blobs.visible = this.blobCount > 0;
+        }
         this.stats.drawn = this.count;
         this.stats.trails = trails;
         this.stats.ms = performance.now() - t0;
@@ -374,8 +426,9 @@ export class AntColonies {
 
     private readonly colour = new Color();
 
-    private push(x: number, y: number, z: number, tx: number, ty: number, tz: number, ux: number, uy: number, uz: number, s: number, load: AntLoad, front: number, back: number, budget: number): boolean {
-        if (this.count >= budget) return false;
+    private push(x: number, y: number, z: number, tx: number, ty: number, tz: number, ux: number, uy: number, uz: number, s: number, load: AntLoad, front: number, back: number): boolean {
+        const pool = this.pool;
+        if (!pool || this.count >= this.budget) return false;
         // Basis: forward t, up u (made square to t), right = u × t.
         let fl = Math.hypot(tx, ty, tz) || 1;
         tx /= fl;
@@ -392,14 +445,14 @@ export class AntColonies {
         const rx = uy * tz - uz * ty;
         const ry = uz * tx - ux * tz;
         const rz = ux * ty - uy * tx;
-        const m = this.ants.instanceMatrix.array as Float32Array;
+        const m = pool.ants.instanceMatrix.array as Float32Array;
         const o = this.count * 16;
         m[o] = rx * s; m[o + 1] = ry * s; m[o + 2] = rz * s; m[o + 3] = 0;
         m[o + 4] = ux * s; m[o + 5] = uy * s; m[o + 6] = uz * s; m[o + 7] = 0;
         m[o + 8] = tx * s; m[o + 9] = ty * s; m[o + 10] = tz * s; m[o + 11] = 0;
         m[o + 12] = x; m[o + 13] = y; m[o + 14] = z; m[o + 15] = 1;
-        const f = this.aFront.array as Float32Array;
-        const b = this.aBack.array as Float32Array;
+        const f = pool.aFront.array as Float32Array;
+        const b = pool.aBack.array as Float32Array;
         this.colour.setHex(front);
         f[this.count * 3] = this.colour.r; f[this.count * 3 + 1] = this.colour.g; f[this.count * 3 + 2] = this.colour.b;
         this.colour.setHex(back);
@@ -407,7 +460,7 @@ export class AntColonies {
         this.count++;
         if (load !== LOAD_NONE) {
             const leaf = load === LOAD_LEAF;
-            const mesh = leaf ? this.leaves : this.blobs;
+            const mesh = leaf ? pool.leaves : pool.blobs;
             const i = leaf ? this.leafCount : this.blobCount;
             if (i < (mesh.instanceMatrix.count ?? 0)) {
                 const a = mesh.instanceMatrix.array as Float32Array;
@@ -436,13 +489,7 @@ export class AntColonies {
         let p = c.paths.get(food.key);
         if (!p) {
             const path = trailPath(c, food, this.host.groundY);
-            const width = c.kind.form === "leafcut" ? 0.045 : c.kind.length * 2.2;
-            const ribbon = new Mesh(ribbonGeometry(path, width), c.kind.form === "leafcut" ? this.ribbonMaterialCleared : this.ribbonMaterialScent.clone());
-            ribbon.renderOrder = 1;
-            ribbon.visible = false;
-            ribbon.frustumCulled = false;
-            this.group.add(ribbon);
-            p = {path, ribbon};
+            p = {path, ribbon: null};
             c.paths.set(food.key, p);
             // (Old trails' lines dropped: a colony keeps a handful.)
             if (c.paths.size > 6) {
@@ -454,13 +501,27 @@ export class AntColonies {
         return p;
     }
 
+    /** A trail's mark: a very faint scent line one ant wide, or a leafcutters' cleared highway. */
+    private makeRibbon(c: ColonyState, path: Path): Mesh {
+        const width = c.kind.form === "leafcut" ? 0.045 : c.kind.length;
+        const ribbon = new Mesh(ribbonGeometry(path, width), c.kind.form === "leafcut" ? this.ribbonMaterialCleared : this.ribbonMaterialScent.clone());
+        ribbon.renderOrder = 1;
+        ribbon.frustumCulled = false;
+        this.group.add(ribbon);
+        return ribbon;
+    }
+
     private moveBivouac(c: ColonyState, at: {x: number; y: number; z: number}) {
         if (c.nestMesh) c.nestMesh.position.set(at.x, at.y, at.z);
     }
 
     private ensureNest(c: ColonyState, want: boolean) {
         if (!want) {
-            if (c.nestMesh) c.nestMesh.visible = false;
+            if (c.nestMesh) {
+                this.group.remove(c.nestMesh);
+                c.nestMesh.traverse((o) => (o as Mesh).geometry?.dispose());
+                c.nestMesh = null;
+            }
             return;
         }
         if (!c.nestMesh) {
@@ -513,8 +574,7 @@ export class AntColonies {
 
     /** The trail's path at tenths of its length (the harness frames it). */
     private samplePath(c: ColonyState, food: AntFood): Array<{x: number; y: number; z: number}> {
-        const p = c.paths.get(food.key)?.path;
-        if (!p) return [];
+        const p = this.pathOf(c, food).path;
         const o = new Float32Array(9);
         const out: Array<{x: number; y: number; z: number}> = [];
         for (let k = 0; k <= 10; k++) {
@@ -526,9 +586,10 @@ export class AntColonies {
 
     dispose() {
         for (const c of this.colonies) this.dropColony(c);
-        this.ants.geometry.dispose();
-        this.leaves.geometry.dispose();
-        this.blobs.geometry.dispose();
+        this.freePool();
+        this.antGeo.dispose();
+        this.leafGeo.dispose();
+        this.blobGeo.dispose();
         for (const m of this.materials) m.dispose();
         this.ribbonMaterialScent.dispose();
         this.ribbonMaterialCleared.dispose();
