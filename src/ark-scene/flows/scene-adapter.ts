@@ -14,12 +14,12 @@
  */
 
 import table from "@/ark-scene/flows/flow-params.json";
-import {flowStepAt, forgetFlows, stepLine, type FlowServer, type FlowStep, type FlowSubject} from "@/ark-scene/flows/flows";
+import {flowStepAt, flowSteps, forgetFlows, stepLine, type FlowServer, type FlowStep, type FlowSubject} from "@/ark-scene/flows/flows";
 import type {FlowParams} from "@/ark-scene/flows/params";
 
 type Beat = "walk" | "run" | "fly" | "glide" | "swim" | "enter_water" | "exit_water" | "climb" | "pause" | "shake" | "bite" | "chew" | "step" | "scan" | "peck" | "drink" | "preen" | "rest" | "sleep" | "play" | "stalk";
 type StayBeat = {at: number; beat: Beat; x: number; z: number; yaw: number; dur?: number};
-type AdaptTrip = {doing: string; arrive: number; end: number; stay: StayBeat[]; shadow?: unknown};
+type AdaptTrip = {doing: string; arrive: number; end: number; stay: StayBeat[]; shadow?: unknown; to?: {x: number; z: number; yaw?: number}; finish?: {yaw?: number}};
 
 const PARAMS = (table as unknown as {species: Record<string, FlowParams>}).species;
 
@@ -36,6 +36,9 @@ const servers = new Map<string, Partial<FlowServer>>();
 /** What the server released about an animal (its kills, escapes, caches, keepers' feedings, matings), for its flows. */
 export function setFlowServer(id: string, server: Partial<FlowServer>): void {
     servers.set(id, server);
+    // (A subject already handed out reads the new release too.)
+    const known = subjects.get(id);
+    if (known) known.server = {...known.server, ...server};
     forgetFlows();
 }
 
@@ -61,6 +64,17 @@ export function flowNow(id: string, epoch: number): {kind: string; line: string;
     const subject = subjects.get(id);
     const step = subject ? flowStepAt(subject, epoch) : null;
     return step ? {kind: step.kind, line: stepLine(step), server: Boolean(step.server)} : null;
+}
+
+/** A slot its flow spends at least this share of still is a stay: the schedule's route for it is dropped. */
+export const FLOW_STILL_SHARE = 0.6;
+
+/** The share of [from, to) its flow is still (eating, resting, a catch, a still search): 0 with no flow. */
+export function flowStillShare(subject: FlowSubject | null, from: number, to: number): number {
+    if (!subject) return 0;
+    let still = 0;
+    for (const step of flowSteps(subject, from, to)) if (step.pose === "still" && step.kind !== "sleep") still += Math.min(step.to, to) - Math.max(step.from, from);
+    return still / Math.max(to - from, 1);
 }
 
 /** The beats it walks with: kept where the schedule put them. */
@@ -106,9 +120,11 @@ function cadence(beat: Beat): number {
  * flies with a flock). The walked beats stay where they are; between them, at the place each leaves it, the flow's beats.
  */
 export function flowTrip<T extends AdaptTrip>(trip: T, subject: FlowSubject | null): T {
-    if (!subject || trip.shadow || trip.doing === "sleep" || trip.doing === "to_roost" || !trip.stay.length) return trip;
+    if (!subject || trip.shadow || trip.doing === "sleep" || trip.doing === "to_roost") return trip;
     const out: StayBeat[] = [];
-    const stay = trip.stay;
+    // (A stay with no beats of its own, a slot its flow keeps it still in: its flow's beats where it stands.)
+    const stay = trip.stay.length ? trip.stay : trip.to ? [{at: 0, beat: "pause" as Beat, x: trip.to.x, z: trip.to.z, yaw: trip.to.yaw ?? trip.finish?.yaw ?? 0}] : [];
+    if (!stay.length) return trip;
     for (let i = 0; i < stay.length; i++) {
         const beat = stay[i];
         const next = i + 1 < stay.length ? stay[i + 1].at : trip.end - trip.arrive;

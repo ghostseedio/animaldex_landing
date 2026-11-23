@@ -4,7 +4,7 @@ import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {forgetSchedules, scheduleWorld, tripAt, SLOT_SECONDS, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import {forgetFlows, flowStepAt} from "@/ark-scene/flows/flows";
-import {flowSubjectOf} from "@/ark-scene/flows/scene-adapter";
+import {flowStillShare, flowSubjectOf, FLOW_STILL_SHARE} from "@/ark-scene/flows/scene-adapter";
 import {placeAnimals} from "@/ark-scene/placement";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {displayLength} from "@/ark-scene/sizes";
@@ -34,19 +34,20 @@ function trips(on: boolean, animal: ScheduleAnimal) {
     return out;
 }
 
-test("flows in the scene: the route and where it ends are the schedule's; the stance is the flow's", () => {
+test("flows in the scene: still flow slots stay put, the body never jumps, and every meal stance is the flow's", () => {
     const animal = deer(null);
-    const off = trips(false, animal);
     const on = trips(true, animal);
-    let eatingStances = 0;
+    (globalThis as {__arkFlows?: boolean}).__arkFlows = true;
     const subject = flowSubjectOf(animal, "red-deer", hoursAt)!;
-    for (let k = 0; k < off.length; k++) {
-        assert.equal(JSON.stringify(on[k].legs), JSON.stringify(off[k].legs), `slot ${k}: legs changed`);
-        assert.deepEqual(on[k].finish, off[k].finish, `slot ${k}: finish changed`);
-        assert.equal(on[k].arrive, off[k].arrive);
-        // (Its walked beats, at their places, are the schedule's own.)
-        const walked = (t: typeof on[number]) => t.stay.filter((b) => b.beat === "step" || b.beat === "stalk" || b.beat === "play").map((b) => `${b.at},${b.x},${b.z}`);
-        assert.deepEqual(walked(on[k]), walked(off[k]));
+    let eatingStances = 0;
+    let stays = 0;
+    for (let k = 0; k < on.length; k++) {
+        // (Where one slot ends the next begins: no jump at a slot's edge.)
+        if (k) assert.ok(Math.hypot(on[k].from.x - on[k - 1].finish.x, on[k].from.z - on[k - 1].finish.z) < 0.05, `slot ${k}: jumped ${Math.hypot(on[k].from.x - on[k - 1].finish.x, on[k].from.z - on[k - 1].finish.z).toFixed(2)} m`);
+        if (flowStillShare(subject, on[k].start, on[k].end) >= FLOW_STILL_SHARE && on[k].doing !== "sleep") {
+            stays++;
+            assert.equal(on[k].mode, "stay", `slot ${k}: a still flow slot travels`);
+        }
         for (const beat of on[k].stay) {
             const step = flowStepAt(subject, on[k].arrive + beat.at);
             if (beat.beat === "bite" || beat.beat === "chew") {
@@ -55,6 +56,8 @@ test("flows in the scene: the route and where it ends are the schedule's; the st
             }
         }
     }
+    (globalThis as {__arkFlows?: boolean}).__arkFlows = false;
+    assert.ok(stays > 0, "no still slot");
     assert.ok(eatingStances > 0, "no meal played");
 });
 

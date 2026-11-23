@@ -287,6 +287,22 @@ Design only. Engine changes land one at a time after hunting goes live (about 25
 
 ## 8. Sequencing and what ships first
 
+**The scene adapter (pilot, `src/ark-scene/flows/scene-adapter.ts`, switch `globalThis.__arkFlows`, harness `?flows=1`;
+off by default, and nothing runs while off: the schedule tests pass unchanged).**
+
+- A slot its flow spends at least 60% still (`FLOW_STILL_SHARE`: eating, resting, a catch, a still search) is a stay:
+  the schedule's route for it is dropped, so it stands where it is. Other slots keep the schedule's route: a moving step
+  is the schedule's trip leg. Where a slot ends the next begins (tested: no jump at any slot edge; `finishOf` looks back
+  48 slots with flows on, a long graze being goal-less slots in a row).
+- At a stay, its beats are the flow's: a meal is bite and chew (birds and insects peck), standing, head down; a still
+  search looks round (`scan`); rest, drink and groom as themselves. The schedule's walked beats (`step`, `stalk`,
+  `play`) are kept where they are.
+- In the scene a flow sleeps and wakes with the schedule's own hours (the server's activity), never its own.
+- The fed state is the server's condition (`hungry` or not); events come in through `setFlowServer`.
+- In-scene pictures: `scripts/ark-flow-scene-shots.mjs` (flows on and off at the same moments, captioned with the
+  flow's line, the pose's beat and today's card).
+
+
 1. This design and the pilot strips (here).
 2. **First shippable piece (client only, narrates existing server events):** feeding, sleeping and drinking flows.
    - It covers the forage templates; the kill, escape, cache and fed pins; kept feeding; sleep; drink and rest.
