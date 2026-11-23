@@ -13,7 +13,7 @@
 
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
-import {scheduleWorld, SLOT_SECONDS, tripAt, tripEpisode, recipeNest, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
+import {scheduleWorld, SLOT_SECONDS, tripAt, tripEpisode, recipeNest, roostOf, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
 import {nestStageAt, speciesRecipes, type Episode} from "@/ark-scene/behaviour-recipes";
 import {sleepStyle} from "@/ark-scene/sleep";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
@@ -210,6 +210,12 @@ async function main() {
         close(Math.max(g.spread * 2.2, lengths * g.length));
         handle.setView({target: {x: g.x, y: g.y + g.length * 0.25, z: g.z}, distance: Math.max(g.spread * 2.4 + g.length * 2, lengths * g.length), polar, azimuth});
         await frames(4);
+        const roosts = ctx.animals.map((a) => {
+            const r = roostOf(ctx.world, a.profile, a.animal);
+            const yaw = handle.locate(a.id)?.yaw;
+            return `${a.id.slice(-2)}:${(r.point ?? "-").slice(0, 28)}${r.along ? " along" : ""}${r.heading === undefined ? "" : ` h${r.heading.toFixed(2)}`} yaw${yaw === undefined ? "-" : yaw.toFixed(2)}`;
+        });
+        console.log("[sig2] roosts", roosts.join(" | "));
         return `t=${epoch.toFixed(0)} cards ${statuses().join("/")} social ${api.social} meanGap ${g.meanGap} gaps ${g.gaps.join(",")} spread ${g.spread.toFixed(2)} m length ${g.length.toFixed(2)} m`;
     };
     (window as unknown as {__sig2: typeof api}).__sig2 = api;

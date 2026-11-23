@@ -861,7 +861,7 @@ function workRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: ArkZone): Sc
     const dry = wetDen && place.map?.who && typeof (place as {x?: number}).x === "number" ? coastalDen(place.map, (place as {x: number}).x, (place as {z: number}).z, (place as {ground?: number}).ground ?? 0) : null;
     if (dry) return dry;
     if (roost) {
-        if (roost.kind === "attach" && roost.attach) return {x: roost.attach.x, y: roost.attach.y, z: roost.attach.z, nx: roost.attach.normal[0], ny: roost.attach.normal[1], nz: roost.attach.normal[2], point: `map:${roost.attach.id}`};
+        if (roost.kind === "attach" && roost.attach) return {x: roost.attach.x, y: roost.attach.y, z: roost.attach.z, nx: roost.attach.normal[0], ny: roost.attach.normal[1], nz: roost.attach.normal[2], point: `map:${roost.attach.id}`, along: roost.attach.tangent};
         if (roost.kind === "canopy" && roost.canopy) {
             const at = canopyPoint(roost.canopy.zone ?? zone, roost.canopy);
             return {x: at.x, y: at.y, z: at.z, nx: at.nx, ny: at.ny, nz: at.nz, point: `map:canopy`};
@@ -873,7 +873,7 @@ function workRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: ArkZone): Sc
     // (A den on its perch in the tide or the surf, a desert rain frog's hole on the beach: its den on dry land instead.)
     const wetPerch = perch && place.map?.who && !denIsDry(perch.x, perch.z) ? coastalDen(place.map, perch.x, perch.z, perch.y) : null;
     if (wetPerch) return wetPerch;
-    if (perch) return {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`};
+    if (perch) return {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`, along: [perch.tx, perch.ty, perch.tz]};
     // A hauled-out diver rests where it stands on its shore (a penguin colony on the cove's ice).
     const at = place as {x?: number; z?: number; ground?: number};
     if (place.map?.shore && typeof at.x === "number" && typeof at.z === "number") {

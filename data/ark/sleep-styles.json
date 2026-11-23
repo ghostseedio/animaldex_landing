@@ -13528,7 +13528,7 @@
      "rule": "plan primate: sits hunched, the head down"
     },
     "social": {
-     "rule": "held (signature-holds.json): SIG3 (members now seated at their leader's limb): the 0.23 m marmosets sit where the limb meets the trunk and are drawn half inside the wood"
+     "rule": "held (signature-holds.json): SIG3 (members now seated at their leader's limb): the 0.23 m marmosets sit where the limb meets the trunk and are drawn half inside the wood SIG3 tranche 3: the"
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -33023,7 +33023,7 @@
    "slug": "long-tailed-macaque",
    "posture": "sit",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -33032,7 +33032,8 @@
      "rule": "plan primate: sits hunched, the head down"
     },
     "social": {
-     "rule": "held (signature-holds.json): SIG3 (members now seated at their leader's limb): the five stand in a single file along the limb (walking pose), two beside it in the air from behind: a queue, "
+     "field": "sleep",
+     "phrase": "Sleeping trees, often ones overhanging a river, are occupied before dusk, and the animals huddle in small groups near the ends of branches until first light."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"

@@ -4,17 +4,12 @@
   {
    "slug": "common-marmoset",
    "recipe": "sleep:huddle",
-   "reason": "SIG3 (members now seated at their leader's limb): the 0.23 m marmosets sit where the limb meets the trunk and are drawn half inside the wood SIG3 tranche 2: tried seating the members along the limb (the map point's tangent) out from the leader: the group's sleeping bodies are then drawn onto the same spot (gaps 0.01-0.08 body lengths for lemur, capuchin, stump-tail), so it was reverted; the marmoset's and long-tailed macaque's leaders sleep on a point whose roost carries no limb heading, and their frames were unchanged."
-  },
-  {
-   "slug": "long-tailed-macaque",
-   "recipe": "sleep:huddle",
-   "reason": "SIG3 (members now seated at their leader's limb): the five stand in a single file along the limb (walking pose), two beside it in the air from behind: a queue, not a huddle at the branch's end SIG3 tranche 2: tried seating the members along the limb (the map point's tangent) out from the leader: the group's sleeping bodies are then drawn onto the same spot (gaps 0.01-0.08 body lengths for lemur, capuchin, stump-tail), so it was reverted; the marmoset's and long-tailed macaque's leaders sleep on a point whose roost carries no limb heading, and their frames were unchanged."
+   "reason": "SIG3 (members now seated at their leader's limb): the 0.23 m marmosets sit where the limb meets the trunk and are drawn half inside the wood SIG3 tranche 2: tried seating the members along the limb (the map point's tangent) out from the leader: the group's sleeping bodies are then drawn onto the same spot (gaps 0.01-0.08 body lengths for lemur, capuchin, stump-tail), so it was reverted; the marmoset's and long-tailed macaque's leaders sleep on a point whose roost carries no limb heading, and their frames were unchanged. SIG3 tranche 3: the huddle now faces one way across its limb (the map point's heading), but the five still sit round a thick sloping limb, some under it and two on a thinner branch beside it; seating them along the limb itself put the lemurs past its end two on one spot, so the seats were left as they were. Switched off in the sleep layer (each sleeps a little apart) until it reads."
   },
   {
    "slug": "barbary-macaque",
    "recipe": "sleep:huddle",
-   "reason": "four drawn inside each other (gap 0) on a cliff face, a fifth 6 m off: a merged blob, not a huddle (unchanged by SIG3: the leader's cliff spot, not a map roost)"
+   "reason": "four drawn inside each other (gap 0) on a cliff face, a fifth 6 m off: a merged blob, not a huddle (unchanged by SIG3: the leader's cliff spot, not a map roost) SIG3 tranche 3: switched off in the sleep layer (each sleeps a little apart) until it reads."
   },
   {
    "slug": "sugar-glider",
@@ -104,7 +99,7 @@
   {
    "slug": "golden-stag-beetle",
    "recipe": "wrestle",
-   "reason": "the beetles are not in the frame; a stone fills the corner"
+   "reason": "the beetles are not in the frame; a stone fills the corner SIG3 tranche 3: re-shot (sm-stag): the pair its cluster gives are 7.5-10 m apart, 'wrestling' across the clearing, so a micro pair act now plays only with the other drawn within four body lengths; none is, so it is off in the scene."
   },
   {
    "slug": "european-hornet",
