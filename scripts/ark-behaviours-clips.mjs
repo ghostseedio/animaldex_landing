@@ -255,6 +255,40 @@ for (const name of scenes) {
         await context.close();
         continue;
     }
+    if (name === "tails") {
+        // Lane SIG-OTHER (tail postures, `tail-posture.ts`): each species of the cast framed from its side and from behind, its posture off and on.
+        const plan = await page.evaluate(() => window.__behaviours.tailPlan());
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const labels = [];
+        const lengths = Number(arg("lengths", "2.4"));
+        const WANT = {"domestic-dog": [{label: "calm, side", social: 0, moving: false, azimuth: Math.PI / 2}, {label: "greeting, side", social: 1, moving: false, azimuth: Math.PI / 2}, {label: "greeting, from behind", social: 1, moving: false, azimuth: Math.PI}, {label: "greeting, from behind +0.12 s", social: 1, moving: false, azimuth: Math.PI, run: 0.12}]};
+        for (const sp of plan) {
+            const steps = WANT[sp.slug] ?? [{label: "side", social: null, moving: true, azimuth: Math.PI / 2}, {label: "from behind", social: null, moving: true, azimuth: Math.PI}, {label: "three-quarters behind", social: null, moving: true, azimuth: Math.PI * 0.75}];
+            const files = [];
+            for (let i = 0; i < steps.length; i++) {
+                const step = steps[i];
+                const note = await page.evaluate(async ([id, step, lengths, label]) => {
+                    const text = await window.__behaviours.tailShot(id, {social: step.social, moving: step.moving, lengths, azimuth: step.azimuth, run: step.run});
+                    document.getElementById("note").textContent = `${label}: ${step.label}\n${text}`;
+                    return text;
+                }, [sp.ids[0], step, lengths, sp.name]);
+                const file = path.join(dir, `${sp.slug}-${i}.jpg`);
+                await page.screenshot({path: file, type: "jpeg", quality: 88});
+                files.push(file);
+                labels.push(`${sp.slug} ${step.label}: ${note}`);
+            }
+            const cols = files.length <= 3 ? files.length : 2;
+            execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, `${sp.slug}-%d.jpg`), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(files.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-${sp.slug}.jpg`)]);
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
     if (DEFENCE[name]) {
         const dir = path.join(out, name);
         rmSync(dir, {recursive: true, force: true});

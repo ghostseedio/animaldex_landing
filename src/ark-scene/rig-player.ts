@@ -31,6 +31,7 @@
  * reloaded, and every animal looked at after that stayed stiff.)
  */
 
+import type {TailPostureSpec} from "@/ark-scene/tail-posture";
 import {
     BufferAttribute,
     BufferGeometry,
@@ -1670,6 +1671,8 @@ export type RigLiveInput = {
     actSpeed?: number | null;
     /** Its air leg's stage on the schedule while it flies (MA1: the flight driver tucks its legs by it). */
     airStage?: string | null;
+    /** Lane SIG-OTHER: its species' tail posture and how socially it signals now (`tail-posture.ts`), or null. */
+    tail?: {spec: TailPostureSpec; social: number} | null;
     ground?: GroundQuery;
     /** ARK-CANOPY: on its canopy route, its arms' holds (`locomotion/brachiate.ts`). */
     canopy?: LocoCanopy | null;
@@ -1706,6 +1709,7 @@ export function rigLivePose(model: RigModel, state: RigState, input: RigLiveInpu
             actState: input.actState ?? null,
             actSpeed: input.actSpeed ?? null,
             airStage: input.airStage ?? null,
+            tail: input.tail ?? null,
             clipBake: clipBakeOf(model.code, now),
             canopy: input.canopy ?? null
         },

@@ -308,6 +308,8 @@ import {Lineage, nurseTurn} from "@/ark-scene/young-care";
 import {applyYoungCoat, youngCoatOf, youngCoatStrength, youngSteps} from "@/ark-scene/young-coat";
 // 3.3 batch (C): the antler cycle.
 import {antlerOf, antlerState, applyAntler, type AntlerState} from "@/ark-scene/antler-cycle";
+// Lane SIG-OTHER: tail postures (a dog's wag, a coati's flag).
+import {socialTarget, stepSocial, tailPostureOf, type TailPostureSpec} from "@/ark-scene/tail-posture";
 import {MouthCarry} from "@/ark-scene/mouth-carry";
 import {mealOnStage, mealScript, DRINK_REACH, type MealCatch} from "@/ark-scene/meal-acts";
 import {MealTraces, type TraceDraw} from "@/ark-scene/meal-traces";
@@ -631,6 +633,8 @@ type Entry = {
     rideBlend?: {from: {x: number; z: number; base: number; yaw: number}; at: number} | null;
     /** 3.3 batch (C): its antlers in this month of the Ark year (`antler-cycle.ts`), re-read every 30 s. */
     antler?: AntlerState & {at: number};
+    /** Lane SIG-OTHER: how socially it signals now (`tail-posture.ts`, 0-1), for a species whose tail wags. */
+    tailSocial?: {k: number};
     /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
     recipeAct?: RecipeAct | null;
     /** ARK-CONTACT: its rock face as the rock is drawn (kept, filled each frame). */
@@ -2194,6 +2198,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const sharedPins = new Map<string, (epoch: number) => Partial<TripPose & {doing: ArkDoing}>>();
     /** Development only (the head-look probe): a fixed `arkLook` (yaw, pitch, weight) for an animal, over the reactive layer's. */
     const forcedLooks = new Map<string, [number, number, number]>();
+    /** Development only (the tail lab): a fixed social strength (0-1) for an animal's tail posture. */
+    const forcedTailSocial = new Map<string, number>();
 
     // MARK: Collisions (motion pass L5: `collide/`)
 
@@ -4478,6 +4484,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (process.env.NODE_ENV !== "production" && (globalThis as {__arkZoomFixOff?: boolean}).__arkZoomFixOff) return false;
         return Boolean(was && Math.hypot(t.x - was.x, t.y - was.y, t.z - was.z) < 0.05 && Math.abs(d - was.d) > 0.005);
     };
+    /** Lane SIG-OTHER: its species' tail posture and how socially it signals now (`tail-posture.ts`), or null for a species without one. */
+    const tailPostureNow = (e: Entry, dt: number): {spec: TailPostureSpec; social: number} | null => {
+        const spec = tailPostureOf(e.animal.model_slug);
+        if (!spec) return null;
+        const state = (e.tailSocial ??= {k: 0});
+        const forced = forcedTailSocial.get(e.animal.id);
+        if (forced !== undefined) state.k = forced;
+        else state.k = stepSocial(state.k, socialTarget(spec, {looking: e.reactive?.looking ?? null, doing: ((e.sched?.pose ?? null) as {doing?: string} | null)?.doing ?? null}), dt);
+        return {spec, social: state.k};
+    };
     const stepReactive = (list: Array<{entry: Entry; distance: number; pose: Pose; modelHeight: number}>, dt: number) => {
         const t0 = performance.now();
         const want = reactiveTier();
@@ -6198,6 +6214,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     const d = c.entry.animal;
                     seenActs.push({id: d.id, name: d.name, speciesId: d.kind_species_profile_id || d.species_profile_id || `slug:${d.model_slug}`, zone: d.zone, recipe: "antler_cycle", episode: `antler_cycle:${d.id}:${Math.floor(epoch / 900)}`, block: "look", fish: false, line: antlerOf(d.model_slug)!.line});
                 }
+                // Lane SIG-OTHER: its tail posture, close by, while it is held (`tail-posture.ts`): the species' own sentence.
+                const tailSpec = c.distance < 30 ? tailPostureOf(c.entry.animal.model_slug) : null;
+                if (tailSpec && (tailSpec.when === "always" || (tailSpec.when === "social" ? (c.entry.tailSocial?.k ?? 0) > 0.6 : (c.entry.gait?.speed ?? 0) > 0.3))) {
+                    const t = c.entry.animal;
+                    seenActs.push({id: t.id, name: t.name, speciesId: t.kind_species_profile_id || t.species_profile_id || `slug:${t.model_slug}`, zone: t.zone, recipe: "tail_posture", episode: `tail_posture:${t.id}:${Math.floor(epoch / 900)}`, block: "look", fish: false, line: tailSpec.line});
+                }
                 // (One of the log's kinds, or a recipe its species has its own sentence for: `live/signature-lines.ts`.)
                 const ownLine = act ? signatureLineOf(c.entry.animal.model_slug, act.recipe) : null;
                 if (act && (ownLine || arkSeenKind(act.recipe))) {
@@ -7140,7 +7162,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // and asked again, and again: horses' and pigeons' offsets ran away by metres with their bodies where they were.)
                 const seatLift = seated ? seated.y : 0;
                 const seatGround = seatFloor !== null ? () => ({height: seatFloor, nx: 0, ny: 1, nz: 0}) : seatLift !== 0 ? (x: number, z: number) => { const g = locoGround()(x, z); return {height: g.height + seatLift, nx: g.nx, ny: g.ny, nz: g.nz, water: g.water}; } : null;
-                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, ...(seatGround ? {ground: seatGround} : {}), actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null, canopy: (surface as {arms?: LocoCanopy | null} | null | undefined)?.arms ?? (entry.hop && (entry.hop.hopping || state.pace > entry.length * 0.1) && !surface && !where.water && brachiates(animal.model_slug, animal.scientific_name) ? {phase: "walk", hand: null, next: null, lead: 1, u: (epochNow * 1.4 + entry.phase) % 1, brachiate: true} : null)}, index);
+                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, ...(seatGround ? {ground: seatGround} : {}), actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null, canopy: (surface as {arms?: LocoCanopy | null} | null | undefined)?.arms ?? (entry.hop && (entry.hop.hopping || state.pace > entry.length * 0.1) && !surface && !where.water && brachiates(animal.model_slug, animal.scientific_name) ? {phase: "walk", hand: null, next: null, lead: 1, u: (epochNow * 1.4 + entry.phase) % 1, brachiate: true} : null), tail: tailPostureNow(entry, frameDt)}, index);
                 if (perf.on) perf.carve("locomotion", performance.now() - locoAt);
                 seatGait = Boolean(live?.gait);
                 entry.seatGait = seatGait;
@@ -11118,6 +11140,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         })),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
         forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
+        forceTailSocial: (id: string, k: number | null) => (k === null ? forcedTailSocial.delete(id) : forcedTailSocial.set(id, k)), tailSocialOf: (id: string) => entryById.get(id)?.tailSocial?.k ?? null,
         // 3.3 batch (A): an animal's defence move now (the harness).
         defence: (id: string) => findEntry(id)?.defence ?? null,
         // 3.3 fix (log): the record's deaths, where each lies (the harness).

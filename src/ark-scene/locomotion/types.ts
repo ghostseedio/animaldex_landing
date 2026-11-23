@@ -12,6 +12,7 @@
  * Space: the rig file's mesh space (glTF), +y up, the animal faces +z, its left is +x. World space is the scene's.
  */
 
+import type {TailPostureSpec} from "@/ark-scene/tail-posture";
 import type {Matrix4} from "three";
 import type {ClipBake} from "@/ark-scene/locomotion/flight";
 import type {LocoCanopy} from "@/ark-scene/locomotion/brachiate";
@@ -173,6 +174,8 @@ export type LocoInput = {
     clipBake?: ClipBake | null;
     /** ARK-CANOPY: on its canopy route, what its arms hold and reach for (`brachiate.ts`), or null. */
     canopy?: LocoCanopy | null;
+    /** Lane SIG-OTHER: its species' tail posture (`tail-posture.ts`) and how socially it signals now (0-1), or null: the tail's own springs alone. */
+    tail?: {spec: TailPostureSpec; social: number} | null;
 };
 
 /** One foot's target this frame (world space), for debug views, metrics and L3's checks. */
