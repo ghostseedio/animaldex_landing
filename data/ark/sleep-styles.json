@@ -4424,7 +4424,7 @@
    "slug": "barbary-macaque",
    "posture": "sit",
    "alts": [],
-   "social": "huddle",
+   "social": "apart",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -4433,8 +4433,7 @@
      "rule": "plan primate: sits hunched, the head down"
     },
     "social": {
-     "field": "sleep",
-     "phrase": "Day-active, sleeping in trees or cliffs and huddling in cold weather, making warmth something the group builds together."
+     "rule": "held (signature-holds.json): four drawn inside each other (gap 0) on a cliff face, a fifth 6 m off: a merged blob, not a huddle (unchanged by SIG3: the leader's cliff spot, not a map roost)"
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -13520,7 +13519,7 @@
    "slug": "common-marmoset",
    "posture": "sit",
    "alts": [],
-   "social": "huddle",
+   "social": "apart",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -13529,8 +13528,7 @@
      "rule": "plan primate: sits hunched, the head down"
     },
     "social": {
-     "field": "sleep",
-     "phrase": "The group sleeps huddled together in a vine tangle, dense tree crown or hollow, and rests again in the heat of midday."
+     "rule": "held (signature-holds.json): SIG3 (members now seated at their leader's limb): the 0.23 m marmosets sit where the limb meets the trunk and are drawn half inside the wood"
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -33025,7 +33023,7 @@
    "slug": "long-tailed-macaque",
    "posture": "sit",
    "alts": [],
-   "social": "huddle",
+   "social": "apart",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -33034,8 +33032,7 @@
      "rule": "plan primate: sits hunched, the head down"
     },
     "social": {
-     "field": "sleep",
-     "phrase": "Sleeping trees, often ones overhanging a river, are occupied before dusk, and the animals huddle in small groups near the ends of branches until first light."
+     "rule": "held (signature-holds.json): SIG3 (members now seated at their leader's limb): the five stand in a single file along the limb (walking pose), two beside it in the air from behind: a queue, "
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"

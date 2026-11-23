@@ -4124,7 +4124,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const slug = entry.animal.model_slug;
         const micro = entry.place.micro!;
         const epoch = worldMs() / 1000;
-        const pair = microPartnerOf(entry, epoch);
+        // (SIG3: a pair's act only with the other really beside it: cluster neighbours crawl metres apart, and two stag
+        // beetles "wrestling" 7-10 m from each other read as nothing. Both drawn, within four of the larger's lengths.)
+        const partner = microPartnerOf(entry, epoch);
+        const mate = partner ? findEntry(partner.id) : null;
+        const near = Boolean(mate && entry.middle && mate.middle && Math.hypot(entry.middle.x - mate.middle.x, entry.middle.z - mate.middle.z) <= 4 * Math.max(entry.trueLength, mate.trueLength, 0.02));
+        const pair = near ? partner : null;
         const input = {id: entry.animal.id, slug, epoch, hours: hoursNow(), length: entry.trueLength, soil: soilSpot(micro.spot), flower: flowerSpot(micro.attach?.tag), resting: entry.rest > 0.5, pair};
         const now = microActAt(input);
         if (now) microLast.set(input.id, {t0: now.t0, t1: now.t1});
