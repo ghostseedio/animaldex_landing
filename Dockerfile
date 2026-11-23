@@ -90,6 +90,8 @@ COPY package.json package-lock.json .npmrc next.config.js tsconfig.json \
 COPY public ./public
 COPY src ./src
 COPY scripts ./scripts
+# (sig2's held rows: src/lib/ark-signature-held-rows.ts imports this one data file; the rest of data/ stays out.)
+COPY data/ark/signature-holds.json ./data/ark/signature-holds.json
 
 # .next/cache is a BuildKit cache mount (never in a layer) that CI carries between runs
 # (buildkit-cache-dance). Only the type-check (.tsbuildinfo) and ESLint caches are kept: they
