@@ -422,6 +422,7 @@
             "revived": "{animal} er tilbage",
             "revivedYoung": "{animal} er tilbage som ung voksen igen",
             "released": "{aAnimal} blev sat fri i naturen",
+            "mateFound": "{aAnimal} rejste {distance} m for at finde en mage",
             "gone": "{animal} er væk fra Ark",
             "crisis": "{animal}: kun få tilbage i naturen",
             "saved": "{animal}: ude af fare i naturen",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "Lister sig ind på bytte",
             "mateSeeking": "Leder efter en mage",
             "wounded": "Såret"
+        },
+        "mate": {
+            "nearest": "Leder efter en mage · den nærmeste er {distance} m væk",
+            "found": "Rejste {distance} m for at finde en mage"
         },
         "eggs": {
             "eggsInNest": "Æg i reden",

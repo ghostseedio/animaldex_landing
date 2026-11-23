@@ -422,6 +422,7 @@
             "revived": "{animal} se vratio",
             "revivedYoung": "{animal} se vratio, opet mlada odrasla životinja",
             "released": "Puštanje u divljinu: {aAnimal}",
+            "mateFound": "{aAnimal} je prešao {distance} m da pronađe partnera",
             "gone": "{animal} je otišao iz Arka",
             "crisis": "{animal}: u divljini je ostalo tek nekoliko jedinki",
             "saved": "{animal}: izvan opasnosti u divljini",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "Prikrada se plijenu",
             "mateSeeking": "Traži partnera",
             "wounded": "S ranom"
+        },
+        "mate": {
+            "nearest": "Traži partnera · najbliži je {distance} m daleko",
+            "found": "Prešao je {distance} m da pronađe partnera"
         },
         "eggs": {
             "eggsInNest": "Jaja u gnijezdu",

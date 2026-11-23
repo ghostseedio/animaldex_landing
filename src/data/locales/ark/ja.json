@@ -422,6 +422,7 @@
             "revived": "{animal}が戻ってきました",
             "revivedYoung": "{animal}が若い成体に戻って帰ってきました",
             "released": "{aAnimal}が野生に放されました",
+            "mateFound": "{aAnimal}が相手を見つけるために{distance}m移動しました",
             "gone": "{animal}はArkからいなくなりました",
             "crisis": "{animal}：野生に残るのはわずか",
             "saved": "{animal}：野生で危機を脱しました",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "忍び寄っています",
             "mateSeeking": "相手を探しています",
             "wounded": "けがをしています"
+        },
+        "mate": {
+            "nearest": "相手を探しています · いちばん近い相手は{distance}m先",
+            "found": "相手を見つけるために{distance}m移動しました"
         },
         "eggs": {
             "eggsInNest": "巣に卵があります",

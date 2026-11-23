@@ -422,6 +422,7 @@
             "revived": "{animal} επέστρεψε",
             "revivedYoung": "{animal} επέστρεψε, ξανά νεαρό ενήλικο",
             "released": "Απελευθέρωση στην άγρια φύση: {aAnimal}",
+            "mateFound": "{aAnimal} διένυσε {distance} μ. για να βρει ταίρι",
             "gone": "{animal} έφυγε από την Ark",
             "crisis": "{animal}: έχουν απομείνει μόνο λίγα στην άγρια φύση",
             "saved": "{animal}: εκτός κινδύνου στην άγρια φύση",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "Παραμονεύει",
             "mateSeeking": "Ψάχνει ταίρι",
             "wounded": "Με τραύμα"
+        },
+        "mate": {
+            "nearest": "Ψάχνει ταίρι · το πιο κοντινό είναι {distance} μ. μακριά",
+            "found": "Διένυσε {distance} μ. για να βρει ταίρι"
         },
         "eggs": {
             "eggsInNest": "Αυγά στη φωλιά",

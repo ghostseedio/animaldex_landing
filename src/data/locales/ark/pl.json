@@ -422,6 +422,7 @@
             "revived": "{animal} wraca",
             "revivedYoung": "{animal} wraca, znów jako młody dorosły",
             "released": "Wypuszczenie na wolność: {aAnimal}",
+            "mateFound": "{aAnimal} przebył(a) {distance} m, by znaleźć partnera",
             "gone": "{animal} odchodzi z Ark",
             "crisis": "{animal}: na wolności zostało już niewiele",
             "saved": "{animal}: poza niebezpieczeństwem na wolności",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "Podkrada się",
             "mateSeeking": "Szuka pary",
             "wounded": "Z raną"
+        },
+        "mate": {
+            "nearest": "Szuka partnera · najbliższy jest {distance} m stąd",
+            "found": "Przebył(a) {distance} m, by znaleźć partnera"
         },
         "eggs": {
             "eggsInNest": "Jaja w gnieździe",

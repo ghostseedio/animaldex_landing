@@ -422,6 +422,7 @@
             "revived": "{animal} è tornato",
             "revivedYoung": "{animal} è tornato, di nuovo giovane adulto",
             "released": "Liberazione in natura: {aAnimal}",
+            "mateFound": "{aAnimal} ha percorso {distance} m per trovare un compagno",
             "gone": "{animal} non è più nell'Ark",
             "crisis": "{animal}: ne restano pochi esemplari in natura",
             "saved": "{animal}: fuori pericolo in natura",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "In agguato",
             "mateSeeking": "Cerca un compagno",
             "wounded": "Con una ferita"
+        },
+        "mate": {
+            "nearest": "Cerca un compagno · il più vicino è a {distance} m",
+            "found": "Ha percorso {distance} m per trovare un compagno"
         },
         "eggs": {
             "eggsInNest": "Uova nel nido",

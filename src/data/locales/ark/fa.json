@@ -422,6 +422,7 @@
             "revived": "{animal} برگشت",
             "revivedYoung": "{animal} برگشت، دوباره بالغی جوان",
             "released": "{aAnimal} در طبیعت رها شد",
+            "mateFound": "{aAnimal} برای یافتن جفت {distance} متر راه پیمود",
             "gone": "{animal} از Ark رفت",
             "crisis": "{animal}: در طبیعت فقط چند نمونه باقی مانده است",
             "saved": "{animal}: در طبیعت دیگر در خطر نیست",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "در کمین",
             "mateSeeking": "در جست‌وجوی جفت",
             "wounded": "زخمی"
+        },
+        "mate": {
+            "nearest": "در جست‌وجوی جفت · نزدیک‌ترین {distance} متر دورتر است",
+            "found": "برای یافتن جفت {distance} متر راه پیمود"
         },
         "eggs": {
             "eggsInNest": "تخم در لانه",

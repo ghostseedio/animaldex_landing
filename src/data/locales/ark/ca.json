@@ -422,6 +422,7 @@
             "revived": "{animal} ha tornat",
             "revivedYoung": "{animal} ha tornat, jove adult de nou",
             "released": "Alliberament a la natura: {aAnimal}",
+            "mateFound": "{aAnimal} ha recorregut {distance} m per trobar parella",
             "gone": "{animal} ja no és a l'Ark",
             "crisis": "{animal}: en queden pocs exemplars en llibertat",
             "saved": "{animal}: fora de perill en llibertat",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "Sotja",
             "mateSeeking": "Busca parella",
             "wounded": "Amb una ferida"
+        },
+        "mate": {
+            "nearest": "Busca parella · la més propera és a {distance} m",
+            "found": "Ha recorregut {distance} m per trobar parella"
         },
         "eggs": {
             "eggsInNest": "Ous al niu",

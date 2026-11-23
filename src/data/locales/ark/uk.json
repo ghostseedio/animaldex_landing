@@ -422,6 +422,7 @@
             "revived": "{animal} повернувся",
             "revivedYoung": "{animal} повернувся знову молодим дорослим",
             "released": "Випуск на волю: {aAnimal}",
+            "mateFound": "{aAnimal} подолав(ла) {distance} м, щоб знайти пару",
             "gone": "{animal} покинув Ark",
             "crisis": "{animal}: у дикій природі лишилося зовсім мало",
             "saved": "{animal}: у дикій природі поза небезпекою",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "Підкрадається до здобичі",
             "mateSeeking": "Шукає пару",
             "wounded": "З раною"
+        },
+        "mate": {
+            "nearest": "Шукає пару · найближча за {distance} м",
+            "found": "Подолав(ла) {distance} м, щоб знайти пару"
         },
         "eggs": {
             "eggsInNest": "Яйця в гнізді",

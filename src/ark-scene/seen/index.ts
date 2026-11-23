@@ -139,10 +139,19 @@ export function attachArkSeen(options: ArkSeenOptions): ArkSeen {
         const countdown = clutch ? arkEggCountdown(clutch.laidMs, clutch.hatchMs, epochMs(), words) : null;
         return countdown ? {share: countdown.share, label: countdown.text} : null;
     };
+    /** MATE-FINDING (decision 432): the trips the record says were made to a far mate, by traveller (shown a real day). */
+    const trips = new Map<string, {distance: number; atMs: number}>();
+    const metres = (d: number) => String(d < 50 ? Math.max(5, Math.round(d / 5) * 5) : Math.round(d / 10) * 10);
     cast.label = (id) => {
         const band = seen.band(id);
         if (band) return words[band];
+        const trip = trips.get(id);
+        if (trip && epochMs() - trip.atMs < 86_400_000) return words.mateFound.replace("{distance}", metres(trip.distance));
         const state = states.get(id);
+        if (state?.kind === "mate_seeking") {
+            const near = handle.mateNearest?.(id);
+            if (typeof near === "number" && near >= 25) return words.mateNearest.replace("{distance}", metres(near));
+        }
         // (A stalker names its quarry; a wounded one's `target` is its biter, which its line does not name.)
         if (state) return arkSeenStateText(state, state.kind === "stalking" && state.target ? read?.animals.find((animal) => animal.id === state.target)?.name ?? null : null, words);
         if (lone.has(id)) return words.lone;
@@ -193,6 +202,12 @@ export function attachArkSeen(options: ArkSeenOptions): ArkSeen {
             for (const item of incoming) {
                 const row = item && typeof item === "object" && !Array.isArray(item) ? item as Row : null;
                 if (row && (row.kind === "laid" || row.kind === "birth")) noteEggs(row);
+                if (row && row.kind === "mate_found") {
+                    const animal = row.animal && typeof row.animal === "object" ? row.animal as Row : null;
+                    const journey = row.journey && typeof row.journey === "object" ? row.journey as Row : null;
+                    const at = Date.parse(String(row.at));
+                    if (typeof animal?.id === "string" && typeof journey?.distance === "number" && Number.isFinite(at)) trips.set(animal.id, {distance: journey.distance, atMs: at});
+                }
                 if (!row || typeof row.kind !== "string" || !ARK_SEEN_KINDS.has(row.kind) || !idOf(row) || known.has(idOf(row))) continue;
                 known.add(idOf(row));
                 fresh.push(row);

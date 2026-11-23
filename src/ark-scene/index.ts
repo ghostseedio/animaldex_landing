@@ -278,6 +278,7 @@ import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating
 import {CLUTCH_FRAME_POLAR, CLUTCH_SHOWN_SECONDS, clutchFrame, clutchSize, kinFrameApart, seenAt} from "@/ark-scene/live/breed-focus"; // 3.3 fix (breeding taps)
 import {LiveBirths, newbornScale} from "@/ark-scene/live-births";
 import {LiveSeeking} from "@/ark-scene/live-seeking";
+import {LiveJourneys} from "@/ark-scene/live-journeys"; // MATE-FINDING (decision 432)
 import {LiveClutches} from "@/ark-scene/live-clutches";
 import {reproOf, ReproFx} from "@/ark-scene/repro"; // REAL-REPRODUCTION (decision 440)
 import {LiveDeaths, type DeathRecord} from "@/ark-scene/live-deaths"; // 3.3 fix (log)
@@ -10452,8 +10453,55 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setAct: (entry, pose) => {
             entry.act = pose;
         },
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id) || liveBirths.pins().includes(entry.animal.id) || liveJourneys.pins().includes(entry.animal.id))
+    });
+    /**
+     * MATE-FINDING (decision 432): the record's trips to a far mate (`live-journeys.ts`): from its old home to its new one,
+     * along the nav grid's walk or swim, or straight over for a flier, at the row's time on the shared clock.
+     */
+    const liveJourneys = new LiveJourneys<Entry>({
+        find: (id) => {
+            const e = entryById.get(id);
+            return e && !e.held && !e.visitor ? e : null;
+        },
+        path: (entry, from, to, way) => {
+            if (!world) return [from, to];
+            const way2 = way === "water" ? "swim" : "walk";
+            const path = world.nav.path(from, to, way2, way === "water" ? 0.3 : 0.5, 4000);
+            return path.length >= 2 ? path : [from, to];
+        },
+        ground: (x, z) => Math.max(heightAt(x, z), -0.3),
+        water: (x, z) => Math.max(waterTopAt(x, z), heightAt(x, z)),
+        walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
+        length: (entry) => entry.length,
+        setAct: (entry, pose) => {
+            entry.act = pose;
+        },
         busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id) || liveBirths.pins().includes(entry.animal.id))
     });
+    /** MATE-FINDING: the nearest of its kind it could mate with, from the homes the scene draws (m); null: none. */
+    const mateNearest = (id: string): number | null => {
+        const me = findEntry(id);
+        if (!me || me.animal.area) return null;
+        const kind = me.animal.kind_species_profile_id || me.animal.species_profile_id;
+        const island = me.animal.island ?? "wild";
+        const sexOfEntry = (e: Entry) => sexLook(e.animal.id, e.animal.model_slug).sex;
+        const mine = sexOfEntry(me);
+        const at = (e: Entry) => e.sched?.animal.home ?? bodyOf(e);
+        const here = at(me);
+        let best = Infinity;
+        for (const e of entries) {
+            if (e === me || e.animal.area || (e.animal.island ?? "wild") !== island) continue;
+            if ((e.animal.kind_species_profile_id || e.animal.species_profile_id) !== kind) continue;
+            const sex = sexOfEntry(e);
+            if ((mine === "male" || mine === "female") && (sex === "male" || sex === "female") && sex === mine) continue;
+            if (e.sched?.animal.young) continue;
+            const p = at(e);
+            const d = Math.hypot(p.x - here.x, p.z - here.z);
+            if (d < best) best = d;
+        }
+        return best === Infinity ? null : best;
+    };
     /**
      * ARK-MATING-SHOWN (decision 416): the record's layings and hatchings you can see (`live-clutches.ts`): she lays
      * where she stood for the mount, the clutch stays there until it hatches, the young come out of it.
@@ -10511,6 +10559,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!reducedMotion) {
             const epoch = worldMs() / 1000;
             readSeeking(epoch);
+            if (liveJourneys.size) liveJourneys.step(epoch); // MATE-FINDING (before the seeking: a traveller is not looking)
             if (liveSeeking.size) liveSeeking.step(epoch);
         }
         if (reproFx.visible && !liveMatings.size && !liveBirths.size) {
@@ -11724,6 +11773,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         addMatings: (matings) => {
             liveMatings.add(matings, worldMs() / 1000);
         },
+        // MATE-FINDING (decision 432): the record's trips to a far mate, acted from the old home to the new.
+        addJourneys: (journeys) => liveJourneys.add(journeys, worldMs() / 1000),
+        mateNearest: (id) => mateNearest(id),
         // 3.3 fix (log): the record's deaths, and a death line's tap: the camera to where it died (its body there a while).
         addDeaths: (deaths) => liveDeaths.add(deaths),
         focusDeath: (key) => {
@@ -11821,6 +11873,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             liveMatings.clear();
             liveBirths.clear();
             liveSeeking.clear();
+            liveJourneys.clear();
             liveClutches.clear();
             liveEscapes.clear();
             liveDeaths.clear();

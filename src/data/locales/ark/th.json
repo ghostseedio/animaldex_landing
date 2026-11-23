@@ -422,6 +422,7 @@
             "revived": "{animal} กลับมาแล้ว",
             "revivedYoung": "{animal} กลับมาเป็นตัวเต็มวัยวัยหนุ่มสาวอีกครั้ง",
             "released": "{aAnimal} ถูกปล่อยสู่ธรรมชาติ",
+            "mateFound": "{aAnimal} เดินทาง {distance} ม. เพื่อหาคู่",
             "gone": "{animal} จากไปจาก Ark แล้ว",
             "crisis": "{animal}: เหลืออยู่ในธรรมชาติเพียงไม่กี่ตัว",
             "saved": "{animal}: พ้นอันตรายในธรรมชาติแล้ว",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "กำลังย่องเข้าหาเหยื่อ",
             "mateSeeking": "กำลังหาคู่",
             "wounded": "บาดเจ็บ"
+        },
+        "mate": {
+            "nearest": "กำลังหาคู่ · ตัวที่ใกล้ที่สุดอยู่ห่าง {distance} ม.",
+            "found": "เดินทาง {distance} ม. เพื่อหาคู่"
         },
         "eggs": {
             "eggsInNest": "มีไข่ในรัง",

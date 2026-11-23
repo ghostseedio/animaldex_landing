@@ -422,6 +422,7 @@
             "revived": "{animal} తిరిగి వచ్చింది",
             "revivedYoung": "{animal} మళ్లీ యువ పెద్దదిగా తిరిగి వచ్చింది",
             "released": "{aAnimal}ను అడవిలోకి వదిలారు",
+            "mateFound": "{aAnimal} జతను కనుగొనడానికి {distance} మీ. ప్రయాణించింది",
             "gone": "{animal} Ark నుంచి వెళ్లిపోయింది",
             "crisis": "{animal}: అడవిలో ఇక కొన్ని మాత్రమే మిగిలాయి",
             "saved": "{animal}: అడవిలో ఇక ప్రమాదంలో లేదు",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "మాటు వేసింది",
             "mateSeeking": "తోడు కోసం వెతుకుతోంది",
             "wounded": "గాయపడింది"
+        },
+        "mate": {
+            "nearest": "జత కోసం వెతుకుతోంది · దగ్గరిది {distance} మీ. దూరంలో ఉంది",
+            "found": "జతను కనుగొనడానికి {distance} మీ. ప్రయాణించింది"
         },
         "eggs": {
             "eggsInNest": "గూడులో గుడ్లు",

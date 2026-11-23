@@ -422,6 +422,7 @@
             "revived": "{animal} er tilbake",
             "revivedYoung": "{animal} er tilbake som ung voksen igjen",
             "released": "{aAnimal} ble sluppet fri i naturen",
+            "mateFound": "{aAnimal} reiste {distance} m for å finne en make",
             "gone": "{animal} har forlatt Ark",
             "crisis": "{animal}: bare noen få igjen i naturen",
             "saved": "{animal}: ute av fare i naturen",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "Sniker seg innpå bytte",
             "mateSeeking": "Leter etter en make",
             "wounded": "Såret"
+        },
+        "mate": {
+            "nearest": "Leter etter en make · den nærmeste er {distance} m unna",
+            "found": "Reiste {distance} m for å finne en make"
         },
         "eggs": {
             "eggsInNest": "Egg i reiret",

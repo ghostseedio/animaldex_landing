@@ -422,6 +422,7 @@
             "revived": "{animal}이(가) 돌아왔어요",
             "revivedYoung": "{animal}이(가) 다시 어린 성체로 돌아왔어요",
             "released": "{aAnimal}이(가) 야생에 풀려났어요",
+            "mateFound": "{aAnimal}이(가) 짝을 찾아 {distance}m를 이동했어요",
             "gone": "{animal}이(가) Ark를 떠났어요",
             "crisis": "{animal}: 야생에 몇 마리만 남았어요",
             "saved": "{animal}: 야생에서 위기를 벗어났어요",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "몰래 다가가는 중",
             "mateSeeking": "짝을 찾는 중",
             "wounded": "다쳤어요"
+        },
+        "mate": {
+            "nearest": "짝을 찾는 중 · 가장 가까운 짝은 {distance}m 떨어져 있어요",
+            "found": "짝을 찾아 {distance}m를 이동했어요"
         },
         "eggs": {
             "eggsInNest": "둥지에 알이 있어요",

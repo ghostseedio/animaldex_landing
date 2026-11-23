@@ -422,6 +422,7 @@
             "revived": "{animal} geri döndü",
             "revivedYoung": "{animal} yeniden genç bir yetişkin olarak döndü",
             "released": "{aAnimal} doğaya salındı",
+            "mateFound": "{aAnimal} eş bulmak için {distance} m yol aldı",
             "gone": "{animal} Ark'tan ayrıldı",
             "crisis": "{animal}: doğada yalnızca birkaçı kaldı",
             "saved": "{animal}: doğada artık tehlikede değil",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "Sinsice yaklaşıyor",
             "mateSeeking": "Eş arıyor",
             "wounded": "Yaralı"
+        },
+        "mate": {
+            "nearest": "Eş arıyor · en yakını {distance} m uzakta",
+            "found": "Eş bulmak için {distance} m yol aldı"
         },
         "eggs": {
             "eggsInNest": "Yuvada yumurtalar",

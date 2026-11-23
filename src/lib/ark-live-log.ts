@@ -84,7 +84,7 @@ export type ArkLiveItem = {
     web?: boolean;
     /** A kind's dormant season beginning or ending (`src/ark-scene/live/dormancy-lines.ts`): said with its own words. */
     /** (`signature`: a saved signature move, AnimalDex SIG-EVENTS, `src/ark-scene/live/signature-events.ts`.) */
-    say?: "dormant" | "woke" | "escaped" | "deforested" | "dated" | "moved_in" | "released" | "signature" | "cacheRehidden" | "cacheStolen";
+    say?: "dormant" | "woke" | "escaped" | "deforested" | "dated" | "moved_in" | "released" | "signature" | "cacheRehidden" | "cacheStolen" | "mate_found";
     /** A species' own sentence for what it is seen doing (`src/ark-scene/live/signature-lines.ts`): said as it is. */
     line?: string;
     /**

@@ -422,6 +422,7 @@
             "revived": "عاد {animal}",
             "revivedYoung": "عاد {animal} بالغًا شابًا من جديد",
             "released": "أُطلق {aAnimal} إلى البرية",
+            "mateFound": "قطع {aAnimal} مسافة {distance} م ليجد شريكًا",
             "gone": "رحل {animal} عن Ark",
             "crisis": "{animal}: أعداد قليلة جدًا في البرية",
             "saved": "{animal}: خارج دائرة الخطر في البرية",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "تربُّص",
             "mateSeeking": "بحث عن شريك",
             "wounded": "إصابة بجرح"
+        },
+        "mate": {
+            "nearest": "يبحث عن شريك · أقربهم على بُعد {distance} م",
+            "found": "قطع {distance} م ليجد شريكًا"
         },
         "eggs": {
             "eggsInNest": "بيض في العش",

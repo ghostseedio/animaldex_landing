@@ -422,6 +422,7 @@
             "revived": "{animal} sudah kembali",
             "revivedYoung": "{animal} sudah kembali, dewasa muda semula",
             "released": "{aAnimal} dilepaskan ke alam liar",
+            "mateFound": "{aAnimal} mengembara {distance} m untuk mencari pasangan",
             "gone": "{animal} sudah tiada dari Ark",
             "crisis": "{animal}: tinggal sedikit di alam liar",
             "saved": "{animal}: tidak lagi terancam di alam liar",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "Mengintai",
             "mateSeeking": "Mencari pasangan",
             "wounded": "Cedera"
+        },
+        "mate": {
+            "nearest": "Mencari pasangan · yang terdekat {distance} m jauhnya",
+            "found": "Mengembara {distance} m untuk mencari pasangan"
         },
         "eggs": {
             "eggsInNest": "Telur dalam sarang",

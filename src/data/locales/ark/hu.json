@@ -422,6 +422,7 @@
             "revived": "{animal} visszatért",
             "revivedYoung": "{animal} visszatért, újra fiatal felnőttként",
             "released": "Szabadon engedték a vadonba: {aAnimal}",
+            "mateFound": "{aAnimal} {distance} m-t tett meg, hogy párt találjon",
             "gone": "{animal} elment az Arkból",
             "crisis": "{animal}: a vadonban már csak néhány maradt",
             "saved": "{animal}: a vadonban már nincs veszélyben",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "Cserkészik",
             "mateSeeking": "Párt keres",
             "wounded": "Sebesült"
+        },
+        "mate": {
+            "nearest": "Párt keres · a legközelebbi {distance} m-re van",
+            "found": "{distance} m-t tett meg, hogy párt találjon"
         },
         "eggs": {
             "eggsInNest": "Tojások a fészekben",

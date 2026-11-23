@@ -422,6 +422,7 @@
             "revived": "{animal} लौट आया",
             "revivedYoung": "{animal} फिर से युवा वयस्क बनकर लौट आया",
             "released": "{aAnimal} को जंगल में छोड़ा गया",
+            "mateFound": "{aAnimal} ने साथी खोजने के लिए {distance} मी. का सफ़र तय किया",
             "gone": "{animal} Ark से चला गया",
             "crisis": "{animal}: जंगल में अब बहुत कम संख्या",
             "saved": "{animal}: जंगल में अब खतरे से बाहर",
@@ -831,6 +832,10 @@
             "stalkingNoTarget": "घात में",
             "mateSeeking": "साथी की तलाश में",
             "wounded": "घायल"
+        },
+        "mate": {
+            "nearest": "साथी की तलाश में · सबसे पास वाला {distance} मी. दूर है",
+            "found": "साथी खोजने के लिए {distance} मी. का सफ़र तय किया"
         },
         "eggs": {
             "eggsInNest": "घोंसले में अंडे",
