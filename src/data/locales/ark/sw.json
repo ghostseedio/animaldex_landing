@@ -417,6 +417,8 @@
             "dormant": "{animals} wameanza usingizi wa majira ya baridi",
             "woke": "{animals} wameamka tena",
             "escaped": "{aPrey} alimtoroka {aPredator}",
+            "cacheRehidden": "{aAnimal} anaficha tena chakula chake baada ya kuonekana",
+            "cacheStolen": "{aThief} amechimbua chakula alichokificha {aOwner}",
             "revived": "{animal} amerudi",
             "revivedYoung": "{animal} amerudi, mtu mzima kijana tena",
             "released": "{aAnimal} aliachiliwa porini",

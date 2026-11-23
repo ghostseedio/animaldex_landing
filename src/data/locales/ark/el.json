@@ -417,6 +417,8 @@
             "dormant": "{animals}: άρχισε η χειμερία νάρκη",
             "woke": "{animals}: τελείωσε η χειμερία νάρκη",
             "escaped": "{aPrey}: ξέφυγε, το κυνηγούσε {aPredator}",
+            "cacheRehidden": "{aAnimal} ξανακρύβει την τροφή του αφού το είδαν",
+            "cacheStolen": "{aThief} ξέθαψε τροφή που είχε κρύψει {aOwner}",
             "revived": "{animal} επέστρεψε",
             "revivedYoung": "{animal} επέστρεψε, ξανά νεαρό ενήλικο",
             "released": "Απελευθέρωση στην άγρια φύση: {aAnimal}",

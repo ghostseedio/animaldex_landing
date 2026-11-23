@@ -417,6 +417,8 @@
             "dormant": "{animals}: vinterdvalen har begynt",
             "woke": "{animals}: vinterdvalen er over",
             "escaped": "{aPrey} kom seg unna {aPredator}",
+            "cacheRehidden": "{aAnimal} gjemmer maten sin på nytt etter at noen så det",
+            "cacheStolen": "{aThief} gravde opp mat som {aOwner} hadde gjemt",
             "revived": "{animal} er tilbake",
             "revivedYoung": "{animal} er tilbake som ung voksen igjen",
             "released": "{aAnimal} ble sluppet fri i naturen",

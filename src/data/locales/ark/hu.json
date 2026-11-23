@@ -417,6 +417,8 @@
             "dormant": "{animals}: elkezdődött a téli álom",
             "woke": "{animals}: véget ért a téli álom",
             "escaped": "{aPrey} elmenekült, üldözője: {aPredator}",
+            "cacheRehidden": "{aAnimal} újra elrejti az élelmét, mert meglátták",
+            "cacheStolen": "{aThief} kiásta az élelmet, amelyet {aOwner} rejtett el",
             "revived": "{animal} visszatért",
             "revivedYoung": "{animal} visszatért, újra fiatal felnőttként",
             "released": "Szabadon engedték a vadonba: {aAnimal}",

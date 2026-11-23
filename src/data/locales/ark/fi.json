@@ -417,6 +417,8 @@
             "dormant": "{animals}: talviuni alkoi",
             "woke": "{animals}: talviuni päättyi",
             "escaped": "{aPrey} pääsi pakoon, saalistaja: {aPredator}",
+            "cacheRehidden": "{aAnimal} piilottaa ruokansa uudelleen, koska joku näki sen",
+            "cacheStolen": "{aThief} kaivoi esiin ruokaa, jonka {aOwner} oli piilottanut",
             "revived": "{animal} on palannut",
             "revivedYoung": "{animal} on palannut, taas nuori aikuinen",
             "released": "{aAnimal} vapautettiin luontoon",

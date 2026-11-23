@@ -417,6 +417,8 @@
             "dormant": "{animals} শীতঘুমে গেছে",
             "woke": "{animals} আবার জেগে উঠেছে",
             "escaped": "{aPrey} {aPredator}-এর কাছ থেকে পালিয়ে গেছে",
+            "cacheRehidden": "{aAnimal} কেউ দেখে ফেলায় নিজের খাবার আবার লুকোচ্ছে",
+            "cacheStolen": "{aThief} {aOwner}-এর লুকোনো খাবার খুঁড়ে বের করল",
             "revived": "{animal} ফিরে এসেছে",
             "revivedYoung": "{animal} আবার তরুণ প্রাপ্তবয়স্ক হয়ে ফিরে এসেছে",
             "released": "{aAnimal}-কে বনে ছেড়ে দেওয়া হয়েছে",

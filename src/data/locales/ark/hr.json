@@ -417,6 +417,8 @@
             "dormant": "{animals}: počeo je zimski san",
             "woke": "{animals}: zimski san je završio",
             "escaped": "{aPrey}: bijeg je uspio, lovio ga je {aPredator}",
+            "cacheRehidden": "{aAnimal} ponovno skriva svoju hranu jer ga je netko vidio",
+            "cacheStolen": "{aThief} je iskopao hranu koju je sakrio {aOwner}",
             "revived": "{animal} se vratio",
             "revivedYoung": "{animal} se vratio, opet mlada odrasla životinja",
             "released": "Puštanje u divljinu: {aAnimal}",

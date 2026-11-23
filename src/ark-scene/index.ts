@@ -83,7 +83,7 @@ import {bellyOfGeometry, clipDrawsSleep, goesIntoRoost, LEGLESS_BELLY, lyingBody
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
-import {applyRecipeCoat, seasonMonthAt, setRecipeArkDay, fallbackNests, microMurmuration, microRoost, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, seasonFactor, setRecordedSexes, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {applyRecipeCoat, seasonMonthAt, setRecipeArkDay, fallbackNests, microMurmuration, microRoost, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setSignatureCues, setRecipeColliders, seasonFactor, setRecordedSexes, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
 import {fishSchoolsNear} from "@/ark-scene/fish-schools";
 import {setFishChasers} from "@/ark-scene/fish-render";
@@ -1745,6 +1745,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let disposed = false;
     // Powers you can see (decision 420; `power-show.ts`): loaded with the first read that has an animal above ordinary.
     let powerShow: ArkPowerShow | null = null;
+    /** SIG-EVENTS: the saved signature moves' cues by animal (`addSignatureCues`). */
+    const signatureCues = new Map<string, Array<{animalId: string; recipe: string; from: number; to: number}>>();
     let powerLoading = false;
     let width = 1;
     let height = 1;
@@ -9152,6 +9154,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // (`props/nest-growth.ts`, on the Ark day), and a hunter's chase or plunge goes to the reef's nearest school.
     // The map lane's per-zone visible capacity (rule E, `map/capacity.ts`) for the runtime's live budget (`setArkZoneCapacity`).
     wireZoneCapacity(liveBudget);
+    setSignatureCues((id, start) => signatureCues.get(id)?.find((c) => start >= c.from && start < c.to)?.recipe ?? null); // SIG-EVENTS
     setNestSource(options.props === false ? null : nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => arkDayNow(current, epoch * 1000) ?? 0}));
     // And the recipes' seasons on the Ark's year, from the same Ark day (lane ark-activities: not the calendar month).
     setRecipeArkDay((epoch) => arkDayNow(current, epoch * 1000));
@@ -11752,6 +11755,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (hatchings.map((b) => lineage.note(b.young, b.parents)).some(Boolean)) liveliness.lineageChanged();
         },
         // 3.3 batch (D): the record's escapes, on the encounter's step where the server gives it.
+        // SIG-EVENTS: saved signature moves; the animal plays the recipe in its slots that suit it (`behaviour-recipes.ts`).
+        addSignatureCues: (cues) => {
+            const now = worldMs() / 1000;
+            for (const [id, list] of Array.from(signatureCues.entries())) {
+                const kept = list.filter((c: {to: number}) => c.to > now);
+                if (kept.length) signatureCues.set(id, kept);
+                else signatureCues.delete(id);
+            }
+            for (const c of cues) {
+                if (c.to <= now) continue;
+                const list = signatureCues.get(c.animalId) ?? [];
+                if (!list.some((x) => x.from === c.from && x.recipe === c.recipe)) list.push(c);
+                signatureCues.set(c.animalId, list);
+            }
+        },
         addEscapes: (escapes) => {
             liveEscapes.add(escapes.map((e) => {
                 const encounter = mealEncounter({encounter: e.encounter});
@@ -12263,6 +12281,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             mealTraces.dispose();
             recipeScene.dispose();
             setNestSource(null);
+            setSignatureCues(null);
+            signatureCues.clear();
             setRecipeArkDay(null);
             setFishSource(null);
             setFishChasers(null);

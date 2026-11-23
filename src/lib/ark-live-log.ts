@@ -83,7 +83,8 @@ export type ArkLiveItem = {
     /** ARK-WEBS: a meal the server says was caught in the hunter's web (`encounter.web`): said as "caught ... in its web". */
     web?: boolean;
     /** A kind's dormant season beginning or ending (`src/ark-scene/live/dormancy-lines.ts`): said with its own words. */
-    say?: "dormant" | "woke" | "escaped" | "deforested" | "dated" | "moved_in" | "released";
+    /** (`signature`: a saved signature move, AnimalDex SIG-EVENTS, `src/ark-scene/live/signature-events.ts`.) */
+    say?: "dormant" | "woke" | "escaped" | "deforested" | "dated" | "moved_in" | "released" | "signature" | "cacheRehidden" | "cacheStolen";
     /** A species' own sentence for what it is seen doing (`src/ark-scene/live/signature-lines.ts`): said as it is. */
     line?: string;
     /**

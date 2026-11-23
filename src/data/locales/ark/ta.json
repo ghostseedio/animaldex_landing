@@ -417,6 +417,8 @@
             "dormant": "{animals} குளிர்கால உறக்கத்திற்குச் சென்றன",
             "woke": "{animals} மீண்டும் விழித்துக்கொண்டன",
             "escaped": "{aPrey} {aPredator}-இடமிருந்து தப்பியது",
+            "cacheRehidden": "{aAnimal} யாரோ பார்த்துவிட்டதால் தன் உணவை மீண்டும் மறைக்கிறது",
+            "cacheStolen": "{aOwner} மறைத்து வைத்த உணவை {aThief} தோண்டி எடுத்தது",
             "revived": "{animal} திரும்பி வந்தது",
             "revivedYoung": "{animal} மீண்டும் இளம் வயதுவந்ததாகத் திரும்பி வந்தது",
             "released": "{aAnimal} காட்டில் விடப்பட்டது",

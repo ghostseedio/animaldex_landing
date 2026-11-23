@@ -4635,6 +4635,8 @@
       "dormant": "{animals} have gone into their winter sleep",
       "woke": "{animals} are awake again",
       "escaped": "{aPrey} got away from {aPredator}",
+      "cacheRehidden": "{aAnimal} is re-hiding its food after being watched",
+      "cacheStolen": "{aThief} dug up food that {aOwner} had hidden",
       "revived": "{animal} is back",
       "revivedYoung": "{animal} is back, a young adult again",
       "released": "{aAnimal} was released into the wild",

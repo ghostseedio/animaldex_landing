@@ -417,6 +417,8 @@
             "dormant": "{animals} เริ่มจำศีลแล้ว",
             "woke": "{animals} ตื่นขึ้นมาอีกครั้งแล้ว",
             "escaped": "{aPrey} หนีรอดจาก {aPredator} ได้",
+            "cacheRehidden": "{aAnimal}กำลังซ่อนอาหารใหม่หลังจากถูกมองเห็น",
+            "cacheStolen": "{aThief}ขุดอาหารที่{aOwner}ซ่อนไว้ขึ้นมา",
             "revived": "{animal} กลับมาแล้ว",
             "revivedYoung": "{animal} กลับมาเป็นตัวเต็มวัยวัยหนุ่มสาวอีกครั้ง",
             "released": "{aAnimal} ถูกปล่อยสู่ธรรมชาติ",

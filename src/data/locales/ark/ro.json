@@ -417,6 +417,8 @@
             "dormant": "{animals}: a început somnul de iarnă",
             "woke": "{animals}: somnul de iarnă s-a încheiat",
             "escaped": "{aPrey} a scăpat de {aPredator}",
+            "cacheRehidden": "{aAnimal} își ascunde din nou hrana după ce a fost văzut",
+            "cacheStolen": "{aThief} a dezgropat hrana ascunsă de {aOwner}",
             "revived": "{animal} s-a întors",
             "revivedYoung": "{animal} s-a întors, din nou adult tânăr",
             "released": "Eliberare în sălbăticie: {aAnimal}",

@@ -417,6 +417,8 @@
             "dormant": "Nagsimula na ang tulog-taglamig ng {animals}",
             "woke": "Gising na ulit ang {animals}",
             "escaped": "Nakatakas ang {aPrey} mula sa {aPredator}",
+            "cacheRehidden": "Muling itinatago ng {aAnimal} ang pagkain nito matapos itong makita",
+            "cacheStolen": "Hinukay ng {aThief} ang pagkaing itinago ng {aOwner}",
             "revived": "Nakabalik na ang {animal}",
             "revivedYoung": "Nakabalik na ang {animal}, batang adulto ulit",
             "released": "{aAnimal} ang pinakawalan sa kalikasan",

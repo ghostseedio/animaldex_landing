@@ -417,6 +417,8 @@
             "dormant": "{animals}: der Winterschlaf hat begonnen",
             "woke": "{animals}: wieder wach",
             "escaped": "{aPrey} konnte vor {aPredator} fliehen",
+            "cacheRehidden": "{aAnimal} versteckt sein Futter neu, weil es beobachtet wurde",
+            "cacheStolen": "{aThief} hat Futter ausgegraben, das {aOwner} versteckt hatte",
             "revived": "{animal} ist zurück",
             "revivedYoung": "{animal} ist zurück, wieder ein junges erwachsenes Tier",
             "released": "{aAnimal} wurde in die Wildnis entlassen",

@@ -309,7 +309,10 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
     if (!species.recipes.length) return null;
     const random = rng(hashString(`${input.animal.id}#recipe#${input.slot}`));
     const sex = sexLook(input.animal.id, input.slug).sex;
-    for (const {id, weight} of species.recipes) {
+    // SIG-EVENTS: a saved signature move cues its recipe: tried first, and taken whenever the slot suits it.
+    const cued = cueSource ? cueSource(input.animal.id, input.start) : null;
+    const list = cued && species.recipes.some((r) => r.id === cued) ? [{id: cued, weight: Infinity}, ...species.recipes.filter((r) => r.id !== cued)] : species.recipes;
+    for (const {id, weight} of list) {
         const template = TEMPLATES[id];
         if (!template || template.kind !== "stay" || template.goal === "here") continue;
         if (!template.replaces.includes(input.behaviour) && !template.replaces.includes(input.doing)) continue;
@@ -333,7 +336,7 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         // (A nest dug or guarded by a kind whose text names no month for it: a little all year, where its template says so.)
         const season = template.season === "nesting" && !species.nesting.length && template.unstored !== undefined ? template.unstored : seasonFactor(species, template.season, input.start);
         const chance = weight * 0.7 * (template.often ?? 1) * (tending ?? season) * pull;
-        if (random() >= chance) continue;
+        if (weight !== Infinity && random() >= chance) continue;
         const to = goalSpot(input, template, random);
         if (!to) continue;
         const flyer = input.kit.flies(input.profile);
@@ -536,6 +539,13 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
 export type NestSource = (animalId: string, epochSeconds: number) => {x: number; y: number; z: number; stage: number; eggs?: number; chicks?: number} | null;
 /** Ambient fish schools near a point at a world time (the reef lane's `fishSchoolsNear`). */
 export type FishSource = (pos: {x: number; y?: number; z: number}, radius: number, epochSeconds: number) => Array<{centre: {x: number; y: number; z: number}; radius: number; heading: {x: number; y: number; z: number}; speed: number; mode: string}>;
+/** SIG-EVENTS: the recipe a saved signature move cues for an animal at a slot's start (epoch s), or null. */
+type CueSource = (animalId: string, start: number) => string | null;
+let cueSource: CueSource | null = null;
+export function setSignatureCues(source: CueSource | null) {
+    cueSource = source;
+}
+
 let nestSource: NestSource | null = null;
 let fishSource: FishSource | null = null;
 

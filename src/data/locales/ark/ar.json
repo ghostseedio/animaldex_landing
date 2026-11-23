@@ -417,6 +417,8 @@
             "dormant": "{animals}: بدأ السبات الشتوي",
             "woke": "{animals}: انتهى السبات الشتوي",
             "escaped": "هرب {aPrey} من {aPredator}",
+            "cacheRehidden": "{aAnimal} يعيد إخفاء طعامه بعد أن رآه أحد",
+            "cacheStolen": "{aThief} نبش طعامًا خبّأه {aOwner}",
             "revived": "عاد {animal}",
             "revivedYoung": "عاد {animal} بالغًا شابًا من جديد",
             "released": "أُطلق {aAnimal} إلى البرية",

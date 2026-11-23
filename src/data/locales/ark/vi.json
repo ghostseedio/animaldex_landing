@@ -417,6 +417,8 @@
             "dormant": "{animals} đã bắt đầu ngủ đông",
             "woke": "{animals} đã thức dậy trở lại",
             "escaped": "{aPrey} đã thoát khỏi {aPredator}",
+            "cacheRehidden": "{aAnimal} đang giấu lại thức ăn sau khi bị nhìn thấy",
+            "cacheStolen": "{aThief} đã đào lên thức ăn mà {aOwner} giấu",
             "revived": "Con {animal} đã trở lại",
             "revivedYoung": "Con {animal} đã trở lại, lại là con trưởng thành trẻ",
             "released": "{aAnimal} đã được thả về tự nhiên",
