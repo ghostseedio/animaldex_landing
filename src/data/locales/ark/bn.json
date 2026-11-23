@@ -442,7 +442,14 @@
             "split": "{animal}: মূল দেহ থেকে নতুন একটি আলাদা হলো",
             "giftMeal": "{aAnimal}: একজন দর্শক খাইয়েছেন",
             "giftShelter": "{aPrey}: একজন দর্শকের আশ্রয়ে {aPredator} থেকে নিরাপদ",
-            "giftNest": "{aAnimal}: একজন দর্শকের বাসার সাহায্যে মিলন"
+            "giftNest": "{aAnimal}: একজন দর্শকের বাসার সাহায্যে মিলন",
+            "antTrailFound": "{animals}: একটি মৃত প্রাণীর দিকে পথ ({other})",
+            "antTend": "{animals}: মধুশিশির সংগ্রহ ({other})",
+            "antLeaves": "{animals}: নিজেদের পথ ধরে পাতা বহন",
+            "antSeeds": "{animals}: বীজ বাসায় বহন",
+            "antRaid": "{animals}: চওড়া সারিতে হানা",
+            "antBivouac": "{animals}: অস্থায়ী বাসা বদল",
+            "antWeave": "{animals}: বাসার জন্য পাতা টেনে জোড়া"
         },
         "card": {
             "now": "এখন: {activity}",

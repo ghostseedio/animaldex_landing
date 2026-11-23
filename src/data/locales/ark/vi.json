@@ -442,7 +442,14 @@
             "split": "{animal}: một cá thể mới tách ra từ cá thể mẹ",
             "giftMeal": "{aAnimal}: được một khách thăm cho ăn",
             "giftShelter": "{aPrey}: an toàn trước {aPredator} trong chỗ trú ẩn của khách thăm",
-            "giftNest": "{aAnimal}: giao phối, nhờ hỗ trợ làm tổ của khách thăm"
+            "giftNest": "{aAnimal}: giao phối, nhờ hỗ trợ làm tổ của khách thăm",
+            "antTrailFound": "{animals}: đường mòn tới một con vật chết ({other})",
+            "antTend": "{animals}: thu mật sương ({other})",
+            "antLeaves": "{animals}: khiêng lá dọc con đường của chúng",
+            "antSeeds": "{animals}: khiêng hạt về tổ",
+            "antRaid": "{animals}: đột kích trên một mặt trận rộng",
+            "antBivouac": "{animals}: dời tổ tạm",
+            "antWeave": "{animals}: kéo lá lại với nhau để làm tổ"
         },
         "card": {
             "now": "Lúc này: đang {activity}",

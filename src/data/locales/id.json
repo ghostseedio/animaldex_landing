@@ -4693,7 +4693,14 @@
       "split": "{animal}: satu individu baru memisah dari induknya",
       "giftMeal": "{aAnimal} diberi makan oleh seorang pengunjung",
       "giftShelter": "{aPrey} aman dari {aPredator} di tempat berlindung dari pengunjung",
-      "giftNest": "{aAnimal} kawin, dengan bantuan sarang dari pengunjung"
+      "giftNest": "{aAnimal} kawin, dengan bantuan sarang dari pengunjung",
+      "antTrailFound": "{animals}: jejak ke hewan mati ({other})",
+      "antTend": "{animals}: mengumpulkan embun madu ({other})",
+      "antLeaves": "{animals}: membawa daun di sepanjang jalur mereka",
+      "antSeeds": "{animals}: membawa biji pulang",
+      "antRaid": "{animals}: serbuan di garis depan yang lebar",
+      "antBivouac": "{animals}: memindahkan sarang sementara",
+      "antWeave": "{animals}: menarik daun bersama untuk sarang"
     },
     "card": {
       "now": "Sekarang: {activity}",

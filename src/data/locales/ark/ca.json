@@ -442,7 +442,14 @@
             "split": "{animal}: un de nou s'ha separat del progenitor",
             "giftMeal": "{aAnimal}: alimentat per un visitant",
             "giftShelter": "{aPrey}: a recer de {aPredator} al refugi d'un visitant",
-            "giftNest": "{aAnimal}: aparellament, amb l'ajuda d'un visitant amb el niu"
+            "giftNest": "{aAnimal}: aparellament, amb l'ajuda d'un visitant amb el niu",
+            "antTrailFound": "{animals}: rastre cap a un animal mort ({other})",
+            "antTend": "{animals}: recollida de melada ({other})",
+            "antLeaves": "{animals}: transport de fulles pel seu camí",
+            "antSeeds": "{animals}: transport de llavors al niu",
+            "antRaid": "{animals}: incursió en un front ampli",
+            "antBivouac": "{animals}: trasllat del bivac",
+            "antWeave": "{animals}: fulles ajuntades per al niu"
         },
         "card": {
             "now": "Ara: {activity}",

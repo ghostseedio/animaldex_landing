@@ -141,6 +141,8 @@ import {BugGround, bugClearPoints, bugCoverAt, setBugGrazing} from "@/ark-scene/
 // p3 (trees): small ground insects climb a grass blade now and then.
 import {ClimbStems, climbAt, climbPoint, climbStem, climbsBlades, mixClimb, type ClimbPoint, type ClimbStem} from "@/ark-scene/bug-climb";
 import type {SpiderWebs} from "@/ark-scene/spider-webs-draw";
+import type {AntColonies, AntMember} from "@/ark-scene/ants/ant-draw";
+import type {AntFood, Disturb} from "@/ark-scene/ants/colony";
 import {AssetTrees} from "@/ark-scene/asset-trees";
 import {AssetFloor, AssetRocks} from "@/ark-scene/asset-rocks";
 import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
@@ -1176,6 +1178,74 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             webNoted.set(id, noted);
         }
         return noted ? spiderWebs.pose(id, hoursNow(), worldMs() / 1000) : null;
+    };
+    // ARK-ANTS: the ant colonies (`ants/ant-draw.ts`, loaded with the first colony ant aboard): each colony's nest, its
+    // trail to REAL food only (a body the record says died, real sap-sucking Ark animals, a leafcutters' plant on a fed
+    // day), its workers as tiny instanced ants close up. Never decides anything; never a visual-only crumb or fruit.
+    let ants: AntColonies | null = null;
+    let antsLoading = false;
+    let antsAt = -Infinity;
+    let antSeen: ArkSeenAct[] = [];
+    const antFeet: Disturb[] = [];
+    const ANT_SLUG = /(^|-)ant$/;
+    const SAP_SUCKER = /aphid|scale-insect|mealybug|treehopper|leafhopper|cicada|whitefly|psyllid|planthopper/;
+    const antTier = () => (reducedMotion ? "lite" : liteOn() ? "lite" : tier === "high" ? "high" : tier === "medium" ? "medium" : "low") as "high" | "medium" | "low" | "lite";
+    const stepAnts = (target: Vector3, viewDistance: number) => {
+        if ((globalThis as {__arkAntsOff?: boolean}).__arkAntsOff) return;
+        if (!ants) {
+            if (!antsLoading && entries.some((e) => ANT_SLUG.test(e.animal.model_slug))) {
+                antsLoading = true;
+                void import("@/ark-scene/ants/ant-draw").then((m) => {
+                    ants = new m.AntColonies({
+                        groundY: (x, z) => standGround(x, z, 0.01),
+                        trunkNear: (x, z, r, skip = 0) => {
+                            const set = world ? sceneColliders(world, townWorld) : null;
+                            if (!set) return null;
+                            let best: {cx: number; cz: number; r: number; top: number} | null = null;
+                            let bestD = Infinity;
+                            for (const c of set.near(x, z, r, [])) {
+                                if (c.kind !== "trunk" || c.shape !== "circle") continue;
+                                const d = Math.hypot(c.cx - x, c.cz - z);
+                                if (d < skip || d > r || d >= bestD) continue;
+                                bestD = d;
+                                best = {cx: c.cx, cz: c.cz, r: c.r, top: c.y1 - c.y0};
+                            }
+                            return best;
+                        },
+                        awake: (activity) => isAwake((activity ?? "diurnal") as ArkAnimal["activity"], sunElevation)
+                    });
+                    scene.add(ants.group);
+                    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkAnts?: AntColonies}).__arkAnts = ants;
+                }).catch(() => undefined);
+            }
+            return;
+        }
+        const epoch = worldMs() / 1000;
+        // The colonies and the real food near them, once a second (pure; the same for every viewer).
+        if (Math.abs(epoch - antsAt) > 1) {
+            antsAt = epoch;
+            const members: AntMember[] = [];
+            const foods: AntFood[] = [];
+            for (const e of entries) {
+                const a = e.animal;
+                if (e.visitor || e.ghost) continue;
+                if (ANT_SLUG.test(a.model_slug)) members.push({id: a.id, slug: a.model_slug, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, island: a.island ?? null, area: a.area ?? null, container: a.container ?? null, x: e.place.x, z: e.place.z, hungry: a.condition === "hungry", activity: a.activity ?? null});
+                else if (SAP_SUCKER.test(a.model_slug)) foods.push({key: `host:${a.id}`, kind: "honeydew", host: a.model_slug, x: e.place.x, y: e.place.ground ?? standGround(e.place.x, e.place.z), z: e.place.z, from: -Infinity, until: Infinity, label: a.name});
+            }
+            for (const body of liveDeaths.bodies(epoch)) foods.push({key: body.key, kind: "carcass", x: body.x, y: body.base, z: body.z, from: body.from, until: body.until, label: body.name});
+            ants.setMembers(members);
+            ants.setFoods(foods);
+            ants.setTier(antTier(), reducedMotion);
+            antSeen = reducedMotion ? [] : ants.moments(epoch, target, viewDistance).map((m) => ({id: m.memberId, name: m.name, speciesId: m.speciesId, zone: m.zone as ArkSeenAct["zone"], recipe: "ant_colony", episode: m.episode, block: "colony", fish: false, words: {key: m.key, other: m.other}}));
+        }
+        antFeet.length = 0;
+        if (viewDistance < 3) {
+            for (const e of entries) {
+                if (!e.middle || e.length < 0.05 || Math.abs(e.middle.x - target.x) > 2 || Math.abs(e.middle.z - target.z) > 2) continue;
+                antFeet.push({x: e.middle.x, z: e.middle.z, r: Math.min(e.length * 0.3, 0.3), age: 0});
+            }
+        }
+        ants.update(camera.position, target, viewDistance, epoch, reducedMotion ? 0 : reactiveWeather.rain, antFeet);
     };
     // The asset library's trees (graphics pass, batch 3): they replace the decor's tree shapes once loaded.
     const assetTrees = new AssetTrees(options.assetBase);
@@ -7860,6 +7930,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let moduleWant = 4;
         if (!close) for (const sceneModule of modules) moduleWant = Math.min(moduleWant, sceneModule.closeUp?.(target.x, target.y, target.z) ?? 4);
         if (!close && spiderWebs) moduleWant = Math.min(moduleWant, spiderWebs.closeUp(target.x, target.y, target.z)); // ARK-WEBS
+        if (!close && ants) moduleWant = Math.min(moduleWant, ants.closeUp(target.x, target.z)); // ARK-ANTS
         const want = Math.min(shotClosest ?? Infinity, castTiny ? Math.min(MICRO_MIN_DISTANCE, Math.max(castTiny.trueLength * 4, 0.008)) : close ? MICRO_MIN_DISTANCE : moduleWant);
         // Down at once; back up gently (the camera eases out rather than jumping).
         controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
@@ -11121,6 +11192,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         bugGround.update(controls.target, viewDistance); // p2 (ground)
         climbStems.update(camera.position); // p3 (trees)
         spiderWebs?.update(camera.position, hoursNow(), worldMs() / 1000, {width: renderer.domElement.width, height: renderer.domElement.height, pixelRatio: renderer.getPixelRatio()}, reducedMotion); // ARK-WEBS
+        stepAnts(controls.target, viewDistance); // ARK-ANTS
         forest.step(arkDayNow(current, worldMs())); // p5 (humans): before the trees' re-sort
         forest.draw(camera.position, worldMs() / 1000); // p5 (humans): the crews
         assetTrees?.update(camera.position);
@@ -11948,7 +12020,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (caller) alarms.push({id: caller.id, name: caller.name, speciesId: caller.kind_species_profile_id || caller.species_profile_id || `slug:${caller.model_slug}`, zone: caller.zone, at: call.at, threat: call.threat || null});
             }
             // 3.3 batch (A): with the defence moves in view.
-            return {acts: reducedMotion ? [] : seenActs.concat(defenceSeen), alarms: reducedMotion ? [] : alarms};
+            return {acts: reducedMotion ? [] : seenActs.concat(defenceSeen, antSeen), alarms: reducedMotion ? [] : alarms};
         },
         reactiveStats: () => ({tier: reactiveTierNow ?? reactiveTier(), agents: reactive.stats.agents, inputs: reactiveInputs, perceptions: reactive.stats.perceptions, sightChecks: reactive.stats.sightChecks, alarms: reactive.stats.alarms, ms: reactiveMs}),
         heightAt: (x, z) => Math.max(heightAt(x, z), 0),
@@ -12196,6 +12268,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             reflections.dispose(); // p3 (reflect)
             climbStems.dispose(); // p3 (trees)
             spiderWebs?.dispose(); // ARK-WEBS
+            ants?.dispose(); // ARK-ANTS
             forest.dispose(); // p5 (humans)
             assetTrees?.dispose();
             assetRocks?.dispose();

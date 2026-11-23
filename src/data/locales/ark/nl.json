@@ -442,7 +442,14 @@
             "split": "{animal}: een nieuwe heeft zich van de ouder afgesplitst",
             "giftMeal": "{aAnimal}: gevoerd door een bezoeker",
             "giftShelter": "{aPrey}: veilig voor {aPredator} in de schuilplaats van een bezoeker",
-            "giftNest": "{aAnimal}: gepaard, met nesthulp van een bezoeker"
+            "giftNest": "{aAnimal}: gepaard, met nesthulp van een bezoeker",
+            "antTrailFound": "{animals}: spoor naar een dood dier ({other})",
+            "antTend": "{animals}: honingdauw verzamelen ({other})",
+            "antLeaves": "{animals}: bladeren dragen over de mierenweg",
+            "antSeeds": "{animals}: zaden naar huis dragen",
+            "antRaid": "{animals}: rooftocht in een breed front",
+            "antBivouac": "{animals}: het bivak verhuist",
+            "antWeave": "{animals}: bladeren samentrekken voor het nest"
         },
         "card": {
             "now": "Nu: {activity}",

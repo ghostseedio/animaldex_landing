@@ -442,7 +442,14 @@
             "split": "{animal}：從親體分裂出一個新個體",
             "giftMeal": "{aAnimal}：一位訪客餵了牠",
             "giftShelter": "{aPrey}：在訪客的庇護所裡躲過了{aPredator}",
-            "giftNest": "{aAnimal}：藉助訪客的築巢幫助完成了交配"
+            "giftNest": "{aAnimal}：藉助訪客的築巢幫助完成了交配",
+            "antTrailFound": "{animals}：通往一隻死去動物的蟻路（{other}）",
+            "antTend": "{animals}：採集蜜露（{other}）",
+            "antLeaves": "{animals}：沿著蟻道搬運葉片",
+            "antSeeds": "{animals}：把種子搬回巢",
+            "antRaid": "{animals}：以寬闊的陣線突襲",
+            "antBivouac": "{animals}：遷移臨時巢",
+            "antWeave": "{animals}：把葉子拉攏築巢"
         },
         "card": {
             "now": "現在：{activity}",

@@ -442,7 +442,14 @@
             "split": "{animal}: uno nuovo si è separato dal genitore",
             "giftMeal": "{aAnimal}: nutrito da un visitatore",
             "giftShelter": "{aPrey}: al sicuro da {aPredator} nel riparo di un visitatore",
-            "giftNest": "{aAnimal}: accoppiamento, con l'aiuto per il nido di un visitatore"
+            "giftNest": "{aAnimal}: accoppiamento, con l'aiuto per il nido di un visitatore",
+            "antTrailFound": "{animals}: pista verso un animale morto ({other})",
+            "antTend": "{animals}: raccolta di melata ({other})",
+            "antLeaves": "{animals}: trasporto di foglie lungo la pista",
+            "antSeeds": "{animals}: trasporto di semi al nido",
+            "antRaid": "{animals}: razzia su un fronte ampio",
+            "antBivouac": "{animals}: trasloco del bivacco",
+            "antWeave": "{animals}: foglie avvicinate per il nido"
         },
         "card": {
             "now": "Ora: {activity}",

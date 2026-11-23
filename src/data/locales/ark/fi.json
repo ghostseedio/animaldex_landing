@@ -442,7 +442,14 @@
             "split": "{animal}: uusi yksilö irtosi emostaan",
             "giftMeal": "{aAnimal}: vierailija antoi aterian",
             "giftShelter": "{aPrey}: turvassa {aPredator}-saalistajalta vierailijan suojassa",
-            "giftNest": "{aAnimal}: pariutui vierailijan pesäavun turvin"
+            "giftNest": "{aAnimal}: pariutui vierailijan pesäavun turvin",
+            "antTrailFound": "{animals}: jälki kuolleen eläimen luo ({other})",
+            "antTend": "{animals}: mesikasteen keruu ({other})",
+            "antLeaves": "{animals}: lehtien kantaminen muurahaispolkua pitkin",
+            "antSeeds": "{animals}: siementen kantaminen kotiin",
+            "antRaid": "{animals}: ryöstöretki leveänä rintamana",
+            "antBivouac": "{animals}: bivuakin muutto",
+            "antWeave": "{animals}: lehtien vetäminen yhteen pesäksi"
         },
         "card": {
             "now": "Nyt: {activity}",

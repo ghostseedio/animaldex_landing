@@ -442,7 +442,14 @@
             "split": "{animal}: פרט חדש נפרד מהורהו",
             "giftMeal": "{aAnimal}: קיבל ארוחה ממבקר",
             "giftShelter": "{aPrey}: מוגן מפני {aPredator} במחסה של מבקר",
-            "giftNest": "{aAnimal}: הזדווגות, בעזרת מבקר בקן"
+            "giftNest": "{aAnimal}: הזדווגות, בעזרת מבקר בקן",
+            "antTrailFound": "{animals}: שביל אל בעל חיים מת ({other})",
+            "antTend": "{animals}: איסוף טל דבש ({other})",
+            "antLeaves": "{animals}: נשיאת עלים לאורך הדרך שלהן",
+            "antSeeds": "{animals}: נשיאת זרעים הביתה",
+            "antRaid": "{animals}: פשיטה בחזית רחבה",
+            "antBivouac": "{animals}: העברת הקן הזמני",
+            "antWeave": "{animals}: משיכת עלים יחד לקן"
         },
         "card": {
             "now": "עכשיו: {activity}",

@@ -442,7 +442,14 @@
             "split": "{animal}: satu individu baharu terpisah daripada induknya",
             "giftMeal": "{aAnimal} diberi makanan oleh seorang pelawat",
             "giftShelter": "{aPrey} selamat daripada {aPredator} di tempat berlindung pelawat",
-            "giftNest": "{aAnimal} mengawan, dengan bantuan sarang pelawat"
+            "giftNest": "{aAnimal} mengawan, dengan bantuan sarang pelawat",
+            "antTrailFound": "{animals}: denai ke haiwan mati ({other})",
+            "antTend": "{animals}: mengumpul embun madu ({other})",
+            "antLeaves": "{animals}: membawa daun di sepanjang laluan mereka",
+            "antSeeds": "{animals}: membawa biji pulang",
+            "antRaid": "{animals}: serbuan di barisan yang luas",
+            "antBivouac": "{animals}: memindahkan sarang sementara",
+            "antWeave": "{animals}: menarik daun bersama untuk sarang"
         },
         "card": {
             "now": "Sekarang: {activity}",

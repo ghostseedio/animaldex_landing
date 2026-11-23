@@ -442,7 +442,14 @@
             "split": "{animal}: മാതൃശരീരത്തിൽ നിന്ന് പുതിയൊന്ന് വേർപെട്ടു",
             "giftMeal": "{aAnimal}: ഒരു സന്ദർശകൻ ഭക്ഷണം നൽകി",
             "giftShelter": "{aPrey}: ഒരു സന്ദർശകന്റെ അഭയത്തിൽ {aPredator} നിന്ന് സുരക്ഷിതം",
-            "giftNest": "{aAnimal}: ഒരു സന്ദർശകന്റെ കൂട് സഹായത്തോടെ ഇണചേർന്നു"
+            "giftNest": "{aAnimal}: ഒരു സന്ദർശകന്റെ കൂട് സഹായത്തോടെ ഇണചേർന്നു",
+            "antTrailFound": "{animals}: ചത്ത ജീവിയിലേക്കുള്ള പാത ({other})",
+            "antTend": "{animals}: തേൻമഞ്ഞ് ശേഖരണം ({other})",
+            "antLeaves": "{animals}: തങ്ങളുടെ പാതയിലൂടെ ഇലകൾ ചുമക്കൽ",
+            "antSeeds": "{animals}: വിത്തുകൾ കൂട്ടിലേക്ക് ചുമക്കൽ",
+            "antRaid": "{animals}: വിശാലമായ മുന്നണിയിൽ ആക്രമണം",
+            "antBivouac": "{animals}: താൽക്കാലിക കൂട് മാറ്റൽ",
+            "antWeave": "{animals}: കൂടിനായി ഇലകൾ ചേർത്തുവലിക്കൽ"
         },
         "card": {
             "now": "ഇപ്പോൾ: {activity}",

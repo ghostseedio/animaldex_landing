@@ -442,7 +442,14 @@
             "split": "{animal}: mpya amejitenga na mzazi wake",
             "giftMeal": "{aAnimal}: amelishwa na mgeni",
             "giftShelter": "{aPrey}: salama dhidi ya {aPredator} katika makazi ya mgeni",
-            "giftNest": "{aAnimal}: amepanda, kwa msaada wa kiota wa mgeni"
+            "giftNest": "{aAnimal}: amepanda, kwa msaada wa kiota wa mgeni",
+            "antTrailFound": "{animals}: njia kuelekea mnyama aliyekufa ({other})",
+            "antTend": "{animals}: kukusanya umande wa asali ({other})",
+            "antLeaves": "{animals}: kubeba majani kando ya njia yao",
+            "antSeeds": "{animals}: kubeba mbegu nyumbani",
+            "antRaid": "{animals}: uvamizi kwa mstari mpana",
+            "antBivouac": "{animals}: kuhamisha kiota cha muda",
+            "antWeave": "{animals}: kuvuta majani pamoja kwa kiota"
         },
         "card": {
             "now": "Sasa: {activity}",

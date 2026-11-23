@@ -442,7 +442,14 @@
             "split": "{animal}: ตัวใหม่แยกออกจากตัวแม่",
             "giftMeal": "{aAnimal}: ได้รับอาหารจากผู้มาเยือน",
             "giftShelter": "{aPrey}: ปลอดภัยจาก {aPredator} ในที่หลบภัยของผู้มาเยือน",
-            "giftNest": "{aAnimal}: ผสมพันธุ์ด้วยความช่วยเหลือเรื่องรังจากผู้มาเยือน"
+            "giftNest": "{aAnimal}: ผสมพันธุ์ด้วยความช่วยเหลือเรื่องรังจากผู้มาเยือน",
+            "antTrailFound": "{animals}: ทางไปยังสัตว์ที่ตายแล้ว ({other})",
+            "antTend": "{animals}: เก็บน้ำหวานจากแมลง ({other})",
+            "antLeaves": "{animals}: ขนใบไม้ไปตามทางของพวกมัน",
+            "antSeeds": "{animals}: ขนเมล็ดกลับรัง",
+            "antRaid": "{animals}: บุกเป็นแนวกว้าง",
+            "antBivouac": "{animals}: ย้ายรังชั่วคราว",
+            "antWeave": "{animals}: ดึงใบไม้เข้าหากันเพื่อทำรัง"
         },
         "card": {
             "now": "ตอนนี้: กำลัง{activity}",

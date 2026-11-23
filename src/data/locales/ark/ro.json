@@ -442,7 +442,14 @@
             "split": "{animal}: unul nou s-a desprins de părinte",
             "giftMeal": "{aAnimal}: hrănit de un vizitator",
             "giftShelter": "{aPrey}: în siguranță de {aPredator} în adăpostul unui vizitator",
-            "giftNest": "{aAnimal}: împerechere, cu ajutorul la cuib al unui vizitator"
+            "giftNest": "{aAnimal}: împerechere, cu ajutorul la cuib al unui vizitator",
+            "antTrailFound": "{animals}: potecă spre un animal mort ({other})",
+            "antTend": "{animals}: strângerea manei ({other})",
+            "antLeaves": "{animals}: transportul frunzelor pe drumul furnicilor",
+            "antSeeds": "{animals}: transportul semințelor acasă",
+            "antRaid": "{animals}: raid pe un front larg",
+            "antBivouac": "{animals}: mutarea bivuacului",
+            "antWeave": "{animals}: frunze trase împreună pentru cuib"
         },
         "card": {
             "now": "Acum: {activity}",

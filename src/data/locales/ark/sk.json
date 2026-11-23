@@ -442,7 +442,14 @@
             "split": "{animal}: od rodiča sa oddelil nový jedinec",
             "giftMeal": "{aAnimal}: nakŕmené návštevníkom",
             "giftShelter": "{aPrey}: v bezpečí pred {aPredator} v úkryte od návštevníka",
-            "giftNest": "{aAnimal}: párenie, s pomocou návštevníka s hniezdom"
+            "giftNest": "{aAnimal}: párenie, s pomocou návštevníka s hniezdom",
+            "antTrailFound": "{animals}: chodník k mŕtvemu zvieraťu ({other})",
+            "antTend": "{animals}: zber medovice ({other})",
+            "antLeaves": "{animals}: nosenie listov po mravčej ceste",
+            "antSeeds": "{animals}: nosenie semien domov",
+            "antRaid": "{animals}: nájazd v širokom šíku",
+            "antBivouac": "{animals}: sťahovanie bivaku",
+            "antWeave": "{animals}: sťahovanie listov do hniezda"
         },
         "card": {
             "now": "Teraz: {activity}",

@@ -4660,7 +4660,14 @@
       "split": "{animal}: a new one split off its parent",
       "giftMeal": "{aAnimal} was given a meal by a visitor",
       "giftShelter": "{aPrey} was safe from {aPredator} in a visitor's shelter",
-      "giftNest": "{aAnimal} mated, with a visitor's nesting help"
+      "giftNest": "{aAnimal} mated, with a visitor's nesting help",
+      "antTrailFound": "A trail of {animals} found a dead {other}",
+      "antTend": "{animals} are collecting honeydew from the {other}",
+      "antLeaves": "{animals} are carrying leaves along their highway",
+      "antSeeds": "{animals} are carrying seeds home",
+      "antRaid": "{animals} are raiding in a broad swarm",
+      "antBivouac": "{animals} are moving their bivouac",
+      "antWeave": "{animals} are pulling leaves together for their nest"
     },
     "card": {
       "now": "Now: {activity}",

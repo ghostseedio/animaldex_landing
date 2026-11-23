@@ -442,7 +442,14 @@
             "split": "{animal}: یکی تازه از والدش جدا شد",
             "giftMeal": "{aAnimal}: یک بازدیدکننده به آن غذا داد",
             "giftShelter": "{aPrey}: در پناهگاه یک بازدیدکننده از {aPredator} در امان ماند",
-            "giftNest": "{aAnimal}: جفت‌گیری با کمک یک بازدیدکننده به لانه"
+            "giftNest": "{aAnimal}: جفت‌گیری با کمک یک بازدیدکننده به لانه",
+            "antTrailFound": "{animals}: ردی به سوی جانوری مرده ({other})",
+            "antTend": "{animals}: جمع‌آوری عسلک ({other})",
+            "antLeaves": "{animals}: حمل برگ‌ها در جاده‌شان",
+            "antSeeds": "{animals}: حمل دانه‌ها به لانه",
+            "antRaid": "{animals}: یورش در جبهه‌ای گسترده",
+            "antBivouac": "{animals}: جابه‌جایی لانهٔ موقت",
+            "antWeave": "{animals}: کشیدن برگ‌ها به هم برای لانه"
         },
         "card": {
             "now": "اکنون: {activity}",

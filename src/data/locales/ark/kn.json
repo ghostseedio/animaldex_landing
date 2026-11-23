@@ -442,7 +442,14 @@
             "split": "{animal}: ಮೂಲದಿಂದ ಹೊಸದೊಂದು ಬೇರ್ಪಟ್ಟಿತು",
             "giftMeal": "{aAnimal}: ಒಬ್ಬ ಸಂದರ್ಶಕ ಉಣಿಸಿದರು",
             "giftShelter": "{aPrey}: ಒಬ್ಬ ಸಂದರ್ಶಕರ ಆಶ್ರಯದಲ್ಲಿ {aPredator} ನಿಂದ ಸುರಕ್ಷಿತ",
-            "giftNest": "{aAnimal}: ಒಬ್ಬ ಸಂದರ್ಶಕರ ಗೂಡಿನ ನೆರವಿನಿಂದ ಜೋಡಿಯಾಯಿತು"
+            "giftNest": "{aAnimal}: ಒಬ್ಬ ಸಂದರ್ಶಕರ ಗೂಡಿನ ನೆರವಿನಿಂದ ಜೋಡಿಯಾಯಿತು",
+            "antTrailFound": "{animals}: ಸತ್ತ ಪ್ರಾಣಿಯೆಡೆಗೆ ಜಾಡು ({other})",
+            "antTend": "{animals}: ಜೇನುಮಂಜು ಸಂಗ್ರಹ ({other})",
+            "antLeaves": "{animals}: ತಮ್ಮ ದಾರಿಯಲ್ಲಿ ಎಲೆಗಳನ್ನು ಹೊರುವುದು",
+            "antSeeds": "{animals}: ಬೀಜಗಳನ್ನು ಗೂಡಿಗೆ ಹೊರುವುದು",
+            "antRaid": "{animals}: ಅಗಲ ಮುಂಚೂಣಿಯಲ್ಲಿ ದಾಳಿ",
+            "antBivouac": "{animals}: ತಾತ್ಕಾಲಿಕ ಗೂಡಿನ ಸ್ಥಳಾಂತರ",
+            "antWeave": "{animals}: ಗೂಡಿಗಾಗಿ ಎಲೆಗಳನ್ನು ಎಳೆದು ಜೋಡಿಸುವುದು"
         },
         "card": {
             "now": "ಈಗ: {activity}",

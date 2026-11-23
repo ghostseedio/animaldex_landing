@@ -442,7 +442,14 @@
             "split": "{animal}: ਮੂਲ ਤੋਂ ਇੱਕ ਨਵਾਂ ਵੱਖ ਹੋਇਆ",
             "giftMeal": "{aAnimal}: ਇੱਕ ਮਹਿਮਾਨ ਨੇ ਖੁਆਇਆ",
             "giftShelter": "{aPrey}: ਇੱਕ ਮਹਿਮਾਨ ਦੇ ਆਸਰੇ ਵਿੱਚ {aPredator} ਤੋਂ ਸੁਰੱਖਿਅਤ",
-            "giftNest": "{aAnimal}: ਇੱਕ ਮਹਿਮਾਨ ਦੀ ਆਲ੍ਹਣੇ ਦੀ ਮਦਦ ਨਾਲ ਮਿਲਾਪ"
+            "giftNest": "{aAnimal}: ਇੱਕ ਮਹਿਮਾਨ ਦੀ ਆਲ੍ਹਣੇ ਦੀ ਮਦਦ ਨਾਲ ਮਿਲਾਪ",
+            "antTrailFound": "{animals}: ਇੱਕ ਮਰੇ ਜਾਨਵਰ ਤੱਕ ਰਸਤਾ ({other})",
+            "antTend": "{animals}: ਮਧੂ-ਤ੍ਰੇਲ ਇਕੱਠੀ ਕਰਨਾ ({other})",
+            "antLeaves": "{animals}: ਆਪਣੇ ਰਾਹ 'ਤੇ ਪੱਤੇ ਲਿਜਾਣਾ",
+            "antSeeds": "{animals}: ਬੀਜ ਘਰ ਲਿਜਾਣਾ",
+            "antRaid": "{animals}: ਚੌੜੇ ਮੋਰਚੇ 'ਤੇ ਧਾਵਾ",
+            "antBivouac": "{animals}: ਆਰਜ਼ੀ ਆਲ੍ਹਣੇ ਦੀ ਬਦਲੀ",
+            "antWeave": "{animals}: ਆਲ੍ਹਣੇ ਲਈ ਪੱਤੇ ਜੋੜਨਾ"
         },
         "card": {
             "now": "ਹੁਣ: {activity}",

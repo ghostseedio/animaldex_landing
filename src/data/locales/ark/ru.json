@@ -442,7 +442,14 @@
             "split": "{animal}: от родителя отделилась новая особь",
             "giftMeal": "{aAnimal}: покормлено посетителем",
             "giftShelter": "{aPrey}: в безопасности от {aPredator} в укрытии посетителя",
-            "giftNest": "{aAnimal}: спаривание с помощью посетителя с гнездом"
+            "giftNest": "{aAnimal}: спаривание с помощью посетителя с гнездом",
+            "antTrailFound": "{animals}: тропа к мёртвому животному ({other})",
+            "antTend": "{animals}: сбор пади ({other})",
+            "antLeaves": "{animals}: переноска листьев по муравьиной дороге",
+            "antSeeds": "{animals}: переноска семян домой",
+            "antRaid": "{animals}: набег широким фронтом",
+            "antBivouac": "{animals}: переселение бивака",
+            "antWeave": "{animals}: стягивание листьев для гнезда"
         },
         "card": {
             "now": "Сейчас: {activity}",

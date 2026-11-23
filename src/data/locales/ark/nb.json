@@ -442,7 +442,14 @@
             "split": "{animal}: en ny delte seg fra forelderen",
             "giftMeal": "{aAnimal}: matet av en besøkende",
             "giftShelter": "{aPrey}: trygg for {aPredator} i en besøkendes ly",
-            "giftNest": "{aAnimal}: paret seg, med en besøkendes reirhjelp"
+            "giftNest": "{aAnimal}: paret seg, med en besøkendes reirhjelp",
+            "antTrailFound": "{animals}: spor til et dødt dyr ({other})",
+            "antTend": "{animals}: innsamling av honningdugg ({other})",
+            "antLeaves": "{animals}: blader bæres langs maurveien",
+            "antSeeds": "{animals}: frø bæres hjem",
+            "antRaid": "{animals}: raid i bred front",
+            "antBivouac": "{animals}: bivuakken flytter",
+            "antWeave": "{animals}: blader trekkes sammen til reiret"
         },
         "card": {
             "now": "Nå: {activity}",

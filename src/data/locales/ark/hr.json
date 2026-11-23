@@ -442,7 +442,14 @@
             "split": "{animal}: novi se odvojio od roditelja",
             "giftMeal": "{aAnimal}: nahranio ga je posjetitelj",
             "giftShelter": "{aPrey}: sigurno od {aPredator} u zaklonu posjetitelja",
-            "giftNest": "{aAnimal}: parenje, uz posjetiteljevu pomoć s gnijezdom"
+            "giftNest": "{aAnimal}: parenje, uz posjetiteljevu pomoć s gnijezdom",
+            "antTrailFound": "{animals}: trag do mrtve životinje ({other})",
+            "antTend": "{animals}: skupljanje medne rose ({other})",
+            "antLeaves": "{animals}: nošenje lišća mravljom cestom",
+            "antSeeds": "{animals}: nošenje sjemenki kući",
+            "antRaid": "{animals}: pohod u širokom stroju",
+            "antBivouac": "{animals}: selidba bivaka",
+            "antWeave": "{animals}: privlačenje listova za gnijezdo"
         },
         "card": {
             "now": "Sada: {activity}",

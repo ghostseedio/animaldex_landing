@@ -442,7 +442,14 @@
             "split": "{animal}: انفصل فرد جديد عن أصله",
             "giftMeal": "{aAnimal}: أطعمه زائر",
             "giftShelter": "{aPrey}: في أمان من {aPredator} في مأوى من زائر",
-            "giftNest": "{aAnimal}: تزاوج بمساعدة زائر في العش"
+            "giftNest": "{aAnimal}: تزاوج بمساعدة زائر في العش",
+            "antTrailFound": "{animals}: أثر إلى حيوان نافق ({other})",
+            "antTend": "{animals}: جمع الندوة العسلية ({other})",
+            "antLeaves": "{animals}: نقل الأوراق على طريقها",
+            "antSeeds": "{animals}: نقل البذور إلى العش",
+            "antRaid": "{animals}: غارة على جبهة واسعة",
+            "antBivouac": "{animals}: نقل العش المؤقت",
+            "antWeave": "{animals}: ضمّ الأوراق لبناء العش"
         },
         "card": {
             "now": "الآن: {activity}",

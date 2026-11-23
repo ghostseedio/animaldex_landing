@@ -442,7 +442,14 @@
             "split": "{animal}: may bagong humiwalay sa magulang nito",
             "giftMeal": "{aAnimal}: pinakain ng isang bisita",
             "giftShelter": "{aPrey}: ligtas mula sa {aPredator} sa silungan ng isang bisita",
-            "giftNest": "{aAnimal}: nag-asawa, sa tulong sa pugad ng isang bisita"
+            "giftNest": "{aAnimal}: nag-asawa, sa tulong sa pugad ng isang bisita",
+            "antTrailFound": "{animals}: daan patungo sa patay na hayop ({other})",
+            "antTend": "{animals}: pag-ipon ng honeydew ({other})",
+            "antLeaves": "{animals}: pagbubuhat ng dahon sa kanilang daan",
+            "antSeeds": "{animals}: pagbubuhat ng buto pauwi",
+            "antRaid": "{animals}: pagsalakay sa malapad na hanay",
+            "antBivouac": "{animals}: paglipat ng pansamantalang pugad",
+            "antWeave": "{animals}: paghila ng mga dahon para sa pugad"
         },
         "card": {
             "now": "Ngayon: {activity}",
