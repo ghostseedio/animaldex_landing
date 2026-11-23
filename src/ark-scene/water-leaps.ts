@@ -34,6 +34,13 @@ export function leapSpec(slug: string | null | undefined): LeapSpec | null {
     return row ? {style: row[0], perTick: row[1], burst: row[2], quote: row[3], field: row[4]} : null;
 }
 
+const HELD = (table as unknown as {held?: Record<string, string>}).held ?? {};
+
+/** Its kind's leaps as the scene shows them: a kind held back (`held` in the table: not yet seen right in the pictures) is not. */
+export function leapShown(slug: string | null | undefined): LeapSpec | null {
+    return slug && Object.prototype.hasOwnProperty.call(HELD, slug) ? null : leapSpec(slug);
+}
+
 export function leapKinds(): string[] {
     return Object.keys(SPECS);
 }

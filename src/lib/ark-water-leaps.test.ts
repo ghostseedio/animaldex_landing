@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {readdirSync, readFileSync} from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import {LEAP_TICK_SECONDS, leapAt, leapBoutsIn, leapKinds, leapPose, leapSpec, leapsInTick} from "@/ark-scene/water-leaps";
+import {LEAP_TICK_SECONDS, leapAt, leapBoutsIn, leapKinds, leapPose, leapShown, leapSpec, leapsInTick} from "@/ark-scene/water-leaps";
 
 test("only kinds whose own text says they leave the water leap; none tied to a catch", () => {
     for (const slug of ["flathead-grey-mullet", "spinner-dolphin", "dusky-dolphin", "tropical-two-wing-flyingfish", "southern-right-whale", "spotted-eagle-ray"]) assert.ok(leapSpec(slug), slug);
@@ -70,4 +70,11 @@ test("the leap lines are in all 45 locales", () => {
             assert.ok(m && m[1].includes("{aAnimal}"), `${file}: ${key}`);
         }
     }
+});
+
+test("kinds held back after the picture check are not shown (whale sail, flyingfish glide); the rest are", () => {
+    assert.equal(leapShown("southern-right-whale"), null);
+    assert.equal(leapShown("tropical-two-wing-flyingfish"), null);
+    for (const slug of ["spinner-dolphin", "dusky-dolphin", "spotted-eagle-ray", "flathead-grey-mullet"]) assert.ok(leapShown(slug), slug);
+    assert.equal(leapShown("great-white-shark"), null);
 });

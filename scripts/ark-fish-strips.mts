@@ -122,26 +122,37 @@ for (const slug of KINDS) {
         // and a frame is taken every ~0.3 s; the world's time of each is read back.
         const lead = spec.style === "sail" ? 2 : 1.2;
         const want = spec.style === "sail" ? [0, 3, 6, 12, 25, 40, 60, 90] : Array.from({length: FRAMES}, (_, f) => (f / (FRAMES - 1)) * Math.min(span, own.back + 2.4));
+        // The camera set once on where it swims before the leap, and given time to arrive (a view set every frame is
+        // eased toward and never reached), then the leap is pinned to begin `lead` seconds after the clock is pinned.
+        const settleS = 3;
         await page.evaluate(([s, who, dist]) => {
             (window as any).__arkGoldenCamera = {free: true, maxPolar: 1.3};
             (window as any).__pinArk(s);
             const golden = (window as any).__arkGolden;
-            const w = window as any;
-            w.__follow = true;
-            w.__dist = dist;
-            const step = () => {
-                if (!w.__follow) return;
-                const at = golden.handle.locate(who);
-                if (at) golden.handle.setView({target: {x: at.x, y: 0.8, z: at.z}, distance: w.__dist || Math.max(at.length * 8, 12), polar: 1.18, azimuth: (at.yaw ?? 0) + Math.PI / 2});
-                requestAnimationFrame(step);
-            };
-            step();
-        }, [own.from - lead, id, DIST] as const);
+            const at = golden.handle.locate(who);
+            if (at) golden.handle.setView({target: {x: at.x, y: 0.8, z: at.z}, distance: dist || Math.max(at.length * 6, 10), polar: 1.2, azimuth: (at.yaw ?? 0) + Math.PI / 2});
+            // The app's own choice of the animal, close up: the camera flies to it as drawn and keeps it framed.
+            golden.handle.select(who, true);
+        }, [own.from - lead - settleS, id, DIST] as const);
+        await new Promise((r) => setTimeout(r, settleS * 1000));
+        await page.evaluate(([s, who]) => {
+            (window as any).__pinArk(s);
+            const golden = (window as any).__arkGolden;
+            const at = golden.handle.locate(who);
+            const v = golden.handle.view();
+            void at; void v; // (the follow camera keeps it framed)
+        }, [own.from - lead, id] as const);
         const t0 = Date.now();
         for (let f = 0; f < want.length; f++) {
             if (spec.style === "sail") {
-                await page.evaluate((s) => (window as any).__pinArk(s), own.from + want[f]);
-                await new Promise((r) => setTimeout(r, 600));
+                await page.evaluate(([s, who]) => {
+                    (window as any).__pinArk(s);
+                    const golden = (window as any).__arkGolden;
+                    const at = golden.handle.locate(who);
+                    const v = golden.handle.view();
+                    void at; void v; // (the follow camera keeps it framed)
+                }, [own.from + want[f] - 2.5, id] as const);
+                await new Promise((r) => setTimeout(r, 2500));
             } else {
                 const realWait = (want[f] + lead) * 1000;
                 while (Date.now() - t0 < realWait) await new Promise((r) => setTimeout(r, 15));
@@ -153,10 +164,10 @@ for (const slug of KINDS) {
             const where = await page.evaluate((who) => {
                 const debug = (window as any).__arkDebug;
                 const e = debug.entries().find((x: any) => x.animal.id === who);
-                if (!e?.middle) return null;
+                if (!e?.middle) return {drawn: false, found: Boolean(e), asleep: e?.state?.asleep ?? null, act: Boolean(e?.act), moment: Boolean(e?.moment), ocean: e?.ocean ?? null} as any;
                 const p = e.middle.clone().project(debug.camera);
                 const r = debug.camera.near !== undefined ? document.querySelector("canvas")!.getBoundingClientRect() : {width: innerWidth, height: innerHeight};
-                return {y: Math.round(e.middle.y * 100) / 100, px: ((p.x + 1) / 2) * r.width, py: ((1 - p.y) / 2) * r.height};
+                return {asleep: e.state?.asleep ?? null, act: Boolean(e.act), moment: Boolean(e.moment), ocean: e.ocean ?? null, y: Math.round(e.middle.y * 100) / 100, px: ((p.x + 1) / 2) * r.width, py: ((1 - p.y) / 2) * r.height};
             }, id);
             const cx = Math.min(Math.max(Math.round(where?.px ?? 600) - 210, 0), 1200 - 420);
             const cy = Math.min(Math.max(Math.round(where?.py ?? 450) - 330, 0), 900 - 600);

@@ -108,7 +108,7 @@ import {floatOver} from "@/ark-scene/water-float"; // p3 (zoofix)
 import {breathAt, depthSeed, fitInWater, floatPitch, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, waterSurfaceAt, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {tripBreath} from "@/ark-scene/breath-trip";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
-import {leapAt, leapBoutsIn, leapPose, leapSpec, leapSplashes, type LeapStyle} from "@/ark-scene/water-leaps";
+import {leapAt, leapBoutsIn, leapPose, leapShown, leapSplashes, type LeapStyle} from "@/ark-scene/water-leaps";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
 import {ARK_SCENE_MODULES, type ArkSceneModule} from "@/ark-scene/scene-modules";
@@ -2836,7 +2836,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const s of subjects) {
             const entry = findEntry(s.id);
             if (!entry || !entry.depth || entry.state.asleep) continue;
-            const spec = leapSpec(entry.animal.model_slug);
+            const spec = leapShown(entry.animal.model_slug);
             const kind = spec ? LEAP_MOMENT[spec.style] : null;
             if (!spec || !kind) continue;
             const bout = leapBoutsIn(entry.animal.id, entry.animal.model_slug, entry.trueLength, from, to)[0];
@@ -6552,7 +6552,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // ARK-FISH: a leap out of the water (only a kind whose own text says it leaves the water: `water-leaps.ts`),
                 // laid over its swim at the height it is drawn at. Seeded by its id and the engine's tick: every viewer
                 // sees the same leap. Behaviour only: nothing is caught, logged as a meal or changed in its bars.
-                if (where.water.motion === "swim" && !reducedMotion && !entry.act && !entry.moment && !entry.visitor && !entry.state.asleep && leapSpec(animal.model_slug)) {
+                if (where.water.motion === "swim" && !reducedMotion && !entry.act && !entry.moment && !entry.visitor && !entry.state.asleep && leapShown(animal.model_slug)) {
                     const epoch = worldMs() / 1000;
                     const step = leapAt(animal.id, animal.model_slug, entry.trueLength, epoch);
                     if (step) {
