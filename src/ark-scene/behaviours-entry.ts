@@ -213,6 +213,7 @@ async function main() {
     const view = (distance: number, at: {x: number; z: number}, polar = 1.15, azimuth = 0.7): ArkCameraView => ({target: {x: at.x, y: Math.max(handle.heightAt(at.x, at.z), 0) + 0.5, z: at.z}, distance, polar, azimuth});
     handle.setView(view(12, at0));
     let closeView: ArkCameraView | null = null;
+    const pinned = new Set<string>();
     const api = {
         /** 3.3 fix (log): a death line's tap, from the island's overview: where the camera goes, after its flight. */
         tapDeath: async (key: string) => {
@@ -347,10 +348,11 @@ async function main() {
          * Lane SIG-OTHER: an animal with its look state forced to `k` (0-1; null: its own), the Ark month (null: its own) and
          * the hour of the island's day (null: as it is), framed from `lengths` of its body away, from `azimuth` off its side.
          */
-        lsShot: async (id: string, o: {k: number | null; lengths: number; azimuth: number; polar?: number; hour?: number | null; month?: number | null; run?: number; lift?: number}) => {
-            const dbg = debug as unknown as {forceLookState: (id: string, k: number | null) => void; forceMonth: (m: number | null) => void; lookStateOf: (id: string) => {k: number} | null; controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}};
+        lsShot: async (id: string, o: {k: number | null; lengths: number; azimuth: number; polar?: number; hour?: number | null; month?: number | null; run?: number; lift?: number; focus?: [number, number, number] | null; bare?: boolean; pin?: boolean}) => {
+            const dbg = debug as unknown as {forceLookState: (id: string, k: number | null) => void; forceMonth: (m: number | null) => void; lookStateOf: (id: string) => {k: number} | null; controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}; bareStage: (on: boolean) => void; pinShared: (id: string, fn: ((epoch: number) => Record<string, unknown>) | null) => void};
             dbg.forceLookState(id, o.k);
             dbg.forceMonth(o.month ?? null);
+            dbg.bareStage(Boolean(o.bare));
             if (o.hour !== undefined && o.hour !== null) await setAt(Date.UTC(2026, 10, 20, o.hour) / 1000 + 60);
             for (let i = 0; i < Math.round((o.run ?? 2.5) * 10); i++) {
                 fake!.perf += 100;
@@ -360,21 +362,36 @@ async function main() {
             const far = handle.locate(id);
             if (far) handle.setView({target: {x: far.x, y: far.y, z: far.z}, distance: 30, polar: 0.9, azimuth: 0.7});
             await frames(4);
+            // (Held where it stands for the whole series: the same place by day and by night, in each state.)
+            if (o.pin && far && !pinned.has(id)) {
+                pinned.add(id);
+                const spot = {x: far.x, y: far.y, z: far.z, yaw: far.yaw};
+                dbg.pinShared(id, () => ({x: spot.x, y: spot.y, z: spot.z, yaw: spot.yaw, moving: false, aloft: false, doing: "watch"}));
+                await frames(4);
+            }
             const drawn = debug.entries().find((e) => e.animal.id === id) as unknown as {length: number; middle: {x: number; y: number; z: number} | null};
             const at = handle.locate(id);
             if (!at || !drawn) return "not found";
-            const distance = Math.max(o.lengths * drawn.length, 0.05);
+            const distance = Math.max(o.lengths * drawn.length, 0.04);
             dbg.controls.minDistance = Math.min(dbg.controls.minDistance, distance);
             dbg.camera.near = Math.min(0.03, distance / 25);
             dbg.camera.updateProjectionMatrix();
-            const target = drawn.middle ? {x: drawn.middle.x, y: drawn.middle.y + (o.lift ?? 0) * drawn.length, z: drawn.middle.z} : {x: at.x, y: at.y + drawn.length * (0.3 + (o.lift ?? 0)), z: at.z};
+            const base = drawn.middle ? {x: drawn.middle.x, y: drawn.middle.y + (o.lift ?? 0) * drawn.length, z: drawn.middle.z} : {x: at.x, y: at.y + drawn.length * (0.3 + (o.lift ?? 0)), z: at.z};
+            // (A focus: a point of the model's own frame, in lengths: x to its right, y up, z ahead: the head, the throat, the cheeks.)
+            let target = base;
+            if (o.focus) {
+                const [fx, fy, fz] = o.focus;
+                const sin = Math.sin(at.yaw);
+                const cos = Math.cos(at.yaw);
+                target = {x: base.x + (fx * cos + fz * sin) * drawn.length, y: base.y + fy * drawn.length, z: base.z + (-fx * sin + fz * cos) * drawn.length};
+            }
             for (let i = 0; i < 3; i++) {
-                handle.setView({target, distance, polar: o.polar ?? 1.4, azimuth: at.yaw + o.azimuth});
+                handle.setView({target, distance, polar: o.polar ?? 1.3, azimuth: at.yaw + o.azimuth});
                 await frames(1);
             }
             const state = dbg.lookStateOf(id);
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
-            return `strength ${state ? state.k.toFixed(2) : "-"} length ${drawn.length.toFixed(3)} m   ${said.filter((l) => l.includes(id.slice(-3)) || true).slice(0, 2).join(" / ")}`;
+            return `strength ${state ? state.k.toFixed(2) : "-"} length ${drawn.length.toFixed(3)} m  at ${at.x.toFixed(1)}, ${at.y.toFixed(2)}, ${at.z.toFixed(1)} yaw ${at.yaw.toFixed(2)}  ${said.slice(0, 1).join(" / ")}`;
         },
         /**
          * 3.3 batch (A): the predator (the second cast) stood `gap` body lengths of the first cast's animal from it, or

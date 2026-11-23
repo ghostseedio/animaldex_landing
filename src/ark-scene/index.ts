@@ -1994,6 +1994,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** Development only (the look-state lab): a fixed look-state strength (0-1) for an animal, and a fixed Ark month, over the real ones. */
     const forcedLookStates = new Map<string, number>();
     let forcedMonth: number | null = null;
+    let debugBareStage = false;
     /** The Ark month, worked out once in 30 s of the world's clock (every animal with a look state asks every frame). */
     let lookMonthMemo: {slot: number; month: number} | null = null;
     const lookMonth = (nowS: number): number => {
@@ -9266,6 +9267,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         perf.lap("plants");
         renderer.info.reset();
         if (canvasStale) sizeCanvas();
+        // Development only (the look-state lab): a bare stage, the plants and the floor's litter hidden so a close-up of a small animal is clear.
+        if (debugBareStage) {
+            if (vegetation) {
+                for (const mesh of vegetation.meshes) mesh.visible = false;
+                vegetation.grass.visible = false;
+            }
+            assetTrees.group.visible = false;
+            forest.group.visible = false;
+            assetFloor.group.visible = false;
+            nearDetail.group.visible = false;
+            bugGround.group.visible = false;
+            climbStems.mesh.visible = false;
+            micro?.group && (micro.group.visible = false);
+        }
         post.render();
         drawnOnce = true;
         perf.lap("render");
@@ -9397,7 +9412,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         })),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
         forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
-        forceLookState: (id: string, k: number | null) => (k === null ? forcedLookStates.delete(id) : forcedLookStates.set(id, k)), forceMonth: (month: number | null) => { forcedMonth = month; }, lookStateOf: (id: string) => entryById.get(id)?.lookState ?? null,
+        forceLookState: (id: string, k: number | null) => (k === null ? forcedLookStates.delete(id) : forcedLookStates.set(id, k)), forceMonth: (month: number | null) => { forcedMonth = month; }, bareStage: (on: boolean) => { debugBareStage = on; }, lookStateOf: (id: string) => entryById.get(id)?.lookState ?? null,
         // 3.3 batch (A): an animal's defence move now (the harness).
         defence: (id: string) => findEntry(id)?.defence ?? null,
         // 3.3 fix (log): the record's deaths, where each lies (the harness).
