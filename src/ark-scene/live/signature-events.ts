@@ -1,7 +1,7 @@
 /**
  * Saved signature moves in the live log (AnimalDex lane SIG-EVENTS, owner 2026-11-23: "Save only the notable moves.
  * Tool use, food caching, hunting techniques, displays and courtship"). The engine saves a capped few per island per
- * hour as `signature` events; the public read sends each with `sig: {move, recipe}` (migration 20261228100000). Here:
+ * hour as `signature` events; the public read sends each with `sig: {move, recipe}` (migration 20261230100000). Here:
  *
  * - the line, for everyone: in English the species' own sentence for that recipe (`signature-lines.json`, as the seen
  *   lines say it), else the generic "{aAnimal} is {activity}" line of the recipe's activity, in every language;
