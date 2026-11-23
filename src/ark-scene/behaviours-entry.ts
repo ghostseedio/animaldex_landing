@@ -27,7 +27,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number; /** sig2-small: the slot it is placed at (a place on the island: a flower for a moth), else 90. */ slot?: number; /** sig2-small: the species' own activity (the profile's), else diurnal as the harness always had it. */ activity?: string};
-type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group" | "recipe" | "micro" | "flight" | "tails"; /** (recipe) the recipe's episode to find, and the row to give the first cast when its table has not got it yet ("recipe.weight[,...]"). */ recipe?: string; inject?: string; /** (recipe, micro) how far in body lengths, the camera's azimuth off its side and its polar angle. */ lengths?: number; azimuth?: number; polar?: number; /** (recipe) the first of the cast to frame. */ pick?: number};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group" | "recipe" | "micro" | "flight" | "tails" | "state"; /** (recipe) the recipe's episode to find, and the row to give the first cast when its table has not got it yet ("recipe.weight[,...]"). */ recipe?: string; inject?: string; /** (recipe, micro) how far in body lengths, the camera's azimuth off its side and its polar angle. */ lengths?: number; azimuth?: number; polar?: number; /** (recipe) the first of the cast to frame. */ pick?: number};
 
 const SCENES: Record<string, Scene> = {
     // Signature behaviours, wave 2, the small bodies (`behaviours-small.ts`).
@@ -153,6 +153,16 @@ const SCENES: Record<string, Scene> = {
     display: {zone: "woodland", hours: 10, kind: "flight", cast: [{slug: "common-wood-pigeon", name: "Common Wood Pigeon", n: 24}]},
     // Lane SIG-OTHER: tail postures (`tail-posture.ts`): a dog's wag, a coati's flag, a chipmunk's, the baboons' and the macaque's (`tailShot`).
     tails: {zone: "rainforest", hours: 10, kind: "tails", cast: [{slug: "domestic-dog", name: "Domestic Dog", n: 1}, {slug: "south-american-coati", name: "South American Coati", n: 1}, {slug: "eastern-chipmunk", name: "Eastern Chipmunk", n: 1}, {slug: "hamadryas-baboon", name: "Hamadryas Baboon", n: 1}, {slug: "olive-baboon", name: "Olive Baboon", n: 1}, {slug: "toque-macaque", name: "Toque Macaque", n: 1}]},
+    // Lane SIG-OTHER: look states (`look-state.ts`): each species close up with its state off and on (`lsShot`: the strength forced, or the hour or the month moved).
+    lsfish: {zone: "river_lake", hours: 12, kind: "state", cast: [{slug: "goldfish", name: "Goldfish", n: 1}, {slug: "guppy", name: "Guppy", n: 1}, {slug: "siamese-fighting-fish", name: "Siamese Fighting Fish", n: 1}, {slug: "tiger-barb", name: "Tiger Barb", n: 1}, {slug: "neon-tetra", name: "Neon Tetra", n: 1}, {slug: "black-skirt-tetra", name: "Black Skirt Tetra", n: 1}, {slug: "freshwater-angelfish", name: "Freshwater Angelfish", n: 1}]},
+    lsland: {zone: "farm_garden", hours: 12, kind: "state", cast: [{slug: "common-house-gecko", name: "Common House Gecko", n: 1}, {slug: "tropical-house-gecko", name: "Tropical House Gecko", n: 1}, {slug: "crested-gecko", name: "Crested Gecko", n: 1}, {slug: "veiled-chameleon", name: "Veiled Chameleon", n: 1}, {slug: "carolina-wolf-spider", name: "Carolina Wolf Spider", n: 1}]},
+    lsdewlap: {zone: "rainforest", hours: 12, kind: "state", cast: [{slug: "green-iguana", name: "Green Iguana", n: 1}, {slug: "green-anole", name: "Green Anole", n: 1}, {slug: "brown-anole", name: "Brown Anole", n: 1}, {slug: "oriental-garden-lizard", name: "Oriental Garden Lizard", n: 1}, {slug: "common-green-forest-lizard", name: "Common Green Forest Lizard", n: 1}, {slug: "veiled-chameleon", name: "Veiled Chameleon", n: 1}]},
+    lssac: {zone: "wetland", hours: 12, kind: "state", cast: [{slug: "american-bullfrog", name: "American Bullfrog", n: 1}, {slug: "marsh-frog", name: "Marsh Frog", n: 1}, {slug: "great-plains-toad", name: "Great Plains Toad", n: 1}, {slug: "grey-crowned-crane", name: "Grey Crowned Crane", n: 1}, {slug: "european-starling", name: "European Starling", n: 1}, {slug: "magnificent-frigatebird", name: "Magnificent Frigatebird", n: 1}, {slug: "siamang", name: "Siamang", n: 1}]},
+    lscheek: {zone: "rainforest", hours: 12, kind: "state", cast: [{slug: "long-tailed-macaque", name: "Long-tailed Macaque", n: 1}, {slug: "campbells-dwarf-hamster", name: "Campbell's Dwarf Hamster", n: 1}, {slug: "eastern-chipmunk", name: "Eastern Chipmunk", n: 1}, {slug: "mandrill", name: "Mandrill", n: 1}]},
+    lsglow: {zone: "farm_garden", hours: 12, kind: "state", cast: [{slug: "common-eastern-firefly", name: "Common Eastern Firefly", n: 1}, {slug: "carolina-wolf-spider", name: "Carolina Wolf Spider", n: 1}]},
+    lsindividual: {zone: "river_lake", hours: 12, kind: "state", cast: [{slug: "koi", name: "Koi", n: 4}, {slug: "guppy", name: "Guppy", n: 4}]},
+    lsseasonwater: {zone: "river_lake", hours: 12, kind: "state", cast: [{slug: "mallard", name: "Mallard", n: 8}, {slug: "mandarin-duck", name: "Mandarin Duck", n: 1}, {slug: "black-headed-gull", name: "Black-headed Gull", n: 1}, {slug: "great-crested-grebe", name: "Great Crested Grebe", n: 1}]},
+    lsseasonland: {zone: "woodland", hours: 12, kind: "state", cast: [{slug: "winter-white-dwarf-hamster", name: "Winter White Dwarf Hamster", n: 1}, {slug: "southeastern-five-lined-skink", name: "Southeastern Five-lined Skink", n: 1}, {slug: "two-spotted-spider-mite", name: "Two-spotted Spider Mite", n: 1}, {slug: "white-tailed-deer", name: "White-tailed Deer", n: 1}, {slug: "red-deer", name: "Red Deer", n: 1}, {slug: "raccoon-dog", name: "Raccoon Dog", n: 1}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]},
     // Decision 434: the dung users at a herd's fresh marks (`dung.ts` dungVisitPose).
@@ -299,6 +309,7 @@ async function main() {
     const view = (distance: number, at: {x: number; z: number}, polar = 1.15, azimuth = 0.7): ArkCameraView => ({target: {x: at.x, y: Math.max(handle.heightAt(at.x, at.z), 0) + 0.5, z: at.z}, distance, polar, azimuth});
     handle.setView(view(12, at0));
     let closeView: ArkCameraView | null = null;
+    const pinned = new Set<string>();
     const api = {
         /** 3.3 fix (log): a death line's tap, from the island's overview: where the camera goes, after its flight. */
         tapDeath: async (key: string) => {
@@ -531,6 +542,59 @@ async function main() {
                 await frames(1);
             }
             return `act ${pose?.act?.recipe ?? "-"} block ${pose?.act?.block ?? "-"} state ${pose?.act?.state ?? "-"} at ${at ? `${at.x.toFixed(1)}, ${at.y.toFixed(2)}, ${at.z.toFixed(1)}` : "-"} aloft ${pose?.aloft ? "yes" : "no"}`;
+        },
+        /**
+         * Lane SIG-OTHER: the cast and who is in it (for the look-state shots).
+         */
+        lsPlan: () => scene.cast.map((c, k) => ({slug: c.slug, name: c.name, ids: Array.from({length: c.n}, (_, i) => castId(k, i))})),
+        /**
+         * Lane SIG-OTHER: an animal with its look state forced to `k` (0-1; null: its own), the Ark month (null: its own) and
+         * the hour of the island's day (null: as it is), framed from `lengths` of its body away, from `azimuth` off its side.
+         */
+        lsShot: async (id: string, o: {k: number | null; lengths: number; azimuth: number; polar?: number; hour?: number | null; month?: number | null; run?: number; lift?: number; focus?: [number, number, number] | null; bare?: boolean; pin?: boolean}) => {
+            const dbg = debug as unknown as {forceLookState: (id: string, k: number | null) => void; forceMonth: (m: number | null) => void; lookStateOf: (id: string) => {k: number} | null; controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}; bareStage: (on: boolean) => void; pinShared: (id: string, fn: ((epoch: number) => Record<string, unknown>) | null) => void};
+            dbg.forceLookState(id, o.k);
+            dbg.forceMonth(o.month ?? null);
+            dbg.bareStage(Boolean(o.bare));
+            if (o.hour !== undefined && o.hour !== null) await setAt(Date.UTC(2026, 10, 20, o.hour) / 1000 + 60);
+            for (let i = 0; i < Math.round((o.run ?? 2.5) * 10); i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const far = handle.locate(id);
+            if (far) handle.setView({target: {x: far.x, y: far.y, z: far.z}, distance: 30, polar: 0.9, azimuth: 0.7});
+            await frames(4);
+            // (Held where it stands for the whole series: the same place by day and by night, in each state.)
+            if (o.pin && far && !pinned.has(id)) {
+                pinned.add(id);
+                const spot = {x: far.x, y: far.y, z: far.z, yaw: far.yaw};
+                dbg.pinShared(id, () => ({x: spot.x, y: spot.y, z: spot.z, yaw: spot.yaw, moving: false, aloft: false, doing: "watch"}));
+                await frames(4);
+            }
+            const drawn = debug.entries().find((e) => e.animal.id === id) as unknown as {length: number; middle: {x: number; y: number; z: number} | null};
+            const at = handle.locate(id);
+            if (!at || !drawn) return "not found";
+            const distance = Math.max(o.lengths * drawn.length, 0.04);
+            dbg.controls.minDistance = Math.min(dbg.controls.minDistance, distance);
+            dbg.camera.near = Math.min(0.03, distance / 25);
+            dbg.camera.updateProjectionMatrix();
+            const base = drawn.middle ? {x: drawn.middle.x, y: drawn.middle.y + (o.lift ?? 0) * drawn.length, z: drawn.middle.z} : {x: at.x, y: at.y + drawn.length * (0.3 + (o.lift ?? 0)), z: at.z};
+            // (A focus: a point of the model's own frame, in lengths: x to its right, y up, z ahead: the head, the throat, the cheeks.)
+            let target = base;
+            if (o.focus) {
+                const [fx, fy, fz] = o.focus;
+                const sin = Math.sin(at.yaw);
+                const cos = Math.cos(at.yaw);
+                target = {x: base.x + (fx * cos + fz * sin) * drawn.length, y: base.y + fy * drawn.length, z: base.z + (-fx * sin + fz * cos) * drawn.length};
+            }
+            for (let i = 0; i < 3; i++) {
+                handle.setView({target, distance, polar: o.polar ?? 1.3, azimuth: at.yaw + o.azimuth});
+                await frames(1);
+            }
+            const state = dbg.lookStateOf(id);
+            const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
+            return `strength ${state ? state.k.toFixed(2) : "-"} length ${drawn.length.toFixed(3)} m  at ${at.x.toFixed(1)}, ${at.y.toFixed(2)}, ${at.z.toFixed(1)} yaw ${at.yaw.toFixed(2)}  ${said.slice(0, 1).join(" / ")}`;
         },
         /**
          * 3.3 batch (A): the predator (the second cast) stood `gap` body lengths of the first cast's animal from it, or

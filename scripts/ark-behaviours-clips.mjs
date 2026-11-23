@@ -289,6 +289,50 @@ for (const name of scenes) {
         await context.close();
         continue;
     }
+    if (name.startsWith("ls")) {
+        // Lane SIG-OTHER (look states, `look-state.ts`): each species of the cast close up, its state off and on. `night`: by the island's hour
+        // (12:00, then 01:00 the next day), `season`: the strength forced off and on, `display`: forced off and on, from the side, three-quarters and front.
+        const kind = /^ls(fish|land)/.test(name) ? "night" : name === "lsglow" ? "glow" : name === "lsindividual" ? "individual" : name.startsWith("lsseason") ? "season" : "display";
+        const lengths = Number(arg("lengths", kind === "night" ? "2.2" : kind === "season" || kind === "individual" ? "1.9" : kind === "glow" ? "1.6" : name === "lscheek" ? "0.9" : "1.2"));
+        const SIDE = Math.PI / 2;
+        const STEPS = {
+            night: [{label: "day, 12:00", k: null, hour: 12, azimuth: SIDE}, {label: "night, 01:00", k: null, hour: 25, azimuth: SIDE}, {label: "night, three-quarters", k: null, hour: 25, azimuth: Math.PI / 4}],
+            season: [{label: "state off (k 0)", k: 0, azimuth: SIDE}, {label: "state on (k 1)", k: 1, azimuth: SIDE}, {label: "state on, three-quarters", k: 1, azimuth: Math.PI / 4}],
+            glow: [{label: "night, state off", k: 0, hour: 25, azimuth: SIDE}, {label: "night, state on", k: 1, hour: 25, azimuth: SIDE}, {label: "night, on, three-quarters", k: 1, hour: 25, azimuth: Math.PI / 4}],
+            individual: [{label: "its own pattern, side", k: null, azimuth: SIDE}, {label: "its own pattern, three-quarters", k: null, azimuth: Math.PI / 4}],
+            display: [{label: "off (k 0), side", k: 0, azimuth: SIDE}, {label: "on (k 1), side", k: 1, azimuth: SIDE}, {label: "on, three-quarters", k: 1, azimuth: Math.PI / 4}, {label: "on, front", k: 1, azimuth: 0.05}]
+        }[kind];
+        const only = arg("only", "").split(",").filter(Boolean);
+        const plan = await page.evaluate(() => window.__behaviours.lsPlan());
+        const dir = path.join(out, name);
+        mkdirSync(dir, {recursive: true});
+        const labels = [];
+        const subjects = kind === "individual" ? plan.flatMap((sp) => sp.ids.map((id, n) => ({...sp, ids: [id], slug: `${sp.slug}-${n}`}))) : plan;
+        for (const sp of subjects) {
+            if (only.length && !only.includes(sp.slug)) continue;
+            const files = [];
+            for (let i = 0; i < STEPS.length; i++) {
+                const step = STEPS[i];
+                const note = await page.evaluate(async ([id, step, lengths, label]) => {
+                    const text = await window.__behaviours.lsShot(id, {k: step.k, lengths, azimuth: step.azimuth, hour: step.hour ?? null, month: step.month ?? null, run: step.hour ? 3 : 1.5, lift: Number(label.lift ?? 0)});
+                    document.getElementById("note").textContent = `${label.name}: ${step.label}\n${text}`;
+                    return text;
+                }, [sp.ids[0], step, lengths, {name: sp.name, lift: arg("lift", "0")}]);
+                const file = path.join(dir, `${sp.slug}-${i}.jpg`);
+                await page.screenshot({path: file, type: "jpeg", quality: 88});
+                files.push(file);
+                labels.push(`${sp.slug} ${step.label}: ${note.replace(/\n/g, " | ")}`);
+            }
+            const cols = files.length <= 3 ? files.length : 2;
+            execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, `${sp.slug}-%d.jpg`), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(files.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-${sp.slug}.jpg`)]);
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
     if (DEFENCE[name]) {
         const dir = path.join(out, name);
         rmSync(dir, {recursive: true, force: true});

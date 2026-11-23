@@ -26,6 +26,7 @@ import {LOOK_CLASSES, LOOK_FLAG, type LookClass} from "@/ark-scene/animal-look-r
 import {lookVectors} from "@/ark-scene/animal-look-shader";
 import {youngCoatUniforms} from "@/ark-scene/young-coat";
 import {antlerUniform} from "@/ark-scene/antler-cycle";
+import {lookStateUniforms} from "@/ark-scene/look-state";
 import {ARK_DAYLIGHT} from "@/ark-scene/glsl";
 import {FurShells, SHELL_ANIMALS, SHELL_LAYERS} from "@/ark-scene/fur-shells";
 import {CloseUpTextures} from "@/ark-scene/closeup-textures";
@@ -137,7 +138,9 @@ export function lookUniforms(look: SpeciesLook | null, level: "near" | "far", sh
         // 3.3 batch (C): the species' young coat (zeros for a species without one).
         ...youngCoatUniforms(look?.slug),
         // 3.3 batch (C): where its antlers start, for the antler cycle (none: never reached).
-        arkAntler: {value: antlerUniform(look?.slug)}
+        arkAntler: {value: antlerUniform(look?.slug)},
+        // Lane SIG-OTHER: the species' look states, its night tone, its season's or display's tone and its swell (zeros for a species without one).
+        ...lookStateUniforms(look?.slug)
     };
 }
 
