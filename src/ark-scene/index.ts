@@ -6010,7 +6010,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (Lane MA3: any animal with a band in the water, `swimDepth`, a coot as well as a duck: its band is its pose's.)
             const motion = where.water.motion;
             if (motion === "walk") {
-                const move = clip("walk") ?? clip("slither") ?? clip("run");
+                // (SPECIES-ANIM-B2, 2026-11-24: a bed walker with a walk and a run takes the one whose own pace fits, as on land
+                // (`paceClip`), so a crab hurrying across the seabed runs instead of spinning its walk; else as before.)
+                const walk = clip("walk");
+                const run = clip("run");
+                const move = walk && run ? paceClip(speed, [walk, run], state.now.name) : walk ?? clip("slither") ?? run;
                 if (moving(move)) {
                     want = move.name;
                     mode = "distance";
