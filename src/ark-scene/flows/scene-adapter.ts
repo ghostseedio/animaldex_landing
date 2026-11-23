@@ -19,7 +19,7 @@ import type {FlowParams} from "@/ark-scene/flows/params";
 
 type Beat = "walk" | "run" | "fly" | "glide" | "swim" | "enter_water" | "exit_water" | "climb" | "pause" | "shake" | "bite" | "chew" | "step" | "scan" | "peck" | "drink" | "preen" | "rest" | "sleep" | "play" | "stalk";
 type StayBeat = {at: number; beat: Beat; x: number; z: number; yaw: number; dur?: number};
-type AdaptTrip = {doing: string; arrive: number; end: number; stay: StayBeat[]; shadow?: unknown; to?: {x: number; z: number; yaw?: number}; finish?: {yaw?: number}};
+type AdaptTrip = {doing: string; start: number; arrive: number; end: number; stay: StayBeat[]; shadow?: unknown; legs: Array<{mode: string; seconds: number; beat: Beat}>; to?: {x: number; z: number; yaw?: number}; finish?: {yaw?: number}};
 
 const PARAMS = (table as unknown as {species: Record<string, FlowParams>}).species;
 
@@ -60,7 +60,7 @@ export function flowSubjectOf(animal: {id: string; condition?: string | null; gr
  * A kill the scene acts (`live-meals.ts`, when it builds the meal): pinned at its catch, with the act's own phases, and
  * its cache when the engine saved it. Replaces a kill of the same prey already given (the event's own time).
  */
-export function addFlowKill(id: string, kill: {at: number; prey: string; acted?: {eat?: number; carry?: number; cache?: number}}, cached: boolean): void {
+export function addFlowKill(id: string, kill: {at: number; prey: string; acted?: {eat?: number; carry?: number; cache?: number; rest?: number}}, cached: boolean): void {
     const had = servers.get(id) ?? {};
     const kills = (had.kills ?? []).filter((k) => k.prey !== kill.prey || Math.abs(k.at - kill.at) > 600).concat(kill);
     const caches = cached ? (had.caches ?? []).filter((c) => Math.abs(c.at - kill.at) > 600).concat({at: kill.at + 4.5, recipe: "cache_food"}) : had.caches;
@@ -135,11 +135,27 @@ function cadence(beat: Beat): number {
  * flies with a flock). The walked beats stay where they are; between them, at the place each leaves it, the flow's beats.
  */
 export function flowTrip<T extends AdaptTrip>(trip: T, subject: FlowSubject | null): T {
-    if (!subject || trip.shadow || trip.doing === "sleep" || trip.doing === "to_roost") return trip;
+    if (!subject || trip.doing === "sleep" || trip.doing === "to_roost") return trip;
+    // (A flock member waiting for its flock to go up, or one standing between legs: it does its flow's still step there, a
+    // peck or a bite where it waits, not a blank pause. Its place and its times are the leg's own.)
+    let at = trip.start;
+    let legs = trip.legs;
+    for (let i = 0; i < trip.legs.length; i++) {
+        const leg = trip.legs[i];
+        if (leg.mode === "pause" && leg.beat === "pause" && leg.seconds > 2) {
+            const step = flowStepAt(subject, at + leg.seconds / 2);
+            const beat = step && step.pose === "still" ? beatOf(step, subject.params, 0) : null;
+            if (beat && beat !== "rest") {
+                if (legs === trip.legs) legs = trip.legs.slice();
+                legs[i] = {...leg, beat};
+            }
+        }
+        at += leg.seconds;
+    }
+    if (trip.shadow || !(trip.stay.length || trip.to)) return legs === trip.legs ? trip : ({...trip, legs} as T);
     const out: StayBeat[] = [];
     // (A stay with no beats of its own, a slot its flow keeps it still in: its flow's beats where it stands.)
-    const stay = trip.stay.length ? trip.stay : trip.to ? [{at: 0, beat: "pause" as Beat, x: trip.to.x, z: trip.to.z, yaw: trip.to.yaw ?? trip.finish?.yaw ?? 0}] : [];
-    if (!stay.length) return trip;
+    const stay = trip.stay.length ? trip.stay : [{at: 0, beat: "pause" as Beat, x: trip.to!.x, z: trip.to!.z, yaw: trip.to!.yaw ?? trip.finish?.yaw ?? 0}];
     for (let i = 0; i < stay.length; i++) {
         const beat = stay[i];
         const next = i + 1 < stay.length ? stay[i + 1].at : trip.end - trip.arrive;
@@ -152,7 +168,7 @@ export function flowTrip<T extends AdaptTrip>(trip: T, subject: FlowSubject | nu
         }
         fill(beat.at, next, beat);
     }
-    return {...trip, stay: out} as T;
+    return {...trip, legs, stay: out} as T;
 
     function fill(from: number, to: number, at: StayBeat) {
         let t = from;

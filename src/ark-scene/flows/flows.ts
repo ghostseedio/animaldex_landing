@@ -69,7 +69,7 @@ export type FlowServer = {
      * Kills (`meal` events): when (epoch s: the catch as the scene acts it) and the prey's name; `acted`, the scene's own
      * meal act's phases (s from the catch: eating, or carrying and caching), so the line says what the body does.
      */
-    kills?: ReadonlyArray<{at: number; prey: string; acted?: {eat?: number; carry?: number; cache?: number}}>;
+    kills?: ReadonlyArray<{at: number; prey: string; acted?: {eat?: number; carry?: number; cache?: number; rest?: number}}>;
     /** The engine's own near misses (`escaped` events: its prey got away from it): when, and the prey's name. */
     escapes?: ReadonlyArray<{at: number; prey: string}>;
     /** SIG-EVENTS food caches (`signature` food_cache) and the meals from them (`fed` source cache). */
@@ -375,7 +375,7 @@ function buildTick(subject: FlowSubject, tick: number): FlowStep[] {
 
     // The server's kill at its time: the search before it (only searching: its misses are the engine's own `escaped`), the
     // stalk and the attempt on that prey, the catch, then eating (or caching, when SIG-EVENTS saved it).
-    function huntTo(kill: {at: number; prey: string; acted?: {eat?: number; carry?: number; cache?: number}}, from: number): number {
+    function huntTo(kill: {at: number; prey: string; acted?: {eat?: number; carry?: number; cache?: number; rest?: number}}, from: number): number {
         let t = from;
         const prey: FoodWord = {eat: `a ${kill.prey}`, the: `the ${kill.prey}`};
         const still = p.mode === "sitwait" || p.mode === "watch" || p.mode === "web";
@@ -388,11 +388,13 @@ function buildTick(subject: FlowSubject, tick: number): FlowStep[] {
         // (Cached: picked up and carried off in its mouth to its cache spot, then dug in: the scene's meal act, `meal-acts.ts`.)
         if (cached) {
             t = push("carry", t, t + (kill.acted?.carry ?? 12 + random() * 10), "moving", {food: prey});
-            return push("cache", t, t + (kill.acted?.cache ?? Math.max(around(random, 15), 11)), "still", {food: prey, detail: p.cache?.method ?? "hide", server: true});
+            t = push("cache", t, t + (kill.acted?.cache ?? Math.max(around(random, 15), 11)), "still", {food: prey, detail: p.cache?.method ?? "hide", server: true});
+            // (The scene's act rests it after: its rest, as long as the act's.)
+            return kill.acted?.rest ? push("rest", t, t + kill.acted.rest, "still") : t;
         }
         ate = true;
         t = push("eat", t, t + (kill.acted?.eat ?? around(random, p.handle * 2)), "still", {food: prey});
-        return push("digest", t, t + around(random, p.handle * 3), "still");
+        return push("digest", t, t + (kill.acted?.rest ?? around(random, p.handle * 3)), "still");
     }
 
     // To water: the walk (or flight), a wary look, the drink.

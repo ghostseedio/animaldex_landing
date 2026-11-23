@@ -225,7 +225,8 @@ export class LiveMeals<E> {
         // or its carrying and caching as long as the act's own phases. `flows/scene-adapter.ts`.)
         if (flowsOn()) {
             const catchStep = 4;
-            const acted = script.cache ? {carry: Math.max(script.cache.walkTo - catchStep, 1), cache: script.cache.coverTo - script.cache.walkTo} : {eat: Math.max(script.feedTo - catchStep, 1)};
+            const rest = Math.max(script.ends - script.feedTo, 0);
+            const acted = script.cache ? {carry: Math.max(script.cache.walkTo - catchStep, 1), cache: script.cache.coverTo - script.cache.walkTo, rest} : {eat: Math.max(script.feedTo - catchStep, 1), rest};
             addFlowKill(m.act.predator.id, {at: m.t0 + catchAt, prey: m.act.prey.name, acted}, Boolean(script.cache));
         }
         // The scavengers: who is near and awake when the predator leaves what is left (their schedules' places then).
