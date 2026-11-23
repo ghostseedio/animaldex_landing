@@ -89,9 +89,12 @@ export const SAFARI_GATE_ROAD: Poly = [
  * in from its start, turned square to the road there. Its frame's local x runs across the road (the posts at x = ±3.6), so
  * its turn is the road's heading plus a quarter turn; the painted board's front (local +z) looks back at visitors coming
  * from the plaza. (It was turned by minus the heading plus a quarter turn: square to the road only when the road ran due
- * east or west, 37 degrees off on this one, and set on the road's very first point.)
+ * east or west, 37 degrees off on this one, and set on the road's very first point.) ark-world round 2 (the owner, "the
+ * gate arch sits off the road"): at 3.2 m it stood square to the road's first 6 m stub, right where the road bends 55
+ * degrees west, so seen from the plaza it framed grass with the road turning away behind one post. It now stands 24 m in,
+ * on the road's long straight west leg (x -78 to -100), square to it, clear of the gatehouse, the depot and the tower.
  */
-export const GATE_ARCH_ALONG = 3.2;
+export const GATE_ARCH_ALONG = 24;
 export function safariGateArch(road: Poly = SAFARI_GATE_ROAD): {x: number; z: number; rot: number; heading: number} {
     const {point, dir} = polylineAt(road, GATE_ARCH_ALONG);
     const heading = Math.atan2(dir.z, dir.x);
@@ -225,7 +228,7 @@ const HERBIVORES = (residents as {habitats: Record<string, string>}).habitats as
 /**
  * Where a zoo resident lives in the safari, or null (it stays in its zoo enclosure). The rule (`scripts/ark-safari-
  * residents.mts` writes the herbivores' and the river's table from the stored profiles; the predators by binomial):
- * - large herbivores (body ≥ 45, a quadruped, not a meat or fish eater; the flightless birds keep the zoo's paddocks)
+ * - large herbivores (body ≥ 45, a quadruped or a big flightless bird, not a meat or fish eater)
  *   from the savanna paddocks, by their stored zone: grassland → the plains (a mixed herd), desert → the desert, rainforest or woodland → the
  *   forest edge, wetland or river → the wetland with the hippo pool;
  * - the big cats and the hyenas (meat eaters ≥ 45) from their zoo enclosures, each kind to its own fenced area;

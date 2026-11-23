@@ -63,7 +63,8 @@ test("the safari truck: four round wheels on the ground, a round spare aft, noth
     assert.ok(box.max.z - box.min.z >= 6.2 && box.max.z - box.min.z <= 6.9, `${(box.max.z - box.min.z).toFixed(2)} m long`);
     assert.ok(box.max.x - box.min.x >= 2.2 && box.max.x - box.min.x <= 2.8, `${(box.max.x - box.min.x).toFixed(2)} m wide`);
     const tris = p.count / 3;
-    assert.ok(tris >= 1200 && tris <= 4000, `${tris} triangles`);
+    // (ark-world round 2: 24-sided tyres shaded smooth, a 20-sided spare: ~4.6k.)
+    assert.ok(tris >= 1200 && tris <= 5200, `${tris} triangles`);
     // Each wheel: the vertices that are tyre (on its outer faces, in its place) lie within the radius of its axle.
     for (const [cx, cz] of [[-1.08, 2.05], [1.08, 2.05], [-1.08, -1.85], [1.08, -1.85]] as const) {
         let inside = 0;
@@ -210,42 +211,54 @@ test("a hedge's surface normals lean the way each face's winding faces (the foli
     assert.ok(smooth >= total * 0.9, `${smooth} of ${total} faces are smooth-shaded`);
 });
 
-test("the dome's waterfall: 18 strands over a backing sheet, every face's normal leaning the way its own winding faces (the solid material is front-faced: a viewer sees the wound side, and a fixed pairing drew the curtain black from the lagoon)", async () => {
+test("the dome's waterfall is moving water: two sheets of the falls' water on the arc from the notch to the lagoon, none of it in the solids", async () => {
     const {dressPaddock} = await import("@/ark-scene/islands/town/render/zoo-habitat");
-    const {DOME, DOME_CLIFF, DOME_ID} = await import("@/ark-scene/islands/town/dome");
+    const {DOME, DOME_CLIFF, DOME_ID, DOME_LAGOON} = await import("@/ark-scene/islands/town/dome");
     const {zooLayout, zooSpotsOf} = await import("@/ark-scene/islands/town/areas");
     const {townHeight} = await import("@/ark-scene/islands/town/ground");
+    const {domeFallsGeometry, domeFallsFrame, domeFallsMesh, DOME_FALL_SPAN} = await import("@/ark-scene/islands/town/render/dome-falls");
+    // (ark-world round 2, the owner: "the dome waterfall is flat strips": the still strands are gone from the solids.)
     const e = zooLayout([DOME_ID]).enclosures.find((x) => x.id === DOME_ID)!;
-    assert.ok(e, "the dome's enclosure");
     const solid = new Geo();
     dressPaddock(e, zooSpotsOf(e), solid, new Geo(), (x, z) => townHeight(x, z), null, null);
-    // The curtain: faces within 2.5 m of the fall's axis (the notch down to the lagoon) and above the floor.
     const fx = DOME.x + Math.cos(DOME_CLIFF.fall) * (DOME_CLIFF.inner + 1.2);
     const fz = DOME.z + Math.sin(DOME_CLIFF.fall) * (DOME_CLIFF.inner + 1.2);
-    let water = 0;
-    let wrong = 0;
-    // (Above the spray: the plumes at the foot are smooth lumps, checked as bushes are.)
-    let low = Infinity;
+    const floor = townHeight(DOME.x, DOME.z);
+    let still = 0;
     for (let t = 0; t < solid.triangles; t++) {
         const cx = (solid.pos[t * 9] + solid.pos[t * 9 + 3] + solid.pos[t * 9 + 6]) / 3;
+        const cy = (solid.pos[t * 9 + 1] + solid.pos[t * 9 + 4] + solid.pos[t * 9 + 7]) / 3;
         const cz = (solid.pos[t * 9 + 2] + solid.pos[t * 9 + 5] + solid.pos[t * 9 + 8]) / 3;
-        const b = solid.col[t * 9 + 2];
-        if (Math.hypot(cx - fx, cz - fz) < 2.6 && b > 0.5) low = Math.min(low, (solid.pos[t * 9 + 1] + solid.pos[t * 9 + 4] + solid.pos[t * 9 + 7]) / 3);
+        const [r, g, b] = [solid.col[t * 9], solid.col[t * 9 + 1], solid.col[t * 9 + 2]];
+        if (Math.hypot(cx - fx, cz - fz) < 2.6 && cy > floor + 1.5 && b > 0.75 && g > 0.75 && r > 0.6) still++;
     }
-    for (let t = 0; t < solid.triangles; t++) {
-        const p = (v: number, k: number) => solid.pos[(t * 3 + v) * 3 + k];
-        const c = (k: number) => (p(0, k) + p(1, k) + p(2, k)) / 3;
-        // Water is blue-white: the blue channel the highest of three, bright.
-        const r = solid.col[t * 9];
-        const g = solid.col[t * 9 + 1];
-        const b = solid.col[t * 9 + 2];
-        if (Math.hypot(c(0) - fx, c(2) - fz) > 2.6 || c(1) < low + 1.4 || !(b >= g && g >= r * 0.99 && b > 0.1)) continue;
-        const gx = (p(1, 1) - p(0, 1)) * (p(2, 2) - p(0, 2)) - (p(1, 2) - p(0, 2)) * (p(2, 1) - p(0, 1));
-        const gy = (p(1, 2) - p(0, 2)) * (p(2, 0) - p(0, 0)) - (p(1, 0) - p(0, 0)) * (p(2, 2) - p(0, 2));
-        const gz = (p(1, 0) - p(0, 0)) * (p(2, 1) - p(0, 1)) - (p(1, 1) - p(0, 1)) * (p(2, 0) - p(0, 0));
-        water++;
-        for (let v = 0; v < 3; v++) if (solid.nor[(t * 3 + v) * 3] * gx + solid.nor[(t * 3 + v) * 3 + 1] * gy + solid.nor[(t * 3 + v) * 3 + 2] * gz < -1e-9) wrong++;
+    assert.ok(still < 20, `${still} still white water faces left in the solids`);
+    // The moving sheets: the curtain and the veil, every vertex with its flow (across, time of flight, sheet) and edge.
+    const g = domeFallsGeometry();
+    const p = g.getAttribute("position");
+    const flow = g.getAttribute("aFlow");
+    const edge = g.getAttribute("aEdge");
+    assert.ok(g.index && g.index.count / 3 >= 800 && g.index.count / 3 <= 1600, `${g.index!.count / 3} triangles`);
+    const sheets = new Set<number>();
+    let top = -Infinity;
+    let foot = Infinity;
+    for (let i = 0; i < p.count; i++) {
+        sheets.add(flow.getZ(i));
+        top = Math.max(top, p.getY(i));
+        foot = Math.min(foot, p.getY(i));
+        assert.ok(Math.abs(p.getX(i)) <= DOME_FALL_SPAN * 0.61 + 1e-6, "within the curtain's spread");
+        assert.ok(edge.getX(i) >= 0 && edge.getX(i) <= 1 + 1e-9 && flow.getY(i) >= 0);
     }
-    assert.ok(water >= 500, `${water} water faces at the fall`);
-    assert.equal(wrong, 0, `${wrong} corners lean against their face's winding`);
+    assert.deepEqual(Array.from(sheets).sort(), [0, 1]);
+    assert.ok(top > 7 && foot < 0.1, `from ${top.toFixed(2)} m at the notch down to ${foot.toFixed(2)} m, the lagoon`);
+    // In the town: its foot lands in the lagoon's west end, its top under the notch in the cliff.
+    const frame = domeFallsFrame();
+    const mesh = domeFallsMesh();
+    mesh.updateMatrixWorld(true);
+    const v = p.count - 1;
+    const end = mesh.localToWorld(new (await import("three")).Vector3(p.getX(v), p.getY(v), p.getZ(v)));
+    assert.ok(Math.hypot(end.x - DOME_LAGOON.x, end.z - DOME_LAGOON.z) < Math.max(DOME_LAGOON.rx, DOME_LAGOON.rz) * 1.6, "the foot in the lagoon");
+    assert.ok(Math.abs(frame.y - floor) < 1e-9);
+    const lip = mesh.localToWorld(new (await import("three")).Vector3(0, 7.25, -3.3));
+    assert.ok(Math.abs(Math.hypot(lip.x - DOME.x, lip.z - DOME.z) - (DOME_CLIFF.inner + 3.3)) < 0.01, "the lip in the cliff's notch");
 });

@@ -36,6 +36,9 @@ export function encodeColourTag(colour: [number, number, number], tag: number): 
     return [(q(colour[0]) + (tag + 0.5) / 16) / 255, (q(colour[1]) + 0.5) / 255, (q(colour[2]) + 0.25) / 255];
 }
 
+/** The surface kind of a bush's leaves (`Geo.bush`): the building shader's leaf grain (`buildings.ts` SURFACE.leaf). */
+export const LEAF_SURFACE = 11;
+
 /** How near a channel's fraction (× 255) must be to a marker to count (the building shader's own number). */
 export const COLOUR_TAG_TOLERANCE = 0.006;
 
@@ -316,6 +319,20 @@ export class Geo {
      * reach (`sx`, `sy`, `sz`, about its middle); the same 160 faces (the town's scenery is 635k triangles and a phone's heap is tight).
      */
     bush(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number, colour: [number, number, number], seed: number) {
+        // (ark-world, the owner again, "bushes look wrong; compare against the other plants": beside the trees' leaf
+        // cards and the hedges' leaf grain they were green clay. Their faces now carry the leaf surface, so the solid
+        // material's building shader draws leaf clusters, dark gaps and lit tips on them, as the hedges have; the
+        // lumps are rougher, so the outline is a ragged leaf mass, not a smooth ball.)
+        const before = this.surface;
+        this.surface = LEAF_SURFACE;
+        try {
+            this.leafyBush(cx, cy, cz, sx, sy, sz, colour, seed);
+        } finally {
+            this.surface = before;
+        }
+    }
+
+    private leafyBush(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number, colour: [number, number, number], seed: number) {
         let s = (seed ^ 0x5bd1e995) >>> 0;
         const rand = () => {
             s = (s + 0x6d2b79f5) >>> 0;
@@ -349,7 +366,7 @@ export class Geo {
      */
     smoothLump(x: number, y: number, z: number, rx: number, ry: number, rz: number, centre: V3, colour: [number, number, number], leafy: number, rand: () => number, detail: number) {
         const verts = icosphere(detail);
-        const jitter = verts.points.map(() => 0.84 + rand() * 0.28);
+        const jitter = verts.points.map(() => (leafy ? 0.76 + rand() * 0.4 : 0.84 + rand() * 0.28));
         const p = verts.points.map((v, i) => [x + v[0] * rx * jitter[i], y + v[1] * ry * jitter[i], z + v[2] * rz * jitter[i]] as V3);
         const n = verts.points.map((v, i) => {
             const away = normalise([p[i][0] - centre[0], p[i][1] - centre[1], p[i][2] - centre[2]]);
@@ -359,7 +376,17 @@ export class Geo {
             const lift = leafy ? 0.8 + 0.34 * (v[1] * 0.5 + 0.5) + (rand() - 0.5) * 0.18 : 0.9 + (rand() - 0.5) * 0.1;
             return [colour[0] * lift * (0.96 + rand() * 0.08), colour[1] * lift, colour[2] * lift * (0.94 + rand() * 0.1)] as [number, number, number];
         });
-        for (const [a, b, d] of verts.faces) this.triShaded(p[a], p[b], p[d], n[a], n[b], n[d], c[a], c[b], c[d]);
+        // (A leaf face takes its corners' mean, one colour over the face: the shader reads the leaf tag from the colour's
+        // fractions, which hold across a face only while its corners share one colour; the grain gives the variety.)
+        const flat = this.surface === LEAF_SURFACE;
+        for (const [a, b, d] of verts.faces) {
+            if (!flat) {
+                this.triShaded(p[a], p[b], p[d], n[a], n[b], n[d], c[a], c[b], c[d]);
+                continue;
+            }
+            const m: [number, number, number] = [(c[a][0] + c[b][0] + c[d][0]) / 3, (c[a][1] + c[b][1] + c[d][1]) / 3, (c[a][2] + c[b][2] + c[d][2]) / 3];
+            this.triShaded(p[a], p[b], p[d], n[a], n[b], n[d], m, m, m);
+        }
     }
 
     /** A flat strip along a polyline at heights from `heightAt` (+ `lift`), `width` wide (roads, paths, kerbs). */

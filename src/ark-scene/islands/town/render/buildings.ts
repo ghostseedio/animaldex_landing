@@ -28,7 +28,7 @@ import {boundaryChunks, boundaryDetail} from "@/ark-scene/islands/town/render/fe
 import {CHURCH, type Building, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {chance, darkness, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
 import {TOWN_CHUNK_COUNT, townChunkDistance, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
-import {at, COLOUR_TAG_TOLERANCE, Geo, NullGeo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
+import {at, COLOUR_TAG_TOLERANCE, Geo, LEAF_SURFACE, NullGeo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {TOWN_LIGHT, townWeather} from "@/ark-scene/islands/town/render/materials";
 import {roundWheel} from "@/ark-scene/islands/town/render/wheels";
 import {ARK_TIME} from "@/ark-scene/glsl";
@@ -59,7 +59,7 @@ export function newBuildingChunk(scenery?: {solid: Geo; glass: Geo} | null, deta
 }
 
 /** The building surfaces' kinds (in the colour: kit `encodeColourTag`); the building shader's patterns. */
-export const SURFACE = {brick: 1, render: 2, slate: 3, tile: 4, stone: 5, timber: 6, paint: 7, metal: 8, felt: 9, concrete: 10} as const;
+export const SURFACE = {brick: 1, render: 2, slate: 3, tile: 4, stone: 5, timber: 6, paint: 7, metal: 8, felt: 9, concrete: 10, leaf: LEAF_SURFACE} as const;
 
 /** The panes' kinds (the pane shader's frames and bars). */
 export const PANE = {sash: 0, casement: 1, modern: 2, shop: 3, church: 4, civic: 5, works: 6, plain: 7} as const;
@@ -1561,6 +1561,14 @@ float bldNoise(vec2 p) {
     f = f * f * (3.0 - 2.0 * f);
     return mix(mix(bldHash(i), bldHash(i + vec2(1.0, 0.0)), f.x), mix(bldHash(i + vec2(0.0, 1.0)), bldHash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
+float bldHash3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+float bldNoise3(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(bldHash3(i), bldHash3(i + vec3(1, 0, 0)), f.x), mix(bldHash3(i + vec3(0, 1, 0)), bldHash3(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(bldHash3(i + vec3(0, 0, 1)), bldHash3(i + vec3(1, 0, 1)), f.x), mix(bldHash3(i + vec3(0, 1, 1)), bldHash3(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
 `;
 
 /** After `color_fragment`: a tagged face's surface (brick bond, render, slates, tiles, stone, boards, concrete) and its weathering. */
@@ -1620,12 +1628,24 @@ const BUILDING_MAIN = `
             bldOut = bldBase * mix(1.0, 0.86 + 0.14 * step(0.08, board), bldFade) * (0.92 + 0.12 * bldNoise(vec2(bldH * 6.0, bldW.y * 0.4)));
         } else if (bldKind > 8.5 && bldKind < 9.5) {
             bldOut = bldBase * (0.88 + 0.2 * bldNoise(bldW.xz * 1.3));
-        } else if (bldKind > 9.5) {
+        } else if (bldKind > 10.5 && bldKind < 11.5) {
+            // Leaves (ark-world: a bush's mass; the owner, "bushes look wrong": they were smooth green clay beside the
+            // trees' leaf cards): leaf clusters about 10 cm across with dark gaps between them and lit tips, a finer
+            // grain inside each, a coarse mottling of light and shade (the hedges' foliage grain, \`nature.ts\`), the
+            // detail fading with distance so a far bush is not noise.
+            float leaves = bldNoise3(bldW * 9.5) * 0.6 + bldNoise3(bldW * 26.0) * 0.4;
+            float mottle = bldNoise3(bldW * 1.4 + 7.3);
+            // (The pixel's size from the world position alone: a bush is round, so the walls' along-the-face measure
+            // turns with its normal and reads metres a pixel on it.)
+            float near = 1.0 - smoothstep(0.025, 0.1, length(fwidth(bldW)));
+            float clusters = mix(0.5, 1.28, smoothstep(0.22, 0.78, leaves));
+            bldOut = bldBase * mix(0.92, clusters, near) * (0.84 + 0.3 * mottle);
+        } else if (bldKind > 9.5 && bldKind < 10.5) {
             float joint = 1.0 - step(0.012, fract(bldH / 1.5)) ;
             bldOut = bldBase * (0.93 + 0.1 * bldNoise(bldW.xz * 0.5 + bldW.y)) * mix(1.0, 0.82, joint * bldFade);
         }
         // Weathering on walls: damp at the foot, rain streaks down from sills and copings.
-        if (bldWall && (bldKind < 2.5 || (bldKind > 4.5 && bldKind < 6.5) || bldKind > 9.5)) {
+        if (bldWall && (bldKind < 2.5 || (bldKind > 4.5 && bldKind < 6.5) || (bldKind > 9.5 && bldKind < 10.5))) {
             float foot = 1.0 - smoothstep(0.0, 0.9, bldW.y - 2.75);
             float streak = smoothstep(0.58, 0.92, bldNoise(vec2(bldH * 2.4, bldW.y * 0.11))) * 0.13;
             bldOut *= (1.0 - 0.15 * foot) * (1.0 - streak);
@@ -1663,7 +1683,7 @@ export function patchBuildingSurfaces<T extends MeshStandardMaterial>(material: 
             );
         shader.fragmentShader = shader.fragmentShader.replace("#include <common>", `#include <common>\n${BUILDING_GLSL}`).replace("#include <color_fragment>", `#include <color_fragment>\n${BUILDING_MAIN}`);
     };
-    material.customProgramCacheKey = () => `${previousKey.call(material)}|town-buildings:1`;
+    material.customProgramCacheKey = () => `${previousKey.call(material)}|town-buildings:2`;
     material.needsUpdate = true;
     return material;
 }

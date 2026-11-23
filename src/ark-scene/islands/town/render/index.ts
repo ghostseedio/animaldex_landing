@@ -14,6 +14,8 @@ import {sampleTownGround, TOWN_SURFACES, townSurfaceWeights, type TownSurface} f
 import {CANAL_LEVEL, TOWN_HALF, TOWN_SEGMENTS, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {TOWN_CHUNK_COUNT, TOWN_GRID, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
 import {binSpots, launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
+import {DOME_ID} from "@/ark-scene/islands/town/dome";
+import {domeFallsMesh} from "@/ark-scene/islands/town/render/dome-falls";
 import {binsOut, boatIn, clockHands, lampsLevel, marketDay, washingOut, type TownClock} from "@/ark-scene/islands/town/people";
 import {BuildingDetail, buildBuilding, clockFaces, newBuildingChunk, paneGeometry, paneMaterial, patchBuildingSurfaces, windowState, type BuildingChunk, type WindowRecord} from "@/ark-scene/islands/town/render/buildings";
 import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/islands/town/render/scenery";
@@ -592,6 +594,12 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             batch.setDrawn(drawn);
             zooRoot.add(batch.mesh);
             zooBatches.push(batch);
+        }
+        // ark-world round 2: the dome's waterfall, moving water (`render/dome-falls.ts`), while the dome is open.
+        if (open.includes(DOME_ID)) {
+            const falls = domeFallsMesh();
+            zooRoot.add(falls);
+            zooMeshes.push({key: -1, mesh: falls});
         }
         // p3 (zoofix): the habitats' ground cover (drawn in the solids), walked on: never drawn itself, its positions read
         // for the walk surfaces by name (`islands/scene.ts` walkSurfacesNow).

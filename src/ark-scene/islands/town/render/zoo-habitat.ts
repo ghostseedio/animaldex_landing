@@ -816,7 +816,7 @@ function groundFern(plot: Plot, lx: number, lz: number, size: number, seed: numb
  */
 export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed: number; safari?: SafariHabitat; annex?: ZooAnnexTheme}; pool: Pt[] | null}, spots: readonly Pt[], solid: Geo, water: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null, decal: Geo | null = null): Plot | null {
     // p4 (safari): a safari area is dressed as its habitat (`safari-habitat.ts`).
-    if (e.slot.safari) return dressSafari(e, spots, solid, heightAt, cover);
+    if (e.slot.safari) return dressSafari(e, spots, solid, heightAt, cover, decal);
     const s = e.slot.at;
     const fr: Frame = {x: s.x, y: 0, z: s.z, rot: s.rot};
     const floorAt = (lx: number, lz: number) => {
@@ -1071,8 +1071,13 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
                     solid.triShaded(a, b, c, first, first, first, ca, cb, cc);
                     solid.triShaded(a, c, b, second, second, second, ca, cc, cb);
                 };
+                // (ark-world round 2, the owner still saw "flat strips": the water itself is now the moving sheet of
+                // `render/dome-falls.ts`, drawn by the town while the dome is open. The sheet and the strands below are no
+                // longer drawn; their draws of the plot's random stream are kept, so every later thing in the dome (snags,
+                // ledges, feeders, fruit) stays as it was.)
+                const drawStill = false;
                 // The backing sheet, set a hand off the rock behind the strands.
-                for (let i = 0; i < rows; i++) {
+                for (let i = 0; i < rows && drawStill; i++) {
                     const t0 = i / rows;
                     const t1 = (i + 1) / rows;
                     const half = span * 0.5 + 0.12;
@@ -1107,6 +1112,7 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
                         const cb = water(t0, k, edge, band0);
                         const cc = water(t1, k, edge, band1);
                         const cd = water(t1, k, edge, band1);
+                        if (!drawStill) continue;
                         strip(a, b, c2, ca, cb, cc);
                         strip(a, c2, d, ca, cc, cd);
                     }
@@ -1116,7 +1122,10 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
                 for (let k = 0; k < 9; k++) solid.blob(foot[0] + (r() - 0.5) * 3.2, foot[1] - 0.04, foot[2] + (r() - 0.5) * 3.2, 0.6 + r() * 0.6, 0.1 + r() * 0.06, 0.6 + r() * 0.6, tone(k % 2 ? "#dfeef2" : "#c9e0e8"), hashText(`${e.id}foam${k}`), 1);
                 for (let k = 0; k < 7; k++) {
                     const along = (k / 6 - 0.5) * span * 0.9;
-                    solid.blob(foot[0] + sx * along + (r() - 0.5) * 0.4, foot[1] + 0.35 + r() * 0.5, foot[2] + sz * along + (r() - 0.5) * 0.4, 0.38 + r() * 0.3, 0.45 + r() * 0.35, 0.38 + r() * 0.3, tone(k % 2 ? "#f4fbfd" : "#e4f2f6"), hashText(`${e.id}spray${k}`), 1);
+                    // (The spray plumes, white lumps standing in the water, are not drawn either: the moving sheet frays
+                    // white into the foam rings. Their draws kept, as above.)
+                    const plume = [foot[0] + sx * along + (r() - 0.5) * 0.4, foot[1] + 0.35 + r() * 0.5, foot[2] + sz * along + (r() - 0.5) * 0.4, 0.38 + r() * 0.3, 0.45 + r() * 0.35, 0.38 + r() * 0.3] as const;
+                    if (drawStill) solid.blob(...plume, tone(k % 2 ? "#f4fbfd" : "#e4f2f6"), hashText(`${e.id}spray${k}`), 1);
                 }
             }
             // The perches: the snags (a stripped trunk and its limbs, a perch at each limb's tip and at its top), the

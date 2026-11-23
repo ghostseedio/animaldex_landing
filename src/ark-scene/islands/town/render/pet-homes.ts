@@ -180,6 +180,60 @@ function gardenRoomThings(room: HomeRoom, parts: Parts) {
     parts.inside.cylinder({x: corner[0], y: room.floor + 0.04, z: corner[2], rot: 0}, 0, 0, 0, 0.2, 0.2, 0.06, tone("#c86a5a"), 10);
 }
 
+/**
+ * A garden room's free slots along the house wall furnished (ark-world round 2; the owner: "see-into homes are empty
+ * inside": a room held a rug, a basket and the one display in use, the rest of its wall bare tiles). Where no display
+ * stands, the slot (`tanks.ts` displaySlots: against the house wall, 0.46 m deep, out of the pets' free floor) takes the
+ * conservatory's own furniture: the vivarium's long slot a cushioned two-seat garden sofa, the tank's an armchair with
+ * a side table and a lamp, the cage's narrow one a tall plant in a pot. Their backs to the house wall (the slot's +z).
+ */
+function roomFurniture(d: HomeDisplay, siteFloor: number, parts: Parts) {
+    const fr: Frame = {x: d.x, y: siteFloor, z: d.z, rot: d.rot};
+    const r = rng(hashText(`${d.id}|furnish`));
+    const back = d.d / 2;
+    if (d.form === "vivarium" || d.form === "tank") {
+        const frame = WICKER[Math.floor(r() * WICKER.length)];
+        const cushion = SOFAS[Math.floor(r() * SOFAS.length)];
+        const seatW = d.form === "vivarium" ? Math.min(d.w - 0.1, 1.5) : Math.min(d.w * 0.6, 0.75);
+        const sx = d.form === "vivarium" ? 0 : -(d.w - seatW) / 2 + 0.02;
+        // The frame: the seat's box, the back against the wall, the arms; the cushions on the seat and against the back.
+        parts.inside.box(fr, sx, 0, 0, seatW, 0.34, d.d, frame);
+        parts.inside.box(fr, sx, 0.34, back - 0.07, seatW, 0.42, 0.12, frame);
+        for (const side of [-1, 1]) parts.inside.box(fr, sx + side * (seatW / 2 - 0.05), 0.34, 0, 0.1, 0.2, d.d, frame);
+        const seats = d.form === "vivarium" ? 2 : 1;
+        const each = (seatW - 0.14) / seats;
+        for (let k = 0; k < seats; k++) {
+            const cx = sx - (seatW - 0.14) / 2 + each * (k + 0.5);
+            parts.inside.box(fr, cx, 0.34, -0.03, each - 0.03, 0.09, d.d - 0.16, cushion);
+            parts.inside.box(fr, cx, 0.43, back - 0.17, each - 0.06, 0.3, 0.1, cushion);
+        }
+        if (d.form === "tank") {
+            // A side table beside the chair and a lamp on it (lit: the glow), a mug.
+            const tx = sx + seatW / 2 + 0.2;
+            parts.inside.cylinder({...fr, ...{x: at(fr, tx, 0, 0)[0], z: at(fr, tx, 0, 0)[2]}}, 0, 0, 0, 0.16, 0.16, 0.5, WOOD, 10);
+            parts.inside.box(fr, tx, 0.5, 0.05, 0.03, 0.2, 0.03, tone("#2a2a2a"));
+            parts.glow.cylinder({...fr, ...{x: at(fr, tx, 0, 0.05)[0], z: at(fr, tx, 0, 0.05)[2]}}, 0, 0.68, 0, 0.11, 0.07, 0.13, tone("#ffd9a0"), 8);
+            parts.inside.cylinder({...fr, ...{x: at(fr, tx, 0, -0.07)[0], z: at(fr, tx, 0, -0.07)[2]}}, 0, 0.5, 0, 0.035, 0.035, 0.08, tone("#e8e2d6"), 8);
+        } else {
+            // A throw over one arm, a book on the other.
+            parts.inside.box(fr, sx - seatW / 2 + 0.05, 0.53, 0, 0.13, 0.02, d.d * 0.7, RUGS[Math.floor(r() * RUGS.length)]);
+            parts.inside.box(fr, sx + seatW / 2 - 0.05, 0.54, 0.02, 0.1, 0.03, 0.15, tone("#2a4a6a"));
+        }
+        return;
+    }
+    // The cage's slot: a tall plant in a glazed pot (a fiddle-leaf fig, its leaf masses up a stem).
+    const p = at(fr, 0, 0, 0);
+    parts.inside.cylinder({x: p[0], y: siteFloor, z: p[2], rot: 0}, 0, 0, 0, 0.17, 0.13, 0.34, tone(["#b0623a", "#3a5a6a", "#d8d0c0"][Math.floor(r() * 3)]), 10);
+    parts.inside.box(fr, 0, 0.34, 0, 0.03, 0.75, 0.03, tone("#5a4632"));
+    for (let k = 0; k < 4; k++) {
+        const a = k * 1.7 + r();
+        const q = at(fr, Math.cos(a) * 0.1, 0, Math.sin(a) * 0.06);
+        parts.inside.blob(q[0], siteFloor + 0.62 + k * 0.2, q[2], 0.2 - k * 0.02, 0.17, 0.18 - k * 0.02, tone(k % 2 ? "#3f6e30" : "#4c7d38"), hashText(`${d.id}|leaf${k}`), 0);
+    }
+}
+
+const WICKER: RGB[] = [tone("#b58a56"), tone("#9a7044"), tone("#d8c7a4"), tone("#5e4a3a")];
+
 const DUVETS: RGB[] = DUVET_HEX.map((hex) => tone(hex));
 
 /**
@@ -257,7 +311,10 @@ export function buildPetHomes(used: ReadonlyArray<{site: HomeSite; displays: Rea
         }
         for (const form of ["tank", "cage", "vivarium"] as const) {
             const d = site.displays[form];
-            if (!displays.has(d.id)) continue;
+            if (!displays.has(d.id)) {
+                if (indoors && site.kind === "garden_room") roomFurniture(d, site.floor, parts);
+                continue;
+            }
             ids.add(d.id);
             if (site.kind === "garden_room") stand(d, site.floor, parts);
             if (form === "tank") tank(d, parts);

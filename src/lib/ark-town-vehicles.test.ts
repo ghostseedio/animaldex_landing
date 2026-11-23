@@ -26,7 +26,7 @@ import {
     type TrafficAnimals
 } from "@/ark-scene/islands/town/render/vehicles";
 import {buildBuilding, curtainsDrawn, newBuildingChunk, paneSizeCode, paneStyle, windowState} from "@/ark-scene/islands/town/render/buildings";
-import {decodeColourTag, encodeColourTag, Geo, tone} from "@/ark-scene/islands/town/render/kit";
+import {decodeColourTag, encodeColourTag, Geo, LEAF_SURFACE, tone} from "@/ark-scene/islands/town/render/kit";
 import {buildScenery, buildZooScenery} from "@/ark-scene/islands/town/render/scenery";
 import {boundaryBodies} from "@/ark-scene/islands/town/render/fences";
 import {zooLayout} from "@/ark-scene/islands/town/areas";
@@ -383,7 +383,8 @@ test("no other lane's plain colour reads as a building surface on the shared sol
         const ownTags = own ? tagsOf(own) : new Map<number, number>();
         plainTriangles += tags.get(0) ?? 0;
         for (const [tag, n] of Array.from(tags.entries())) {
-            if (tag === 0) continue;
+            // (ark-world round 2: a bush's leaves are their own surface on purpose, `Geo.bush`, `kit.ts` LEAF_SURFACE.)
+            if (tag === 0 || tag === LEAF_SURFACE) continue;
             assert.equal(n, ownTags.get(tag) ?? 0, `chunk ${key}'s scenery reads as a building surface: ${JSON.stringify(Array.from(tags.entries()))}`);
         }
     });
@@ -391,6 +392,7 @@ test("no other lane's plain colour reads as a building surface on the shared sol
     zoo.chunks.forEach((chunk, key) => {
         const tags = tagsOf(chunk.solid);
         plainTriangles += tags.get(0) ?? 0;
+        tags.delete(LEAF_SURFACE);
         assert.ok(tags.size === 0 || (tags.size === 1 && tags.has(0)), `zoo chunk ${key} reads as a building surface`);
     });
     assert.ok(plainTriangles > 50_000, `${plainTriangles} plain triangles scanned`);

@@ -268,7 +268,7 @@ export function safariTruckGeometry(): BufferGeometry {
     const glass = tone("#2a3a40");
     const R = 0.5;
     // Wheels: chunky, off-road; the axles at z = 2.05 and -1.85, the tyres' bottoms on the ground.
-    for (const [lx, lz] of [[-1.08, 2.05], [1.08, 2.05], [-1.08, -1.85], [1.08, -1.85]] as const) roundWheel(g, f, lx, R, lz, R, 0.4, lx > 0 ? 1 : -1, {sides: 16});
+    for (const [lx, lz] of [[-1.08, 2.05], [1.08, 2.05], [-1.08, -1.85], [1.08, -1.85]] as const) roundWheel(g, f, lx, R, lz, R, 0.4, lx > 0 ? 1 : -1, {sides: 24});
     // The underbody and axles (dark, between the wheels).
     g.box(f, 0, 0.32, 0.1, 1.9, 0.34, 6.2, dark);
     g.box(f, 0, 0.42, 2.05, 2.2, 0.14, 0.14, dark);
@@ -331,7 +331,7 @@ export function safariTruckGeometry(): BufferGeometry {
     g.box(f, 1.12, 1.0, 1.55, 0.09, 1.5, 0.09, dark);
     // The spare wheel on the tailgate: round, its face looking aft (a frame turned so its local x runs along the truck's z).
     const aft: Frame = {x: 0, y: 0, z: 0, rot: Math.PI / 2};
-    roundWheel(g, aft, -3.27, 1.18, 0, 0.42, 0.3, -1, {sides: 14});
+    roundWheel(g, aft, -3.27, 1.18, 0, 0.42, 0.3, -1, {sides: 20});
     return g.toGeometry();
 }
 
