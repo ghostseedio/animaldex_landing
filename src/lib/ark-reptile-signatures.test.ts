@@ -13,6 +13,10 @@ import {AMBUSH_RECIPE, DASH, EAT, STRIKE, TURN, ambushBouts, ambushHours, ambush
 import {REPTILE_TEMPLATES, recipeBase} from "@/ark-scene/recipe-templates-reptiles";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
 import {sceneSampler} from "@/ark-scene/world-sampler";
+import {isHeld, putHeldRowsBack} from "@/lib/ark-signature-held-rows";
+
+// (Rows held after their frames were looked at: their mechanism is checked with them put back, `ark-signature-held-rows.ts`.)
+putHeldRowsBack();
 
 type Addition = {slug: string; name: string; recipe: string; behaviour: string; field: string; quote: string; nest?: string; micro?: "night" | "day"};
 const ADDITIONS = (data as unknown as {additions: Addition[]}).additions;
@@ -48,6 +52,11 @@ test("each row: a species whose model is a reptile or a turtle, the catalogue's 
         assert.ok(a.quote.length > 10 && a.behaviour.length > 5 && a.field, `${a.slug}: sourced`);
         assert.ok(TEMPLATES[a.recipe], `${a.slug}: template ${a.recipe}`);
         assert.ok(recipesOf(a.slug).includes(a.recipe), `${a.slug}: its row has ${a.recipe}`);
+        if (isHeld(a.slug, a.recipe)) {
+            // (Held after its frames were looked at: the log never tells it.)
+            assert.equal(LINES[a.slug]?.[a.recipe], undefined, `${a.slug}: held, no sentence`);
+            continue;
+        }
         const line = LINES[a.slug]?.[a.recipe];
         assert.ok(line && line.startsWith("{aAnimal} is "), `${a.slug}: sentence ${line}`);
         // The log's table names no sex.

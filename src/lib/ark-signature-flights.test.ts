@@ -10,6 +10,10 @@ import {scheduleWorld, tripAt, tripEpisode, SLOT_SECONDS, type ScheduleAnimal} f
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 import type {ArkZone} from "@/ark-scene/types";
+import {isHeld, putHeldRowsBack} from "@/lib/ark-signature-held-rows";
+
+// (Rows held after their frames were looked at: their mechanism is checked with them put back, `ark-signature-held-rows.ts`.)
+putHeldRowsBack();
 
 type Add = {slug: string; name: string; recipe: string; behaviour: string; quote: string; id: string};
 const ADDITIONS = (data as unknown as {additions: Add[]}).additions;
@@ -28,7 +32,8 @@ test("the data: each species has the recipe its own catalogue row says, with the
         assert.ok(a.quote.length > 20, a.slug);
         assert.ok(recipesOf(a.slug).includes(a.recipe), `${a.slug} has ${a.recipe}`);
         const line = LINES[a.slug]?.[a.recipe];
-        assert.ok(line && /^\{aAnimal\} /.test(line), `${a.slug}: its sentence`);
+        if (isHeld(a.slug, a.recipe)) assert.equal(line, undefined, `${a.slug}: held, no sentence`);
+        else assert.ok(line && /^\{aAnimal\} /.test(line), `${a.slug}: its sentence`);
     }
     // No other species has any of the three.
     for (const slug of Object.keys(ROWS)) for (const recipe of ["sally_chase", "patrol_low", "display_flight"]) if (recipesOf(slug).includes(recipe)) assert.ok(ADDITIONS.some((a) => a.slug === slug && a.recipe === recipe), `${slug} ${recipe}`);

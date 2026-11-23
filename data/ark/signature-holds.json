@@ -1,0 +1,390 @@
+{
+ "about": "Signature behaviours held after their picture strips were looked at (lane SIG2, 2026-11-23): each row stays in its own data file and is never drawn or told in the log until a fix shows it clearly. Read by scripts/ark-signature-recipes.mts. Strips: ~/AnimalDex-work/sig2/.",
+ "held": [
+  {
+   "slug": "ring-tailed-lemur",
+   "recipe": "sleep:huddle",
+   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
+  },
+  {
+   "slug": "tufted-capuchin",
+   "recipe": "sleep:huddle",
+   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
+  },
+  {
+   "slug": "bolivian-squirrel-monkey",
+   "recipe": "sleep:huddle",
+   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
+  },
+  {
+   "slug": "common-marmoset",
+   "recipe": "sleep:huddle",
+   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
+  },
+  {
+   "slug": "coppery-titi-monkey",
+   "recipe": "sleep:huddle",
+   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
+  },
+  {
+   "slug": "stump-tailed-macaque",
+   "recipe": "sleep:huddle",
+   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
+  },
+  {
+   "slug": "long-tailed-macaque",
+   "recipe": "sleep:huddle",
+   "reason": "tree sleepers: the sleep layer leaves them 1.2-2.2 m apart on separate branches (lemur 1.41 m mean gap for a 0.73 m body, capuchin 2.18 m for 0.44 m): no huddle in the frames"
+  },
+  {
+   "slug": "barbary-macaque",
+   "recipe": "sleep:huddle",
+   "reason": "four drawn inside each other (gap 0) on a cliff face, a fifth 6 m off: a merged blob, not a huddle"
+  },
+  {
+   "slug": "sugar-glider",
+   "recipe": "sleep:huddle",
+   "reason": "drawn 4-23 m apart (mean gap 11.9 m for a 0.19 m body)"
+  },
+  {
+   "slug": "guinea-pig",
+   "recipe": "sleep:huddle",
+   "reason": "drawn 2.6-11.7 m apart (mean gap 6.65 m for a 0.24 m body)"
+  },
+  {
+   "slug": "collared-peccary",
+   "recipe": "sleep:huddle",
+   "reason": "mean gap 0.92 m for a 0.88 m body: spread out, not pressed together as the sentence says"
+  },
+  {
+   "slug": "kuhls-pipistrelle-bat",
+   "recipe": "sleep:cluster",
+   "reason": "a few dots on the ground by a rock: no nursery colony in a building to be seen at phone distance"
+  },
+  {
+   "slug": "long-tailed-macaque",
+   "recipe": "stone_hammer",
+   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at"
+  },
+  {
+   "slug": "tufted-capuchin",
+   "recipe": "stone_hammer",
+   "reason": "no stone_hammer episode in 24 Ark hours for 4 animals in the harness (its rock goal never met where they live): nothing to look at"
+  },
+  {
+   "slug": "javan-ferret-badger",
+   "recipe": "worm_dig",
+   "reason": "night, a dark body under leaves: unreadable; its root_dig already carries the same sentence"
+  },
+  {
+   "slug": "eastern-gray-squirrel",
+   "recipe": "nest_build",
+   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb)"
+  },
+  {
+   "slug": "red-squirrel",
+   "recipe": "nest_build",
+   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb)"
+  },
+  {
+   "slug": "desert-cottontail",
+   "recipe": "nest_build",
+   "reason": "no nest_build episode in 24 Ark hours in the harness (the drey's site is 15-20 m up a limb)"
+  },
+  {
+   "slug": "malaysian-field-rat",
+   "recipe": "nest_build",
+   "reason": "the act runs but no nest reads at phone distance (the rat a dot at night, the hog's material and nest not visible)"
+  },
+  {
+   "slug": "red-river-hog",
+   "recipe": "nest_build",
+   "reason": "the act runs but no nest reads at phone distance (the rat a dot at night, the hog's material and nest not visible)"
+  },
+  {
+   "slug": "carpenter-ant",
+   "recipe": "border_spar",
+   "reason": "2 cm ants: the boxing is not readable at any harness distance"
+  },
+  {
+   "slug": "mangrove-crab",
+   "recipe": "claw_spar",
+   "reason": "the crabs are not in the frame (a rock pool's rim fills it)"
+  },
+  {
+   "slug": "pantropical-jumping-spider",
+   "recipe": "spider_dance",
+   "reason": "the spider leaves the frame during the dance (grass blades or an empty wall): unreadable"
+  },
+  {
+   "slug": "peterss-jumping-spider",
+   "recipe": "spider_dance",
+   "reason": "the spider leaves the frame during the dance (grass blades or an empty wall): unreadable"
+  },
+  {
+   "slug": "two-striped-telamonia",
+   "recipe": "spider_dance",
+   "reason": "the spider leaves the frame during the dance (grass blades or an empty wall): unreadable"
+  },
+  {
+   "slug": "southern-mole-cricket",
+   "recipe": "molehills",
+   "reason": "only a dark hole patch; the cricket is not visible"
+  },
+  {
+   "slug": "giant-mud-crab",
+   "recipe": "bank_burrow",
+   "reason": "the dig is a small pitch on an open sandy bed under water: no burrow or bank reads"
+  },
+  {
+   "slug": "golden-stag-beetle",
+   "recipe": "wrestle",
+   "reason": "the beetles are not in the frame; a stone fills the corner"
+  },
+  {
+   "slug": "european-hornet",
+   "recipe": "night_hawk",
+   "reason": "at night the insect at the light is a tiny purple moth-like shape: not readable as a hornet"
+  },
+  {
+   "slug": "american-bullfrog",
+   "recipe": "wrestle",
+   "reason": "the two bullfrogs are drawn through each other while wrestling"
+  },
+  {
+   "slug": "chinese-mantis",
+   "recipe": "sit_snap",
+   "reason": "the micro animal is not in the frame (leaves or an empty wall): the toad's sit_snap reads, these could not be checked"
+  },
+  {
+   "slug": "orchid-mantis",
+   "recipe": "sit_snap",
+   "reason": "the micro animal is not in the frame (leaves or an empty wall): the toad's sit_snap reads, these could not be checked"
+  },
+  {
+   "slug": "stick-mantis",
+   "recipe": "sit_snap",
+   "reason": "the micro animal is not in the frame (leaves or an empty wall): the toad's sit_snap reads, these could not be checked"
+  },
+  {
+   "slug": "red-assassin-bug",
+   "recipe": "sit_snap",
+   "reason": "the micro animal is not in the frame (leaves or an empty wall): the toad's sit_snap reads, these could not be checked"
+  },
+  {
+   "slug": "minute-pirate-bug",
+   "recipe": "sit_snap",
+   "reason": "the micro animal is not in the frame (leaves or an empty wall): the toad's sit_snap reads, these could not be checked"
+  },
+  {
+   "slug": "giant-house-spider",
+   "recipe": "sit_snap",
+   "reason": "the micro animal is not in the frame (leaves or an empty wall): the toad's sit_snap reads, these could not be checked"
+  },
+  {
+   "slug": "tiger-wolf-spider",
+   "recipe": "sit_snap",
+   "reason": "the micro animal is not in the frame (leaves or an empty wall): the toad's sit_snap reads, these could not be checked"
+  },
+  {
+   "slug": "vampire-crab",
+   "recipe": "dig_burrow",
+   "reason": "the crab is not visible in the dig frames"
+  },
+  {
+   "slug": "aldabra-giant-tortoise",
+   "recipe": "dig_burrow~nest",
+   "reason": "the tortoise tips nose-down with its legs working but no pit or soil shows; the last frame sinks it into the grass"
+  },
+  {
+   "slug": "leopard-tortoise",
+   "recipe": "dig_burrow~nest",
+   "reason": "the tortoise tips nose-down with its legs working but no pit or soil shows; the last frame sinks it into the grass"
+  },
+  {
+   "slug": "russian-tortoise",
+   "recipe": "dig_burrow",
+   "reason": "no dig_burrow episode in the harness's search window"
+  },
+  {
+   "slug": "sulcata-tortoise",
+   "recipe": "dig_burrow",
+   "reason": "no dig_burrow episode in the harness's search window"
+  },
+  {
+   "slug": "aldabra-giant-tortoise",
+   "recipe": "wallow~turtle",
+   "reason": "the 'bury' block stands it on dry grass, no mud or water: not a wallow (the Galapagos episode has no act at all)"
+  },
+  {
+   "slug": "asian-forest-tortoise",
+   "recipe": "wallow~turtle",
+   "reason": "the 'bury' block stands it on dry grass, no mud or water: not a wallow (the Galapagos episode has no act at all)"
+  },
+  {
+   "slug": "galapagos-tortoise",
+   "recipe": "wallow~turtle",
+   "reason": "the 'bury' block stands it on dry grass, no mud or water: not a wallow (the Galapagos episode has no act at all)"
+  },
+  {
+   "slug": "hawksbill-sea-turtle",
+   "recipe": "probe_feed~turtle",
+   "reason": "the episode is swim and turn only: no probe"
+  },
+  {
+   "slug": "indonesian-blue-tongued-skink",
+   "recipe": "probe_feed",
+   "reason": "its probe frames draw it floating on top of a plant's leaves"
+  },
+  {
+   "slug": "mugger-crocodile",
+   "recipe": "beach_nest~bank",
+   "reason": "the episode is crawl/turn/walk: no nest dug or laid shows"
+  },
+  {
+   "slug": "amboina-sailfin-lizard",
+   "recipe": "beach_nest~bank",
+   "reason": "the episode is crawl/turn/walk: no nest dug or laid shows"
+  },
+  {
+   "slug": "siamese-crocodile",
+   "recipe": "incubate_sit~reptile",
+   "reason": "no mound shows to guard, and it stands off the ground (shadow under its feet) in the scan and walk after"
+  },
+  {
+   "slug": "philippine-crocodile",
+   "recipe": "incubate_sit~reptile",
+   "reason": "no mound shows to guard, and it stands off the ground (shadow under its feet) in the scan and walk after"
+  },
+  {
+   "slug": "red-tegu",
+   "recipe": "incubate_sit~reptile",
+   "reason": "no mound shows to guard, and it stands off the ground (shadow under its feet) in the scan and walk after"
+  },
+  {
+   "slug": "oriental-garden-lizard",
+   "recipe": "pounce~lizard",
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+  },
+  {
+   "slug": "brazilian-lava-lizard",
+   "recipe": "pounce~lizard",
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+  },
+  {
+   "slug": "bocages-wall-lizard",
+   "recipe": "pounce~lizard",
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+  },
+  {
+   "slug": "leopard-gecko",
+   "recipe": "pounce~lizard",
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+  },
+  {
+   "slug": "common-house-gecko",
+   "recipe": "pounce~lizard",
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+  },
+  {
+   "slug": "common-wall-gecko",
+   "recipe": "pounce~lizard",
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+  },
+  {
+   "slug": "mediterranean-house-gecko",
+   "recipe": "pounce~lizard",
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+  },
+  {
+   "slug": "tropical-house-gecko",
+   "recipe": "pounce~lizard",
+   "reason": "the episode is freeze/scan/walk with no dash or snap; the wall clingers' sit-and-wait (micro-ambush.ts) runs only for micro-placed animals, and on the live v2 map a gecko perches (map/place.ts: not trueMicro), so it never plays there; the harness's micro shot crashed for the same reason"
+  },
+  {
+   "slug": "brilliant-blue",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "broad-bodied-chaser",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "common-flangetail",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "great-eggfly",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "greater-bee-fly",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "hackberry-emperor",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "mourning-cloak",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "pied-paddy-skimmer",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "red-admiral",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "scarlet-skimmer",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "tropical-carpenter-bee",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "two-tailed-pasha",
+   "recipe": "sally_chase",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "common-rose",
+   "recipe": "patrol_low",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "fox-moth",
+   "recipe": "patrol_low",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "giant-scoliid-wasp",
+   "recipe": "patrol_low",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "little-wood-satyr",
+   "recipe": "patrol_low",
+   "reason": "a true micro animal (an insect under 12 cm, map/species.ts trueMicro) is off the behaviour schedule, so the template never plays on the Ark: the harness waited 900 s for a male in the act and found none"
+  },
+  {
+   "slug": "slender-skimmer",
+   "recipe": "hawk_insects",
+   "reason": "a true micro dragonfly is off the behaviour schedule: its hawking never plays, so no sentence for it"
+  }
+ ]
+}

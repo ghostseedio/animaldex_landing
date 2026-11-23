@@ -7,6 +7,10 @@ import {BLOCKS} from "@/ark-scene/behaviour-blocks";
 import {setRecipeArkDay, sexLook, speciesRecipes} from "@/ark-scene/behaviour-recipes";
 import {MICRO_ACTS, flowerSpot, microActAt, microActWindows, microActsOf, playsInPlace, soilSpot} from "@/ark-scene/micro-acts";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
+import {isHeld, putHeldRowsBack} from "@/lib/ark-signature-held-rows";
+
+// (Rows held after their frames were looked at: their mechanism is checked with them put back, `ark-signature-held-rows.ts`.)
+putHeldRowsBack();
 
 const ROWS = (table as {species: Record<string, string>}).species;
 const T0 = Date.UTC(2026, 10, 20, 11) / 1000;
@@ -37,7 +41,10 @@ test("the wave's additions: each is in its species' row (or held with its reason
         wave2++;
         assert.ok(TEMPLATES[a.recipe], `${a.slug}: ${a.recipe} is a template`);
         const has = new Set((ROWS[a.slug] ?? "").split("|")[0].split(",").map((r) => r.slice(0, r.lastIndexOf("."))));
-        if (a.held) {
+        if (isHeld(a.slug, a.recipe)) {
+            // (Held after its frames were looked at, `data/ark/signature-holds.json`: no sentence in the log.)
+            assert.ok(!own[a.slug]?.[a.recipe], `${a.slug}: a held row has no sentence`);
+        } else if (a.held) {
             assert.ok(a.held.length > 20, `${a.slug}: a held row says why`);
             assert.ok(!has.has(a.recipe), `${a.slug}: held ${a.recipe} is not in its row`);
             assert.ok(!own[a.slug]?.[a.recipe], `${a.slug}: a held row has no sentence`);

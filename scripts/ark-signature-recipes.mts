@@ -111,7 +111,15 @@ let superseded = 0;
 const skipped: string[] = [];
 const already: string[] = [];
 const birds = loadBirds(root);
+// (sig2: rows held after their frames were looked at, `data/ark/signature-holds.json`, each with why: never drawn, no sentence in the log.)
+const holdsPath = path.join(root, "data/ark/signature-holds.json");
+const holds = new Map<string, string>(fs.existsSync(holdsPath) ? (JSON.parse(fs.readFileSync(holdsPath, "utf8")) as {held: Array<{slug: string; recipe: string; reason: string}>}).held.map((h) => [`${h.slug} ${h.recipe}`, h.reason]) : []);
 for (const a of additions) {
+    if (holds.has(`${a.slug} ${a.recipe}`)) {
+        skipped.push(`${a.slug} ${a.recipe}: held (frames): ${holds.get(`${a.slug} ${a.recipe}`)}`);
+        if (lines.species[a.slug]) delete lines.species[a.slug][a.recipe];
+        continue;
+    }
     // (A bird row wave 2 handles: it is shown by its own bird recipe, below.)
     if (birdHandles(birds.rows, a.slug, a.recipe)) continue;
     // (An original row another file shows another way: its replacement is what is applied.)
@@ -201,6 +209,8 @@ for (const a of additions) {
 const birdReport = applyBirdRecipes(table, birds.rows);
 const birdSleep = applyBirdSleep(sleepTable, sleepStyles as unknown as {species: Array<Record<string, unknown>>}, birds.rows);
 const birdLines = applyBirdLines(lines, birds.rows);
+// (A species whose every sentence was a held row's keeps no empty entry.)
+for (const [slug, own] of Object.entries(lines.species)) if (!Object.keys(own).length) delete lines.species[slug];
 if (!dry) {
     fs.writeFileSync(tablePath, `${JSON.stringify(table)}\n`);
     fs.writeFileSync(sleepPath, `${JSON.stringify(sleepTable)}\n`);
