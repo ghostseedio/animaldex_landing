@@ -27,7 +27,7 @@ export const FLOW_TICK_SECONDS = (86_400 * 14) / 365;
 
 export type StepKind =
     | "sleep" | "settle" | "wake"
-    | "search" | "movePatch" | "stalk" | "attempt" | "nearMiss" | "catch" | "found" | "eat" | "cache" | "dance"
+    | "search" | "movePatch" | "stalk" | "attempt" | "nearMiss" | "catch" | "found" | "eat" | "carry" | "cache" | "dance"
     | "rest" | "digest" | "groom" | "toWater" | "drink" | "wary"
     | "keptWait" | "keptEat"
     | "display" | "court" | "mate" | "build";
@@ -65,8 +65,11 @@ export type FlowServer = {
     version?: string | number;
     /** Fed this Ark day (the engine's meal clock: not hungry, or a `fed` event that day). */
     fedOn: (tick: number) => boolean;
-    /** Kills (`meal` events): when (epoch s) and the prey's name. */
-    kills?: ReadonlyArray<{at: number; prey: string}>;
+    /**
+     * Kills (`meal` events): when (epoch s: the catch as the scene acts it) and the prey's name; `acted`, the scene's own
+     * meal act's phases (s from the catch: eating, or carrying and caching), so the line says what the body does.
+     */
+    kills?: ReadonlyArray<{at: number; prey: string; acted?: {eat?: number; carry?: number; cache?: number}}>;
     /** The engine's own near misses (`escaped` events: its prey got away from it): when, and the prey's name. */
     escapes?: ReadonlyArray<{at: number; prey: string}>;
     /** SIG-EVENTS food caches (`signature` food_cache) and the meals from them (`fed` source cache). */
@@ -372,7 +375,7 @@ function buildTick(subject: FlowSubject, tick: number): FlowStep[] {
 
     // The server's kill at its time: the search before it (only searching: its misses are the engine's own `escaped`), the
     // stalk and the attempt on that prey, the catch, then eating (or caching, when SIG-EVENTS saved it).
-    function huntTo(kill: {at: number; prey: string}, from: number): number {
+    function huntTo(kill: {at: number; prey: string; acted?: {eat?: number; carry?: number; cache?: number}}, from: number): number {
         let t = from;
         const prey: FoodWord = {eat: `a ${kill.prey}`, the: `the ${kill.prey}`};
         const still = p.mode === "sitwait" || p.mode === "watch" || p.mode === "web";
@@ -382,9 +385,13 @@ function buildTick(subject: FlowSubject, tick: number): FlowStep[] {
         t = push("catch", t, t + 4, "still", {food: prey, detail: kill.prey, server: true});
         const cached = caches.find((c) => c.at >= t && c.at - t < 600);
         if (cached) caches.splice(caches.indexOf(cached), 1);
-        if (cached) return push("cache", t, t + around(random, 40), "still", {food: prey, detail: p.cache?.method ?? "hide", server: true});
+        // (Cached: picked up and carried off in its mouth to its cache spot, then dug in: the scene's meal act, `meal-acts.ts`.)
+        if (cached) {
+            t = push("carry", t, t + (kill.acted?.carry ?? 12 + random() * 10), "moving", {food: prey});
+            return push("cache", t, t + (kill.acted?.cache ?? Math.max(around(random, 15), 11)), "still", {food: prey, detail: p.cache?.method ?? "hide", server: true});
+        }
         ate = true;
-        t = push("eat", t, t + around(random, p.handle * 2), "still", {food: prey});
+        t = push("eat", t, t + (kill.acted?.eat ?? around(random, p.handle * 2)), "still", {food: prey});
         return push("digest", t, t + around(random, p.handle * 3), "still");
     }
 
@@ -466,6 +473,7 @@ function soloLine(step: FlowStep): string {
         case "catch": return fill("Caught {food}", f);
         case "found": return step.detail === "cache" ? fill("Dug up its cache: {food}", f) : fill("Found {food}", f);
         case "eat": return f?.eat === "nectar" ? "Drinking nectar" : f?.eat === "pollen" ? "Gathering pollen" : fill("Eating {food}", f);
+        case "carry": return fill("Carrying {food} off to store it", f);
         case "cache": return fill(CACHE[step.detail ?? "hide"] ?? CACHE.hide, f);
         case "dance": return "Dancing to show the others the way";
         case "rest": return "Resting";

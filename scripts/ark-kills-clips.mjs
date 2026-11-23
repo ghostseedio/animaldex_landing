@@ -71,7 +71,7 @@ try {
 }
 
 /** How close each pair is framed (m). */
-const DISTANCE = {lion: 7.5, heron: 5, hawk: 4, python: 2.6};
+const DISTANCE = {lion: 7.5, heron: 5, hawk: 4, python: 2.6, fox: 2.8, "fox-cache": 2.8};
 const summary = {};
 for (const pair of pairs) {
     const context = await browser.newContext({viewport: {width, height}});
@@ -82,7 +82,8 @@ for (const pair of pairs) {
         if (m.type() === "error") errors.push(m.text().slice(0, 300));
         if (m.text().startsWith("[kills]")) console.log(pair, m.text().slice(0, 600));
     });
-    await page.goto(`${base}?pair=${pair}&quality=high${process.argv.includes("--where") ? "&where=1" : ""}${pair === "python" ? "&jaw=1" : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
+    // (fox-cache: the fox pair with its catch cached (SIG-EVENTS food_cache); the fox pairs with the behaviour flows on.)
+    await page.goto(`${base}?pair=${pair.replace("-cache", "")}${pair === "fox-cache" ? "&cache=1" : ""}${pair.startsWith("fox") ? "&flows=1" : ""}&quality=high${process.argv.includes("--where") ? "&where=1" : ""}${pair === "python" ? "&jaw=1" : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
     page.on("pageerror", (e) => console.log(pair, "page error:", e.message.slice(0, 300)));
     try {
         await page.waitForFunction(() => window.__kills, null, {timeout: 300000});
@@ -91,7 +92,18 @@ for (const pair of pairs) {
         await context.close();
         continue;
     }
-    const [info] = await page.evaluate(() => window.__kills.info());
+    let [info] = await page.evaluate(() => window.__kills.info());
+    // (The live meal starts a moment after the event's step now: until then it is not built. Run the world on to it.)
+    for (let k = 0; k < 6 && info && !info.plan; k++) {
+        await page.evaluate((s) => window.__kills.shot(s, 6), 20 * (k + 1));
+        [info] = await page.evaluate(() => window.__kills.info());
+    }
+    if (info?.plan) {
+        // (Times relative to the harness's own clock: the meal's start and its catch.)
+        const lead = info.t0 - Number(info.key.split("@")[1]);
+        const shift = (v) => v + lead;
+        info = {...info, catchAt: shift(info.catchAt), feedTo: shift(info.feedTo), rest: info.rest.map(shift), carcassEnd: shift(info.carcassEnd), drink: info.drink?.map(shift) ?? null, cache: info.cache?.map(shift) ?? null, visits: info.visits.map((v) => ({...v, start: shift(v.start), arrive: shift(v.arrive), leave: shift(v.leave)}))};
+    }
     console.log(pair, JSON.stringify({...info, plan: info?.plan ? {style: info.plan.style, feedSeconds: +info.plan.feedSeconds.toFixed(1), naturalMinutes: +info.plan.naturalMinutes.toFixed(1), restSeconds: +info.plan.restSeconds.toFixed(0), drinkSeconds: info.plan.drinkSeconds, trace: info.plan.trace, scavengers: info.plan.scavengers} : null}));
     const c = info.catchAt;
     const f = info.feedTo - c;
@@ -101,7 +113,7 @@ for (const pair of pairs) {
         [Math.max(c - 0.15, 0), "the catch"],
         [c + 0.6, "down: lying on its side (no fade)"],
         [c + 2, "the meal begins"],
-        ...[0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((k) => [c + f * k, `the meal ${Math.round(k * 100)}%`]),
+        ...(info.cache ? [[(c + info.cache[0]) / 2, "picking up its catch"], [(info.cache[0] + info.cache[1]) / 2, "carrying it off in its mouth"], [(info.cache[1] + info.cache[2]) / 2, "digging the cache"], [(info.cache[2] + info.cache[3]) / 2, "covering it over"]] : [0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((k) => [c + f * k, `the meal ${Math.round(k * 100)}%`])),
         [info.feedTo + 0.5, "the meal over"],
         ...(info.drink ? [[(info.drink[0] + info.drink[1]) / 2, "a drink at the water"]] : []),
         [info.rest[0] + 3, "resting nearby"],
@@ -116,7 +128,7 @@ for (const pair of pairs) {
     const labels = [];
     for (let i = 0; i < shots.length; i++) {
         const [s, label] = shots[i];
-        const follow = /water|resting|on its way|chase|waypoint/.test(label) ? (label.includes("scavenger") ? info.visits.find((v) => label.includes(v.id.slice(-2)))?.id : "0000feed-0000-4000-8000-000000000000") : undefined;
+        const follow = /water|resting|on its way|chase|waypoint|carrying|digging|covering/.test(label) ? (label.includes("scavenger") ? info.visits.find((v) => label.includes(v.id.slice(-2)))?.id : "0000feed-0000-4000-8000-000000000000") : undefined;
         const note = await page.evaluate(async ([s, d, follow, label]) => {
             const text = await window.__kills.shot(s, d, follow);
             document.getElementById("note").textContent = `${label}\n${text}`;

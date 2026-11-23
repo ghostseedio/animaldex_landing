@@ -37,7 +37,7 @@ const S: Scenario[] = [
 
 const COLOUR: Record<string, string> = {
     sleep: "#5b6470", settle: "#5b6470", wake: "#8a94a3", search: "#5b8fd6", movePatch: "#7aa7e6", stalk: "#3d6fb8", attempt: "#f0b43c", nearMiss: "#f07c3c", nothing: "#b8c4d6", giveUp: "#d65b5b",
-    catch: "#c0262d", found: "#7ccf62", eat: "#2e9e44", cache: "#8a5a2b", dance: "#e8c23c", rest: "#a7adb5", digest: "#8fb89a", groom: "#c3b4d8", toWater: "#4cc3d9", wary: "#f0d43c", drink: "#2aa7c4",
+    catch: "#c0262d", carry: "#b07a3a", found: "#7ccf62", eat: "#2e9e44", cache: "#8a5a2b", dance: "#e8c23c", rest: "#a7adb5", digest: "#8fb89a", groom: "#c3b4d8", toWater: "#4cc3d9", wary: "#f0d43c", drink: "#2aa7c4",
     keptWait: "#b5a27a", keptEat: "#4f8f3a", call: "#9b6fd6", scentMark: "#b38fe0", display: "#7c4fc4", spar: "#c44f9b", court: "#e07cc0", rejected: "#a04060", mate: "#d02f8f", build: "#a0783c"
 };
 

@@ -4725,6 +4725,7 @@
       "browsing": "browsing on leaves",
       "hunting": "hunting",
       "eating": "eating its catch",
+      "caching": "storing its catch for later",
       "scavenging": "scavenging",
       "waiting": "waiting for prey",
       "prowling": "on the prowl",

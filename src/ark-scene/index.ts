@@ -9278,7 +9278,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const withMeal = kind !== "cutaway";
         const stage = mealStage(kind, bodies.predator, bodies.prey, {seed, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter), meal: withMeal, hunt: hunt?.act ?? null});
         if (!withMeal) return {kind, stage, bodies, script: null, plan: null, catchInfo: null};
-        const plan = mealPlan(mealSideOf(predator, predatorWater), mealSideOf(prey, preyWater), seed);
+        const plan0 = mealPlan(mealSideOf(predator, predatorWater), mealSideOf(prey, preyWater), seed);
+        // (SIG-EVENTS: a catch the engine saved as a cache is carried off and buried, on land, not eaten: `meal-acts.ts`.)
+        const plan = act.cached && !predatorWater && kind !== "swoop" && kind !== "slither" && kind !== "dart" ? {...plan0, cache: true, scavengers: 0, drinkSeconds: 0} : plan0;
         const at = stage.catchAt ?? stage.seconds;
         const p = stage.predator(at)!;
         const q = stage.prey(at);

@@ -50,7 +50,7 @@ const ID = "0000feed-0000-4000-8000-000000000000";
 /** Each scene: framing distance (m), and the flow moments to find: [label, kinds, from s, to s]. */
 const PLANS = {
     flowdeer: {distance: 7, polar: 0.95, finds: [["eating (background food)", ["eat"], 0, 1500], ["searching", ["search", "movePatch"], 0, 1500], ["eating, later", ["eat"], 900, 3000]]},
-    flowsparrow: {distance: 1.4, polar: 1.0, finds: [["eating (background food)", ["eat"], 0, 1500], ["searching", ["search"], 0, 1500], ["resting", ["rest", "digest", "groom"], 0, 2400]]},
+    flowsparrow: {distance: 2.2, polar: 0.9, finds: [["eating (background food)", ["eat"], 0, 1500], ["searching", ["search"], 0, 1500], ["resting", ["rest", "digest", "groom"], 0, 2400]]},
     flowjay: {distance: 2, polar: 1.0, finds: [["eating (background food)", ["eat"], 0, 1500], ["searching", ["search"], 0, 1500]]},
     flowfox: {distance: 4, polar: 1.0, finds: [["the server's kill", ["catch"], 1100, 1300, 1], ["eating its kill", ["eat"], 1200, 1800], ["listening for prey", ["search"], 0, 1150]]}
 };
@@ -85,7 +85,9 @@ for (const name of scenes) {
                 await window.__behaviours.shot(s2, d, id);
                 await window.__behaviours.closeOn(id, d, polar);
             }, [s, plan.distance, ID, plan.polar ?? 1.1]);
-            const caption = await page.evaluate((id) => window.__behaviours.flowCaption(id), ID);
+            // (A flock: each member's line, the flock foraging together.)
+            const ids = name === "flowsparrow" ? [0, 1, 2].map((i) => ID.slice(0, -1) + i) : [ID];
+            const caption = (await page.evaluate((list) => list.map((id) => window.__behaviours.flowCaption(id)), ids)).map((line, i) => (ids.length > 1 ? `#${i} ` : "") + line).join("\n");
             const text = `${name} · flows ${flows ? "ON" : "OFF (today)"} · +${Math.round(s)} s · ${label}\n${caption}`;
             await page.evaluate((t) => (document.getElementById("note").textContent = t), text);
             const file = path.join(out, `${name}-${i + 1}-${flows ? "on" : "off"}.png`);

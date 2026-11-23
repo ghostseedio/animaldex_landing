@@ -42,14 +42,29 @@ export function setFlowServer(id: string, server: Partial<FlowServer>): void {
     forgetFlows();
 }
 
-export function flowSubjectOf(animal: {id: string; condition?: string | null}, slug: string, hoursAt: (epoch: number) => number, awake?: (epoch: number) => boolean): FlowSubject | null {
+export function flowSubjectOf(animal: {id: string; condition?: string | null; group?: {leader: {id: string}} | null}, slug: string, hoursAt: (epoch: number) => number, awake?: (epoch: number) => boolean): FlowSubject | null {
     const params = flowParamsFor(slug);
     if (!params) return null;
     const extra = servers.get(animal.id) ?? {};
     const hungry = animal.condition === "hungry";
-    const subject: FlowSubject = {id: animal.id, params, hoursAt, awake, server: {fedOn: () => !hungry, ...extra}};
+    // A flock's member forages with its flock: its flow is its leader's (seeded by the leader's id), so they land, eat,
+    // rest and go up together; its own server events still pin its own steps (its version keeps them apart).
+    const leader = params.flock && animal.group ? animal.group.leader.id : null;
+    const own = leader && Object.keys(extra).length ? {version: `${animal.id}:${String(extra.version ?? "")}`} : {};
+    const subject: FlowSubject = {id: leader ?? animal.id, params, hoursAt, awake, server: {fedOn: () => !hungry, ...extra, ...own}};
     subjects.set(animal.id, subject);
     return subject;
+}
+
+/**
+ * A kill the scene acts (`live-meals.ts`, when it builds the meal): pinned at its catch, with the act's own phases, and
+ * its cache when the engine saved it. Replaces a kill of the same prey already given (the event's own time).
+ */
+export function addFlowKill(id: string, kill: {at: number; prey: string; acted?: {eat?: number; carry?: number; cache?: number}}, cached: boolean): void {
+    const had = servers.get(id) ?? {};
+    const kills = (had.kills ?? []).filter((k) => k.prey !== kill.prey || Math.abs(k.at - kill.at) > 600).concat(kill);
+    const caches = cached ? (had.caches ?? []).filter((c) => Math.abs(c.at - kill.at) > 600).concat({at: kill.at + 4.5, recipe: "cache_food"}) : had.caches;
+    setFlowServer(id, {...had, kills, ...(caches ? {caches} : {}), version: `${String(had.version ?? "")}+${Math.round(kill.at)}`});
 }
 
 /** The subjects the scene's schedule last asked for, by id: the card line's and the harness's reads. */
