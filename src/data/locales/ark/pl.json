@@ -441,7 +441,14 @@
             "split": "{animal}: nowy osobnik oddzielił się od rodzica",
             "giftMeal": "{aAnimal}: nakarmione przez odwiedzającego",
             "giftShelter": "{aPrey}: bezpieczne przed {aPredator} w schronieniu od odwiedzającego",
-            "giftNest": "{aAnimal}: gody, z pomocą odwiedzającego przy gnieździe"
+            "giftNest": "{aAnimal}: gody, z pomocą odwiedzającego przy gnieździe",
+            "antTrailFound": "{animals}: ścieżka do martwego zwierzęcia ({other})",
+            "antTend": "{animals}: zbieranie spadzi ({other})",
+            "antLeaves": "{animals}: noszenie liści wzdłuż mrówczej drogi",
+            "antSeeds": "{animals}: noszenie nasion do gniazda",
+            "antRaid": "{animals}: najazd szerokim frontem",
+            "antBivouac": "{animals}: przeprowadzka biwaku",
+            "antWeave": "{animals}: ściąganie liści do gniazda"
         },
         "card": {
             "now": "Teraz: {activity}",

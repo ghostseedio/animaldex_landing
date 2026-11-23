@@ -441,7 +441,14 @@
             "split": "{animal}: اپنے والد جاندار سے ایک نیا الگ ہوا",
             "giftMeal": "{aAnimal}: ایک زائر نے کھانا دیا",
             "giftShelter": "{aPrey}: ایک زائر کی پناہ گاہ میں {aPredator} سے محفوظ",
-            "giftNest": "{aAnimal}: ایک زائر کی گھونسلے کی مدد سے ملاپ"
+            "giftNest": "{aAnimal}: ایک زائر کی گھونسلے کی مدد سے ملاپ",
+            "antTrailFound": "{animals}: ایک مردہ جانور تک راستہ ({other})",
+            "antTend": "{animals}: شہد شبنم جمع کرنا ({other})",
+            "antLeaves": "{animals}: اپنی شاہراہ پر پتے لے جانا",
+            "antSeeds": "{animals}: بیج گھر لے جانا",
+            "antRaid": "{animals}: وسیع محاذ پر دھاوا",
+            "antBivouac": "{animals}: عارضی گھونسلے کی منتقلی",
+            "antWeave": "{animals}: گھونسلے کے لیے پتے جوڑنا"
         },
         "card": {
             "now": "ابھی: {activity}",

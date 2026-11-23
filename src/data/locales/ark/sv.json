@@ -441,7 +441,14 @@
             "split": "{animal}: en ny delade sig från sin förälder",
             "giftMeal": "{aAnimal}: matad av en besökare",
             "giftShelter": "{aPrey}: trygg för {aPredator} i en besökares skydd",
-            "giftNest": "{aAnimal}: parade sig, med en besökares bohjälp"
+            "giftNest": "{aAnimal}: parade sig, med en besökares bohjälp",
+            "antTrailFound": "{animals}: spår till ett dött djur ({other})",
+            "antTend": "{animals}: insamling av honungsdagg ({other})",
+            "antLeaves": "{animals}: löv bärs längs myrvägen",
+            "antSeeds": "{animals}: frön bärs hem",
+            "antRaid": "{animals}: räd i bred front",
+            "antBivouac": "{animals}: bivacken flyttar",
+            "antWeave": "{animals}: löv dras ihop till boet"
         },
         "card": {
             "now": "Nu: {activity}",

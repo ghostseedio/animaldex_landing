@@ -441,7 +441,14 @@
             "split": "{animal}：親から新しい個体が分かれた",
             "giftMeal": "{aAnimal}: 訪問者からごはんをもらいました",
             "giftShelter": "{aPrey}: 訪問者の隠れ家で{aPredator}から守られました",
-            "giftNest": "{aAnimal}: 訪問者の巣づくりの手助けで交尾しました"
+            "giftNest": "{aAnimal}: 訪問者の巣づくりの手助けで交尾しました",
+            "antTrailFound": "{animals}：死んだ動物への道（{other}）",
+            "antTend": "{animals}：甘露を集めている（{other}）",
+            "antLeaves": "{animals}：葉を運んで行列の道を進む",
+            "antSeeds": "{animals}：種を巣へ運ぶ",
+            "antRaid": "{animals}：広い前線で襲撃中",
+            "antBivouac": "{animals}：仮の巣を移動中",
+            "antWeave": "{animals}：葉を引き寄せて巣作り"
         },
         "card": {
             "now": "いま：{activity}",

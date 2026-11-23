@@ -441,7 +441,14 @@
             "split": "{animal}: 부모에게서 새 개체가 떨어져 나왔어요",
             "giftMeal": "{aAnimal}: 방문자가 먹이를 줬어요",
             "giftShelter": "{aPrey}: 방문자의 은신처에서 {aPredator}에게서 안전했어요",
-            "giftNest": "{aAnimal}: 방문자의 둥지 도움으로 짝짓기했어요"
+            "giftNest": "{aAnimal}: 방문자의 둥지 도움으로 짝짓기했어요",
+            "antTrailFound": "{animals}: 죽은 동물로 가는 길 ({other})",
+            "antTend": "{animals}: 감로 모으기 ({other})",
+            "antLeaves": "{animals}: 길을 따라 잎 나르기",
+            "antSeeds": "{animals}: 씨앗을 집으로 나르기",
+            "antRaid": "{animals}: 넓은 전선으로 습격",
+            "antBivouac": "{animals}: 임시 둥지 이동",
+            "antWeave": "{animals}: 둥지를 위해 잎 끌어 모으기"
         },
         "card": {
             "now": "지금: {activity}",

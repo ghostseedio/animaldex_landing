@@ -441,7 +441,14 @@
             "split": "{animal}: తల్లిదండ్రి నుండి కొత్తది ఒకటి విడిపోయింది",
             "giftMeal": "{aAnimal}: ఒక సందర్శకుడు ఆహారం ఇచ్చారు",
             "giftShelter": "{aPrey}: ఒక సందర్శకుడి ఆశ్రయంలో {aPredator} నుండి సురక్షితం",
-            "giftNest": "{aAnimal}: ఒక సందర్శకుడి గూడు సహాయంతో జత కట్టింది"
+            "giftNest": "{aAnimal}: ఒక సందర్శకుడి గూడు సహాయంతో జత కట్టింది",
+            "antTrailFound": "{animals}: చనిపోయిన జంతువు వైపు దారి ({other})",
+            "antTend": "{animals}: తేనెమంచు సేకరణ ({other})",
+            "antLeaves": "{animals}: తమ దారి వెంట ఆకులు మోయడం",
+            "antSeeds": "{animals}: విత్తనాలను గూటికి మోయడం",
+            "antRaid": "{animals}: విశాలమైన ముందుభాగంతో దాడి",
+            "antBivouac": "{animals}: తాత్కాలిక గూడు మార్పు",
+            "antWeave": "{animals}: గూడు కోసం ఆకులను కలిపి లాగడం"
         },
         "card": {
             "now": "ఇప్పుడు: {activity}",

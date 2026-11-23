@@ -441,7 +441,14 @@
             "split": "{animal}: um novo separou-se do progenitor",
             "giftMeal": "{aAnimal}: alimentado por um visitante",
             "giftShelter": "{aPrey}: seguro de {aPredator} no abrigo de um visitante",
-            "giftNest": "{aAnimal}: acasalou, com a ajuda de um visitante no ninho"
+            "giftNest": "{aAnimal}: acasalou, com a ajuda de um visitante no ninho",
+            "antTrailFound": "{animals}: trilha até um animal morto ({other})",
+            "antTend": "{animals}: coleta de melada ({other})",
+            "antLeaves": "{animals}: transporte de folhas pela trilha",
+            "antSeeds": "{animals}: transporte de sementes para o ninho",
+            "antRaid": "{animals}: incursão em frente ampla",
+            "antBivouac": "{animals}: mudança do bivaque",
+            "antWeave": "{animals}: folhas unidas para o ninho"
         },
         "card": {
             "now": "Agora: {activity}",

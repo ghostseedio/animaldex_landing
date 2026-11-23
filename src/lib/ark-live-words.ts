@@ -90,6 +90,18 @@ export type ArkLiveWords = {
     amplexus?: string;
     pouchFry?: string;
     split?: string;
+    /**
+     * Ant colonies (lane ARK-ANTS, `src/ark-scene/live/ant-lines.ts`): seen near the camera, only about real food (a
+     * body the record says died, real sap-sucking Ark animals) or the colony's own way of foraging on a fed day.
+     * `{animals}` the kind, `{other}` / `{aOther}` the food's name.
+     */
+    antTrailFound?: string;
+    antTend?: string;
+    antLeaves?: string;
+    antSeeds?: string;
+    antRaid?: string;
+    antBivouac?: string;
+    antWeave?: string;
 };
 
 /** English, as `en.json` has it: the fallback when a reader's words lack `live`. */
@@ -153,5 +165,12 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     spawnPair: "{animal}: eggs laid, and the male fertilised them",
     amplexus: "{animal}: a pair in amplexus, and spawn laid",
     pouchFry: "{animal}: {count} young released from the father's pouch",
-    split: "{animal}: a new one split off its parent"
+    split: "{animal}: a new one split off its parent",
+    antTrailFound: "A trail of {animals} found a dead {other}",
+    antTend: "{animals} are collecting honeydew from {aOther}",
+    antLeaves: "{animals} are carrying leaves along their highway",
+    antSeeds: "{animals} are carrying seeds home",
+    antRaid: "{animals} are raiding in a broad swarm",
+    antBivouac: "{animals} are moving their bivouac",
+    antWeave: "{animals} are pulling leaves together for their nest"
 };

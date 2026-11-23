@@ -39,6 +39,7 @@ import {forestDeathRecords, forestItems, forestText} from "@/ark-scene/live/fore
 import {humanItems, humanText} from "@/ark-scene/live/human-lines"; // p5 (humans)
 import {releaseItems, releaseText} from "@/ark-scene/live/release-lines"; // Release to the Wild (P1-8)
 import {isEnglish, signatureItems, signatureText} from "@/ark-scene/live/signature-lines";
+import {antItems} from "@/ark-scene/live/ant-lines";
 import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 import {ARK_ACTIVITY_ENGLISH, arkRecordNotesFromEvents, type ArkActivityWords} from "@/lib/ark-animal-status";
 import {arkPickAnimal, arkSpeciesKey} from "@/lib/ark-population";
@@ -809,7 +810,7 @@ export class ArkLive {
                     // In English a species' own sentence first; the generic line only for acts without one.
                     const english = isEnglish(this.locale);
                     const own = english ? signatureItems(seen.acts, this.memory) : [];
-                    const items = own.concat(arkSeenItems(english ? {acts: seen.acts.filter((act) => !act.line), alarms: seen.alarms} : seen, this.memory)).filter((item) => (this.nowSaid.get(`${item.focus.animalId}:${item.kind}`) ?? 0) < Date.now());
+                    const items = own.concat(antItems(seen.acts, this.memory, this.text, this.locale), arkSeenItems(english ? {acts: seen.acts.filter((act) => !act.line), alarms: seen.alarms} : seen, this.memory)).filter((item) => (this.nowSaid.get(`${item.focus.animalId}:${item.kind}`) ?? 0) < Date.now());
                     if (items.length) this.say(items, now);
                 }
             }

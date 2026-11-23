@@ -69,6 +69,10 @@ const round = (value: number) => Math.round(value * 10) / 10;
     // `?relations=on|off` (lane ark-relation-lines): 8 s in, the animal with the most others of its kind is selected; with
     // `on` the relation lines go up to its 12 nearest neighbours (any kind: the drawing's cost, not who they are) and stay.
     const relations = params.get("relations");
+    // ARK-ANTS (the heap A/B): `?ants=0` keeps the ant colonies' layer off; `?select=<id>` selects that animal 8 s in
+    // (an ant: the camera comes down to its colony, where the layer draws).
+    if (params.get("ants") === "0") (globalThis as {__arkAntsOff?: boolean}).__arkAntsOff = true;
+    const selectId = params.get("select");
     // Carers (decision 418): `?carers=1` draws them as if the server's switch were on (the heap A/B).
     if (params.get("carers") === "1") (globalThis as {__arkCarers?: boolean}).__arkCarers = true;
     try {
@@ -166,6 +170,7 @@ const round = (value: number) => Math.round(value * 10) / 10;
         let peakHeap = 0;
         let inViewRequests: number | null = null;
         let peakGpu = 0;
+        let selectAt = performance.now() + 8000;
         let relationsAt = relations === "on" || relations === "off" ? performance.now() + 8000 : Infinity;
         let relationLines: {set: (id: string | null, lines: Array<{kind: "predator" | "prey" | "partner"; id: string; label: string}>) => void} | null = null;
         let relationSelected: string | null = null;
@@ -194,6 +199,10 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 const near = here ? snapshot.animals.filter((a) => a.id !== relationSelected).map((a) => ({id: a.id, at: handle.locate(a.id)})).filter((a) => a.at).map((a) => ({id: a.id, d: Math.hypot(a.at!.x - here.x, a.at!.z - here.z)})).sort((x, y) => x.d - y.d).slice(0, 12) : [];
                 const kinds = ["predator", "prey", "partner"] as const;
                 relationLines.set(relationSelected, near.map((a, i) => ({kind: kinds[i % 3], id: a.id, label: a.id})));
+            }
+            if (selectId && performance.now() > selectAt) {
+                selectAt = Infinity;
+                handle.select(selectId);
             }
             if (walk && performance.now() > nextVisit) {
                 nextVisit = performance.now() + 3000;

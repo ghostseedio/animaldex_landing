@@ -183,6 +183,21 @@ export class LiveDeaths<E> {
         return this.deaths.some((d) => d.animal.id === id && epoch < d.t0 + DEATH_BODY_SECONDS);
     }
 
+    /**
+     * ARK-ANTS: the bodies lying now where they died (real carcasses: the record's deaths), food for the ants whose own
+     * text says they take dead insects or carrion. From the fall to the fade (`from`, `until`, epoch s).
+     */
+    bodies(epoch: number): Array<{key: string; name: string; x: number; z: number; base: number; from: number; until: number}> {
+        const out: Array<{key: string; name: string; x: number; z: number; base: number; from: number; until: number}> = [];
+        for (const d of this.deaths) {
+            if (epoch < d.t0 || epoch > d.t0 + DEATH_BODY_SECONDS) continue;
+            const spot = this.place(d);
+            if (!spot) continue;
+            out.push({key: d.key, name: d.animal.name, x: spot.x, z: spot.z, base: spot.base, from: d.t0 + DEATH_DYING_SECONDS, until: d.t0 + DEATH_BODY_SECONDS - DEATH_FADE_SECONDS});
+        }
+        return out;
+    }
+
     debug(): Array<{key: string; id: string; t0: number; spot: DeathSpot | null; drawn: boolean}> {
         return this.deaths.map((d) => ({key: d.key, id: d.animal.id, t0: d.t0, spot: d.spot, drawn: Boolean(d.ghost)}));
     }

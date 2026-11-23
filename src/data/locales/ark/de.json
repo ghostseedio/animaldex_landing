@@ -441,7 +441,14 @@
             "split": "{animal}: ein neues Tier hat sich vom Elterntier abgeteilt",
             "giftMeal": "{aAnimal}: von einem Besucher gefüttert",
             "giftShelter": "{aPrey}: im Unterschlupf eines Besuchers sicher vor {aPredator}",
-            "giftNest": "{aAnimal}: gepaart, mit der Nesthilfe eines Besuchers"
+            "giftNest": "{aAnimal}: gepaart, mit der Nesthilfe eines Besuchers",
+            "antTrailFound": "{animals}: Spur zu einem toten Tier ({other})",
+            "antTend": "{animals}: Honigtau-Ernte ({other})",
+            "antLeaves": "{animals}: Blätter werden über die Ameisenstraße getragen",
+            "antSeeds": "{animals}: Samen werden nach Hause getragen",
+            "antRaid": "{animals}: Raubzug in breiter Front",
+            "antBivouac": "{animals}: das Biwak zieht um",
+            "antWeave": "{animals}: Blätter werden zum Nest zusammengezogen"
         },
         "card": {
             "now": "Jetzt: {activity}",

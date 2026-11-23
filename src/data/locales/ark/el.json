@@ -441,7 +441,14 @@
             "split": "{animal}: ένα νέο αποσπάστηκε από τον γονέα του",
             "giftMeal": "{aAnimal}: τάισμα από επισκέπτη",
             "giftShelter": "{aPrey}: ασφαλές από {aPredator} στο καταφύγιο ενός επισκέπτη",
-            "giftNest": "{aAnimal}: ζευγάρωμα, με βοήθεια στη φωλιά από επισκέπτη"
+            "giftNest": "{aAnimal}: ζευγάρωμα, με βοήθεια στη φωλιά από επισκέπτη",
+            "antTrailFound": "{animals}: ίχνος προς ένα νεκρό ζώο ({other})",
+            "antTend": "{animals}: συλλογή μελιτώματος ({other})",
+            "antLeaves": "{animals}: μεταφορά φύλλων στον δρόμο τους",
+            "antSeeds": "{animals}: μεταφορά σπόρων στη φωλιά",
+            "antRaid": "{animals}: επιδρομή σε πλατύ μέτωπο",
+            "antBivouac": "{animals}: μετακόμιση του προσωρινού καταλύματος",
+            "antWeave": "{animals}: φύλλα τραβιούνται μαζί για τη φωλιά"
         },
         "card": {
             "now": "Τώρα: {activity}",

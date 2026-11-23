@@ -441,7 +441,14 @@
             "split": "{animal}: egy új egyed vált le a szülőjéről",
             "giftMeal": "{aAnimal}: egy látogató megetette",
             "giftShelter": "{aPrey}: biztonságban {aPredator} elől egy látogató menedékében",
-            "giftNest": "{aAnimal}: párzás, egy látogató fészeksegítségével"
+            "giftNest": "{aAnimal}: párzás, egy látogató fészeksegítségével",
+            "antTrailFound": "{animals}: nyom egy elpusztult állathoz ({other})",
+            "antTend": "{animals}: mézharmatgyűjtés ({other})",
+            "antLeaves": "{animals}: levelek szállítása a hangyaúton",
+            "antSeeds": "{animals}: magvak hazaszállítása",
+            "antRaid": "{animals}: portyázás széles fronton",
+            "antBivouac": "{animals}: a bivak költözése",
+            "antWeave": "{animals}: levelek összehúzása a fészekhez"
         },
         "card": {
             "now": "Most: {activity}",

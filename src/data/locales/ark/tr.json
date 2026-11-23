@@ -441,7 +441,14 @@
             "split": "{animal}: ebeveyninden yeni bir birey ayrıldı",
             "giftMeal": "{aAnimal}: bir ziyaretçi besledi",
             "giftShelter": "{aPrey}: bir ziyaretçinin barınağında {aPredator} karşısında güvende",
-            "giftNest": "{aAnimal}: bir ziyaretçinin yuva yardımıyla çiftleşti"
+            "giftNest": "{aAnimal}: bir ziyaretçinin yuva yardımıyla çiftleşti",
+            "antTrailFound": "{animals}: ölü bir hayvana giden iz ({other})",
+            "antTend": "{animals}: tatlı salgı toplama ({other})",
+            "antLeaves": "{animals}: yaprakları karınca yolu boyunca taşıma",
+            "antSeeds": "{animals}: tohumları yuvaya taşıma",
+            "antRaid": "{animals}: geniş bir cephede baskın",
+            "antBivouac": "{animals}: geçici yuvanın taşınması",
+            "antWeave": "{animals}: yuva için yaprakları birleştirme"
         },
         "card": {
             "now": "Şimdi: {activity}",

@@ -441,7 +441,14 @@
             "split": "{animal} : un nouvel individu s'est détaché de son parent",
             "giftMeal": "{aAnimal} : nourri par un visiteur",
             "giftShelter": "{aPrey} : à l'abri de {aPredator} grâce à un visiteur",
-            "giftNest": "{aAnimal} : accouplement, avec l'aide au nid d'un visiteur"
+            "giftNest": "{aAnimal} : accouplement, avec l'aide au nid d'un visiteur",
+            "antTrailFound": "{animals}: piste vers un animal mort ({other})",
+            "antTend": "{animals}: récolte de miellat ({other})",
+            "antLeaves": "{animals}: transport de feuilles le long de la piste",
+            "antSeeds": "{animals}: transport de graines vers le nid",
+            "antRaid": "{animals}: raid sur un large front",
+            "antBivouac": "{animals}: déménagement du bivouac",
+            "antWeave": "{animals}: feuilles rapprochées pour le nid"
         },
         "card": {
             "now": "Maintenant : {activity}",

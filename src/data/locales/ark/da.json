@@ -441,7 +441,14 @@
             "split": "{animal}: en ny delte sig fra sin forælder",
             "giftMeal": "{aAnimal}: fodret af en besøgende",
             "giftShelter": "{aPrey}: i sikkerhed for {aPredator} i en besøgendes ly",
-            "giftNest": "{aAnimal}: parret, med en besøgendes redehjælp"
+            "giftNest": "{aAnimal}: parret, med en besøgendes redehjælp",
+            "antTrailFound": "{animals}: spor til et dødt dyr ({other})",
+            "antTend": "{animals}: indsamling af honningdug ({other})",
+            "antLeaves": "{animals}: blade bæres ad myrevejen",
+            "antSeeds": "{animals}: frø bæres hjem",
+            "antRaid": "{animals}: plyndringstogt i bred front",
+            "antBivouac": "{animals}: bivuakken flytter",
+            "antWeave": "{animals}: blade trækkes sammen til reden"
         },
         "card": {
             "now": "Nu: {activity}",
