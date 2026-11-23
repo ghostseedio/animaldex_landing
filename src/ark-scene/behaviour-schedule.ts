@@ -1000,10 +1000,13 @@ function denDry(world: ScheduleWorld, x: number, z: number): boolean {
 }
 
 function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
-    if (animal.roost) return animal.roost;
     const group = animal.group;
     // (A flock whose text has it sleeping together, huddled or in a row, roosts as a group too: `sleep.ts`.)
     const together = sleepStyle(profile.slug).social !== "apart";
+    // (Its own place from the map, a hole or a branch, is where it sleeps alone; a member of a group that sleeps together
+    // huddles or piles at its leader's instead (a roost's row or cluster keeps its own perches): five guinea pigs each in a hole of their own were metres apart, not huddled.)
+    const huddles = sleepStyle(profile.slug).social === "huddle" || sleepStyle(profile.slug).social === "pile";
+    if (animal.roost && !(group && huddles)) return animal.roost;
     if (group && (!FLOCKING.has(profile.social) || together)) {
         // The group sleeps together: round its leader's roost, each a little apart; huddled, piled or a young mammal
         // against the adult, touching (`sleepSpacing`); on a raised perch in a row along it or a bat's cluster.

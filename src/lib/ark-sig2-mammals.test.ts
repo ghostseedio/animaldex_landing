@@ -56,8 +56,13 @@ test("sig2 mammals: every held mammal row is shown by something the scene has: a
 test("sig2 mammals: the huddles are the sleep layer's (a recipe `cluster` is the insects' crawling cluster), and no mammal row asks for it", () => {
     assert.ok(!mammals.some((r) => r.recipe === "cluster"));
     for (const slug of ["zebu", "capybara", "domestic-sheep"]) assert.equal(sleepStyle(slug).social, "huddle", slug);
-    // (The tree sleepers' and the bat's were held: their frames showed no huddle.)
-    for (const slug of ["ring-tailed-lemur", "tufted-capuchin", "sugar-glider"]) assert.ok(isHeld(slug, "sleep:huddle"), slug);
+    // (SIG3: a huddling group sleeps at its leader's roost, so the tree sleepers' and the guinea pigs' frames read; the
+    // sugar glider's text names no sleeping together, the marmosets sit inside the wood, the bat's colony is not seen.)
+    for (const slug of ["ring-tailed-lemur", "tufted-capuchin", "guinea-pig", "collared-peccary"]) {
+        assert.ok(!isHeld(slug, "sleep:huddle"), slug);
+        assert.equal(sleepStyle(slug).social, "huddle", slug);
+    }
+    for (const slug of ["sugar-glider", "common-marmoset", "long-tailed-macaque", "barbary-macaque"]) assert.ok(isHeld(slug, "sleep:huddle"), slug);
     assert.ok(isHeld("kuhls-pipistrelle-bat", "sleep:cluster"));
     assert.equal(sleepStyle("domestic-pig").social, "pile");
     // (A kind with no word for it keeps sleeping a little apart.)

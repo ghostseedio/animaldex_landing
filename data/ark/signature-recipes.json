@@ -1397,7 +1397,8 @@
    "recipe": "dig_burrow",
    "behaviour": "digs metre-long burrows with strong forelimbs",
    "field": "facts",
-   "quote": "Its compact body and strong forelimbs are built for digging burrows, which are reported to reach a metre or more."
+   "quote": "Its compact body and strong forelimbs are built for digging burrows, which are reported to reach a metre or more.",
+   "line": "{aAnimal} is digging a burrow with its strong forelimbs"
   },
   {
    "slug": "savannah-monitor",
@@ -1515,7 +1516,8 @@
    "recipe": "dig_burrow",
    "behaviour": "excavates deep burrows and retreats in midday heat/drought",
    "field": "evidence",
-   "quote": "Tortoises are most active during the cooler parts of the day (early morning, late afternoon) and retreat into their burrows during the peak heat of midday or during prolonged dry spells."
+   "quote": "Tortoises are most active during the cooler parts of the day (early morning, late afternoon) and retreat into their burrows during the peak heat of midday or during prolonged dry spells.",
+   "line": "{aAnimal} is digging at the burrow it retreats into from the heat"
   },
   {
    "slug": "sumatran-tiger",

@@ -12252,7 +12252,7 @@
    "slug": "collared-peccary",
    "posture": "sternal",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -12261,7 +12261,8 @@
      "rule": "family Tayassuidae: lies on its chest, the legs folded under"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "story",
+     "phrase": "On cold nights herd members rest pressed tightly together in a cave, under a bank or in thick brush, sharing body heat."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -26786,7 +26787,7 @@
    "slug": "guinea-pig",
    "posture": "curl",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -26795,7 +26796,8 @@
      "rule": "order Rodentia: curls up"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "evidence",
+     "phrase": "Guinea pigs are highly social and often huddle together, especially when resting or feeling insecure."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -45487,7 +45489,7 @@
    "slug": "ring-tailed-lemur",
    "posture": "sit",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -45496,7 +45498,8 @@
      "rule": "plan primate: sits hunched, the head down"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "Day-active, sleeping in groups and warming after cool nights, so shared heat becomes a daily ritual rather than just comfort."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -54603,7 +54606,7 @@
    "slug": "tufted-capuchin",
    "posture": "sit",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -54612,7 +54615,8 @@
      "rule": "plan primate: sits hunched, the head down"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "At dusk the group settles in tall trees, often in palm crowns or large emergent trees, and sleeps on branches with members sitting close together."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"

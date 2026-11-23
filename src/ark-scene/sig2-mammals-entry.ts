@@ -57,6 +57,12 @@ const SCENES: Record<string, Scene> = {
     "sleep-capybara": {zone: "wetland", hours: 13, date: day(11), slug: "capybara", name: "Capybara", n: 5, activity: "nocturnal", kind: "sleep"},
     "sleep-domestic-sheep": {zone: "farm_garden", hours: 13, date: day(11), slug: "domestic-sheep", name: "Domestic Sheep", n: 6, activity: "nocturnal", kind: "sleep"},
     "sleep-kuhls-pipistrelle-bat": {zone: "woodland", hours: 13, date: day(11), slug: "kuhls-pipistrelle-bat", name: "Kuhl's Pipistrelle Bat", n: 6, activity: "nocturnal", kind: "sleep"},
+    // (SIG3: the other tree sleepers, a troop on its leader's branch.)
+    "sleep-bolivian-squirrel-monkey": {zone: "rainforest", hours: 13, date: day(11), slug: "bolivian-squirrel-monkey", name: "Bolivian Squirrel Monkey", n: 5, activity: "nocturnal", kind: "sleep"},
+    "sleep-coppery-titi-monkey": {zone: "rainforest", hours: 13, date: day(11), slug: "coppery-titi-monkey", name: "Coppery Titi Monkey", n: 5, activity: "nocturnal", kind: "sleep"},
+    "sleep-stump-tailed-macaque": {zone: "rainforest", hours: 13, date: day(11), slug: "stump-tailed-macaque", name: "Stump-tailed Macaque", n: 5, activity: "nocturnal", kind: "sleep"},
+    "sleep-common-marmoset": {zone: "rainforest", hours: 13, date: day(11), slug: "common-marmoset", name: "Common Marmoset", n: 5, activity: "nocturnal", kind: "sleep"},
+    "sleep-long-tailed-macaque": {zone: "rainforest", hours: 13, date: day(11), slug: "long-tailed-macaque", name: "Long-tailed Macaque", n: 5, activity: "nocturnal", kind: "sleep"},
     // (A control: a kind with no sleeping together.)
     "sleep-control-red-deer": {zone: "grassland", hours: 13, date: day(11), slug: "red-deer", name: "Red Deer", n: 5, activity: "nocturnal", kind: "sleep"},
     // MARK: Recipe episodes
