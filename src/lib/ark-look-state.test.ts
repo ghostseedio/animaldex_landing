@@ -7,6 +7,7 @@ import {LOOK_ALBEDO, LOOK_FINISH, LOOK_FRAGMENT_DECLARATIONS, LOOK_VERTEX, LOOK_
 import {packAntler} from "@/ark-scene/antler-cycle";
 import {packYoung} from "@/ark-scene/young-coat";
 import {
+    type Trigger,
     STATE_STEPS,
     applyLookState,
     lookStateOf,
@@ -67,12 +68,12 @@ test("the night: the geckos pale, a crested gecko goes richer, the fishes fade, 
 });
 
 test("the triggers: a season by its months and sex, a display by the block it is in, a cheek by foraging", () => {
-    const summer = {kind: "season", months: [6, 7, 8], sex: "male"} as const;
+    const summer: Trigger = {kind: "season", months: [6, 7, 8], sex: "male"};
     assert.equal(stateTarget(summer, ctx()), 1);
     assert.equal(stateTarget(summer, ctx({month: 11})), 0);
     assert.equal(stateTarget(summer, ctx({sex: "female"})), 0, "only the drakes");
     assert.equal(stateTarget({kind: "season", months: [6]}, ctx({sex: null, month: 6})), 1, "no sex asked: any");
-    const call = {kind: "blocks", blocks: ["call"], sex: "male"} as const;
+    const call: Trigger = {kind: "blocks", blocks: ["call"], sex: "male"};
     assert.equal(stateTarget(call, ctx({block: "call"})), 1);
     assert.equal(stateTarget(call, ctx({block: "scan"})), 0);
     assert.equal(stateTarget(call, ctx()), 0);

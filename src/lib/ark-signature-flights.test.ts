@@ -9,6 +9,7 @@ import {forgetRecipes, sexLook, speciesRecipes} from "@/ark-scene/behaviour-reci
 import {scheduleWorld, tripAt, tripEpisode, SLOT_SECONDS, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
 import {sceneSampler} from "@/ark-scene/world-sampler";
+import type {ArkZone} from "@/ark-scene/types";
 
 type Add = {slug: string; name: string; recipe: string; behaviour: string; quote: string; id: string};
 const ADDITIONS = (data as unknown as {additions: Add[]}).additions;
@@ -56,7 +57,7 @@ test("on the schedule: a male of each kind takes its recipe now and then and fli
     forgetRecipes();
     const world = scheduleWorld(sceneSampler());
     const hoursAt = (epoch: number) => (((epoch / 3600) % 24) + 24) % 24;
-    const check = (slug: string, recipe: string, zone: string, month: number, length: number) => {
+    const check = (slug: string, recipe: string, zone: ArkZone, month: number, length: number) => {
         const profile = behaviourProfile(slug);
         assert.ok(speciesRecipes(slug).recipes.some((r) => r.id === recipe), `${slug} has ${recipe}`);
         const ids = Array.from({length: 40}, (_, i) => `${slug}-${i}`);
@@ -84,7 +85,7 @@ test("on the schedule: a male of each kind takes its recipe now and then and fli
                 if (blocks.includes("fly") && (recipe === "patrol_low" || blocks.includes("take_off"))) flown++;
             }
         });
-        for (const [i, id] of females.entries()) assert.ok(tripsOf(id, i).every((t) => tripEpisode(world, t)?.recipe !== recipe), `${slug}: a female never ${recipe}`);
+        for (const [i, id] of Array.from(females.entries())) assert.ok(tripsOf(id, i).every((t) => tripEpisode(world, t)?.recipe !== recipe), `${slug}: a female never ${recipe}`);
         return {taken, flown};
     };
     const sally = check("scarlet-skimmer", "sally_chase", "river_lake", 5, 0.05);
