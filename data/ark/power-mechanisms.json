@@ -1,7 +1,7 @@
 {
   "about": "Each species' real Animal Power (species_behavior_principles, read 2026-11-20), sorted by hand into one visible survival mechanism (AnimalDex decision 420). Classified by Claude Code reading the Power text, no paid API. 'none': the Power is not a survival trait. 'doubtful': a judgement call flagged for review. 'look' (mimicry only): b bands, e eyespots, f feigning, t tint, with the mimicked colour.",
   "read": "2026-11-20",
-  "counts": {"none": 1982, "camouflage": 193, "hiding": 106, "armour": 91, "warning": 87, "speed": 54, "group": 53, "vigilance": 52, "climb": 50, "mimicry": 33},
+  "counts": {"none": 1981, "camouflage": 193, "hiding": 106, "armour": 91, "warning": 87, "speed": 54, "group": 54, "vigilance": 52, "climb": 50, "mimicry": 33},
   "species": [
     {"id": "164fd8c1-e3b5-4b23-9f23-ce23972b4773", "name": "Aardvark", "slug": "aardvark", "power": "Persistence", "mechanism": "none", "reason": "none (not a survival trait): “Persistence” — Dig through hard ground until the hidden food is reached."},
     {"id": "0a981510-9035-4d33-9c68-5c0e1f51a20b", "name": "Aardwolf", "slug": "aardwolf", "power": "Specialized Humility", "mechanism": "none", "reason": "none (not a survival trait): “Specialized Humility” — Termite-Tongue Night Feeding"},
@@ -25,7 +25,7 @@
     {"id": "084078d2-49ab-4434-adda-877fb2371ca2", "name": "African Grey Parrot", "slug": "african-grey-parrot", "power": "Mimic Intelligence", "mechanism": "none", "reason": "none (not a survival trait): “Mimic Intelligence” — Echo-Learned Problem Solving"},
     {"id": "5c4a20df-a41f-48db-bb8e-b477a38f57a4", "name": "African Harrier-Hawk", "slug": "african-harrier-hawk", "power": "Reach Past Sight", "mechanism": "none", "reason": "none (not a survival trait): “Reach Past Sight” — Reach into what you cannot see, rather than striking harder at what you can."},
     {"id": "e9031f99-af1e-4866-9cfc-f603926d30e8", "name": "African Jacana", "slug": "african-jacana", "power": "Light Footing", "mechanism": "none", "reason": "none (not a survival trait): “Light Footing” — Lily-Pad Weight Spreading"},
-    {"id": "7e7080ec-9c17-4a75-9d85-5a4f6a38e430", "name": "African Lion", "slug": "african-lion", "power": "Pride Command", "mechanism": "none", "reason": "none (not a survival trait): “Pride Command” — Lead by anchoring the group, not outrunning it."},
+    {"id": "7e7080ec-9c17-4a75-9d85-5a4f6a38e430", "name": "African Lion", "slug": "african-lion", "power": "Pride Command", "mechanism": "group", "reason": "group: “Pride Command” — Lead by anchoring the group, not outrunning it."},
     {"id": "8dc581f7-125a-4869-89be-55eb053a2115", "name": "African Openbill", "slug": "african-openbill", "power": "Shell Skill", "mechanism": "none", "reason": "none (not a survival trait): “Shell Skill” — Gap-Bill Snail Extraction"},
     {"id": "1625361a-c870-43b7-9e93-ffe322385a01", "name": "African Palm Civet", "slug": "african-palm-civet", "power": "Quiet Reward", "mechanism": "none", "reason": "none (not a survival trait): “Quiet Reward” — Arboreal Night Foraging"},
     {"id": "c28d3e50-15fd-45e9-b586-a55b98b9f640", "name": "African Penguin", "slug": "african-penguin", "power": "Coastal Pairing", "mechanism": "none", "reason": "none (not a survival trait): “Coastal Pairing” — Survive the rough shore by returning to the bond."},
