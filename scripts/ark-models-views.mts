@@ -6,6 +6,7 @@
  *   npx tsx --tsconfig scripts/tsconfig.scripts.json scripts/ark-models-views.mts <dir of <slug>.glb> <out.png> <slug,slug,...>
  *
  * One row per slug: side (azimuth 90), front (0), three-quarter (45).
+ * ARK_VIEW_ANGLES="90,0;0,85" sets the views (azimuth,elevation; default side, front, three-quarter).
  * ARK_VIEW_CLIP=idle draws the first frame of that clip instead of the bind pose: bird and insect rigs carry flight
  * wing cards at their open size in the bind pose, which every clip tucks away (rig_ark.py CARD_HIDDEN), so the bind
  * pose shows them as flat sheets the Ark never draws.
@@ -23,6 +24,7 @@ for (const slug of list.split(",")) {
     const points = skinnedBy(r, clip ? rowOf(r.data, r.bones, clip.row) : restRow(r.rig));
     const centre: [number, number, number] = [(box.min.x + box.max.x) / 2, box.min.y + (box.max.y - box.min.y) * 0.5, (box.min.z + box.max.z) / 2];
     console.log(slug, Object.keys(r.clips).join(","));
-    for (const [azimuth, elevation] of [[90, 0], [0, 0], [45, 15]]) pictures.push(draw(points, r.index, {azimuth, elevation, ground: box.min.y, fit: size * 0.62, centre, size: 300}));
+    const angles = process.env.ARK_VIEW_ANGLES ? process.env.ARK_VIEW_ANGLES.split(";").map((a) => a.split(",").map(Number)) : [[90, 0], [0, 0], [45, 15]];
+    for (const [azimuth, elevation] of angles) pictures.push(draw(points, r.index, {azimuth, elevation, ground: box.min.y, fit: size * 0.62, centre, size: 300}));
 }
-writePng(out, sheet(pictures, 3));
+writePng(out, sheet(pictures, process.env.ARK_VIEW_ANGLES ? process.env.ARK_VIEW_ANGLES.split(";").length : 3));
