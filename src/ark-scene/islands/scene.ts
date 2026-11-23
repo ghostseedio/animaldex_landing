@@ -244,6 +244,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         import("@/ark-scene/islands/town/ground")
     ]);
     const {townColliderSet} = await import("@/ark-scene/islands/town/colliders");
+    const {buildSolidProxies} = await import("@/ark-scene/islands/town/render/solid-proxies");
     const {primeTownDrawnGrid, setTownWalkSurfaces, townDrawnGround, townDrawnHeight, townStillWater, townWalkSurfaces, townWaterLevel, townWaterSurface} = await import("@/ark-scene/islands/town/drawn-ground");
     const {setIslandWater} = await import("@/ark-scene/water-level");
     const {homeSites, tankPose, tankBody} = await import("@/ark-scene/islands/town/tanks");
@@ -429,6 +430,20 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     };
     let sampler: {key: string; sampler: ArkWorldSampler} | null = null;
     let collidersMemo: {key: string; set: ColliderSet} | null = null;
+    // SIG4: the town's solid scenery as invisible prisms for the seat pass (its drawn meshes let their arrays go), made
+    // from the colliders whenever they are made again (`render/solid-proxies.ts`).
+    let solidProxies: ReturnType<typeof buildSolidProxies> | null = null;
+    const collidersNow = (): ColliderSet => {
+        if (!collidersMemo || collidersMemo.key !== openKey) {
+            collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin, openKey === preparedKey ? prepared?.colliders ?? undefined : undefined)};
+            if (solidProxies) town.root.remove(solidProxies.group);
+            solidProxies?.dispose();
+            solidProxies = buildSolidProxies(collidersMemo.set.list, origin);
+            town.root.add(solidProxies.group);
+            solidProxies.group.updateMatrixWorld(true);
+        }
+        return collidersMemo.set;
+    };
     /** p3 (solid): a zoo resident's body radius, for its bound (`clearWithin`). */
     const boundRadius = new Map<string, number>();
     const STILL_WHERE = new Set(["window", "indoor", "pool"]);
@@ -653,14 +668,13 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         },
         sampler: () => {
             if (!sampler || sampler.key !== openKey) {
-                if (!collidersMemo || collidersMemo.key !== openKey) collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin, openKey === preparedKey ? prepared?.colliders ?? undefined : undefined)};
-                sampler = {key: openKey, sampler: townWorldSampler(openKey ? openKey.split(",") : [], origin, collidersMemo.set, openKey === preparedKey ? prepared?.sampler ?? undefined : undefined)};
+                const set = collidersNow();
+                sampler = {key: openKey, sampler: townWorldSampler(openKey ? openKey.split(",") : [], origin, set, openKey === preparedKey ? prepared?.sampler ?? undefined : undefined)};
             }
             return sampler.sampler;
         },
         colliders: () => {
-            if (!collidersMemo || collidersMemo.key !== openKey) collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin, openKey === preparedKey ? prepared?.colliders ?? undefined : undefined)};
-            return collidersMemo.set;
+            return collidersNow();
         },
         tankPose: (id, length, height, clock) => {
             const info = towned.get(id);

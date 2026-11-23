@@ -121,7 +121,9 @@ export class SeatProbe {
         const walk = (object: Object3D, shown: boolean) => {
             const visible = shown && object.visible;
             const mesh = object as Mesh;
-            if (visible && mesh.isMesh && mesh.geometry?.getAttribute?.("position") && !mesh.geometry.getAttribute("arkInstance") && !mesh.geometry.getAttribute("arkRigA") && (mesh.geometry.getAttribute("position") as BufferAttribute).count >= 3) {
+            // (The town's solid proxies are the seat pass's reading of scenery whose arrays are let go, never drawn: the
+            // audit measures against what is drawn, `islands/town/render/solid-proxies.ts`.)
+            if (visible && mesh.isMesh && !mesh.userData?.solidProxy && mesh.geometry?.getAttribute?.("position") && !mesh.geometry.getAttribute("arkInstance") && !mesh.geometry.getAttribute("arkRigA") && (mesh.geometry.getAttribute("position") as BufferAttribute).count >= 3) {
                 const label = solidLabel(mesh);
                 let cls = label === "||" ? 0 : solidClass(label);
                 if (cls < 0) {
