@@ -10,7 +10,7 @@ import table from "@/ark-scene/locomotion/styles.json";
 export type FlightStyle = "continuous" | "flap_glide" | "flap_bound" | "soar" | "hover" | "bat" | "flutter" | "whir";
 export type FlyerKind = "bird" | "bat" | "insect";
 export type GroundGait = "hop" | "walk" | "waddle" | "run";
-export type SwimStyle = "anguilliform" | "subcarangiform" | "carangiform" | "thunniform" | "ostraciiform" | "labriform" | "flatfish" | "rajiform" | "mobuliform" | "cetacean" | "sirenian";
+export type SwimStyle = "anguilliform" | "subcarangiform" | "carangiform" | "thunniform" | "ostraciiform" | "labriform" | "flatfish" | "rajiform" | "mobuliform" | "cetacean" | "sirenian" | "medusoid" | "octopod" | "teuthoid";
 export type LeglessMode = "lateral" | "sidewind" | "rectilinear" | "peristaltic" | "glide";
 
 export type FlightStyleRow = {
@@ -28,6 +28,11 @@ export type LocoStyle = {
     flight: FlightStyleRow | null;
     ground: {gait: GroundGait; bob: boolean} | null;
     swim: SwimStyle | null;
+    /**
+     * A soft body's shape number from the row (`me0.15`): a jelly's bell, as a share of its height from the top; an
+     * octopus's or squid's arms' root, as a share of its length from the rear. Null: the style's own default.
+     */
+    swimShape: number | null;
     legless: LeglessMode | null;
     /** Not in the table: the plan's default. */
     fallback: boolean;
@@ -36,7 +41,7 @@ export type LocoStyle = {
 const ROWS = (table as {species: Record<string, string>}).species;
 const FLIGHT_CODES: Record<string, FlightStyle> = {c: "continuous", g: "flap_glide", b: "flap_bound", s: "soar", h: "hover", t: "bat", f: "flutter", w: "whir"};
 const GROUND_CODES: Record<string, GroundGait> = {h: "hop", w: "walk", a: "waddle", r: "run"};
-export const SWIM_CODES: Record<string, SwimStyle> = {an: "anguilliform", sc: "subcarangiform", ca: "carangiform", th: "thunniform", os: "ostraciiform", lb: "labriform", ff: "flatfish", rj: "rajiform", mb: "mobuliform", ce: "cetacean", si: "sirenian"};
+export const SWIM_CODES: Record<string, SwimStyle> = {an: "anguilliform", sc: "subcarangiform", ca: "carangiform", th: "thunniform", os: "ostraciiform", lb: "labriform", ff: "flatfish", rj: "rajiform", mb: "mobuliform", ce: "cetacean", si: "sirenian", me: "medusoid", oc: "octopod", sq: "teuthoid"};
 const LEGLESS_CODES: Record<string, LeglessMode> = {la: "lateral", sw: "sidewind", re: "rectilinear", pe: "peristaltic", gl: "glide"};
 
 /** One flight code (`s0.8d`, `w190`, `f`, `t`, `h35`) decoded. */
@@ -52,10 +57,12 @@ export function decodeFlight(code: string, insect = false): FlightStyleRow | nul
 export function decodeStyleRow(row: string): LocoStyle {
     const [f, g, s, l] = row.split("|");
     const gm = /^([hwar])(b?)$/.exec(g ?? "");
+    const sm = /^([a-z]{2})([0-9.]*)$/.exec(s ?? "");
     return {
         flight: f ? decodeFlight(f) : null,
         ground: gm ? {gait: GROUND_CODES[gm[1]], bob: gm[2] === "b"} : null,
-        swim: s ? SWIM_CODES[s] ?? null : null,
+        swim: sm ? SWIM_CODES[sm[1]] ?? null : null,
+        swimShape: sm && sm[2] ? Number(sm[2]) : null,
         legless: l ? LEGLESS_CODES[l] ?? null : null,
         fallback: false
     };
@@ -66,7 +73,7 @@ export function decodeStyleRow(row: string): LocoStyle {
  * a species the table lacks.
  */
 function planDefault(plan: string | null | undefined): LocoStyle {
-    const none: LocoStyle = {flight: null, ground: null, swim: null, legless: null, fallback: true};
+    const none: LocoStyle = {flight: null, ground: null, swim: null, swimShape: null, legless: null, fallback: true};
     switch (plan) {
         case "bird":
         case "flying_bird":

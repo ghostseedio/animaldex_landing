@@ -229,7 +229,7 @@ import {locoGround, setLocoGround} from "@/ark-scene/locomotion/ground";
 import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
 import {flightSpec} from "@/ark-scene/locomotion/flight";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
-import {swimPaces} from "@/ark-scene/locomotion/swim";
+import {SWIM, swimPaces} from "@/ark-scene/locomotion/swim";
 import {collideBlocked, collideSegmentClear, setIslandColliders, unionColliders, type ColliderSet} from "@/ark-scene/collide";
 import type {Collider} from "@/ark-scene/collide/colliders";
 import type {Stand} from "@/ark-scene/grounding/stand";
@@ -1492,7 +1492,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         flee: (b) => fleePace({plan: chasePlan(b.slug), slug: b.slug, length: b.length, speedStat: b.speedStat}),
         burst: (b) => {
             const swim = b.slug ? locoStyle(b.slug, chasePlan(b.slug)).swim : null;
-            return swim ? swimPaces(b.length, swim).burst : null;
+            // (A soft body's style is drawn only: a jelly or an octopus keeps the chase pace it had before it.)
+            return swim && !SWIM[swim].body ? swimPaces(b.length, swim).burst : null;
         },
         dive: (b) => (b.slug ? flightSpec(b.slug, b.length, chasePlan(b.slug))?.dive ?? null : null)
     });

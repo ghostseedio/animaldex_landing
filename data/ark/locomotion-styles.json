@@ -31,6 +31,9 @@
    "th": 11,
    "ca": 26,
    "os": 60,
+   "me": 6,
+   "sq": 5,
+   "oc": 12,
    "ff": 5,
    "rj": 5,
    "mb": 4
@@ -622,6 +625,12 @@
     "why": "Rallidae: walks, head-bobbing as it walks"
    }
   },
+  "australian-box-jellyfish": {
+   "swim": {
+    "code": "me0.2",
+    "why": "Cubozoa medusa (Chirodropidae): the bell pulses, the bell the top 20% of the model's height (down to its rim, where it stops widening)"
+   }
+  },
   "australian-brush-turkey": {
    "flight": {
     "code": "c1.2",
@@ -982,6 +991,12 @@
     "why": "Scaridae: labriform: rows with its pectoral fins, the body steady, a light tail"
    }
   },
+  "bigfin-squid": {
+   "swim": {
+    "code": "sq",
+    "why": "Oegopsida (Magnapinnidae): fins ripple along the mantle, the mantle jets, the arms trail"
+   }
+  },
   "black-and-yellow-mud-dauber": {
    "flight": {
     "code": "w110",
@@ -1276,6 +1291,12 @@
     "why": "Strigidae: walks"
    }
   },
+  "blanket-octopus": {
+   "swim": {
+    "code": "oc",
+    "why": "Octopoda (Tremoctopodidae): the arms wave out from the mantle"
+   }
+  },
   "blind-cave-tetra": {
    "swim": {
     "code": "ca",
@@ -1422,6 +1443,12 @@
    "swim": {
     "code": "lb",
     "why": "Scaridae: labriform: rows with its pectoral fins, the body steady, a light tail"
+   }
+  },
+  "blue-ringed-octopus": {
+   "swim": {
+    "code": "oc",
+    "why": "Octopoda (Octopodidae): the arms wave out from the mantle"
    }
   },
   "blue-rumped-parrot": {
@@ -2034,6 +2061,12 @@
     "why": "fish (Esocidae): subcarangiform default (the rear half of the body and the tail)"
    }
   },
+  "chambered-nautilus": {
+   "swim": {
+    "code": "oc",
+    "why": "Nautilida (Nautilidae): the arms wave out from the mantle (the nautilus's tentacles)"
+   }
+  },
   "chickweed-geometer-moth": {
    "flight": {
     "code": "f",
@@ -2198,6 +2231,12 @@
    "flight": {
     "code": "f",
     "why": "Lepidoptera (Erebidae): fluttering flight, f = 1.5 L^-0.5 Hz"
+   }
+  },
+  "coconut-octopus": {
+   "swim": {
+    "code": "oc",
+    "why": "Octopoda (Octopodidae): the arms wave out from the mantle"
    }
   },
   "coelacanth": {
@@ -2498,6 +2537,12 @@
    "ground": {
     "code": "w",
     "why": "Caprimulgidae: walks"
+   }
+  },
+  "common-octopus": {
+   "swim": {
+    "code": "oc",
+    "why": "Octopoda (Octopodidae): the arms wave out from the mantle"
    }
   },
   "common-pheasant": {
@@ -3070,6 +3115,12 @@
    "swim": {
     "code": "si",
     "why": "Dugongidae: sirenian: slow up-and-down beats of the paddle tail"
+   }
+  },
+  "dumbo-octopus": {
+   "swim": {
+    "code": "oc",
+    "why": "Octopoda (Opisthoteuthidae): the arms wave out from the mantle"
    }
   },
   "dusky-dolphin": {
@@ -3726,6 +3777,12 @@
     "why": "Megalaimidae: walks"
    }
   },
+  "firefly-squid": {
+   "swim": {
+    "code": "sq",
+    "why": "Oegopsida (Enoploteuthidae): fins ripple along the mantle, the mantle jets, the arms trail"
+   }
+  },
   "fischers-lovebird": {
    "flight": {
     "code": "c1.1",
@@ -3734,6 +3791,12 @@
    "ground": {
     "code": "w",
     "why": "Psittacidae: walks"
+   }
+  },
+  "flamboyant-cuttlefish": {
+   "swim": {
+    "code": "sq",
+    "why": "Sepiida (Sepiidae): fins ripple along the mantle, the mantle jets, the arms trail"
    }
   },
   "flame-bowerbird": {
@@ -3778,6 +3841,12 @@
    "ground": {
     "code": "wb",
     "why": "Corvidae: walks, head-bobbing as it walks"
+   }
+  },
+  "flower-hat-jelly": {
+   "swim": {
+    "code": "me0.3",
+    "why": "Hydrozoa medusa (Olindiidae): the bell pulses, the bell the top 30% of the model's height (down to its rim, where it stops widening)"
    }
   },
   "flower-wasp": {
@@ -4000,6 +4069,12 @@
     "why": "Myliobatidae: mobuliform: flies with its wing-like fins, big slow flaps"
    }
   },
+  "giant-pacific-octopus": {
+   "swim": {
+    "code": "oc",
+    "why": "Octopoda (Enteroctopodidae): the arms wave out from the mantle"
+   }
+  },
   "giant-redeye": {
    "flight": {
     "code": "f",
@@ -4010,6 +4085,12 @@
    "flight": {
     "code": "w110",
     "why": "Hymenoptera/Scoliidae: wasps 80-150 Hz"
+   }
+  },
+  "giant-squid": {
+   "swim": {
+    "code": "sq",
+    "why": "Oegopsida (Architeuthidae): fins ripple along the mantle, the mantle jets, the arms trail"
    }
   },
   "giant-stonefly": {
@@ -4028,6 +4109,12 @@
    "swim": {
     "code": "sc",
     "why": "fish (Siluridae): subcarangiform default (the rear half of the body and the tail)"
+   }
+  },
+  "glass-octopus": {
+   "swim": {
+    "code": "oc",
+    "why": "Octopoda (Amphitretidae): the arms wave out from the mantle"
    }
   },
   "glasswing-butterfly": {
@@ -5190,6 +5277,12 @@
     "why": "fish (Adrianichthyidae): subcarangiform default (the rear half of the body and the tail)"
    }
   },
+  "japanese-sea-nettle": {
+   "swim": {
+    "code": "me0.15",
+    "why": "Scyphozoa medusa (Pelagiidae): the bell pulses, the bell the top 15% of the model's height (down to its rim, where it stops widening)"
+   }
+  },
   "javan-munia": {
    "flight": {
     "code": "b",
@@ -6082,6 +6175,12 @@
     "why": "Colubridae: lateral undulation"
    }
   },
+  "mimic-octopus": {
+   "swim": {
+    "code": "oc",
+    "why": "Octopoda (Octopodidae): the arms wave out from the mantle"
+   }
+  },
   "mint-moth": {
    "flight": {
     "code": "f",
@@ -6150,6 +6249,12 @@
    "ground": {
     "code": "wb",
     "why": "Icteridae: walks, head-bobbing as it walks"
+   }
+  },
+  "moon-jellyfish": {
+   "swim": {
+    "code": "me0.17",
+    "why": "Scyphozoa medusa (Ulmaridae): the bell pulses, the bell the top 18% of the model's height (down to its rim, where it stops widening)"
    }
   },
   "moon-wrasse": {
@@ -6728,6 +6833,12 @@
     "why": "Psittacidae: walks"
    }
   },
+  "pacific-sea-nettle": {
+   "swim": {
+    "code": "me0.3",
+    "why": "Scyphozoa medusa (Pelagiidae): the bell pulses, the bell the top 30% of the model's height (down to its rim, where it stops widening)"
+   }
+  },
   "pacific-spiny-lumpsucker": {
    "swim": {
     "code": "os",
@@ -6822,6 +6933,12 @@
    "swim": {
     "code": "lb",
     "why": "Callichthyidae: labriform: rows with its pectoral fins, the body steady, a light tail"
+   }
+  },
+  "paper-nautilus": {
+   "swim": {
+    "code": "oc",
+    "why": "Octopoda (Argonautidae): the arms wave out from the mantle"
    }
   },
   "paper-wasp": {
@@ -7314,6 +7431,12 @@
    "swim": {
     "code": "ca",
     "why": "Melanotaeniidae: carangiform: the rear third of the body and the tail beat"
+   }
+  },
+  "ram-s-horn-squid": {
+   "swim": {
+    "code": "sq",
+    "why": "Spirulida (Spirulidae): fins ripple along the mantle, the mantle jets, the arms trail"
    }
   },
   "ray": {
@@ -8792,6 +8915,12 @@
     "why": "Brachionichthyidae: fin-driven (ostraciiform/tetraodontiform): the body nearly still, fins and tail scull"
    }
   },
+  "spotted-jellyfish": {
+   "swim": {
+    "code": "me0.2",
+    "why": "Scyphozoa medusa (Mastigiidae): the bell pulses, the bell the top 20% of the model's height (down to its rim, where it stops widening)"
+   }
+  },
   "spotted-lanternfish": {
    "swim": {
     "code": "ca",
@@ -9432,6 +9561,12 @@
     "why": "Anatidae: waddles"
    }
   },
+  "vampire-squid": {
+   "swim": {
+    "code": "oc",
+    "why": "Vampyromorpha (Vampyroteuthidae): the arms wave out from the mantle"
+   }
+  },
   "vapourer-moth": {
    "flight": {
     "code": "f",
@@ -10042,6 +10177,12 @@
    "legless": {
     "code": "la",
     "why": "Anarhichadidae: lateral undulation"
+   }
+  },
+  "wonderpus-octopus": {
+   "swim": {
+    "code": "oc",
+    "why": "Octopoda (Octopodidae): the arms wave out from the mantle"
    }
   },
   "wood-duck": {

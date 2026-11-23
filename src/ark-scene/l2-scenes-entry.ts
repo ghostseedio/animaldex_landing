@@ -42,6 +42,9 @@ const CAST: Array<[string, string, string]> = [
     ["tang", "blue-tang", "coral_reef"],
     ["eel", "european-eel", "river_lake"],
     ["salmon", "atlantic-salmon", "open_ocean"],
+    ["jelly", "moon-jellyfish", "open_ocean"],
+    ["octopus", "common-octopus", "coral_reef"],
+    ["squid", "giant-squid", "open_ocean"],
     ["mamba", "eastern-green-mamba", "grassland"],
     ["sidewinder", "sidewinder", "desert"],
     ["python", "african-rock-python", "grassland"]
@@ -394,6 +397,32 @@ async function mountScenes(el: HTMLElement) {
             swimLine(id, nowS() + 1e6, from, Math.PI / 2, 0.35, -1);
             track(id, 2.2, 1.7, (yaw) => yaw + 0.6, 0);
             return {note: "a European eel in the lake (anguilliform: the whole body waves)", watch: [id], go: () => swimLine(id, nowS(), from, Math.PI / 2, 0.35, -1)};
+        },
+        /** Soft bodies (`swim.ts` softBody): a moon jelly's bell pulse, drifting slowly, the camera level with it. */
+        swim_jelly: () => {
+            const at = site("open_ocean", -2, 10);
+            const id = ids.jelly;
+            const from = {x: at.x - 0.6, z: at.z};
+            swimLine(id, nowS() + 1e6, from, Math.PI / 2, 0.05, -2);
+            // (The camera on the drawn jelly: its depth band, not the pinned height, sets where it drifts.)
+            track(id, 1.3, 1.57, (yaw) => yaw + Math.PI / 2, 0);
+            return {note: "a moon jelly: the bell pulses (a quick contraction, a slow relaxation), the tentacles follow", watch: [id], go: () => swimLine(id, nowS(), from, Math.PI / 2, 0.05, -2)};
+        },
+        swim_octopus: () => {
+            // Not pinned: the octopus where the scene keeps it (on the reef floor by its den), the camera low and to
+            // the side.
+            const id = ids.octopus;
+            track(id, 2.2, 1.25, (yaw) => yaw + Math.PI / 2 - 0.5, 0);
+            return {note: "a common octopus: the arms wave out from the mantle, the tips most", watch: [id]};
+        },
+        swim_squid: () => {
+            const at = site("open_ocean", 10, -10);
+            const id = ids.squid;
+            const from = {x: at.x - 6, z: at.z};
+            lineStart = nowS() + 1e6;
+            swimLine(id, lineStart, from, Math.PI / 2, 0.6, -5);
+            track(id, 16, 1.5, 0, 0, lineAt(from, Math.PI / 2, 0.6));
+            return {note: "a giant squid: the fins ripple along the mantle, the mantle jets once a beat", watch: [id], go: goLine(() => swimLine(id, lineStart, from, Math.PI / 2, 0.6, -5))};
         },
         /** A green mamba crawls across the grass (lateral undulation, no slip). */
         snake_lateral: () => {
