@@ -187,7 +187,9 @@ function ArkLifeHelp({words, bar, chance, children}: {words: ArkLifeHelpWords; b
                 </button>
             </div>
             {open ? (
-                <div id={id} role="note" aria-label={words.button} data-testid="ark-card-life-help-box" className="rows-in mt-1.5 rounded-md border border-line-200 bg-canvas-950/90 px-2.5 py-2">
+                // Fully opaque, in the card's flow (it pushes the rows under it down), and no fade-in: a see-through or
+                // animated box let the card's Talk and action row show through its top lines in the Android app's web view.
+                <div id={id} role="note" aria-label={words.button} data-testid="ark-card-life-help-box" className="relative mt-1.5 rounded-md border border-line-200 bg-[#101512] px-2.5 py-2">
                     <ul className="space-y-1">
                         {lines.map(([key, mark]) => (
                             <li key={key} className="flex items-start gap-2 text-[11.5px] leading-snug text-ink-200">
