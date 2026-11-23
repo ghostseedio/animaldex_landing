@@ -11,13 +11,14 @@ import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {disturbedNow} from "@/ark-scene/defence-moves";
 import {actWindow} from "@/ark-scene/behaviour-group";
+import {flowDebug, flowNow, setFlowServer} from "@/ark-scene/flows/scene-adapter";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group"};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group" | "flow"};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -111,6 +112,12 @@ const SCENES: Record<string, Scene> = {
     gfeast: {zone: "rainforest", hours: 10, kind: "group", cast: [{slug: "northern-pig-tailed-macaque", name: "Northern Pig-tailed Macaque", n: 5}]},
     gbask: {zone: "river_lake", hours: 11, kind: "group", cast: [{slug: "red-eared-slider", name: "Red-eared Slider", n: 5}]},
     gpairs: {zone: "rainforest", hours: 12, kind: "group", cast: [{slug: "blue-fronted-amazon", name: "Blue-fronted Amazon", n: 7}]},
+    // Behaviour flows (docs/ark/behaviour-flows.md 8; `?flows=1` switches them on): pilot kinds eating their engine
+    // background food where the schedule stands them, and a fox's kill from a sample server event.
+    flowdeer: {zone: "grassland", hours: 16.4, kind: "flow", cast: [{slug: "red-deer", name: "Red Deer", n: 3}]},
+    flowsparrow: {zone: "farm_garden", hours: 10, kind: "flow", cast: [{slug: "house-sparrow", name: "House Sparrow", n: 3}]},
+    flowjay: {zone: "woodland", hours: 10, kind: "flow", cast: [{slug: "eurasian-jay", name: "Eurasian Jay", n: 2}]},
+    flowfox: {zone: "grassland", hours: 16.4, kind: "flow", cast: [{slug: "red-fox", name: "Red Fox", n: 2}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]},
     // Decision 434: the dung users at a herd's fresh marks (`dung.ts` dungVisitPose).
@@ -137,6 +144,7 @@ async function main() {
     const params = new URLSearchParams(location.search);
     const scene = SCENES[params.get("scene") ?? "birth"];
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
+    if (params.get("flows") === "1") (globalThis as {__arkFlows?: boolean}).__arkFlows = true;
     if (params.get("grass") === "0") (globalThis as {__arkNoGrass?: boolean}).__arkNoGrass = true;
     const template = fixture.animals[0];
     const day = fixture.voyage.ark_day;
@@ -235,7 +243,24 @@ async function main() {
     const view = (distance: number, at: {x: number; z: number}, polar = 1.15, azimuth = 0.7): ArkCameraView => ({target: {x: at.x, y: Math.max(handle.heightAt(at.x, at.z), 0) + 0.5, z: at.z}, distance, polar, azimuth});
     handle.setView(view(12, at0));
     let closeView: ArkCameraView | null = null;
+    // (Behaviour flows: a sample server kill for the fox scene's first fox, 20 minutes in.)
+    if (scene.kind === "flow" && scene.cast[0].slug === "red-fox") setFlowServer(a, {kills: [{at: t0 + 1200, prey: "Bank Vole"}], version: "harness-kill"});
     const api = {
+        /** Behaviour flows: the first second in [from, to] (s after t0, every `every` s) the animal's flow step is one of `kinds`. */
+        flowFind: (id: string, kinds: string[], from: number, to: number, every = 4) => {
+            for (let s = from; s <= to; s += every) {
+                const now = flowNow(id, t0 + s + 2.1);
+                if (now && kinds.includes(now.kind)) return s;
+            }
+            console.log("[behaviours] flowFind none", JSON.stringify(flowDebug()), JSON.stringify(flowNow(id, t0 + from + 2.1)));
+            return null;
+        },
+        /** Behaviour flows: what the animal's flow says now, and the beat its pose plays (the scene's own, after a `shot`). */
+        flowCaption: (id: string) => {
+            const e = debug.entries().find((x) => x.animal.id === id) as unknown as {sched?: {pose?: {beat?: string; moving?: boolean}}} | undefined;
+            const now = flowNow(id, fake!.date / 1000);
+            return `${now ? `flow: ${now.line}${now.server ? " (server)" : ""}` : "flow: (off)"}   pose: ${e?.sched?.pose?.beat ?? "-"}${e?.sched?.pose?.moving ? " moving" : ""}   card: ${handle.animalStatus?.(id)?.activity ?? "-"}`;
+        },
         /** 3.3 fix (log): a death line's tap, from the island's overview: where the camera goes, after its flight. */
         tapDeath: async (key: string) => {
             handle.setView(view(150, at0, 0.9));

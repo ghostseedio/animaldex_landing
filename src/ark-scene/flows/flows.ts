@@ -70,7 +70,7 @@ export type FlowServer = {
     /** The engine's own near misses (`escaped` events: its prey got away from it): when, and the prey's name. */
     escapes?: ReadonlyArray<{at: number; prey: string}>;
     /** SIG-EVENTS food caches (`signature` food_cache) and the meals from them (`fed` source cache). */
-    caches?: ReadonlyArray<{at: number; recipe: string}>;
+    caches?: ReadonlyArray<{at: number; recipe: string; /** SIG-EVENTS `cache: {food}`: what it stored (its own Field Guide text). */ food?: string}>;
     cacheMeals?: readonly number[];
     /** A kept animal (house, farm, zoo): its keepers' feeding times (epoch s, the scene's feeding rhythm), none when not kept. */
     kept?: {feedings: readonly number[]} | null;
@@ -88,7 +88,15 @@ export type FlowServer = {
     } | null;
 };
 
-export type FlowSubject = {id: string; params: FlowParams; server: FlowServer; /** The island's hour at a moment (0-24). */ hoursAt: (epoch: number) => number};
+export type FlowSubject = {
+    id: string;
+    params: FlowParams;
+    server: FlowServer;
+    /** The island's hour at a moment (0-24). */
+    hoursAt: (epoch: number) => number;
+    /** In the scene: the schedule's own waking hours (its activity as the server stores it), so a flow never sleeps while its body is up. */
+    awake?: (epoch: number) => boolean;
+};
 
 // MARK: Seeds
 
@@ -113,6 +121,7 @@ function sunElevation(hours: number): number {
 }
 
 export function flowAwake(subject: FlowSubject, epoch: number): boolean {
+    if (subject.awake) return subject.awake(epoch);
     return isAwake(subject.params.activity, sunElevation(subject.hoursAt(epoch)));
 }
 
@@ -242,7 +251,7 @@ function buildTick(subject: FlowSubject, tick: number): FlowStep[] {
         if (cache) {
             caches.splice(caches.indexOf(cache), 1);
             t = push("search", t, cache.at, "moving", {detail: p.mode});
-            t = push("cache", t, t + around(random, 40), "still", {detail: p.cache?.method ?? "hide", food: p.foods[0], server: true});
+            t = push("cache", t, t + around(random, 40), "still", {detail: p.cache?.method ?? "hide", food: cache.food ? {eat: cache.food, the: null} : p.foods[0], server: true});
             continue;
         }
         const cacheMeal = cacheMeals.find((m) => m >= t && m - t < 300);

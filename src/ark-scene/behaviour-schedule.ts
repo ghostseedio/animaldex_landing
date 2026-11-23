@@ -53,6 +53,7 @@ import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FL
 import {shakeTotal, waterShakeOf} from "@/ark-scene/water-shake";
 import {commuteCentre, flockTightness, groupIntent, pairSide} from "@/ark-scene/behaviour-group";
 import {coatOf, drawnRecipe, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, pairMeetings, recipeRoostTags, sexLook, sitterIntent, type DrawnRecipe, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
+import {flowsOn, flowSubjectOf, flowTrip} from "@/ark-scene/flows/scene-adapter";
 
 export const SLOT_SECONDS = 80;
 /** The raised perches a group sleeps along in a row or a cluster (sleep lane). */
@@ -2031,7 +2032,9 @@ export function tripAt(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     const slot = slotOf(animal, epochSeconds);
     return remember(memoOf(world, hoursAt, animal).trips, slot, () => {
         const now = intent(world, profile, animal, activity, slot, hoursAt);
-        return tripFor(world, profile, animal, activity, slot, hoursAt, now, previous && previous.slot === slot - 1 ? previous.finish : null);
+        const trip = tripFor(world, profile, animal, activity, slot, hoursAt, now, previous && previous.slot === slot - 1 ? previous.finish : null);
+        // (Behaviour flows, pilot, behind their switch: what it does where it stands, from its flow. `flows/scene-adapter.ts`.)
+        return flowsOn() ? flowTrip(trip, flowSubjectOf(animal, profile.slug, hoursAt, (e) => awakeAt(profile, activity, hoursAt(e), animal.sleep))) : trip;
     });
 }
 

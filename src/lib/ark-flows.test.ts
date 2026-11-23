@@ -122,7 +122,9 @@ test("flows: no fake events: with nothing from the server, only neutral steps an
     forgetFlows();
     const outcome = new Set(["stalk", "attempt", "nearMiss", "catch", "found", "cache", "display", "court", "mate", "build"]);
     for (const slug of Object.keys(P)) {
-        for (const [k, server] of [{}, {fedOn: () => false}, {repro: {inSeason: true, sex: "male" as const, partner: true}}, {repro: {inSeason: true, sex: "female" as const, partner: true}}].entries()) {
+        const cases: Array<Partial<FlowServer>> = [{}, {fedOn: () => false}, {repro: {inSeason: true, sex: "male", partner: true}}, {repro: {inSeason: true, sex: "female", partner: true}}];
+        for (let k = 0; k < cases.length; k++) {
+            const server = cases[k];
             const steps = flowSteps(subject(slug, {...server, version: `fake-${k}`}, `fake-${slug}-${k}`), T0, T0 + 20 * FLOW_TICK_SECONDS);
             const foods = new Set(P[slug].foods.map((f) => f.eat));
             for (const step of steps) {
