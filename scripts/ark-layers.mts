@@ -263,16 +263,10 @@ const NOT_BED = /\b(?:above the (?:sea ?bed|sea ?floor|bottom)|rather than (?:re
 const DEEP_STRICT = /\b(?:deep[- ]sea|deep[- ]water|deep waters|deep ocean|ocean depths|abyss(?:al)?|bathyal|bathypelagic|mesopelagic|midwater|mid-water|twilight zone|hadal|hydrothermal vents?|deep (?:continental slopes?|seafloor|sea floor|marine))\b/i;
 const POND_SURFACE = /\b(?:floats?|floating|dabbl\w*|surface of (?:the )?water|water surface|on open water|swims? on (?:the )?(?:water|surface))\b/i;
 
-/** Fish families whose talking plan, when it says a land body, is overruled (see `depthBand`). */
-const FISH_FAMILIES = /^Cichlidae$/;
-const LAND_PLANS = new Set(["mammal", "quadruped", "reptile", "bird"]);
 function depthBand(row: Row): DepthResult | null {
     if (DEPTH_HOLD[row.slug]) return {held: DEPTH_HOLD[row.slug]};
     if (SEA_ZONES.has(row.zone) && NEVER_ON_WATER_FAMILIES.has(row.family ?? "")) return {held: `taxonomy: ${row.family} (a seabird that never lands on the water: it soars, and sleeps on the wing)`};
-    // (A fish family's talking plan read as a land body is the plans file's error, not the animal: blood-parrot and
-    // flowerhorn cichlids, both "mammal" there, stood on the grass. Their family decides: SPECIES-ANIM-B, 2026-11-24.)
-    const said = plans[row.slug]?.talking_plan ?? null;
-    const talking = FISH_FAMILIES.test(row.family ?? "") && said !== null && LAND_PLANS.has(said) ? "fish" : said;
+    const talking = plans[row.slug]?.talking_plan ?? null;
     const trait = traits.get(row.spid);
     const realm = new Set(trait?.realm ?? []);
     const cls = row.class ?? "";
