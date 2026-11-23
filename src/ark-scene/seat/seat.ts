@@ -153,6 +153,18 @@ const DEAD = 0.012;
 const FALL_AFTER = 0.8;
 /** The most an animal is ever moved (m): past it something else is wrong, and it is left where its own motion has it. */
 const MOST = 60;
+/**
+ * ARK-VANISH (the owner, 2026-11-23: "when i zoom in, animals seem to disappear"): a held animal (on a limb, a frond,
+ * a rock's face) with nothing found under its feet is moved onto a surface beside it only this near (m, or 1.5 of its
+ * length); further, it stays where its own motion has it, and it never falls. The seat runs only once an animal is
+ * drawn near, so a parrot on its limb, a fairy-bluebird on a palm frond, a pipit on a rock's face were carried 5 to 12 m
+ * off (the ground, a shrub) the moment the camera came close: gone from where the viewer was looking.
+ */
+const BESIDE_MOST = 0.5;
+/** ARK-VANISH: `false` (development: `__arkSeatFar = true`) brings back the far move and the fall, to compare. */
+const nearOnly = () => (globalThis as {__arkSeatFar?: boolean}).__arkSeatFar !== true;
+/** ARK-VANISH: held on a surface the scene gave it (a limb, a leaf, a face); one it only calls standing, up in the air, still comes down. */
+const onSurface = (kind: SeatKind) => kind === "perch" || kind === "cling";
 /** How far over a point a rock's top is looked for (m): the biggest boulders. */
 const ROCK_REACH = 12;
 const EASE = 14;
@@ -719,7 +731,9 @@ export class SeatPass {
             s.gap = NaN;
             s.on = "none";
             s.doubt += Math.max(dt, 1 / 60);
-            if (s.doubt >= FALL_AFTER) {
+            // (ARK-VANISH: left where its own motion has it, not brought down.)
+            if (nearOnly() && onSurface(input.kind)) s.tx = s.ty = s.tz = 0;
+            else if (s.doubt >= FALL_AFTER) {
                 s.fell = true;
                 s.fellX = e[12] - s.x;
                 s.fellZ = e[14] - s.z;
@@ -807,14 +821,24 @@ export class SeatPass {
         // Held on something with nothing near under it: a drawn surface beside it first; none, it comes down, once
         // that has lasted (what it is held on may be a moment from being drawn).
         let waiting = false;
+        // (ARK-VANISH: left where its own motion has it: looked at again in half a second, not every few frames.)
+        let left = false;
         // (Not one whose body lies on a closed thing by another part of it than its feet: a frog on a rock's shoulder.)
         const nothing = held && !cling && gap > Math.max(0.1, height) && closedMin > Math.max(0.1, height);
         if (nothing && this.besidesLeft <= 0 && !this.forced && !input.focus) waiting = true;
         else if (nothing) {
             this.besidesLeft--;
             // (Moved onto a surface beside it and still with nothing under it: a sliver. It comes down where it is.)
-            const side = s.sides < 1 ? this.beside(cx, least, cz, length, Math.max(0.1, height), length <= 0.6 ? mask : ROCK | HARD, input.ground) : null;
-            if (side) {
+            const found = s.sides < 1 ? this.beside(cx, least, cz, length, Math.max(0.1, height), length <= 0.6 ? mask : ROCK | HARD, input.ground) : null;
+            // (ARK-VANISH: only a surface close by; none, it stays where its own motion has it, and does not fall.)
+            const side = found && (!nearOnly() || !onSurface(input.kind) || Math.hypot(found.x, found.gap, found.z) <= Math.max(BESIDE_MOST, 1.5 * length)) ? found : null;
+            if (!side && nearOnly() && onSurface(input.kind)) {
+                s.tx = s.ty = s.tz = 0;
+                s.env = NaN;
+                s.doubt = 0;
+                waiting = true;
+                left = true;
+            } else if (side) {
                 s.sides++;
                 s.tx = s.x + side.x;
                 s.ty = s.y - side.gap;
@@ -924,7 +948,7 @@ export class SeatPass {
         }
         const settled = !moved && s.env === s.env && Math.abs(s.env + (s.tx * ax + s.ty * ay + s.tz * az)) <= DEAD && s.x === s.tx && s.y === s.ty && s.z === s.tz;
         s.calm = settled && !moving && s.lean === 0;
-        s.due = this.frame + (waiting ? 4 : settled && s.lean === 0 ? (moving ? 2 : 24 + (Math.abs(Math.round(e[12] * 31 + e[14] * 17)) % 12)) : 1);
+        s.due = this.frame + (waiting ? (left ? 30 : 4) : settled && s.lean === 0 ? (moving ? 2 : 24 + (Math.abs(Math.round(e[12] * 31 + e[14] * 17)) % 12)) : 1);
         return true;
     }
 

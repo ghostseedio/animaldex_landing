@@ -211,20 +211,30 @@ test("seat: a long body through a rock too small to carry it goes out sideways, 
     assert.equal(through.seat.inside, 0, "none of it in the rock at the end");
 });
 
-test("seat: held on a leaf it rests on the leaf; held on nothing it comes down", () => {
+test("seat: held on a leaf it rests on the leaf; held on nothing near, it stays where its own motion has it", () => {
     const top = {nx: 0, ny: 1, nz: 0};
     const onLeaf = seatBody("perch", new Vector3(140, 1.62, 100), {surface: top});
     assert.ok(Math.abs(onLeaf.position.y - 1.5) < 0.014, `on the leaf: ${onLeaf.position.y}`);
     // A body's length to the side of the leaf: onto the leaf beside it, not left in the air.
     const beside = seatBody("perch", new Vector3(140.5, 1.56, 100), {surface: top});
     assert.ok(Math.abs(beside.position.y - 1.5) < 0.014 && Math.abs(beside.position.x - 140) < 0.45, `beside the leaf: ${beside.position.x}, ${beside.position.y}`);
-    // Held 3 m over a tree's crown and 2 m out from its edge (the schedule's limb, on a tree drawn smaller): onto the crown,
-    // not down to the ground.
+    // ARK-VANISH (the owner, 2026-11-23: "when i zoom in, animals seem to disappear"): held 3 m over a tree's crown and
+    // 2 m out from its edge, it is not carried off metres from where the viewer looks at it: it stays on its limb.
     const over = seatBody("perch", new Vector3(174, 8, 100), {surface: top, frames: 240});
-    assert.ok(Math.abs(over.position.y - 5) < 0.014 && over.position.x < 172.1, `beside a crown: ${over.position.x}, ${over.position.y}`);
-    // Nothing anywhere near: down onto the ground.
+    assert.ok(Math.abs(over.position.y - 8) < 0.014 && Math.abs(over.position.x - 174) < 0.014, `carried off its limb: ${over.position.x}, ${over.position.y}`);
+    // Nothing anywhere near: not dropped to the ground either.
     const nothing = seatBody("perch", new Vector3(160, 3, 100), {surface: top});
-    assert.ok(Math.abs(nothing.position.y) < 0.013, `in the air: ${nothing.position.y}`);
+    assert.ok(Math.abs(nothing.position.y - 3) < 0.013 && !nothing.seat.fell, `dropped: ${nothing.position.y}`);
+    // (Development, `__arkSeatFar = true`: the move before ARK-VANISH, onto the crown and down to the ground.)
+    (globalThis as {__arkSeatFar?: boolean}).__arkSeatFar = true;
+    try {
+        const crown = seatBody("perch", new Vector3(174, 8, 100), {surface: top, frames: 240});
+        assert.ok(Math.abs(crown.position.y - 5) < 0.014 && crown.position.x < 172.1, `beside a crown: ${crown.position.x}, ${crown.position.y}`);
+        const down = seatBody("perch", new Vector3(160, 3, 100), {surface: top});
+        assert.ok(Math.abs(down.position.y) < 0.013, `in the air: ${down.position.y}`);
+    } finally {
+        delete (globalThis as {__arkSeatFar?: boolean}).__arkSeatFar;
+    }
     // A walker on the ground under a low leaf (12 cm up, through its body) is not lifted onto it.
     const under = seatBody("stand", new Vector3(150, 0.04, 100));
     assert.ok(Math.abs(under.position.y) < 0.013, `a walker on a leaf: ${under.position.y}`);
@@ -238,10 +248,10 @@ test("seat: on a wall's face it is brought to the face", () => {
     const rotation = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), new Vector3(1, 0, 0));
     const off = seatBody("cling", new Vector3(120.25, 1.5, 100), {surface: {nx: 1, ny: 0, nz: 0}, rotation});
     assert.ok(Math.abs(off.position.x - 120.15) < 0.014, `off the wall: ${off.position.x}`);
-    // A face that is not drawn (nothing within its reach): not left on the air, down onto the ground, upright.
+    // A face that is not drawn (nothing within its reach): ARK-VANISH, left where its own motion has it, not dropped.
     const gone = seatBody("cling", new Vector3(300, 2, 300), {surface: {nx: 1, ny: 0, nz: 0}, rotation, frames: 200});
-    assert.ok(gone.seat.fell, "it knows nothing is drawn there");
-    assert.ok(Math.abs(gone.position.y) < 0.013, `left on the air: ${gone.position.y}`);
+    assert.ok(!gone.seat.fell && gone.seat.on === "none", "it knows nothing is drawn there");
+    assert.ok(Math.abs(gone.position.y - 2) < 0.013, `dropped: ${gone.position.y}`);
 });
 
 test("seat: a rig's hull points are posed by the rows its shader reads", () => {
