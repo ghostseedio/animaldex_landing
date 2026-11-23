@@ -199,7 +199,7 @@ import type {ResolvePose} from "@/ark-scene/collide/resolve";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
 import {awakeAt as scheduleAwakeAt, forgetSchedules, slotOffset, SLOT_SECONDS, groupSpread, homeRadius, maxSlopeOf, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, waterEdgeAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
-import {dayCursor, MOMENT_WINDOW_SECONDS, pickMoment, scheduleFed, scheduleStatus, type DayCursor, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
+import {dayCursor, MOMENT_REPEAT_DEFAULT, MOMENT_REPEAT_SECONDS, MOMENT_WINDOW_SECONDS, pickMoment, scheduleFed, scheduleStatus, type DayCursor, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
 import {scheduleRhythm, type ArkRhythmStatus} from "@/ark-scene/rhythm-status";
 import {ArkSelectionBars} from "@/ark-scene/selection-bars";
 import {arkActivityKey, arkDayWindow, arkEnergy, arkOriginEntry, arkStatusBars, arkStatusLog, arkStatusSignature, type ArkAnimalDay, type ArkAnimalStatus, type ArkRecordNote, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
@@ -2827,6 +2827,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         momentsAt = entries.every((e) => !e.sched || e.sched.wired) ? performance.now() : -Infinity;
         return list;
     };
+    /** When each kind of schedule line was last said (world seconds), so the same kind is not said again too soon. */
+    const momentLastSaid = new Map<string, number>();
     const happening = (after: number | null): {window: number; moments: ArkHappening[]} => {
         const done = Math.floor(worldMs() / 1000 / MOMENT_WINDOW_SECONDS) - 1;
         if (!world || reducedMotion || !scheduleOn) return {window: done, moments: []};
@@ -2844,6 +2846,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const moment = pickMoment(w, subjects, forays);
             const entry = moment ? findEntry(moment.animalId) : null;
             if (!moment || !entry) continue;
+            // (Not the same kind of line again so soon: "heading home" × 6 at dusk reads like a machine.)
+            const repeatKey = moment.kind === "doing" ? `doing:${moment.activity}` : moment.kind;
+            const lastSaid = momentLastSaid.get(repeatKey);
+            if (lastSaid !== undefined && moment.at - lastSaid < (MOMENT_REPEAT_SECONDS[moment.kind] ?? MOMENT_REPEAT_DEFAULT)) continue;
+            momentLastSaid.set(repeatKey, moment.at);
             const a = entry.animal;
             // (One animal starting a recipe its species has its own sentence for: said in those words.)
             const sentence = moment.recipe && moment.count <= 1 ? signatureLineOf(a.model_slug, moment.recipe) : null;
