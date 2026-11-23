@@ -5173,7 +5173,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const waterTop = surfaceHere(at.x, at.z);
         // (Lane MA3: anything that swims has a band while its schedule has it in the water, a coot, an otter, a crocodile
         // as well as a duck: `swimDepth`; a water species its own band, with its kind's float line.)
-        const band = (entry.swim ??= entry.place.micro ? null : swimDepth(entry.animal.model_slug, entry.animal.zone));
+        const ownBand = (entry.swim ??= entry.place.micro ? null : swimDepth(entry.animal.model_slug, entry.animal.zone));
+        // (Development only: a pinned crevice dweller, `pinShared`, swims its pinned path, out of its hole.)
+        const band = ownBand?.crevice && sharedPins.size > 0 && sharedPins.has(entry.animal.id) ? {...ownBand, crevice: false} : ownBand;
         // Into the water or out of it (lane MA3, the movement audit's goose): down the bank it settles from standing to its
         // float line by the slide's progress, nose down into the water; out of it, the reverse, nose up. Its rig plays
         // the entry or exit clip by the same progress (`rigFor`).
@@ -5436,7 +5438,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (up a post, along the beams the way its kind travels, back down: `islands/town/zoo-swing.ts`, the shared clock's).
         const swing = island && !entry.visitor && !tank && !room && !reducedMotion && !entry.act && island.held(entry.animal.id) ? island.zooSwing(entry.animal, entry.length, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, !entry.state.asleep) : null;
         if (swing) return {x: swing.x, z: swing.z, base: swing.y, yaw: Math.atan2(swing.tx, swing.tz), pitch: 0, roll: 0, afloat: true, surface: swing};
-        if (entry.depth && oceanRoams(entry)) return oceanPose(entry, entry.depth, modelHeight); // p2 (ocean)
+        // (Development only: a pinned animal, `pinShared`, goes where its pin says, not round its ocean loop or held in its hole.)
+        const pinned = sharedPins.size > 0 && sharedPins.has(entry.animal.id) && scheduled(entry) && Boolean(entry.sched!.pose);
+        if (entry.depth && !pinned && oceanRoams(entry)) return oceanPose(entry, entry.depth, modelHeight); // p2 (ocean)
         if (place.hamlet && !entry.visitor) {
             // A hamlet resident: on its spot when out, walking out of its door or back in, else at its door (drawn only when it is yours).
             // Out of doors, the collisions have the last word (out of the props, eased off the others: `collide/`).
@@ -5466,7 +5470,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return {x: host.middle.x + place.host.dx, z: host.middle.z + place.host.dz, base, yaw, pitch: 0, roll: 0, afloat: rider};
             }
         }
-        if (scheduled(entry) && entry.sched!.pose && !(entry.depth && waterMotion(entry.depth) === "hole")) {
+        if (scheduled(entry) && entry.sched!.pose && (pinned || !(entry.depth && waterMotion(entry.depth) === "hole"))) {
             const at = fromSchedule(entry, modelHeight);
             // Part C: a zoo animal never leaves its enclosure (the mask is its hard bound, whatever its schedule's route).
             if (island) island.bound(entry.animal.id, at);
@@ -12103,7 +12107,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!entry) return null;
             const ground = Math.max(entry.place.ground, 0);
             // p2 (ocean): one out in the open ocean not drawn yet is where its loop has it now, not at its old place.
-            const sea = !entry.middle && entry.depth && oceanRoams(entry) ? oceanFix(entry.animal, entry.length, clockNow()) : null;
+            const sea = !entry.middle && entry.depth && !sharedPins.has(entry.animal.id) && oceanRoams(entry) ? oceanFix(entry.animal, entry.length, clockNow()) : null;
             if (sea) return {x: sea.x, y: ARK_ENVIRONMENT.seaLevel.value - 4, z: sea.z, ground: 0, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: sea.yaw};
             // (Out of the picture, it is not drawn: where its act poses it, else where its day last had it, else its place.)
             const posed = entry.act && !entry.act.hidden ? {x: entry.act.x, y: entry.act.base, z: entry.act.z} : entry.sched?.pose ?? null;
