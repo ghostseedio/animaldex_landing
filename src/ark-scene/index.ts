@@ -109,7 +109,7 @@ import {floatOver} from "@/ark-scene/water-float"; // p3 (zoofix)
 import {breathAt, depthSeed, fitInWater, floatPitch, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, waterSurfaceAt, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {tripBreath} from "@/ark-scene/breath-trip";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
-import {leapAt, leapBoutsIn, leapPose, leapShown, leapSplashes, type LeapStyle} from "@/ark-scene/water-leaps";
+import {leapAt, leapBoutsIn, leapPose, leapShown, leapSplashes, sailTail, tailEnd, type LeapBody, type LeapStep, type LeapStyle} from "@/ark-scene/water-leaps";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
 import {ARK_SCENE_MODULES, type ArkSceneModule} from "@/ark-scene/scene-modules";
@@ -665,6 +665,8 @@ type Entry = {
     wander?: Wander | null;
     /** A leaper in the air: how far across (0…1), else 0. */
     leapK?: number;
+    /** SEA-VISIBLE: the leap out of the water it is in this frame (`water-leaps.ts`), or null. */
+    leapStep?: LeapStep | null;
     /** An underground animal out of its burrow: how far through the peek (0…1), else -1. */
     peek?: number;
     /** A small animal's crawl once its rig has driven it (`crawlStep`): where along, which way, the pause left, its half-turn, its speed (m/s). */
@@ -6551,7 +6553,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             stepDen(entry, dt);
             // Loops (a swimmer's, a flyer's) slow almost to a stop asleep.
             const plan = model?.behaviour?.plan ?? "";
-            const pace = 1 - 0.85 * entry.rest;
+            // SEA-VISIBLE: the leap out of the water it is in now (its kind's own text; seeded by its id and the engine's
+            // tick), worked out once a frame for its culling, its pose and the camera. A sail holds it where it is: its
+            // loop all but stops (drifting in the wind) until it swims on.
+            entry.leapStep = !reducedMotion && !entry.act && !entry.moment && !entry.visitor && !entry.state.asleep && leapShown(slug) ? leapAt(entry.animal.id, slug, entry.trueLength, epochNow) : null;
+            const pace = (1 - 0.85 * entry.rest) * (entry.leapStep?.style === "sail" ? 0.04 : 1);
             // Its speed sets the pace: a tuna laps the reef, a turtle drifts.
             // (ARK-CONTACT: a sea star or an urchin creeps on the bed, centimetres a minute; a sessile one keeps still.)
             const creep = entry.depth && waterMotion(entry.depth) === "walk" ? benthicCreep(behaviourProfile(slug, plan)) : null;
@@ -6613,6 +6619,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (An act under the water, a sea kind's birth on its seabed: at its depth too, not at the surface, or the view
             // from down there culls it. REAL-REPRODUCTION.)
             position.set(where.x, where.water || (entry.act && where.base < -0.02) ? where.base : Math.max(where.base, 0), where.z);
+            // SEA-VISIBLE: a leap is culled and loaded where it is drawn, out over the water and a glide's run on (the open-ocean
+            // flyingfish, culled at the swim it had left behind, vanished as it broke out, even chosen).
+            const leapNow = entry.leapStep && where.water?.motion === "swim" ? entry.leapStep : null;
+            if (leapNow && where.water) {
+                const shape = leapPose(leapNow, epochNow - leapNow.from, where.base, where.water.surface ?? ARK_ENVIRONMENT.seaLevel.value, modelHeight, entry.length, entry.length / Math.max(entry.trueLength, 0.01));
+                position.set(where.x + Math.sin(where.yaw) * shape.ahead, Math.max(where.base, shape.base), where.z + Math.cos(where.yaw) * shape.ahead);
+            }
             const distance = cameraPosition.distanceTo(position);
             // 3.3 batch (E): bubbles from an air-breather's dive and a fast swimmer's wake, near the camera under the sea.
             if (underwater && seaLook && where.water && distance < 28) seaLook.swimmer(entry.animal.id, where.x, where.base + modelHeight * 0.7, where.z, where.water.breath, entry.length, seaLookNow);
@@ -6815,6 +6828,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (entry.ride?.on) rideLate(entry, where);
             // (Grounding: the pose's own base before the offsets below, an idle's lift, a sleeper's drop, a den, a gait's bob.)
             const poseBase = where.base;
+            // SEA-VISIBLE: a sail's flukes out of the water (their middle, and how far into the hold): its card, its ring and the camera's aim.
+            let sailShown: {x: number; y: number; z: number; k: number} | null = null;
             const level = entry.level;
             const animal = entry.animal;
             const dim = mineOnly && !animal.mine ? 1 : 0;
@@ -6845,13 +6860,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // ARK-FISH: a leap out of the water (only a kind whose own text says it leaves the water: `water-leaps.ts`),
                 // laid over its swim at the height it is drawn at. Seeded by its id and the engine's tick: every viewer
                 // sees the same leap. Behaviour only: nothing is caught, logged as a meal or changed in its bars.
-                if (where.water.motion === "swim" && !reducedMotion && !entry.act && !entry.moment && !entry.visitor && !entry.state.asleep && leapShown(animal.model_slug)) {
+                if (where.water.motion === "swim" && entry.leapStep) {
                     const epoch = worldMs() / 1000;
-                    const step = leapAt(animal.id, animal.model_slug, entry.trueLength, epoch);
+                    const step = entry.leapStep;
                     if (step) {
                         const drawnLength = entry.length * sizeUp;
                         const surface = where.water.surface ?? ARK_ENVIRONMENT.seaLevel.value;
-                        const leap = leapPose(step, epoch - step.from, where.base, surface, modelHeight, drawnLength, drawnLength / Math.max(entry.trueLength, 0.01));
+                        // (A sail: where its tail is as drawn, so its flukes clear the surface by a quarter of its length.)
+                        const body = step.style === "sail" && model ? leapBodyOf(model, animal.model_slug, candidate.rig ? "rig" : level === "far" ? "far" : "near", modelHeight / Math.max(model.height, 1e-6)) : undefined;
+                        const leap = leapPose(step, epoch - step.from, where.base, surface, modelHeight, drawnLength, drawnLength / Math.max(entry.trueLength, 0.01), body);
+                        if (body && leap.hold > 0) {
+                            const tip = sailTail({base: leap.base, pitch: leap.pitch, yaw: where.yaw}, body);
+                            sailShown = {x: where.x + tip.dx, y: (surface + Math.max(tip.y, surface)) / 2, z: where.z + tip.dz, k: leap.hold};
+                        }
                         where.base = leap.base;
                         where.pitch = leap.pitch;
                         where.roll += leap.roll;
@@ -6989,6 +7010,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const surface = where.surface;
             if (surface) entry.middle = (entry.middle ?? new Vector3()).set(where.x + surface.nx * modelHeight / 2, where.base + surface.ny * modelHeight / 2, where.z + surface.nz * modelHeight / 2);
             else entry.middle = (entry.middle ?? new Vector3()).set(where.x, where.base + lift + modelHeight / 2, where.z);
+            // (SEA-VISIBLE: a sailing whale's middle is what shows of it, its flukes over the water, as the hold comes in.)
+            if (sailShown) entry.middle.lerp(leapAimAt.set(sailShown.x, sailShown.y, sailShown.z), sailShown.k);
             // (ARK-SEAT: where it is drawn: its seat's offset on its middle too, for its label, its ring and the camera.)
             if (entry.seat && !seat.off) entry.middle.set(entry.middle.x + entry.seat.x, entry.middle.y + entry.seat.y, entry.middle.z + entry.seat.z);
             // What it leaves behind, and (sound on) its calls (`liveliness-scene.ts`); the reactive layer's alarm when it has one.
@@ -8557,7 +8580,31 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      */
     /** The animal last framed under a lake's or the shallows' surface by a selection (`swimmerFrame`'s `under`). */
     let framedUnder: string | null = null;
+    /** SEA-VISIBLE: a model's origin over its base and its tail's tip behind the origin (m as drawn at `scale`), for a sail. */
+    const leapBodies = new WeakMap<object, {tail: number; tailAt: 1 | -1}>();
+    const leapAimAt = new Vector3();
+    /** The chosen animal's leap the camera last came up for (its id and the leap's start). */
+    let leapFramed: string | null = null;
+    const leapBodyOf = (model: SpeciesModel, slug: string, level: "near" | "far" | "rig", scale: number): LeapBody => {
+        // (The geometry it is drawn with: its rig's, or its model's.)
+        const geometry = (level === "rig" ? rigs.get(slug)?.geometry : null) ?? model.near?.geometry ?? model.far?.geometry;
+        let known = geometry ? leapBodies.get(geometry) : undefined;
+        const position = geometry?.getAttribute("position");
+        if (geometry && !known && position) {
+            const flat = new Float32Array(position.count * 3);
+            for (let i = 0; i < position.count; i++) {
+                flat[i * 3] = position.getX(i);
+                flat[i * 3 + 1] = position.getY(i);
+                flat[i * 3 + 2] = position.getZ(i);
+            }
+            known = tailEnd(flat);
+            leapBodies.set(geometry, known);
+        }
+        return {pivotUp: -groundedLevelBase(slug, level, model.minY) * scale, tail: (known?.tail ?? model.bodyLength / 2) * scale, tailAt: known?.tailAt ?? -1};
+    };
     const swimmerFrame = (entry: Entry): {target: () => Vector3; distance: number; polar: number; small: boolean; under?: true} | null => {
+        // (SEA-VISIBLE: not while it is out of the water, a sail or a leap: then it is framed from over the surface.)
+        if (entry.leapStep && entry.leapStep.style !== "roll") return null;
         const small = entry.trueLength < 0.3;
         const m = middleNow(entry);
         if ((atSeaOf(entry) || entry.depth?.home === "coast") && m.y - entry.drawnHeight / 2 < -0.3) {
@@ -8710,7 +8757,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // Face to face: low, near, from three-quarters in front, where its mouth can be seen.
                 // A visitor is seen from along the beach, with the jetty beside it rather than under the camera.
                 if (entry.length < 0.3) controls.minDistance = MICRO_MIN_DISTANCE;
-                fly(target, Math.max(entry.length < 0.3 ? meetDistance(entry.length, width / Math.max(height, 1), FOV) : 3.5 + entry.length * 2, cardFit(entry)), 1.6, 1.26, (entry.yawNow ?? entry.place.yaw) + 0.35);
+                // (SEA-VISIBLE: one out of the water, a sail or a glide, square to its side and low over the water: the flukes
+                // held up, the glide's run across the view.)
+                const outOfWater = Boolean(entry.leapStep && entry.leapStep.style !== "roll");
+                fly(target, Math.max(entry.length < 0.3 ? meetDistance(entry.length, width / Math.max(height, 1), FOV) : 3.5 + entry.length * 2, cardFit(entry)), 1.6, outOfWater ? 1.38 : 1.26, (entry.yawNow ?? entry.place.yaw) + (outOfWater ? Math.PI / 2 : 0.35));
                 framedOnGround = entry.animal.id;
                 follow();
                 return;
@@ -11172,6 +11222,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             spherical.radius = easeToward(spherical.radius, pairNow.distance, frameDt, 1.5);
             camera.position.copy(controls.target).add(offset.setFromSpherical(spherical));
             lastTracked = null;
+        }
+        // SEA-VISIBLE: the chosen animal begins a sail or a glide while the camera is under the sea with it: the camera comes
+        // up over the surface to it (its close-up from above the water, `swimmerFrame`), once a leap. From under the sea
+        // nothing of a whale's held-up flukes or a flyingfish's glide shows.
+        const leaping = selectedId && !followed && !pairNow && !flight && pointers === 0 ? findEntry(selectedId)?.leapStep : null;
+        if (leaping && (leaping.style === "sail" || leaping.style === "glide") && underwater && leapFramed !== `${selectedId}|${leaping.from}`) {
+            leapFramed = `${selectedId}|${leaping.from}`;
+            flyToChosen(selectedId!, true);
         }
         // Otherwise a selected animal that moves (a swimmer's loop) is kept in view.
         const tracked = selectedId && !followed && !pairNow ? findEntry(selectedId)?.middle : null;

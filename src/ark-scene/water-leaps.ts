@@ -61,11 +61,25 @@ export type LeapStep = {
     turns: number;
     /** A glide's run over the water (m, true size). */
     run: number;
+    /**
+     * A glide's tail-tap (s from `from`; 0 for none): half way along it drops to the water, the long lower lobe of its tail
+     * in it, sculls and is off again on the same spread pectorals (SEA-VISIBLE).
+     */
+    tap: number;
     /** The first of its bout (the live log says a bout once). */
     first: boolean;
 };
 
 const G = 9.81;
+/**
+ * A flyingfish's glide (SEA-VISIBLE; estimates, flagged): it leaves the water at about 10 m/s and glides low, about a metre
+ * over it (Davenport 1994, "How and why do flying fish fly?", Rev. Fish Biol. Fish. 4: 184-214); a glide can be stretched
+ * by "taxiing", the lower lobe of the tail beating in the water while the body is held out (its stored trait: "Lower lobe
+ * of the tail fin longer than the upper").
+ */
+export const GLIDE_SPEED = 10;
+export const GLIDE_BURST = 0.3;
+export const GLIDE_TAP = 0.5;
 /** Up from its depth to the surface (a burst of speed), and down again after re-entry (s). */
 const RISE = 1.6;
 const SINK = 1.1;
@@ -108,28 +122,32 @@ function shape(style: LeapStyle, length: number, random: () => number): Omit<Lea
         case "falls": {
             const apex = Math.min(Math.max(L * 0.9, 0.35), 2.5) * jitter;
             const air = airTime(apex);
-            return {apex, out: RISE, back: RISE + air, turns: 0, run: 0};
+            return {apex, out: RISE, back: RISE + air, turns: 0, run: 0, tap: 0};
         }
         case "twist":
         case "spin": {
             const apex = Math.min(Math.max(L * (style === "spin" ? 1.4 : 1.1), 0.8), 3) * jitter;
             const air = airTime(apex);
-            return {apex, out: RISE, back: RISE + air, turns: style === "spin" ? 2 + Math.floor(random() * 3) : 0.5 + random() * 0.5, run: 0};
+            return {apex, out: RISE, back: RISE + air, turns: style === "spin" ? 2 + Math.floor(random() * 3) : 0.5 + random() * 0.5, run: 0, tap: 0};
         }
         case "glide": {
-            // "commonly for tens of metres": 10–40 m at about 10 m/s, just over the water.
+            // "commonly for tens of metres": 10–40 m at about 10 m/s, low over the water (half a metre to a metre and a
+            // bit), one tail-tap on the way: out, a long glide, the tap, a shorter glide on, back in.
             const run = 10 + random() * 30;
-            const air = run / 10;
-            return {apex: Math.max(L * 1.5, 0.3), out: RISE, back: RISE + air, turns: 0, run};
+            const gliding = run / GLIDE_SPEED;
+            const first = gliding * (0.55 + random() * 0.15);
+            const apex = Math.min(Math.max(L * 4, 0.5), 1.2) * jitter;
+            const tap = RISE + GLIDE_BURST + first;
+            return {apex, out: RISE, back: tap + GLIDE_TAP + (gliding - first), turns: 0, run, tap};
         }
         case "roll": {
             // Its back breaks the surface as it turns over: no air under it.
-            return {apex: 0, out: RISE, back: RISE + 1.2 + random() * 0.6, turns: 0.25 + random() * 0.25, run: 0};
+            return {apex: 0, out: RISE, back: RISE + 1.2 + random() * 0.6, turns: 0.25 + random() * 0.25, run: 0, tap: 0};
         }
         case "sail": {
             // "for long periods": one to four minutes, flukes up.
             const hold = 60 + random() * 180;
-            return {apex: 0, out: 6, back: 6 + hold, turns: 0, run: 0};
+            return {apex: 0, out: 6, back: 6 + hold, turns: 0, run: 0, tap: 0};
         }
     }
 }
@@ -194,7 +212,94 @@ export type LeapPose = {
     ahead: number;
     /** Out of the water now (its splash rings start at `out` and `back`). */
     airborne: boolean;
+    /** How far into a sail's hold (0…1): the camera and its card then frame what is out of the water. */
+    hold: number;
 };
+
+/**
+ * The body as drawn, for a sail: its model origin over its base, its tail's tip from the origin along its length (m), and
+ * which end its tail is at (-1: -z, as the scene's swimmers face +z; +1: a model made facing the other way).
+ */
+export type LeapBody = {pivotUp: number; tail: number; tailAt: 1 | -1};
+
+/**
+ * Which end of a model its tail is at, from its shape: the narrower of the two bands 15–30% in from either end (a whale's
+ * or a fish's tail stock against its head). Positions as x, y, z triples, z its length.
+ */
+export function tailEnd(positions: ArrayLike<number>): {tailAt: 1 | -1; tail: number} {
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let i = 2; i < positions.length; i += 3) {
+        lo = Math.min(lo, positions[i]);
+        hi = Math.max(hi, positions[i]);
+    }
+    const span = Math.max(hi - lo, 1e-6);
+    let back = 0;
+    let front = 0;
+    for (let i = 0; i + 2 < positions.length; i += 3) {
+        const u = (positions[i + 2] - lo) / span;
+        const wide = Math.abs(positions[i]);
+        if (u > 0.15 && u < 0.3) back = Math.max(back, wide);
+        else if (u > 0.7 && u < 0.85) front = Math.max(front, wide);
+    }
+    return front < back ? {tailAt: 1, tail: Math.max(hi, 0)} : {tailAt: -1, tail: Math.max(-lo, 0)};
+}
+
+/** Up out of the water a sail holds the tail (m over the surface, its tip): the tail stock and the flukes, a quarter of its length. */
+export const SAIL_TAIL_OUT = 0.26;
+/** Head down, near upright (rad, nose down). */
+export const SAIL_PITCH = 1.3;
+
+/** Where a sailing body's tail tip is (relative to its x, z; world up), its pose's origin at `base + pivotUp`. */
+export function sailTail(pose: {base: number; pitch: number; yaw: number}, body: LeapBody): {dx: number; dz: number; y: number} {
+    const along = body.tailAt * body.tail * Math.cos(pose.pitch);
+    return {dx: along * Math.sin(pose.yaw), dz: along * Math.cos(pose.yaw), y: pose.base + body.pivotUp - body.tailAt * body.tail * Math.sin(pose.pitch)};
+}
+
+/** A glide's beats (s after it breaks out), with its height over the water (a share of its apex), pitch and speed share. */
+function glideBeats(step: LeapStep): Array<[number, number, number, number]> {
+    const first = step.tap - step.out - GLIDE_BURST;
+    const second = step.back - step.tap - GLIDE_TAP;
+    const b = GLIDE_BURST;
+    // [time, height share (-1: half under), pitch (nose down +), speed share]
+    return [
+        [0, -1, -0.55, 1],
+        [b, 1, -0.12, 1],
+        [b + first * 0.5, 0.85, -0.04, 0.97],
+        [b + first, 0.25, -0.02, 0.92],
+        // The tap: down to the water, nose up, the lower lobe in it, sculling.
+        [b + first + GLIDE_TAP * 0.35, -0.35, -0.38, 0.6],
+        [b + first + GLIDE_TAP, 0.15, -0.3, 0.75],
+        [b + first + GLIDE_TAP + second * 0.3, 0.7, -0.06, 0.95],
+        [b + first + GLIDE_TAP + second * 0.85, 0.3, 0.02, 0.9],
+        // Back in: the fins folded, nose first.
+        [b + first + GLIDE_TAP + second, -1, 0.45, 0.8]
+    ];
+}
+
+/** A glide's height share, pitch and how far along (m, true) `t` s after it breaks out. */
+function glideAt(step: LeapStep, t: number): {height: number; pitch: number; ahead: number} {
+    const beats = glideBeats(step);
+    let ahead = 0;
+    for (let i = 1; i < beats.length; i++) {
+        const [t0, h0, p0, v0] = beats[i - 1];
+        const [t1, h1, p1, v1] = beats[i];
+        const span = Math.max(t1 - t0, 1e-6);
+        if (t <= t1 || i === beats.length - 1) {
+            const k = clamp01((t - t0) / span);
+            const e = ease(k);
+            ahead += GLIDE_SPEED * (v0 * k + (v1 - v0) * k * k * 0.5) * span;
+            return {height: lerp(h0, h1, e), pitch: lerp(p0, p1, e), ahead};
+        }
+        ahead += GLIDE_SPEED * (v0 + v1) * 0.5 * span;
+    }
+    return {height: -1, pitch: 0, ahead};
+}
+
+/** How far a glide carries it in all (m, true): where it is when back in. */
+export function glideRun(step: LeapStep): number {
+    return glideAt(step, step.back - step.out).ahead;
+}
 
 const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 const clamp01 = (t: number) => Math.min(Math.max(t, 0), 1);
@@ -204,43 +309,52 @@ const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
  * Its pose `t` seconds into a leap, laid over where it swims (`swimBase`, its base there), at the surface `surface`,
  * drawn `height` tall and `length` long, `scale` its drawn size over its true size.
  */
-export function leapPose(step: LeapStep, t: number, swimBase: number, surface: number, height: number, length: number, scale: number): LeapPose {
+export function leapPose(step: LeapStep, t: number, swimBase: number, surface: number, height: number, length: number, scale: number, body?: LeapBody): LeapPose {
     const half = surface - height * 0.5;
     const apex = step.apex * scale;
     if (step.style === "sail") {
-        // Head down, flukes held up in the wind: in over `out` s, held, out over the sink.
+        // Head down, near upright, the tail stock and flukes held up out of the water in the wind, the body just under:
+        // in over `out` s, held, out over the sink. (SEA-VISIBLE: the drawn tail's tip a quarter of its length over the
+        // surface, from where its model's origin and tail are; nothing showed with the old fixed depth.)
         const k = t < step.out ? ease(t / step.out) : t < step.back ? 1 : 1 - ease(clamp01((t - step.back) / Math.max(step.to - step.from - step.back, 0.1)));
-        const sway = Math.sin(t * 0.35) * 0.04;
-        return {base: lerp(swimBase, surface - height * 0.5 - length * 0.42, k), pitch: lerp(0, 1.25 + sway, k), roll: 0, ahead: 0, airborne: false};
+        const sway = Math.sin(t * 0.35) * 0.05;
+        // (Tail up: nose down for a model whose tail is at -z, the other way for one made facing back.)
+        const pitch = (SAIL_PITCH + sway) * (body?.tailAt === 1 ? -1 : 1);
+        const held = body ? surface + SAIL_TAIL_OUT * length - body.pivotUp - body.tail * Math.abs(Math.sin(pitch)) : surface - height * 0.5 - length * 0.3;
+        return {base: lerp(swimBase, held, k), pitch: lerp(0, pitch, k), roll: Math.sin(t * 0.21) * 0.06 * k, ahead: 0, airborne: false, hold: k};
     }
     if (t < step.out) {
         // Up to the surface, nose up.
         const k = ease(t / step.out);
-        return {base: lerp(swimBase, half, k), pitch: -0.75 * k, roll: 0, ahead: 0, airborne: false};
+        return {base: lerp(swimBase, half, k), pitch: -0.75 * k, roll: 0, ahead: 0, airborne: false, hold: 0};
     }
     if (t < step.back) {
         const k = (t - step.out) / (step.back - step.out);
         if (step.style === "roll") {
             // Its back breaks the surface and it turns over on its side.
             const arc = Math.sin(Math.PI * k);
-            return {base: half + height * 0.35 * arc, pitch: lerp(-0.4, 0.4, k), roll: Math.PI * 2 * step.turns * ease(k), ahead: 0, airborne: false};
+            return {base: half + height * 0.35 * arc, pitch: lerp(-0.4, 0.4, k), roll: Math.PI * 2 * step.turns * ease(k), ahead: 0, airborne: false, hold: 0};
         }
         if (step.style === "glide") {
-            // Out, then level just over the water on its wings, down again at the end.
-            const up = Math.min(k / 0.12, 1, (1 - k) / 0.12);
-            return {base: half + (apex + height * 0.5) * ease(up), pitch: k < 0.12 ? -0.5 * (1 - k / 0.12) : k > 0.88 ? 0.4 * ((k - 0.88) / 0.12) : 0, roll: Math.sin(k * 9) * 0.06, ahead: step.run * scale * k, airborne: true};
+            // Burst out, a long low glide on its spread pectorals, the tail-tap (down to the water, sculling, off again),
+            // a shorter glide on, back in nose first (`glideBeats`).
+            const g = glideAt(step, t - step.out);
+            const base = g.height < 0 ? lerp(surface, half, -g.height) : surface + apex * g.height;
+            return {base, pitch: g.pitch, roll: Math.sin((t - step.out) * 2.3) * 0.05, ahead: g.ahead * scale, airborne: g.height > 0, hold: 0};
         }
         // The arc: its middle along a parabola through its apex; nose up at the start, down at the end.
         const arc = 4 * k * (1 - k);
-        return {base: half + (apex + height * 0.55) * arc, pitch: lerp(-0.9, 0.9, k), roll: Math.PI * 2 * step.turns * k, ahead: 0, airborne: true};
+        return {base: half + (apex + height * 0.55) * arc, pitch: lerp(-0.9, 0.9, k), roll: Math.PI * 2 * step.turns * k, ahead: 0, airborne: true, hold: 0};
     }
     // Back under and down to its depth (a glide's run eased away under water).
     const k = ease(clamp01((t - step.back) / Math.max(step.to - step.from - step.back, 0.1)));
-    return {base: lerp(half, swimBase, k), pitch: lerp(step.style === "roll" ? 0.4 : 0.8, 0, k), roll: 0, ahead: step.style === "glide" ? step.run * scale * (1 - k) : 0, airborne: false};
+    return {base: lerp(half, swimBase, k), pitch: lerp(step.style === "roll" ? 0.4 : step.style === "glide" ? 0.45 : 0.8, 0, k), roll: 0, ahead: step.style === "glide" ? glideRun(step) * scale * (1 - k) : 0, airborne: false, hold: 0};
 }
 
 /** When its splashes come (s from `from`): breaking out and coming back in. A sail and a roll only stir the surface. */
 export function leapSplashes(step: LeapStep): number[] {
     if (step.style === "sail") return [step.out];
+    // (A glide's tail-tap stirs the water too: its lobe in it.)
+    if (step.style === "glide" && step.tap > 0) return [step.out, step.tap + GLIDE_TAP * 0.3, step.back];
     return [step.out, step.back];
 }
