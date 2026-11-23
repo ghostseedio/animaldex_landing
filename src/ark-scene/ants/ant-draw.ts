@@ -204,7 +204,8 @@ export class AntColonies {
 
     /** The record's colony ants (each one's kind, place and the engine's hunger): colonies rebuilt when they change. */
     setMembers(members: readonly AntMember[]) {
-        const key = members.map((m) => `${m.id}:${m.hungry ? 1 : 0}:${Math.round(m.x)}:${Math.round(m.z)}`).sort().join(",");
+        // (Membership and hunger only: a member walking about does not rebuild its colony or move the nest.)
+        const key = members.map((m) => `${m.id}:${m.hungry ? 1 : 0}`).sort().join(",");
         if (key === this.membersKey) return;
         this.membersKey = key;
         for (const c of this.colonies) this.dropColony(c);
@@ -268,10 +269,14 @@ export class AntColonies {
             this.group.remove(c.nestMesh);
             c.nestMesh.traverse((o) => (o as Mesh).geometry?.dispose());
         }
-        for (const p of Array.from(c.paths.values())) if (p.ribbon) {
-            this.group.remove(p.ribbon);
-            p.ribbon.geometry.dispose();
-        }
+        for (const p of Array.from(c.paths.values())) if (p.ribbon) this.dropRibbon(p.ribbon);
+        c.paths.clear();
+    }
+
+    private dropRibbon(ribbon: Mesh) {
+        this.group.remove(ribbon);
+        ribbon.geometry.dispose();
+        if (ribbon.material !== this.ribbonMaterialCleared) (ribbon.material as MeshStandardMaterial).dispose();
     }
 
     /** How near the camera may come over a colony (a few ant-lengths), or 4 (the usual) away from them. */
@@ -442,10 +447,7 @@ export class AntColonies {
             // (Old trails' lines dropped: a colony keeps a handful.)
             if (c.paths.size > 6) {
                 const [oldKey, old] = c.paths.entries().next().value as [string, {path: Path; ribbon: Mesh | null}];
-                if (old.ribbon) {
-                    this.group.remove(old.ribbon);
-                    old.ribbon.geometry.dispose();
-                }
+                if (old.ribbon) this.dropRibbon(old.ribbon);
                 c.paths.delete(oldKey);
             }
         }
