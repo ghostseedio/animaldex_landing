@@ -969,11 +969,18 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
             const a = turn + (k / n) * Math.PI * 2;
             const x = spot.x + Math.cos(a) * d;
             const z = spot.z + Math.sin(a) * d;
-            if (!nav.fits(x, z, r, slope)) continue;
+            // (The cheap checks first, the same answer: a point no clearer of the others than the best so far, or outside its
+            // keep box, is never asked whether its body fits there. The fit's ground and collider look-ups were most of the
+            // safari close-up's schedule time with the rings out to 8.4 m.)
+            let clear = 0;
+            if (beds) {
+                clear = Infinity;
+                for (const b of beds) clear = Math.min(clear, Math.hypot(x - b.x, z - b.z) - own - b.reach);
+            }
+            if (clear < 0 && best && clear <= best.clear) continue;
             // (Penned: inside its keep box, never in the strip behind a trough by the rails.)
             if (keep && !inKeep(keep, x, z)) continue;
-            const clear = beds ? Math.min(...beds.map((b) => Math.hypot(x - b.x, z - b.z) - own - b.reach)) : 0;
-            if (clear < 0 && best && clear <= best.clear) continue;
+            if (!nav.fits(x, z, r, slope)) continue;
             // (The way it came in, from the spot: never past a fence to its far side.)
             if (!nav.runClear({x: spot.x, z: spot.z}, {x, z}, 0.01)) continue;
             if (clear >= 0) return {...spot, x, y: topAt(world, x, z), z};
@@ -2289,7 +2296,7 @@ function placeShadow(world: ScheduleWorld, animal: ScheduleAnimal, slot: number,
     const avoid = ground && world.nav.colliders ? herdAvoid(world, group.profile, animal, slot, hoursAt) : [];
     const reach = avoid.length ? bodyReachOf(animal, group.profile.slug) : 0;
     const fitsHere = (x: number, z: number) =>
-        world.nav.fits(x, z, reach, maxSlopeOf(animal)) && (!animal.keep || inKeep(animal.keep, x, z)) && avoid.every((b) => Math.hypot(x - b.x, z - b.z) >= reach + b.reach);
+        avoid.every((b) => Math.hypot(x - b.x, z - b.z) >= reach + b.reach) && (!animal.keep || inKeep(animal.keep, x, z)) && world.nav.fits(x, z, reach, maxSlopeOf(animal));
     let fallback: {dx: number; dz: number} | null = null;
     const tries = avoid.length ? 12 : 6;
     for (let attempt = 0; attempt < tries; attempt++) {
