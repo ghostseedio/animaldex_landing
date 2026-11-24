@@ -1893,6 +1893,215 @@
    "behaviour": "waits motionless on the ground, then runs prey down in a short dash",
    "field": "story",
    "quote": "After dark the spider waits motionless on the ground until the footsteps of a passing cricket reach the hairs on its legs, then runs it down in a short dash."
+  },
+  {
+   "slug": "abyssinian-cat",
+   "name": "Abyssinian Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "american-curl-cat",
+   "name": "American Curl",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "american-shorthair-cat",
+   "name": "American Shorthair Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "birman-cat",
+   "name": "Birman Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "burmese-cat",
+   "name": "Burmese Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "cornish-rex-cat",
+   "name": "Cornish Rex Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "devon-rex-cat",
+   "name": "Devon Rex Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "domestic-cat-bicolor",
+   "name": "Domestic Bicolor Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "domestic-cat-black",
+   "name": "Black Domestic Shorthair",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "domestic-cat-brown-tabby",
+   "name": "Tabby Domestic Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "domestic-cat-calico",
+   "name": "Calico Domestic Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "domestic-cat-dilute-calico",
+   "name": "Dilute Calico",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "domestic-cat-tortoiseshell",
+   "name": "Tortoiseshell Domestic Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "domestic-longhair-cat",
+   "name": "Domestic Longhair",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "exotic-shorthair-cat",
+   "name": "Exotic Shorthair Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "garut-sheep",
+   "name": "Garut Sheep",
+   "recipe": "sleep:huddle",
+   "behaviour": "huddles into a tight mass in cold or threat",
+   "field": "evidence",
+   "quote": "In cold weather or when feeling threatened, sheep will huddle closely together, often forming a tight mass.",
+   "was": "cluster"
+  },
+  {
+   "slug": "lutino-green-iguana",
+   "name": "Lutino Green Iguana",
+   "recipe": "dig_burrow",
+   "behaviour": "females move to nesting ground and dig burrows",
+   "field": "young",
+   "quote": "Females lay clutches of eggs in burrows or nest chambers, often after moving to suitable nesting ground."
+  },
+  {
+   "slug": "manx-cat",
+   "name": "Manx Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "norwegian-forest-cat",
+   "name": "Norwegian Forest Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "oriental-shorthair-cat",
+   "name": "Oriental Shorthair Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "russian-blue-cat",
+   "name": "Russian Blue Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "savannah-cat",
+   "name": "Savannah Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "selkirk-rex-cat",
+   "name": "Selkirk Rex Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "siberian-cat",
+   "name": "Siberian Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "tonkinese-cat",
+   "name": "Tonkinese Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "turkish-van-cat",
+   "name": "Turkish Van Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
   }
  ]
 }

@@ -25,9 +25,11 @@ export function unitOf(text: string): number {
 }
 
 const RULES: Array<[RegExp, ZooEnclosureType]> = [
+    // (First: a tiger swallowtail's caterpillar is no tiger. SPECIES-ANIM-B2, 2026-11-24, as `voyage_species.zoo_enclosure`.)
+    [/caterpillar|earthworm/, "insect_house"],
     [/(^|-)(goat|sheep|cow|cattle|pig|chicken|donkey|horse|alpaca|llama|guinea-pig|domestic-rabbit|turkey)(-|$)/, "childrens_farm"],
     [/penguin|(^|-)seal(-|$)|sea-lion|walrus/, "penguin_seal_pools"],
-    [/dolphin|dugong|manatee|sea-turtle|shark|(^|-)ray(-|$)|manta|herring|salmon|trout|carp|koi|goldfish|tetra|cichlid|clownfish|tang|wrasse|grouper|eel|octopus|squid|jellyfish|crab|lobster|shrimp|starfish|sea-star|urchin|anemone|coral|seahorse|pufferfish|angelfish|-fish(-|$)|(^|-)fish-|whale/, "aquarium"],
+    [/dolphin|dugong|manatee|sea-turtle|shark|(^|-)ray(-|$)|manta|herring|salmon|trout|carp|koi|goldfish|tetra|cichlid|clownfish|tang|wrasse|grouper|eel|octopus|squid|jellyfish|crab|lobster|shrimp|starfish|sea-star|urchin|anemone|coral|seahorse|pufferfish|angelfish|-fish(-|$)|(^|-)fish-|whale|moray|lamprey|hagfish|leech|planarian|rotifer|bobbit-worm|bootlace-worm/, "aquarium"],
     [/ostrich|(^|-)emu(-|$)|rhea|cassowary|elephant|rhinoceros|rhino|giraffe|zebra|wildebeest|gazelle|impala|antelope|oryx|hippopotamus|hippo|tapir|kudu|eland|buffalo|camel/, "savanna_paddocks"],
     [/(^|-)(lion|tiger|leopard|jaguar|cheetah|puma|cougar|snow-leopard|clouded-leopard)(-|$)/, "big_cats"],
     [/(^|-)(bat|pipistrelle|flying-fox|aye-aye|loris|bushbaby|galago|kiwi|sugar-glider)(-|$)/, "nocturnal_house"],
