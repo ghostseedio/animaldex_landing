@@ -8,14 +8,18 @@
  * step the collisions' push takes in a frame, and how many frames one is drawn across a fence from where its day has it.
  *
  *   npx tsx scripts/ark-paddock-overlap.ts --snapshot public/ark-local/live.json [--pens rural-paddock-2,rural-paddock-1]
- *        [--from <epoch s>] [--minutes 20] [--fps 60] [--world v2] [--old]
+ *        [--from <epoch s>] [--minutes 20] [--fps 60] [--world v2] [--old] [--hour h] [--no-beds]
+ *
+ * Pens or zoo enclosures (`--pens hoofstock_paddocks-2`: a zoo resident is kept by its enclosure's box, as the scene
+ * keeps it). Two asleep of one group may lie together; two of different groups count asleep too. `--no-beds`: the zoo
+ * residents pick their beds one by one, as before lane ZOOSLEEP (`islands/town/zoo-beds.ts`).
  *
  * Prints each pen's worst pairs and a total; exits 1 with `--gate` when any pair is inside the other for more than a second.
  */
 import {readFileSync} from "node:fs";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {arkIslandSnapshot} from "@/lib/ark-islands";
-import {keepInPen, penKeep, placeTownAnimals} from "@/ark-scene/islands/town/placement";
+import {keepInPen, maskBox, penKeep, placeTownAnimals} from "@/ark-scene/islands/town/placement";
 import {townColliderSet} from "@/ark-scene/islands/town/colliders";
 import {townWorldSampler} from "@/ark-scene/islands/town/sampler";
 import {townWorldOrigin} from "@/ark-scene/islands";
@@ -27,6 +31,7 @@ import {overlapOf, SEPARATION_EASE, SEPARATION_SLACK, type ResolveBody, type Res
 import {displayLength} from "@/ark-scene/sizes";
 import {collideBlocked, collideSegmentClear, setIslandColliders} from "@/ark-scene/collide";
 import {setRecipeColliders} from "@/ark-scene/behaviour-recipes";
+import {townZooBeds} from "@/ark-scene/islands/town/zoo-beds";
 import {setArkWorld} from "@/ark-scene/world";
 
 const arg = (name: string, fallback: string) => {
@@ -63,10 +68,14 @@ for (const c of set.list) {
 setIslandColliders({contains: (x, z) => x >= x0 && x <= x1 && z >= z0 && z <= z1, set});
 setRecipeColliders({segmentClear: collideSegmentClear, blocked: (x, z, r) => collideBlocked(x, z, r)});
 const world = scheduleWorld(townWorldSampler(placed.open, origin, set));
-const hours = (epoch: number) => (((epoch / 3600) % 24) + 24) % 24;
+// (`--hour h`: the hour pinned, as the browser probe pins it with `setHours`.)
+const pinnedHour = process.argv.includes("--hour") ? Number(arg("hour", "11")) : null;
+const hours = (epoch: number) => pinnedHour ?? (((epoch / 3600) % 24) + 24) % 24;
 
 type Item = {id: string; slug: string; pen: string; box: NonNullable<ReturnType<typeof placed.town.get>>["pen"]; margin: number; sched: ScheduleAnimal; profile: ReturnType<typeof behaviourProfile>; body: ResolveBody; last: {x: number; z: number; at: number} | null};
 const items: Item[] = [];
+// (Lane ZOOSLEEP: each zoo resident's own bed, as the scene hands them out, `islands/scene.ts` bed; `--no-beds`: as before.)
+const beds = process.argv.includes("--no-beds") ? new Map() : townZooBeds(placed.town, town.animals.map((a) => ({id: a.id, model_slug: a.model_slug, length: displayLength(a)})), set, origin.x, origin.z);
 for (const a of town.animals) {
     const info = placed.town.get(a.id);
     const p = placed.places.get(a.id);
@@ -75,9 +84,14 @@ for (const a of town.animals) {
     const profile = behaviourProfile(a.model_slug);
     const shape = bodyShape(a.model_slug, length);
     // (As the scene schedules a kept town animal: `index.ts` makeSched, `islands/scene.ts` rangeOf.)
-    const sched: ScheduleAnimal = {id: a.id, zone: a.zone, home: {x: p.x + origin.x, y: p.ground, z: p.z + origin.z}, length, sea: false, range: Math.max(info.range, 0.6) * 1.5, kept: true, keep: !old && info.pen ? penKeep(info.pen, info.penMargin ?? 0, origin.x, origin.z) : null};
-    items.push({id: a.id, slug: a.model_slug, pen: info.place, box: info.pen, margin: info.penMargin ?? 0, sched, profile, body: {id: a.id, radius: shape.radius, half: shape.half, height: shape.height, group: p.leader ?? a.id}, last: null});
+    // (A zoo enclosure with a margin is kept as a pen is, by its mask's box: `islands/scene.ts` bound and keep.)
+    const box = info.pen ?? (info.enclosure && info.enclosureMargin !== undefined ? maskBox(info.enclosure.mask) : undefined);
+    const margin = info.pen ? info.penMargin ?? 0 : info.enclosureMargin ?? 0;
+    const sched: ScheduleAnimal = {id: a.id, zone: a.zone, home: {x: p.x + origin.x, y: p.ground, z: p.z + origin.z}, length, sea: false, range: Math.max(info.range, 0.6) * 1.5, kept: true, keep: !old && box ? penKeep(box, margin, origin.x, origin.z) : null, bed: beds.get(a.id) ?? null};
+    items.push({id: a.id, slug: a.model_slug, pen: info.place, box, margin, sched, profile, body: {id: a.id, radius: shape.radius, half: shape.half, height: shape.height, group: p.leader ?? a.id}, last: null});
 }
+// (Lane ZOOSLEEP: a zoo resident's goals keep off its enclosure-mates' beds, as the scene wires them: `index.ts` mates.)
+if (!process.argv.includes("--no-beds")) for (const it of items) if (placed.town.get(it.id)?.area === "zoo") it.sched.mates = () => items.filter((o) => o.pen === it.pen).map((o) => ({animal: o.sched, profile: o.profile}));
 const baseOf = (it: Item, epoch: number): ResolvePose & {moving: boolean} => {
     const pose = poseOnTrip(world, tripAt(world, it.profile, it.sched, epoch, hours), epoch);
     return {x: pose.x, y: pose.y, z: pose.z, yaw: pose.yaw, aloft: pose.aloft, asleep: pose.beat === "sleep", still: !pose.aloft && !pose.moving, moving: pose.moving};
@@ -132,7 +146,8 @@ for (let f = 0; f < frames; f++) {
         for (let j = i + 1; j < drawn.length; j++) {
             const a = drawn[i];
             const b = drawn[j];
-            if (a.it.pen !== b.it.pen || (a.pose.asleep && b.pose.asleep)) continue;
+            // (Two of one group asleep lie together; two of different groups or kinds never in each other, asleep or not.)
+            if (a.it.pen !== b.it.pen || (a.pose.asleep && b.pose.asleep && a.it.body.group === b.it.body.group)) continue;
             const deep = overlapOf(a.it.body, a.pose, b.it.body, b.pose).depth - SEPARATION_SLACK * Math.min(a.it.body.radius, b.it.body.radius);
             const key = `${a.it.pen} ${a.it.slug} ${a.it.id.slice(0, 8)} | ${b.it.slug} ${b.it.id.slice(0, 8)}`;
             const s = inside.get(key) ?? {now: 0, longest: 0, total: 0, deepest: 0};

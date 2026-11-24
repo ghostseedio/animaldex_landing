@@ -220,6 +220,18 @@ export type ScheduleAnimal = {
      * rails, outside it, three horses on one point; the collisions could push them neither way). Absent: no pen.
      */
     keep?: KeepBox | null;
+    /**
+     * Lane ZOOSLEEP: its own bed in its enclosure, handed out with every other resident's (`islands/town/zoo-beds.ts`):
+     * where it lies asleep, and the way it faces, over any roost it would pick itself and its group's huddle. Absent or
+     * null: it picks its own.
+     */
+    bed?: {x: number; z: number; heading: number} | null;
+    /**
+     * Lane ZOOSLEEP: the others kept in its enclosure (each its schedule animal and profile), whose beds its goals keep
+     * off: a tapir asleep in its paddock's corner had an elephant's goal beside it, both held to the corner by their keep
+     * boxes, inside each other for seven seconds. Absent: no one.
+     */
+    mates?: () => ReadonlyArray<{animal: ScheduleAnimal; profile: ArkBehaviourProfile}>;
     /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
     roost?: Spot | null;
     /** Its own sleep, when it is active at any hour (`sleep-hours.ts` arkSleepOf): it sleeps in bouts of its own. */
@@ -804,7 +816,13 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
     const slope = maxSlopeOf(animal);
     // (Clear of everything solid, and not on a cliff's face.)
     const keep = animal.keep ?? null;
-    if (nav.fits(spot.x, spot.z, r, slope) && (!keep || inKeep(keep, spot.x, spot.z))) return spot;
+    // (A goal on its way: off its enclosure-mates' beds by both their reaches, `ScheduleAnimal.mates`.)
+    // (Its own roost, when it has no bed handed out: off the beds handed out to the others, a babirusa's den spot by the
+    // shed on a fallow deer's bed. Those only: theirs are known without asking their roosts.)
+    const beds = still ? (animal.bed ? null : handedBeds(animal)) : matesBeds(world, animal);
+    const own = beds ? bodyReachOf(animal, profile.slug) : 0;
+    const offBeds = (x: number, z: number) => !beds || beds.every((b) => Math.hypot(x - b.x, z - b.z) >= own + b.reach);
+    if (nav.fits(spot.x, spot.z, r, slope) && (!keep || inKeep(keep, spot.x, spot.z)) && offBeds(spot.x, spot.z)) return spot;
     // (Rings 0.35 m apart, out to 4.2 m, at most 16 points each: the first that fits, in ring order, is the spot; each
     // animal starts its rings at its own bearing and its own offset out, so a group nudged off one trunk or one fence
     // does not line up in a row along it.)
@@ -821,12 +839,41 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
             if (!nav.fits(x, z, r, slope)) continue;
             // (Penned: inside its keep box, never in the strip behind a trough by the rails.)
             if (keep && !inKeep(keep, x, z)) continue;
+            if (!offBeds(x, z)) continue;
             // (The way it came in, from the spot: never past a fence to its far side.)
             if (!nav.runClear({x: spot.x, z: spot.z}, {x, z}, 0.01)) continue;
             return {...spot, x, y: topAt(world, x, z), z};
         }
     }
     return spot;
+}
+
+const matesBedsMemo = new WeakMap<ScheduleWorld, WeakMap<ScheduleAnimal, Array<{x: number; z: number; reach: number}>>>();
+/** Its enclosure-mates' beds (their roosts on the ground), each with its body's reach: null with none. */
+function matesBeds(world: ScheduleWorld, animal: ScheduleAnimal): Array<{x: number; z: number; reach: number}> | null {
+    if (!animal.mates) return null;
+    let by = matesBedsMemo.get(world);
+    if (!by) matesBedsMemo.set(world, (by = new WeakMap()));
+    let beds = by.get(animal);
+    if (!beds) {
+        beds = [];
+        for (const m of animal.mates()) {
+            if (m.animal.id === animal.id || aquatic(m.profile)) continue;
+            const roost = roostOf(world, m.profile, m.animal);
+            if (raised(world, roost) || wet(world, roost)) continue;
+            beds.push({x: roost.x, z: roost.z, reach: bodyReachOf(m.animal, m.profile.slug)});
+        }
+        by.set(animal, beds);
+    }
+    return beds.length ? beds : null;
+}
+
+/** The beds handed out to its enclosure-mates (`ScheduleAnimal.bed`), each with its body's reach: null with none. */
+function handedBeds(animal: ScheduleAnimal): Array<{x: number; z: number; reach: number}> | null {
+    if (!animal.mates) return null;
+    const beds: Array<{x: number; z: number; reach: number}> = [];
+    for (const m of animal.mates()) if (m.animal.id !== animal.id && m.animal.bed) beds.push({x: m.animal.bed.x, z: m.animal.bed.z, reach: bodyReachOf(m.animal, m.profile.slug)});
+    return beds.length ? beds : null;
 }
 
 /** A point in the water near a spot, at the depth it swims at. */
@@ -1045,6 +1092,9 @@ function acrossLimb(along: [number, number, number]): number {
 }
 
 function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
+    // (Lane ZOOSLEEP: a bed handed out with its enclosure's others is its own. Picked one by one from three shade points
+    // by the shed, a mixed paddock's residents lay two on a point.)
+    if (animal.bed) return {...groundSpot(world, animal.bed.x, animal.bed.z), heading: animal.bed.heading};
     const group = animal.group;
     // (A flock whose text has it sleeping together, huddled or in a row, roosts as a group too: `sleep.ts`.)
     const together = sleepStyle(profile.slug).social !== "apart";

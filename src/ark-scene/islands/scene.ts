@@ -124,6 +124,13 @@ export type ArkIslandScene = {
      * the very box its bound holds it to, for the collisions (`CollideHooks.keep`); null when it has none.
      */
     keep?: (id: string) => KeepBox | null;
+    /**
+     * Lane ZOOSLEEP: a zoo resident's own bed in its enclosure (world frame, and the way it lies), handed out with all
+     * its enclosure's others (`islands/town/zoo-beds.ts`); null when it has none and picks its own.
+     */
+    bed?: (id: string) => {x: number; z: number; heading: number} | null;
+    /** Lane ZOOSLEEP: the others kept outdoors in a zoo resident's enclosure (ids), whose beds its goals keep off. */
+    mates?: (id: string) => readonly string[];
     /** Its behaviour world in the world frame (`islands/town/sampler.ts`): places, ground, walk grid, obstacles. */
     sampler: () => ArkWorldSampler;
     /** Its colliders in the world frame (`islands/town/colliders.ts`, through L5's `collide/` per island). */
@@ -250,6 +257,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         import("@/ark-scene/islands/town/ground")
     ]);
     const {townColliderSet} = await import("@/ark-scene/islands/town/colliders");
+    const {townZooBeds} = await import("@/ark-scene/islands/town/zoo-beds");
     const {buildSolidProxies} = await import("@/ark-scene/islands/town/render/solid-proxies");
     const {primeTownDrawnGrid, setTownWalkSurfaces, townDrawnGround, townDrawnHeight, townStillWater, townWalkSurfaces, townWaterLevel, townWaterSurface} = await import("@/ark-scene/islands/town/drawn-ground");
     const {setIslandWater} = await import("@/ark-scene/water-level");
@@ -436,6 +444,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     };
     let sampler: {key: string; sampler: ArkWorldSampler} | null = null;
     let collidersMemo: {key: string; set: ColliderSet} | null = null;
+    let matesMemo: {places: Map<string, TownPlace>; by: Map<string, string[]>} | null = null;
+    let bedsMemo: {places: Map<string, TownPlace>; set: ColliderSet; beds: Map<string, {x: number; z: number; heading: number}>} | null = null;
     // SIG4: the town's solid scenery as invisible prisms for the seat pass (its drawn meshes let their arrays go), made
     // from the colliders whenever they are made again (`render/solid-proxies.ts`).
     let solidProxies: ReturnType<typeof buildSolidProxies> | null = null;
@@ -610,6 +620,29 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             if (next.join(",") === peopleRooms.join(",")) return;
             peopleRooms = next;
             showPetHomes(lastPlaces);
+        },
+        mates: (id) => {
+            const e = towned.get(id)?.enclosure;
+            const info = towned.get(id);
+            if (!e || info?.area !== "zoo" || info.enclosureMargin === undefined) return [];
+            if (!matesMemo || matesMemo.places !== towned) matesMemo = {places: towned, by: new Map()};
+            let list = matesMemo.by.get(e.id);
+            if (!list) {
+                list = [];
+                for (const [other, o] of Array.from(towned)) if (o.area === "zoo" && o.enclosure?.id === e.id && o.enclosureMargin !== undefined && !o.still) list.push(other);
+                matesMemo.by.set(e.id, list);
+            }
+            return list;
+        },
+        bed: (id) => {
+            // (Every bed at once, for the placement and the colliders they were handed out with.)
+            const set = collidersNow();
+            if (!bedsMemo || bedsMemo.places !== towned || bedsMemo.set !== set) {
+                const list: Array<{id: string; model_slug: string; length: number}> = [];
+                townAnimals.forEach((animal, aid) => list.push({id: aid, model_slug: animal.model_slug, length: displayLength(animal)}));
+                bedsMemo = {places: towned, set, beds: townZooBeds(towned, list, set, origin.x, origin.z)};
+            }
+            return bedsMemo.beds.get(id) ?? null;
         },
         keep: (id) => {
             const info = towned.get(id);
