@@ -293,6 +293,7 @@ import {ForestScene} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): l
 // 3.3 batch (D): the escapes and the dragonflies' dips
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
 import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
+import {entranceShowing, waitForArrival} from "@/ark-scene/arrival-wait";
 import {AMBUSH_RECIPE, ambushHours, ambushNow, inAmbushHours, type AmbushNow} from "@/ark-scene/micro-ambush";
 import {flowerSpot, microActAt, playsInPlace, soilSpot} from "@/ark-scene/micro-acts"; // sig2-small: a small animal's recipe played in place
 // 3.3 batch (B): the birds' own moves (mobbing dive)
@@ -577,6 +578,9 @@ type Entry = {
     /** Its idle loops' pace (a swimmer's, a flyer's), from its speed. */
     pace: number;
     arrivedAt: number | null;
+    /** Its entrance waiting for its body to be drawn (`arrival-wait.ts`). */
+    arrivalWait?: {asked: number; held: number} | null;
+    arrivalSeen?: number | null;
     level: Level;
     phase: number;
     /** Where it was drawn this frame (its middle), for picking; null when not drawn. */
@@ -7006,15 +7010,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const level = entry.level;
             const animal = entry.animal;
             const dim = mineOnly && !animal.mine ? 1 : 0;
-            let grow = 1;
-            if (entry.arrivedAt !== null) {
-                const t = (now - entry.arrivedAt) / ENTRANCE_SECONDS;
-                if (t < 1 && !reducedMotion) grow = Math.max(easeOutBack(Math.max(t, 0)), 0.001);
-                const ripple = (now - entry.arrivedAt) / RIPPLE_SECONDS;
-                if (ripple < 1 && !reducedMotion) {
-                    ringList.push({x: where.x, y: Math.max(entry.place.ground, 0), z: where.z, radius: entry.length * (0.8 + 2.6 * ripple), color: ARRIVAL, alpha: 0.9 * (1 - ripple) ** 1.5});
-                }
-            }
             // Big animals need less help to be seen: a whale isn't blown up like a sparrow.
             // (Tiny animals seen, `tiny-lift.ts`: a beetle or a fly chosen or followed, near, is at least a few pixels long.)
             const sizeUp = level !== "near" ? 1 + (exaggerate - 1) * Math.min(Math.max(1.6 / entry.length, 0.25), 1) : liftTiny(entry, candidate.distance, now);
@@ -7206,13 +7201,32 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const pixels = entry.length * sizeUp / perPixel;
             // Past the model cap, one too small on screen for its icon to mean anything is its marker instead.
             const dotNotIcon = level === "token" && markerNotIcon(pixels);
-            if ((level !== "token" || candidate.skip || dotNotIcon) && !entry.act && fromAfar) {
-                if (entry.floor || pixels < MARKER_BELOW_PIXELS || candidate.skip || dotNotIcon) {
-                    const top = where.base + lift + modelHeight + Math.max(perPixel * 7, 0.08);
-                    dotList.push({x: where.x, y: Math.max(top, rest + 0.1), z: where.z, pixels: marked === 2 ? 11 : 8, alpha: dim ? 0.35 : 1});
-                    if (marked === 2) tokens.ensure(animal.model_slug);
-                    if (marked === 2 && tokens.loaded(animal.model_slug)) tokenList.push({slug: animal.model_slug, x: where.x, y: Math.max(top, rest + 0.1) + perPixel * 20, z: where.z, size: 0.5, dim: 0, ring: 2, grow});
+            const dotted = (level !== "token" || candidate.skip || dotNotIcon) && !entry.act && fromAfar && (entry.floor || pixels < MARKER_BELOW_PIXELS || candidate.skip || dotNotIcon);
+            // Its entrance (the grow, the ripple ring under it) waits for its body to be drawn: a model still loading has
+            // no ring on the empty ground (`arrival-wait.ts`). Drawn: its marker, its icon, the talking model or its mesh.
+            let grow = 1;
+            if (entry.arrivedAt !== null) {
+                const meshesNow = species.get(animal.model_slug);
+                const talkingNow = Boolean(talking.actor?.ready && talking.weight > 0 && talking.target?.animalId === animal.id && talking.actor.slug === animal.model_slug);
+                // (An icon counts only when it is the icon because of the model cap, never while its model is loading:
+                // close by, the icon is a speck in the middle of the ring and the model pops in after it.)
+                const bodyNow = level === "token" ? tokens.loaded(animal.model_slug) && (Boolean(model?.far) || !library.has(animal.model_slug)) : Boolean(model && drawable(level === "near" ? (candidate.rig ? meshesNow?.rig : meshesNow?.near) : meshesNow?.far));
+                waitForArrival(entry, now, dotted || talkingNow || bodyNow);
+            }
+            if (entry.arrivedAt !== null) {
+                const t = (now - entry.arrivedAt) / ENTRANCE_SECONDS;
+                if (t < 1 && !reducedMotion) grow = Math.max(easeOutBack(Math.max(t, 0)), 0.001);
+                const ripple = (now - entry.arrivedAt) / RIPPLE_SECONDS;
+                // (Still waiting for its body: no ring yet, not even its first frame's.)
+                if (ripple < 1 && !reducedMotion && entranceShowing(entry)) {
+                    ringList.push({x: where.x, y: Math.max(entry.place.ground, 0), z: where.z, radius: entry.length * (0.8 + 2.6 * ripple), color: ARRIVAL, alpha: 0.9 * (1 - ripple) ** 1.5});
                 }
+            }
+            if (dotted) {
+                const top = where.base + lift + modelHeight + Math.max(perPixel * 7, 0.08);
+                dotList.push({x: where.x, y: Math.max(top, rest + 0.1), z: where.z, pixels: marked === 2 ? 11 : 8, alpha: dim ? 0.35 : 1});
+                if (marked === 2) tokens.ensure(animal.model_slug);
+                if (marked === 2 && tokens.loaded(animal.model_slug)) tokenList.push({slug: animal.model_slug, x: where.x, y: Math.max(top, rest + 0.1) + perPixel * 20, z: where.z, size: 0.5, dim: 0, ring: 2, grow});
             }
 
             // A small animal far off: its marker only.
