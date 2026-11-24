@@ -114,6 +114,21 @@ const HEX_SPIRAL: Array<[number, number]> = (() => {
     }
     return cells;
 })();
+/** A rock's surfaces: a small vertebrate's home on one stays on it (`mapPlace`, `onRockSurface`). */
+const ROCK_SURFACE: ReadonlySet<string> = new Set(["ledge", "rock_face", "cliff_ledge"]);
+
+/**
+ * Whether a spot offset along a ledge's or a rock face's point is still on that surface: never on a steep face (the
+ * grounding hook holds a perch on a steep point at the point itself), and on a ledge only where the ground under it is the
+ * ledge's (its height, within 5 cm) and gentle enough to rest on (twice what its zone walks, the cliffs' measure).
+ */
+function onRockSurface(sampler: ArkMapSampler, point: AttachPoint, at: {x: number; y: number; z: number}, zone: ArkZone): boolean {
+    if (Math.abs(point.normal[1]) < 0.5) return false;
+    if (Math.abs(sampler.ground(at.x, at.z).height - at.y) > 0.05) return false;
+    const steepest = (zone === "mountains" ? MOUNTAIN_SLOPE : MAX_SLOPE) * 2;
+    return !sampler.walkable || sampler.walkable(at.x, at.z, steepest);
+}
+
 const SPOT_OF: Record<AttachTag, MicroSpot> = {
     leaf: "leaf_litter", branch: "bark", bark: "bark", flower_head: "flowers", rock_face: "rocks", tide_pool: "pond_surface",
     house_wall: "house", house_eave: "house", porch_light: "lamp", worm_hole: "leaf_litter", burrow_entrance: "leaf_litter",
@@ -539,7 +554,14 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             if (!trueMicro(species, animal.model_slug, trueLength)) {
                 // A bird, a bat, a small mammal, a lizard or a frog: its attach point is its perch (its home and its roost on the
                 // behaviour schedule, which flies, walks or hops it from there and back), not a micro animal's spot.
+                // (SPECIES-ANIM-B2, 2026-11-24: on a ledge or a rock face its home sits on that surface: a cluster's or a
+                // member's offset along the point's plane is kept only where it stays on it, else the home is the point
+                // itself. Along a ledge's plane the offset left the ledge for the cliff ground beside it (a tropical house
+                // gecko resting on a 2.05 slope, 405 cliff samples); up a steep face the grounding hook holds it at the
+                // point while its spot was 0.3 m up the face (an elephant shrew drawn 0.30 m under its spot). A flyer lands
+                // on its spot from the air and is held there, `flyerOnRocks`: a puffin colony keeps its spacing.)
                 let at = surfacePoint(micro, zone);
+                if (ROCK_SURFACE.has(point.tag) && species.move !== "fly" && species.move !== "perch" && (micro.offAlong !== 0 || micro.offAcross !== 0) && !onRockSurface(sampler, point, at, zone)) at = surfacePoint({...micro, offAlong: 0, offAcross: 0}, zone);
                 // Set down beside a hole in the ground a few body lengths out, never into a drawn rock beside it (a crag by a
                 // burrow, scenery lane): on the hole itself then, which keeps clear of the rocks (`world-sampler.ts`).
                 if ((point.tag === "burrow_entrance" || point.tag === "worm_hole") && inRock(at.x, at.z, Math.min(Math.max(trueLength * 0.2, 0.05), 0.3))) at = surfacePoint({...micro, offAlong: 0, offAcross: 0}, zone);
