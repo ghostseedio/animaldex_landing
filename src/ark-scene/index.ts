@@ -279,7 +279,7 @@ import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating tap)
 import {CLUTCH_FRAME_POLAR, CLUTCH_SHOWN_SECONDS, clutchFrame, clutchSize, kinFrameApart, seenAt} from "@/ark-scene/live/breed-focus"; // 3.3 fix (breeding taps)
 import {LiveBirths, newbornScale} from "@/ark-scene/live-births";
-import {LiveSeeking, seekLive} from "@/ark-scene/live-seeking";
+import {LiveSeeking, seekLive, seekNear} from "@/ark-scene/live-seeking";
 import {LiveJourneys} from "@/ark-scene/live-journeys"; // MATE-FINDING (decision 432)
 import {LiveClutches} from "@/ark-scene/live-clutches";
 import {reproOf, ReproFx} from "@/ark-scene/repro"; // REAL-REPRODUCTION (decision 440)
@@ -10626,12 +10626,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * about while its day has it about on the ground (`live-seeking.ts`). Who they are is read from the entries every
      * two seconds (the read changes every 45).
      */
-    const liveSeeking = new LiveSeeking<Entry>({
+    const liveSeeking: LiveSeeking<Entry> = new LiveSeeking<Entry>({
         // ZOOGLITCH: posed by the frame, not drawn by it (`seekLive`): drawn is what the act changes, and gated on it the
         // act came and went every frame or two (the savanna paddock's mate-seeking eland, 13 m between its two places).
         find: (id) => {
             const e = entryById.get(id);
-            return e && seekLive(e, posedNow) ? e : null;
+            // (And near the camera, by its day's place: `seekNear`; a seeker far off walks for nobody.)
+            return e && seekLive(e, posedNow) && seekNear(Math.hypot(e.place.x - camera.position.x, e.place.z - camera.position.z), liveSeeking.has(e)) ? e : null;
         },
         scheduleAt: (entry, epoch) => {
             if (!entry.sched || !world || reducedMotion) return null;

@@ -49,6 +49,20 @@ export function seekLive(e: {held?: boolean; visitor?: boolean; posedAt?: number
     return !e.held && !e.visitor && e.posedAt !== undefined && now - e.posedAt >= 0 && now - e.posedAt < SEEK_POSED_WITHIN;
 }
 
+/** Within this of the camera (m, its day's place) a seeker takes the act; it lets it go past `SEEK_FAR` (`seekNear`). */
+export const SEEK_NEAR = 120;
+export const SEEK_FAR = 140;
+
+/**
+ * Whether a seeker is near enough the camera to walk its loop: its day's place (never where its act has walked it, so the
+ * act cannot take it out of range) within `SEEK_NEAR`, kept until past `SEEK_FAR`. Posed is not enough: the scene poses
+ * every animal brought out, and every mate seeker it posed walked its loop each frame, a millisecond a frame on a low
+ * phone's island view with none of them on screen (2026-11-24 A/B, the `scenery` section).
+ */
+export function seekNear(distance: number, taken: boolean): boolean {
+    return distance < (taken ? SEEK_FAR : SEEK_NEAR);
+}
+
 /** One loop: walking this long (s), then looking about this long. */
 export const SEEK_WALK = 9;
 export const SEEK_LOOK = 5;
@@ -121,6 +135,11 @@ export class LiveSeeking<E> {
 
     private reach(s: {since: number; until: number | null}, epoch: number): number {
         return Math.min(ease((epoch - s.since) / EASE), s.until === null ? 1 : 1 - ease((epoch - s.until) / EASE));
+    }
+
+    /** Whether it is walking its loop now. */
+    has(entry: E): boolean {
+        return this.acting.has(entry);
     }
 
     clear(): void {

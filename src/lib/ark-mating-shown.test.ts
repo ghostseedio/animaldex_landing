@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {matingPose, matingScript, meetingSpot, type MatingBody} from "@/ark-scene/live-matings";
-import {LiveSeeking, seekLive, seekPose, SEEK_LOOK, SEEK_WALK} from "@/ark-scene/live-seeking";
+import {LiveSeeking, seekLive, seekNear, seekPose, SEEK_FAR, SEEK_LOOK, SEEK_NEAR, SEEK_WALK} from "@/ark-scene/live-seeking";
 import type {ActPose} from "@/ark-scene/acts";
 
 const body = (x: number, z: number, o: Partial<MatingBody> = {}): MatingBody => ({x, z, pace: 1, length: 1, height: 0.5, plan: "mammal", courtship: null, male: null, ...o});
@@ -374,4 +374,11 @@ test("two small animals off any day (on a wall, on a flower) are acted, not skip
         layer.step((d.courted! + d.mounted!) / 2);
         assert.ok(Math.abs(she.act!.base - 1.5) < 0.05 && Math.hypot(he.act!.x - she.act!.x, he.act!.z - she.act!.z) < 0.1, "together on her surface");
     }
+});
+
+test("seekNear: a seeker walks its loop only near the camera (its day's place), with room either side so it never flickers", () => {
+    assert.equal(seekNear(SEEK_NEAR - 1, false), true);
+    assert.equal(seekNear(SEEK_NEAR + 1, false), false, "the island view's hundreds far off: none walk (no cost)");
+    assert.equal(seekNear(SEEK_NEAR + 1, true), true, "once walking, kept till well past");
+    assert.equal(seekNear(SEEK_FAR + 1, true), false);
 });
