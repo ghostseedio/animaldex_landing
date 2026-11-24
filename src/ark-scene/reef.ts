@@ -176,13 +176,60 @@ function bedFrom(x: number, z: number, s: GroundSample, slope: number): SeaBed {
     const depth = Math.max(-s.height, 0);
     const cliff = coastCliff(Math.atan2(z, x));
     // Patch reefs: knolls of framework, more of them toward the reef's middle, sand channels between.
-    const framework = s.reef > 0.3 ? smoothstep(0.47, 0.6, fbm(x * 0.11 + 3.3, z * 0.11 - 7.1) + 0.22 * (s.reef - 0.3)) : 0;
+    const framework = s.reef > 0.3 ? patchReef(x, z, s.reef) : 0;
     let substrate: Substrate = "sand";
     if (framework > 0.5) substrate = "reef";
     else if (slope > 0.42 || (cliff > 0.3 && s.inland > -22 && depth > 1.2)) substrate = "rock";
     else if (s.reef > 0.25 && framework > 0.08) substrate = "rubble";
     return {depth, height: s.height, slope, substrate, reef: s.reef, framework, shore: s.weights.seashore ?? 0, inland: s.inland, cliff};
 }
+
+/**
+ * The patch reefs' framework at a point, 0…1 (REEF-PATCHES, 2026-11-24). A lagoon reef is not one continuous carpet:
+ * it is separate patch reefs (bommies and knolls a few metres to a dozen across, irregular, often longer one way) with
+ * sand channels between them, more and bigger toward the reef's middle (`reef`, world.ts's 0…1). Before, one noise
+ * threshold made a single mass ~60 m across, which from above read as a tan stain over the lagoon, not as reef.
+ * Two seeded layers: knolls on a 13 m jittered grid (2.5–6 m across their long side's half) and small bommies on a 7 m
+ * grid between them. Each has its own long axis and a wobbled edge. Pure in (x, z, reef).
+ */
+export function patchReef(x: number, z: number, reef: number): number {
+    const middle = smoothstep(0.3, 0.9, reef);
+    let best = 0;
+    for (const layer of PATCH_LAYERS) {
+        const ci = Math.floor(x / layer.cell);
+        const cj = Math.floor(z / layer.cell);
+        for (let di = -1; di <= 1; di++) {
+            for (let dj = -1; dj <= 1; dj++) {
+                const i = ci + di;
+                const j = cj + dj;
+                const h = hashString(`${layer.seed}:${i},${j}`);
+                const u = (k: number) => ((Math.imul(h ^ (k * 0x9e3779b9), 0x85ebca6b) >>> 0) % 100000) / 100000;
+                if (u(1) > layer.presence[0] + (layer.presence[1] - layer.presence[0]) * middle) continue;
+                const cx = (i + 0.5 + (u(2) - 0.5) * 0.7) * layer.cell;
+                const cz = (j + 0.5 + (u(3) - 0.5) * 0.7) * layer.cell;
+                const radius = (layer.radius[0] + (layer.radius[1] - layer.radius[0]) * u(4)) * (0.75 + 0.45 * middle);
+                // Its long axis and how much longer it is that way (1…1.8).
+                const angle = u(5) * Math.PI;
+                const aspect = 1 + 0.8 * u(6);
+                const dx = x - cx;
+                const dz = z - cz;
+                const along = dx * Math.cos(angle) + dz * Math.sin(angle);
+                const across = -dx * Math.sin(angle) + dz * Math.cos(angle);
+                const d = Math.hypot(along / aspect, across);
+                // A ragged edge: the reef's rim grows in lobes, not a circle.
+                const edge = radius * (0.78 + 0.44 * noise(x * 0.42 + i * 3.1, z * 0.42 - j * 1.7));
+                const v = 1 - smoothstep(edge * 0.72, edge * 1.08, d);
+                if (v > best) best = v;
+            }
+        }
+    }
+    return best;
+}
+
+const PATCH_LAYERS = [
+    {seed: "reef-knoll", cell: 14, radius: [2.2, 4.8], presence: [0.45, 0.72]},
+    {seed: "reef-bommie", cell: 7, radius: [0.9, 1.9], presence: [0.18, 0.42]}
+] as const;
 
 /** The sea bed at a point: its depth, slope and what it is made of. */
 export function seaBedAt(x: number, z: number): SeaBed {
@@ -453,6 +500,8 @@ export function reefGrowth(): ReefItem[] {
                 continue;
             }
             if (Math.hypot(x - reef.x, z - reef.z) <= half || bed.depth < CORAL_MIN_DEPTH || bed.depth > 10) continue;
+            // REEF-PATCHES: only on a patch reef (`patchReef`); a head the generator put in a sand channel is not grown.
+            if (bed.framework < 0.3) continue;
             // A head on the lagoon's hard ground: the reef's framework where it is, else the generator's head is its own knoll.
             const hard: SeaBed = bed.substrate === "sand" || bed.substrate === "rubble" ? {...bed, substrate: "reef"} : bed;
             if (local() < 0.5) {
