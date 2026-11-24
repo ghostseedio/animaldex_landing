@@ -2458,13 +2458,20 @@ function memoOf(world: ScheduleWorld, hoursAt: HoursAt, animal: ScheduleAnimal):
 }
 function remember<T>(map: Map<number, T>, slot: number, make: () => T): T {
     const hit = map.get(slot);
-    if (hit !== undefined) return hit;
+    if (hit !== undefined) {
+        // (Asked for again: the most recent now, the last to go.)
+        map.delete(slot);
+        map.set(slot, hit);
+        return hit;
+    }
     const value = make();
     map.set(slot, value);
-    if (map.size > 32) {
-        // Drop the slots furthest from this one.
-        const far = Array.from(map.keys()).sort((a, b) => Math.abs(b - slot) - Math.abs(a - slot)).slice(0, map.size - 24);
-        for (const key of far) map.delete(key);
+    if (map.size > 64) {
+        // Drop the slots asked for least lately. (Lane ELEPHANTS: not the slots furthest from this one. A look back
+        // through a long graze (`finishOf`, up to 48 slots) or a herd-mate's place several slots back (`herdAvoid`) then
+        // dropped the slots being drawn, worked out again on the next frame: the safari close-up's schedule at 20 to
+        // 46 ms a frame.)
+        Array.from(map.keys()).slice(0, map.size - 48).forEach((key) => map.delete(key));
     }
     return value;
 }
