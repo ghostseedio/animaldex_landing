@@ -28,6 +28,37 @@ function insideAny(boxes: number[][], b: Building, p: {x: number; y: number; z: 
     return null;
 }
 
+/** How far `p` is from the box (building frame), 0 inside. */
+function gap(k: number[], b: Building, p: {x: number; y: number; z: number}): number {
+    const q = local(b, p);
+    const out = (v: number, low: number, high: number) => Math.max(low - v, 0, v - high);
+    return Math.hypot(out(q.x, k[0], k[1]), out(p.y, k[2], k[3]), out(q.z, k[4], k[5]));
+}
+
+/** The first of the boxes (building frame, shrunk by 2 cm) the line from `p` to `q` passes through, away from its ends. */
+function hides(boxes: number[][], b: Building, p: {x: number; y: number; z: number}, q: {x: number; y: number; z: number}): number[] | null {
+    const a = local(b, p);
+    const c = local(b, q);
+    for (const k of boxes) {
+        let t0 = 0.02;
+        let t1 = 0.98;
+        let out = false;
+        for (const [from, to, low, high] of [[a.x, c.x, k[0] + 0.02, k[1] - 0.02], [p.y, q.y, k[2] + 0.02, k[3] - 0.02], [a.z, c.z, k[4] + 0.02, k[5] - 0.02]] as const) {
+            const d = to - from;
+            if (Math.abs(d) < 1e-9) {
+                if (from <= low || from >= high) out = true;
+                continue;
+            }
+            const u0 = Math.min((low - from) / d, (high - from) / d);
+            const u1 = Math.max((low - from) / d, (high - from) / d);
+            t0 = Math.max(t0, u0);
+            t1 = Math.min(t1, u1);
+        }
+        if (!out && t0 < t1) return k;
+    }
+    return null;
+}
+
 /**
  * A user orbiting a point just off each face of `b` (past its farthest part on that side: a cat on the lawn by a bay)
  * at the nearest the controls allow (`CAMERA_RANGE.near`), low and lower, round a whole turn in steps, the controls
@@ -78,6 +109,11 @@ function orbitInto(b: Building, obstacles: CameraObstacles): string[] {
                         if (held < minDistance) minDistance = Math.max(held, 1);
                     }
                     const hit = insideAny(drawn, b, eye);
+                    // And what it looks at in sight: the line to it through none of this building's drawn parts.
+                    // (A part within 2 m of the eye: one it was pushed against, as `camera.ts` liftForSight. Further off,
+                    // a building between the view and its target hides it as anything would.)
+                    const hidden = !hit && hides(drawn.filter((k) => gap(k, b, eye) < 2), b, eye, target);
+                    if (hidden) bad.push(`${b.id} side ${side} polar ${polar} step ${step}: the target hidden from ${eye.x.toFixed(2)},${eye.y.toFixed(2)},${eye.z.toFixed(2)} by part ${hidden.map((v) => v.toFixed(2)).join(",")}`);
                     if (hit) bad.push(`${b.id} side ${side} polar ${polar} step ${step}: eye ${eye.x.toFixed(2)},${eye.y.toFixed(2)},${eye.z.toFixed(2)} in part ${hit.map((v) => v.toFixed(2)).join(",")}`);
                 }
             }
@@ -97,8 +133,8 @@ test("parts stacked storey on storey become one box, and a part on a bigger one 
 
 test("a home's bay window and front step are among its parts", () => {
     const homes = cameraBuildings().filter((b) => b.kind === "house" || b.kind === "terrace");
-    // (A bay: 2 to 2.3 m wide, 0.8 to 0.9 m out of the front, a storey high.)
-    const bays = homes.flatMap((b) => buildingParts(b).map((p) => ({b, p})).filter(({p}) => p.hx * 2 >= 1.9 && p.hx * 2 <= 2.4 && p.hz * 2 >= 0.7 && p.hz * 2 <= 1.0 && p.y1 - p.y0 > 1.5));
+    // (A bay: 2 to 2.3 m wide, 0.8 to 0.9 m out of the front, a storey high; with its little roof and sills, a little more.)
+    const bays = homes.flatMap((b) => buildingParts(b).map((p) => ({b, p})).filter(({p}) => p.hx * 2 >= 1.9 && p.hx * 2 <= 2.7 && p.hz * 2 >= 0.7 && p.hz * 2 <= 1.3 && p.y1 - p.y0 > 1.5));
     assert.ok(bays.length > 10, `bays: ${bays.length}`);
     for (const {b, p} of bays) assert.ok(local(b, p).z > b.at.d / 2, `${b.id}: the bay is out of the front`);
 });
@@ -118,7 +154,7 @@ test("every part reaches out of its footprint, and none is drawn that the parts 
     }
 });
 
-test("for every building, a user's eye orbiting at the minimum distance comes to rest inside nothing drawn", () => {
+test("for every building, a user's eye orbiting at the minimum distance comes to rest inside nothing drawn, its target in sight", () => {
     const obstacles = new CameraObstacles([], buildingCameraBoxes({x: 0, z: 0}, townHeight, townBuildingCamera()));
     const bad = cameraBuildings().flatMap((b) => orbitInto(b, obstacles));
     assert.deepEqual(bad.slice(0, 12), [], `${bad.length} resting eyes inside a building's drawing`);

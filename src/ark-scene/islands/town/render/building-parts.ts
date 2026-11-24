@@ -98,10 +98,16 @@ export function drawnParts(b: Building): number[][] {
 }
 
 /** A building as the camera has it: its body's top (the drawn roof, town height) and the parts out of the body. */
-export type BuildingCamera = {id: string; top: number; parts: BuildingPart[]};
+export type BuildingCamera = {
+    id: string;
+    top: number;
+    /** The body's plan in its frame (min x, max x, min z, max z): the footprint and all drawn within `PART_OUT` of it (the eaves' overhang). */
+    body: [number, number, number, number];
+    parts: BuildingPart[];
+};
 
 /**
- * `b` for the camera, from its drawing: the body's top is the highest of the parts that cover half its footprint or
+ * `b` for the camera, from its drawing: the body's plan (`body`) and top is the highest of the parts that cover half its footprint or
  * more (its roof: the plan's `top` is over its centre's ground, under the roof on a slope), at least the plan's; the
  * parts are those that reach more than `PART_OUT` past the footprint, or over that top (a chimney), merged
  * (`mergeParts`), each a box in the building's own turn (town coordinates, heights).
@@ -113,7 +119,11 @@ export function buildingCamera(b: Building): BuildingCamera {
     for (const k of drawn) if ((k[1] - k[0]) * (k[5] - k[4]) >= area * 0.5) top = Math.max(top, k[3]);
     const hw = b.at.w / 2 + PART_OUT;
     const hd = b.at.d / 2 + PART_OUT;
-    const out = drawn.filter((q) => !(q[0] >= -hw && q[1] <= hw && q[4] >= -hd && q[5] <= hd && q[3] <= top + PART_OUT));
+    const isBody = (q: number[]) => q[0] >= -hw && q[1] <= hw && q[4] >= -hd && q[5] <= hd && q[3] <= top + PART_OUT;
+    const out = drawn.filter((q) => !isBody(q));
+    // (The body as drawn: an eave 0.3 m over the wall hides what is behind it as the wall does.)
+    const body: [number, number, number, number] = [-b.at.w / 2, b.at.w / 2, -b.at.d / 2, b.at.d / 2];
+    for (const q of drawn) if (isBody(q)) [body[0], body[1], body[2], body[3]] = [Math.min(body[0], q[0]), Math.max(body[1], q[1]), Math.min(body[2], q[4]), Math.max(body[3], q[5])];
     const cos = Math.cos(b.at.rot);
     const sin = Math.sin(b.at.rot);
     const parts = mergeParts(out).map(([x0, x1, y0, y1, z0, z1]) => {
@@ -121,7 +131,7 @@ export function buildingCamera(b: Building): BuildingCamera {
         const mz = (z0 + z1) / 2;
         return {x: b.at.x + mx * cos - mz * sin, z: b.at.z + mx * sin + mz * cos, y0, y1, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, rot: b.at.rot};
     });
-    return {id: b.id, top, parts};
+    return {id: b.id, top, body, parts};
 }
 
 /** `b`'s parts out of its body (`buildingCamera`). */
@@ -132,7 +142,7 @@ export function buildingParts(b: Building): BuildingPart[] {
 /**
  * Fewer boxes keeping the eye out of the same parts (each box is a camera obstacle every frame near it):
  * - a part within `PART_OUT` of a bigger kept one (a bay's window frame on the bay, a balcony's rail on its slab) is
- *   dropped: the camera keeps 0.35 m off the bigger box, so it cannot reach the smaller;
+ *   taken into it (the bigger box grows to cover it);
  * - parts stacked one over another, one's plan within the other's (a tower's bays or a block's balconies, storey on
  *   storey, the top one's rail), become one box from the lowest to the highest, when the gap between them is under a
  *   storey.
@@ -144,7 +154,13 @@ export function mergeParts(boxes: number[][]): number[][] {
     const within = (q: number[], k: number[]) => q[0] >= k[0] - E && q[1] <= k[1] + E && q[2] >= k[2] - E && q[3] <= k[3] + E && q[4] >= k[4] - E && q[5] <= k[5] + E;
     const prune = (list: number[][]) => {
         const kept: number[][] = [];
-        for (const q of [...list].sort((a, c) => volume(c) - volume(a))) if (!kept.some((k) => within(q, k))) kept.push(q);
+        for (const q of [...list].sort((a, c) => volume(c) - volume(a))) {
+            const k = kept.find((box) => within(q, box));
+            if (!k) kept.push([...q]);
+            // (Taken into it, so the box still covers all it stands for: a bay's own little roof, a hand's breadth over it,
+            // hides what is behind it.)
+            else for (let i = 0; i < 6; i++) k[i] = i % 2 === 0 ? Math.min(k[i], q[i]) : Math.max(k[i], q[i]);
+        }
         return kept;
     };
     let list = prune(boxes);
@@ -192,7 +208,13 @@ export function buildingCameraBoxes(origin: {x: number; z: number}, heightAt: (x
     const footprints = joinedFootprints(
         cameraBuildings().map((building) => {
             const ground = heightAt(building.at.x, building.at.z);
-            return {x: building.at.x, z: building.at.z, y0: ground - 1, y1: Math.max(ground + building.top, byId.get(building.id)?.top ?? -Infinity), hx: building.at.w / 2, hz: building.at.d / 2, rot: building.at.rot};
+            const camera = byId.get(building.id);
+            const [x0, x1, z0, z1] = camera?.body ?? [-building.at.w / 2, building.at.w / 2, -building.at.d / 2, building.at.d / 2];
+            const mx = (x0 + x1) / 2;
+            const mz = (z0 + z1) / 2;
+            const cos = Math.cos(building.at.rot);
+            const sin = Math.sin(building.at.rot);
+            return {x: building.at.x + mx * cos - mz * sin, z: building.at.z + mx * sin + mz * cos, y0: ground - 1, y1: Math.max(ground + building.top, camera?.top ?? -Infinity), hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, rot: building.at.rot};
         })
     );
     const boxes: CameraObstacle[] = footprints.map((f) => ({kind: "box", x: origin.x + f.x, z: origin.z + f.z, y0: f.y0, y1: f.y1, hx: f.hx, hz: f.hz, rotation: -f.rot, sight: true}));
