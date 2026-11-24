@@ -19,6 +19,8 @@ import {boxesOverlap, corners, inBox, toLocal} from "@/ark-scene/islands/town/ge
 import {arkBody} from "@/ark-scene/stats";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {clearOfHallRocks, hallRockList, rockMeasure} from "@/ark-scene/islands/town/hall-rocks";
+import {hallRocks} from "@/ark-scene/islands/town/render/aquarium-hall";
+import {Matrix4, MeshBasicMaterial, Ray, Vector3} from "three";
 
 /** Every species the real Ark keeps in its aquarium (the saved read of 2026-11-16: 66 species, 92 animals), with its zone. */
 const AQUARIUM: Array<[string, string]> = [
@@ -257,4 +259,68 @@ test("the hall's residents swim and walk round its rocks (over a low one, never 
     console.log(`aquarium rocks: ${samples} samples, ${before} in a rock before, ${inRock} after, ${caved} at a cave`);
     assert.equal(inRock, 0, `in a rock: ${bad.join("; ")}`);
     assert.ok(caved > samples * 0.08, "the caves still used");
+});
+
+// SIG4 (the seat audit, #115's CI: a bristlenose pleco resting in the fresh tank's cave, its middle inside a pebble of the
+// sand's scatter): a hider in its cave is inside no drawn rock. Measured against the drawn boulders themselves (the
+// instanced unit shape, as the audit's probe reads it), not their footprints.
+test("a hider resting in its cave is inside no drawn rock (no pebble or reef boulder left in a cave's hollow)", () => {
+    const placed = placeTownAnimals(residents());
+    const meshes = hallRocks(hallRockList().all, new MeshBasicMaterial());
+    const inverse = new Matrix4();
+    const matrix = new Matrix4();
+    const local = new Vector3();
+    const up = new Vector3(0, 1, 0);
+    const hit = new Vector3();
+    const ray = new Ray();
+    const [a, b, c] = [new Vector3(), new Vector3(), new Vector3()];
+    /** Inside a drawn rock: the point in an instance's unit space, an odd number of its faces above it. */
+    const inRock = (x: number, y: number, z: number): boolean => {
+        for (const mesh of meshes) {
+            const position = mesh.geometry.getAttribute("position");
+            for (let i = 0; i < mesh.count; i++) {
+                mesh.getMatrixAt(i, matrix);
+                local.set(x, y, z).applyMatrix4(inverse.copy(matrix).invert());
+                if (Math.abs(local.x) > 1 || Math.abs(local.z) > 1 || local.y < 0 || local.y > 1) continue;
+                ray.set(local, up);
+                let crossings = 0;
+                for (let f = 0; f < position.count; f += 3) {
+                    a.fromBufferAttribute(position, f);
+                    b.fromBufferAttribute(position, f + 1);
+                    c.fromBufferAttribute(position, f + 2);
+                    if (ray.intersectTriangle(a, b, c, false, hit)) crossings++;
+                }
+                if (crossings % 2 === 1) return true;
+            }
+        }
+        return false;
+    };
+    let rested = 0;
+    let inside = 0;
+    const bad: string[] = [];
+    for (const animal of residents()) {
+        const t = placed.town.get(animal.id)!.tank!;
+        if (!(t.caves ?? []).length) continue;
+        const plan = modelBase(animal.model_slug)?.plan ?? null;
+        const display = arkBody(animal, plan).display;
+        const {length, width} = tankBody(animal.model_slug, plan, display);
+        const found = modelBase(animal.model_slug)!;
+        const height = (found.size.y / Math.max(found.size.z, 0.05)) * length;
+        for (let k = 0; k < 240; k++) {
+            const clock = DAY + k * 360 + (k % 7) * 3.7;
+            const p = clearOfHallRocks(t, tankPose(t, animal, display, height, plan, clock), length, width, height);
+            // (In its cave's hollow, where a hider rests: its middle half. Swimmers passing a cave's mouth go into the rock
+            // round it by design, the test above.)
+            if (!(t.caves ?? []).some((cave) => Math.hypot(cave.x - p.x, cave.z - p.z) < cave.r * 0.5)) continue;
+            rested++;
+            if (inRock(p.x, p.base + height / 2, p.z)) {
+                inside++;
+                const key = `${animal.model_slug} in ${t.id}`;
+                if (!bad.includes(key)) bad.push(key);
+            }
+        }
+    }
+    console.log(`cave rests: ${rested} samples, ${inside} inside a drawn rock`);
+    assert.ok(rested > 50, `${rested} cave rests sampled`);
+    assert.deepEqual(bad, []);
 });
