@@ -52,7 +52,7 @@ import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FL
 // p3 (shake): shaking off the water at the edge.
 import {shakeTotal, waterShakeOf} from "@/ark-scene/water-shake";
 import {commuteCentre, flockTightness, groupIntent, pairSide} from "@/ark-scene/behaviour-group";
-import {coatOf, drawnRecipe, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, pairMeetings, recipeRoostTags, sexLook, sitterIntent, type DrawnRecipe, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
+import {coatOf, drawnRecipe, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, pairEpisode, pairMeetings, recipeRoostTags, sexLook, sitterIntent, type DrawnRecipe, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 import {flowParamsFor, flowsOn, flowStillShare, flowSubjectOf, flowTrip, FLOW_STILL_SHARE} from "@/ark-scene/flows/scene-adapter";
 
 export const SLOT_SECONDS = 80;
@@ -3221,6 +3221,11 @@ export function drawnRecipeAt(world: ScheduleWorld, trip: Trip, epochSeconds: nu
 /** The pair meetings it has that start between two world times, as its pose plays them (`behaviour-recipes.ts` pairMeetings). */
 export function pairMeetingsAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, from: number, to: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): DrawnRecipe[] {
     return pairMeetings(world, {animal, profile, slug: profile.slug, activity, hoursAt}, KIT, from, to, (t) => !awakeAt(profile, activity, hoursAt(slotStart(animal, slotOf(animal, t))), animal.sleep));
+}
+
+/** Lane SIG5 (the behaviours harness): the pair meeting's episode it plays at a world time, with its keys, or null. */
+export function pairEpisodeAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epoch: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): Episode | null {
+    return pairEpisode(world, {animal, profile, slug: profile.slug, activity, hoursAt}, KIT, epoch);
 }
 
 /**

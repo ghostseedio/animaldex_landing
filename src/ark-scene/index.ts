@@ -219,7 +219,7 @@ import {attachPoint, drawnContactGap, gripSoleDrop, groundedLevelBase, groundedS
 import {SEAT_FACTS, SeatPass, seatKind, type SeatState} from "@/ark-scene/seat";
 import {HANG_EASE, hangPivot, hangPose} from "@/ark-scene/grounding/hang";
 import {drawnGround, drawnGroundHeight, setDrawnGroundStride} from "@/ark-scene/grounding/drawn-ground";
-import {lowestPoints, seatDrop} from "@/ark-scene/grounding/tips";
+import {lowestPoints, restDrop, seatDrop, turnedLowestPoints} from "@/ark-scene/grounding/tips";
 import {feetCarryClip, modelBase, uprightBody} from "@/ark-scene/grounding/base";
 import {brachiates, canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
 import type {LocoCanopy} from "@/ark-scene/locomotion/brachiate"; // ARK-CANOPY
@@ -424,6 +424,16 @@ const swimFixOff = () => process.env.NODE_ENV !== "production" && (globalThis as
 const FLYERS = ARK_FLYERS;
 /** A catch lying on its side (rad): over onto its flank, not quite flat. */
 const LYING_ROLL = 1.42;
+/** Lane SIG5: a recipe state its rig plays in place (a loop or a one-shot, not a gait by distance) carries its own tilt. */
+const CARRIED_PLAYS: ReadonlySet<string> = new Set(["loop", "once"]);
+/** ...except the body's roll in a roll on the ground: the clip pedals the legs on the lying pose, the block turns the body over. */
+const ROLLED_ON_CLIP: ReadonlySet<string> = new Set(["roll", "dust_bathe", "wallow"]);
+/** Lane SIG6: the clips a rolled body gets up by, held as it was (`rollHeld`). */
+const ROLL_GETS_UP: ReadonlySet<string> = new Set(["get_up", "lie_down", "lie"]);
+/** Lane SIG6: the most a body turned over on its own clip is moved onto its back or side, either way (body lengths). */
+const ROLLED_REST_MOST = 0.5;
+/** Lane SIG5: how far a dabbler floats lower while up-ended on its own clip (body lengths): its front half under. */
+const DABBLE_SINK = 0.25;
 /** A meal act's states the rig plays from its own clips (`rig-player.ts` RECIPE_CLIPS): feeding, a glance up, lying up. */
 const MEAL_CLIP_STATES = new Set(["eat", "scan", "rest", "bask", "dig"]);
 
@@ -684,6 +694,8 @@ type Entry = {
     stirShare?: number;
     /** Its rig plays the lying clips now (`sleepClip`): the procedural lying gives way to them as the rig fades in. */
     sleepClipped?: boolean;
+    /** Lane SIG6: turned over on its own clip, or getting up from it: left by the seat pass, rested on its turned pose. */
+    rollHeld?: boolean;
     /** 0 out … 1 gone into its burrow or den to sleep or rest (its roost is the way in: `goesIntoRoost`), eased. */
     denIn?: number;
     /** 3.3 batch (B): flying one of the birds' own moves (`mobbing.ts`): its rig flies while its act has it in the air. */
@@ -5182,6 +5194,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // In the water: where it goes is the schedule's; how deep, its own place in its species' band (`sea-depth.ts`,
         // each animal its own depth, so a school is spread up and down), up to the surface on its breath, fitted at its drawn size.
         const act = (at as RecipePose).act;
+        const carried = Boolean(act && act.episode !== "sleep" && entry.rig && entry.rig.weight > 0.5 && act.state && CARRIED_PLAYS.has(recipeClip(sleepState(act.state), (name) => Boolean(rigs.clip(entry.animal.model_slug, name)))?.play ?? ""));
         // (`schedule-water.ts`: in the water, the band wins over the schedule's own height; a recipe act of its own, a dive, keeps its height.)
         // (Part C: the water's surface there, the sea's 0 or the bigger wild island's lake and river at their own level.)
         // (Lane MA3: the higher of the drawn lattice's surface and the schedule's own water level, `waterLevelAt`: the
@@ -5226,7 +5239,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (A penguin lies down to swim: `swimBodyPitch`; a floater rides its kind's way, a duck tail up: `floatPitch`. A
             // recipe's attitude on top: an up-end tips it nose down.)
             const ride = spec.motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : spec.motion === "float" ? floatPitch(band.kind) : 0;
-            return {x: at.x, z: at.z, base, yaw, pitch: ride + (act && act.episode !== "sleep" ? act.pitch : 0), roll: act && act.episode !== "sleep" ? act.roll : 0, afloat: true, water: spec, ...(surface ? {surface} : {})};
+            // (Lane SIG5: an act its rig plays on its own clip carries its tilt (a mallard's dabble, kit41, tips 55° itself), and a
+            // dabbler up-ended so floats lower, its front half under the water.)
+            const dabbleSink = carried && act?.state === "upend" ? entry.length * DABBLE_SINK : 0;
+            return {x: at.x, z: at.z, base: base - dabbleSink, yaw, pitch: ride + (act && act.episode !== "sleep" && !carried ? act.pitch : 0), roll: act && act.episode !== "sleep" && !carried ? act.roll : 0, afloat: true, water: spec, ...(surface ? {surface} : {})};
         }
         // Under the surface in its own act (a dive): where the act has it, swimming (lane MA3: it walked and hopped there).
         const diving = Boolean(band) && Boolean(act?.own) && !at.aloft && ground < waterTop - 0.02 && at.y < waterTop - 0.06;
@@ -5248,6 +5264,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (act && act.episode === "sleep") entry.sleepAct = {pitch: act.pitch, roll: act.roll, hang: hangAct};
         else if (!sleepT) entry.sleepAct = null;
         const actShare = act && act.episode === "sleep" ? sleepStages(sleepT).roll : 1;
+        // (Lane SIG5, with SPECIES-ANIM-A2: a rig that plays the act's state on a clip of its own carries the attitude in that
+        // clip: a dog's dig already tips its front end down, so the block's 0.4 rad nose-down on top of it doubled it. The
+        // block's tilt stays the fallback for a rig without the clip. A roll on the ground keeps its turn over: the lying
+        // clip pedals the legs, the block rolls the body.)
+        const actPitchShare = carried ? 0 : actShare;
+        // (Lane SIG6: and a roll's turn over only on the clip itself, eased in as it fades in: turned while still on its feet or
+        // on its way down, a standing horse went over about its feet and was seated on its back with its legs a body's
+        // height up, through the town's paddock rails.)
+        const rolling = carried && ROLLED_ON_CLIP.has(act?.state ?? "") && entry.rig ? (entry.rig.now.name !== act!.state ? 0 : entry.rig.from ? Math.min(Math.max(entry.rig.fade, 0), 1) : 1) : 1;
+        const actRollShare = (carried && !ROLLED_ON_CLIP.has(act?.state ?? "") ? 0 : actShare) * rolling;
         const after = !act || act.episode !== "sleep" ? entry.sleepAct ?? null : null;
         const afterShare = after ? sleepStages(sleepT).roll : 0;
         // ARK-ANIM (round 4): a bat roosting hangs under its limb from its feet, head down, its body below the limb,
@@ -5302,8 +5328,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             base: ashore ? ground : at.y,
             yaw: (at.aloft ? wing.yaw : at.yaw) + glance,
             // A recipe's attitude on top (a plunge nose down, an up-end, a roll in the dust).
-            pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actShare : 0) + (after ? after.pitch * afterShare : 0),
-            roll: (circling ? wing.roll * entry.air : 0) + (act ? act.roll * actShare : 0) + (after ? after.roll * afterShare : 0),
+            pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actPitchShare : 0) + (after ? after.pitch * afterShare : 0),
+            roll: (circling ? wing.roll * entry.air : 0) + (act ? act.roll * actRollShare : 0) + (after ? after.roll * afterShare : 0),
             // (Over water: the sea's below 0, or (lane MA3 water 2) a lake's or a river's above its bed, the v2 lake at 6 m: it
             // read as dry ground there, and a swimmer out of its band was stood on the bed by its feet, a metre down.)
             afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0 || ground < waterTop - 0.02 || diving,
@@ -7320,6 +7346,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             facts.swinging = Boolean((surface as {canopy?: boolean} | undefined)?.canopy);
             facts.hopping = Boolean(entry.hop?.hopping);
             facts.surfaceNy = surface ? surface.ny : null;
+            // (Lane SIG6: a body the block turns over on its own clip, a roll, a dust bathe, a wallow, is its own act, left by the
+            // seat pass and rested on its back below: seated as "stand" it was put down by its soles, kicking up in the air, and
+            // the town's horses were thrown a body's height up and through the paddock rails; seated as "lie", its roll's own
+            // motion muted the seat, and the horse was left in the ground or over it after.)
+            const rolledAct = (entry.sched?.pose as RecipePose | undefined)?.act?.state ?? "";
+            // (Held so through the getting up that follows it too: a fresh seat on its feet put the horse getting up from its
+            // roll in to the knees for a second and a half.)
+            const rolledNow = Boolean(rig && ((ROLLED_ON_CLIP.has(rolledAct) && rig.clips[rolledAct]) || (entry.rollHeld && state && ROLL_GETS_UP.has(state.now.name))));
+            entry.rollHeld = rolledNow;
+            // (And its seat forgotten while it rolls: what held it on its feet before holds nothing after, and the horse up
+            // from its roll was put 1.6 m into the ground by its old seat's solve. It is seated afresh on its feet.)
+            if (rolledNow) {
+                facts.acting = true;
+                entry.seat = undefined;
+            }
             facts.lying = (Boolean(slept) && !sleepsStanding) || lyingOn !== null || Boolean(act?.lying);
             let seatAs = seatKind(facts);
             // (Held where nothing is drawn, a trunk's side that is not there: upright, to come down onto what is under it.)
@@ -7353,6 +7394,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     const drop = seatDrop(lowestPoints(rig, clipRows(clipNow, state.now.phase)[0]), matrix.elements, (x, z) => standGround(x, z, poseBase));
                     if (drop > 0) {
                         position.y -= drop;
+                        matrix.setPosition(position);
+                    }
+                }
+            }
+            // (Lane SIG6: a body turned over on its own clip rests on its back or side as drawn, each frame: the lowest points of
+            // its pose as turned, onto the ground, down or up.)
+            if (rig && state && rolledNow && !reducedMotion) {
+                const clipNow = rig.clips[state.now.name];
+                if (clipNow) {
+                    const move = restDrop(turnedLowestPoints(rig, clipRows(clipNow, state.now.phase)[0]), matrix.elements, (x, z) => standGround(x, z, poseBase), entry.length * ROLLED_REST_MOST);
+                    if (move !== 0) {
+                        position.y -= move;
                         matrix.setPosition(position);
                     }
                 }
