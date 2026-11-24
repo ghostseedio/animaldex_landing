@@ -2142,7 +2142,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (Its roost the first time its schedule asks: the den search out of the mount, `withLazyRoost`; the runtime's
             // sliced mount may have found it already, `mapRoostOf`'s memo.)
             // (Part C: a town animal's range is its garden, paddock or enclosure; it finds its roost among the town's places.)
-            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), sleep: arkSleepOf(animal), condition: animal.condition ?? null, ...(inTown ? {range: island!.rangeOf(animal.id), kept: true} : {})}, () => (inTown ? null : mapRoostOf(place, animal.zone))),
+            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), sleep: arkSleepOf(animal), condition: animal.condition ?? null, ...(inTown ? {range: island!.rangeOf(animal.id), kept: true, keep: island!.keep?.(animal.id) ?? null, bed: island!.bed?.(animal.id) ?? null, mates: () => (island!.mates?.(animal.id) ?? []).flatMap((id) => {
+                const s = entryById.get(id)?.sched;
+                return s ? [{animal: s.animal, profile: s.profile}] : [];
+            })} : {})}, () => (inTown ? null : mapRoostOf(place, animal.zone))),
             profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
             trip: null,
             lead: null,
@@ -2440,6 +2443,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return {id: entry.animal.id, radius: shape.radius, half: shape.half, height: shape.height, group: entry.place.leader ?? entry.animal.id, huddles: HUDDLED.has(sleepStyle(entry.animal.model_slug).social), ...(walker ? {maxSlope: maxSlopeOf(entry.sched!.animal) * 2} : {})};
         },
         slope: (x, z) => Math.max(Math.abs(heightAt(x + 1, z) - heightAt(x - 1, z)), Math.abs(heightAt(x, z + 1) - heightAt(x, z - 1))) / 2,
+        // Lane PENKEEP: a penned town animal's pose and pushes inside the keep box its bound holds it to (`islands/scene.ts` keep).
+        keep: (entry) => (island?.keep && townIds.has(entry.animal.id) && !entry.visitor ? island.keep(entry.animal.id) : null),
         base: (entry, epoch) => (collideActing(entry) ? actBody(entry.act!) : scheduled(entry) && entry.sched?.wired ? collideInput(entry, sharedBase(entry, epoch), epoch) : entry.place.hamlet ? residentBase(entry) : null),
         everyone: () => entries.filter((entry) => (scheduled(entry) && entry.sched!.wired && entry.sched!.pose) || collideActing(entry) || (entry.place.hamlet && !entry.visitor && entry.residentAt)),
         last: (entry) => (collideActing(entry) ? {x: entry.act!.x, z: entry.act!.z, at: worldMs() / 1000} : entry.sched?.pose ? {x: entry.sched.pose.x, z: entry.sched.pose.z, at: entry.sched.at} : entry.residentAt ?? null),
@@ -5581,7 +5586,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (scheduled(entry) && entry.sched!.pose && !(entry.depth && waterMotion(entry.depth) === "hole")) {
             const at = fromSchedule(entry, modelHeight);
             // Part C: a zoo animal never leaves its enclosure (the mask is its hard bound, whatever its schedule's route).
-            if (island) island.bound(entry.animal.id, at);
+            if (island) island.bound(entry.animal.id, at, collisions.body(entry));
             return at;
         }
         if (place.micro && !entry.visitor) {
@@ -5695,14 +5700,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const surface = entry.trueLength < 0.5 ? onGround(x, ground, z, wander.heading) : undefined;
             const walked: Pose = {x, z, base: ground, yaw: wander.heading, pitch: 0.05 * entry.rest, roll: 0, afloat: false, ...(surface ? {surface} : {})};
             // p5 (rural): bound where it has walked to as well (a hen off her spot at dusk still goes in to roost).
-            if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, walked);
+            if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, walked, collisions.body(entry));
             return walked;
         }
         // Asleep: a little lower at the front, as the head goes down.
         if (floating && !wander?.x && !wander?.z) return {x: place.x, z: place.z, base, yaw: place.yaw, pitch: floatPitch(floatBand?.kind), roll: 0, afloat: true, water: floating.water};
         const still: Pose = {x: place.x, z: place.z, base, yaw: wander ? wander.heading : place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
         // p5 (rural): off its schedule too (asleep, at rest), a town animal's bound: a hen shut in her hen house at night.
-        if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, still);
+        if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, still, collisions.body(entry));
         return still;
     };
     /**
@@ -10717,7 +10722,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // ZOOGLITCH: a zoo resident's or a penned animal's loop inside its fence: an act's pose skips the bound its
         // schedule's pose gets (`poseCore`), and the loop reaches three lengths out (a giraffe's 12 m in a 28 m paddock).
         bound: (entry, pose) => {
-            if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, pose);
+            if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, pose, collisions.body(entry));
         }
     });
     /**

@@ -31,6 +31,7 @@ import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength,
 import {bodyShape} from "@/ark-scene/collide/bodies";
 import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
 import {colliderDistance, type Collider} from "@/ark-scene/collide/colliders";
+import {inKeep, intoKeep, type KeepBox} from "@/ark-scene/collide/resolve";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {allAttachPoints, type AttachPoint as SceneryPoint} from "@/ark-scene/sampler";
 import {waterLevelAt} from "@/ark-scene/water-level";
@@ -212,6 +213,25 @@ export type ScheduleAnimal = {
      * its kind's wild rhythm, so its kind's System Dynamics does not shape it (`sd-rhythm.ts`, lane ark-sd-align).
      */
     kept?: boolean;
+    /**
+     * Lane PENKEEP: a penned one's keep box (its pen, its margin in from the rails: `collide/resolve.ts` KeepBox), the one
+     * the collisions and the scene's bound hold it to. Its goals are inside it and clear of what stands in the pen by its
+     * reach (a paddock's horses' goals by a trough went to the only strip that fitted them, between the trough and the
+     * rails, outside it, three horses on one point; the collisions could push them neither way). Absent: no pen.
+     */
+    keep?: KeepBox | null;
+    /**
+     * Lane ZOOSLEEP: its own bed in its enclosure, handed out with every other resident's (`islands/town/zoo-beds.ts`):
+     * where it lies asleep, and the way it faces, over any roost it would pick itself and its group's huddle. Absent or
+     * null: it picks its own.
+     */
+    bed?: {x: number; z: number; heading: number} | null;
+    /**
+     * Lane ZOOSLEEP: the others kept in its enclosure (each its schedule animal and profile), whose beds its goals keep
+     * off: a tapir asleep in its paddock's corner had an elephant's goal beside it, both held to the corner by their keep
+     * boxes, inside each other for seven seconds. Absent: no one.
+     */
+    mates?: () => ReadonlyArray<{animal: ScheduleAnimal; profile: ArkBehaviourProfile}>;
     /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
     roost?: Spot | null;
     /** Its own sleep, when it is active at any hour (`sleep-hours.ts` arkSleepOf): it sleeps in bouts of its own. */
@@ -846,7 +866,14 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
     const r = still ? bodyRadiusOf(animal, profile.slug) : bodyReachOf(animal, profile.slug);
     const slope = maxSlopeOf(animal);
     // (Clear of everything solid, and not on a cliff's face.)
-    if (nav.fits(spot.x, spot.z, r, slope)) return spot;
+    const keep = animal.keep ?? null;
+    // (A goal on its way: off its enclosure-mates' beds by both their reaches, `ScheduleAnimal.mates`.)
+    // (Its own roost, when it has no bed handed out: off the beds handed out to the others, a babirusa's den spot by the
+    // shed on a fallow deer's bed. Those only: theirs are known without asking their roosts.)
+    const beds = still ? (animal.bed ? null : handedBeds(animal)) : matesBeds(world, animal);
+    const own = beds ? bodyReachOf(animal, profile.slug) : 0;
+    const offBeds = (x: number, z: number) => !beds || beds.every((b) => Math.hypot(x - b.x, z - b.z) >= own + b.reach);
+    if (nav.fits(spot.x, spot.z, r, slope) && (!keep || inKeep(keep, spot.x, spot.z)) && offBeds(spot.x, spot.z)) return spot;
     // (Rings 0.35 m apart, out to 4.2 m, at most 16 points each: the first that fits, in ring order, is the spot; each
     // animal starts its rings at its own bearing and its own offset out, so a group nudged off one trunk or one fence
     // does not line up in a row along it.)
@@ -861,12 +888,43 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
             const x = spot.x + Math.cos(a) * d;
             const z = spot.z + Math.sin(a) * d;
             if (!nav.fits(x, z, r, slope)) continue;
+            // (Penned: inside its keep box, never in the strip behind a trough by the rails.)
+            if (keep && !inKeep(keep, x, z)) continue;
+            if (!offBeds(x, z)) continue;
             // (The way it came in, from the spot: never past a fence to its far side.)
             if (!nav.runClear({x: spot.x, z: spot.z}, {x, z}, 0.01)) continue;
             return {...spot, x, y: topAt(world, x, z), z};
         }
     }
     return spot;
+}
+
+const matesBedsMemo = new WeakMap<ScheduleWorld, WeakMap<ScheduleAnimal, Array<{x: number; z: number; reach: number}>>>();
+/** Its enclosure-mates' beds (their roosts on the ground), each with its body's reach: null with none. */
+function matesBeds(world: ScheduleWorld, animal: ScheduleAnimal): Array<{x: number; z: number; reach: number}> | null {
+    if (!animal.mates) return null;
+    let by = matesBedsMemo.get(world);
+    if (!by) matesBedsMemo.set(world, (by = new WeakMap()));
+    let beds = by.get(animal);
+    if (!beds) {
+        beds = [];
+        for (const m of animal.mates()) {
+            if (m.animal.id === animal.id || aquatic(m.profile)) continue;
+            const roost = roostOf(world, m.profile, m.animal);
+            if (raised(world, roost) || wet(world, roost)) continue;
+            beds.push({x: roost.x, z: roost.z, reach: bodyReachOf(m.animal, m.profile.slug)});
+        }
+        by.set(animal, beds);
+    }
+    return beds.length ? beds : null;
+}
+
+/** The beds handed out to its enclosure-mates (`ScheduleAnimal.bed`), each with its body's reach: null with none. */
+function handedBeds(animal: ScheduleAnimal): Array<{x: number; z: number; reach: number}> | null {
+    if (!animal.mates) return null;
+    const beds: Array<{x: number; z: number; reach: number}> = [];
+    for (const m of animal.mates()) if (m.animal.id !== animal.id && m.animal.bed) beds.push({x: m.animal.bed.x, z: m.animal.bed.z, reach: bodyReachOf(m.animal, m.profile.slug)});
+    return beds.length ? beds : null;
 }
 
 /** A point in the water near a spot, at the depth it swims at. */
@@ -891,12 +949,29 @@ function memberSide(centre: {x: number; z: number}, animal: ScheduleAnimal, rank
 
 /** A point to go to within a range of a centre: walkable land (or water for a swimmer). */
 function rangeSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, centre: {x: number; z: number}, radius: number, random: () => number): Spot {
-    const r = radius * Math.sqrt(random());
-    const a = random() * Math.PI * 2;
-    const x = centre.x + Math.cos(a) * r;
-    const z = centre.z + Math.sin(a) * r;
+    let r = radius * Math.sqrt(random());
+    let a = random() * Math.PI * 2;
+    let x = centre.x + Math.cos(a) * r;
+    let z = centre.z + Math.sin(a) * r;
     if (aquatic(profile)) return waterSpot(world, profile, animal, x, z, random);
+    // Lane PENKEEP: a penned one's goal is drawn inside its keep box (again, up to 8 draws, for one past its rails; then
+    // the box's nearest point). Put on the box's nearest point at once, every draw past the rails landed on its inset
+    // line, and those by a trough on the one strip of it clear of the trough: horses on one point all day.
+    const keep = animal.keep ?? null;
+    if (keep) {
+        for (let k = 0; k < 8 && !inKeep(keep, x, z); k++) {
+            r = radius * Math.sqrt(random());
+            a = random() * Math.PI * 2;
+            x = centre.x + Math.cos(a) * r;
+            z = centre.z + Math.sin(a) * r;
+        }
+        ({x, z} = intoKeep(keep, x, z));
+    }
     const land = world.nav.nearest(x, z, "walk", 0.5, 12, maxSlopeOf(animal)) ?? centre;
+    if (keep && !inKeep(keep, land.x, land.z)) {
+        const kept = intoKeep(keep, land.x, land.z);
+        return groundSpot(world, kept.x, kept.z);
+    }
     return groundSpot(world, land.x, land.z);
 }
 
@@ -1068,6 +1143,9 @@ function acrossLimb(along: [number, number, number]): number {
 }
 
 function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
+    // (Lane ZOOSLEEP: a bed handed out with its enclosure's others is its own. Picked one by one from three shade points
+    // by the shed, a mixed paddock's residents lay two on a point.)
+    if (animal.bed) return {...groundSpot(world, animal.bed.x, animal.bed.z), heading: animal.bed.heading};
     const group = animal.group;
     // (A flock whose text has it sleeping together, huddled or in a row, roosts as a group too: `sleep.ts`.)
     const together = sleepStyle(profile.slug).social !== "apart";
@@ -1999,7 +2077,8 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
             const nx = x + (Math.sin(yaw) * (beat.dx ?? 0) + Math.cos(yaw) * (beat.dz ?? 0)) * l * k;
             const nz = z + (Math.cos(yaw) * (beat.dx ?? 0) - Math.sin(yaw) * (beat.dz ?? 0)) * l * k;
             // Only onto ground it can walk, and never out of its range (a stalker stops at the edge).
-            const within = Math.hypot(nx - animal.home.x, nz - animal.home.z) <= Math.max(homeRadius(profile, animal) * 1.6, 2);
+            // (Lane PENKEEP: and a penned one's never out of its keep box: a grazer's steps took it past the inset by the rails.)
+            const within = Math.hypot(nx - animal.home.x, nz - animal.home.z) <= Math.max(homeRadius(profile, animal) * 1.6, 2) && (!animal.keep || inKeep(animal.keep, nx, nz));
             // (And the step itself clear of everything solid for its body, and where it ends: collisions.)
             const r = bodyRadiusOf(animal, profile.slug);
             if (world.nav.fits(nx, nz, bodyReachOf(animal, profile.slug), maxSlopeOf(animal)) && within && world.nav.runClear({x, z}, {x: nx, z: nz}, r)) {
