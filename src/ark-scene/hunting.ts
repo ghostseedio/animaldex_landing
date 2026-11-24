@@ -12,8 +12,14 @@
  *
  * Its home here is the module's (the server's) spot for its slot; `spaceHomes` keeps a resting predator's home a safe
  * distance from its prey as before, and applies only while it is not hunting.
+ *
+ * Hunt geometry (AnimalDex decision 500; the read's `hunt_geometry`): the waypoints follow its way of hunting
+ * (`positions.ts` huntForayAt, by its look in `hunt-geometry.json`): a searcher's loop leans towards where its prey lives,
+ * an ambusher keeps to one spot. Where each works (its lean) is the engine's, sent with the read a day before it is used,
+ * so this draws exactly the server's waypoints. Nothing here finds or catches anything.
  */
-import {ARK_DAY_MS, STEPS_PER_ARK_DAY, awakeAt, decodeAtlas, forayAt, homeOf, stepIndex, type Atlas, type Home} from "@/ark-scene/positions/positions";
+import {ARK_DAY_MS, STEPS_PER_ARK_DAY, awakeAt, decodeAtlas, forayAt, homeOf, huntForayAt, huntGeometryOf, leanAt, stepIndex, type Atlas, type Home, type HuntGeometryTable} from "@/ark-scene/positions/positions";
+import geometryTable from "@/ark-scene/positions/hunt-geometry.json";
 import type {ArkDoing, TripPose} from "@/ark-scene/behaviour-schedule";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {arkSleepOf} from "@/ark-scene/sleep-hours";
@@ -43,7 +49,9 @@ export function loadPositionsAtlas(url = POSITIONS_ATLAS_URL): Promise<Atlas> {
     return atlasLoad;
 }
 
-type State = {startedAtMs: number; from: Map<string, number>; atlas: Atlas};
+type State = {startedAtMs: number; from: Map<string, number>; atlas: Atlas; geometry: boolean; leans: Map<string, Array<Array<number | null>>>};
+
+const GEOMETRY = geometryTable as unknown as HuntGeometryTable;
 type Leg = {k: number; a: {x: number; z: number}; b: {x: number; z: number}; on0: boolean; on1: boolean};
 
 const ease = (u: number) => u * u * (3 - 2 * u);
@@ -67,7 +75,7 @@ export class HuntingLayer {
             return;
         }
         if (this.state && this.state.atlas !== atlas) this.homes.clear();
-        this.state = {startedAtMs: start, from: hunting.predators, atlas};
+        this.state = {startedAtMs: start, from: hunting.predators, atlas, geometry: hunting.geometry === true, leans: hunting.leans ?? new Map()};
         this.legs.clear();
     }
 
@@ -88,6 +96,14 @@ export class HuntingLayer {
             : null;
         this.homes.set(animal.id, h);
         return h;
+    }
+
+    /** Where the server has it at step k: today's foray, or under hunt geometry its way of hunting's, from its lean. */
+    private waypoint(animal: ArkAnimal, home: Home, k: number): {x: number; z: number} {
+        const st = this.state!;
+        if (!st.geometry) return forayAt(st.atlas, home, animal.id, k);
+        const geo = huntGeometryOf(GEOMETRY, home.slug);
+        return geo ? huntForayAt(st.atlas, home, animal.id, k, null, geo, leanAt(st.leans.get(animal.id), k)) : forayAt(st.atlas, home, animal.id, k);
     }
 
     /** Is it hunting at step k: its next hunt has come and it is awake (the module's sleep, its stored activity first). */
@@ -142,7 +158,7 @@ export class HuntingLayer {
         const k = stepIndex(day);
         let leg = this.legs.get(animal.id);
         if (!leg || leg.k !== k) {
-            leg = {k, a: forayAt(st.atlas, home, animal.id, k), b: forayAt(st.atlas, home, animal.id, k + 1), on0: this.on(animal, home, from, k), on1: this.on(animal, home, from, k + 1)};
+            leg = {k, a: this.waypoint(animal, home, k), b: this.waypoint(animal, home, k + 1), on0: this.on(animal, home, from, k), on1: this.on(animal, home, from, k + 1)};
             this.legs.set(animal.id, leg);
         }
         if (!leg.on0 && !leg.on1) return null;

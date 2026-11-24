@@ -10,7 +10,7 @@ import fixtureEvents from "@/ark-scene/fixtures/events.json";
 import {decodeArkEvents, decodeArkMealEncounter, planArkReplay} from "@/lib/ark-life";
 import {decodeArkHunting, decodeArkHuntingResponse} from "@/lib/ark-hunting";
 import {HuntingLayer, type HuntPose} from "@/ark-scene/hunting";
-import {ARK_DAY_MS, decodeAtlas, forayAt, homeOf, sheetOf, stepIndex} from "@/ark-scene/positions/positions";
+import {ARK_DAY_MS, GEO_AMBUSH, GEO_SEARCH, decodeAtlas, forayAt, homeOf, huntForayAt, huntGeometryOf, leanAt, sheetOf, stepIndex} from "@/ark-scene/positions/positions";
 import type {ArkAnimal} from "@/ark-scene/types";
 
 const ENCOUNTER = {t: 1794190925.81, step: 481, island: "wild", predator: {x: -3.74, z: 2.99}, prey: {x: -2.8, z: 5.4, r: 3}, d: 2.59};
@@ -115,4 +115,49 @@ test("forays: a due predator is at the module's waypoint at every step, walks be
     // Off again: the read gone.
     layer.set(null, null, null);
     assert.equal(layer.active, false);
+});
+
+test("hunt geometry: the read's switch and leans, decoded and checked", () => {
+    const fox = "00000000-0000-4000-8000-000000000100";
+    const owl = fox.replace("100", "101");
+    const raw = {hunting: "encounter", hunt_geometry: true, started_at: "2026-11-08T21:45:21.431391+00:00", predators: [[fox, 81.25, [[3.5, -2, 7900, 9], [null, null, 7996, 9], ["x", 1, 8000, 9], [1, 2, 8000.5, 9]]], [owl, 82]], meals: []};
+    const h = decodeArkHunting(raw)!;
+    assert.equal(h.geometry, true);
+    assert.deepEqual(h.leans!.get(fox), [[3.5, -2, 7900, 9], [null, null, 7996, 9]]);
+    assert.equal(h.leans!.has(owl), false);
+    // Off (or an older read): no geometry, nothing about leans.
+    const off = decodeArkHunting({...raw, hunt_geometry: false})!;
+    assert.equal(off.geometry, undefined);
+    assert.equal(off.leans, undefined);
+});
+
+test("hunt geometry: a searcher walks the server's leaned waypoints, an ambusher keeps its spot; off is today's", () => {
+    const geo = JSON.parse(readFileSync(join(process.cwd(), "src/ark-scene/positions/hunt-geometry.json"), "utf8"));
+    const isl = atlas.islands.wild;
+    const pick = (cls: number) => Object.keys(isl.species).sort().find((s) => huntGeometryOf(geo, s) === cls && sheetOf(atlas, s)!.move === "walk" && isl.species[s][1] !== 11)!;
+    const sched = (): HuntPose => ({x: 0, y: 0, z: 0, yaw: 0, moving: false, aloft: false, nx: 0, ny: 1, nz: 0, beat: "rest", doing: "rest"});
+    const ground = () => 0.5;
+    const epochAt = (day: number) => (START + day * ARK_DAY_MS) / 1000;
+    for (const cls of [GEO_SEARCH, GEO_AMBUSH]) {
+        const slug = pick(cls);
+        const zone = atlas.zones[isl.species[slug][1]] as ArkAnimal["zone"];
+        const animal: ArkAnimal = {...predator(), model_slug: slug, name: slug, zone};
+        const home = homeOf(atlas, {zone, slug, speciesId: animal.species_profile_id, slot: 3, rank: 0})!;
+        const leans = [[home.x + 4, home.z - 3, 7600, 12]];
+        const read = (on: boolean) => ({hunting: "encounter" as const, startedAtMs: START, arkDay: null, tickedTo: null, predators: new Map([[animal.id, 80]]), meals: [], ...(on ? {geometry: true, leans: new Map([[animal.id, leans]])} : {})});
+        const layer = new HuntingLayer();
+        layer.set(read(true), atlas, START);
+        const today = new HuntingLayer();
+        today.set(read(false), atlas, START);
+        for (const k of [7700, 7701, 7750, 8000]) {
+            // (huntSearch's sideways shaping is under a step's agreement: compare at the step, where it is zero.)
+            const at = layer.pose(animal, epochAt(k / 96), 1, ground, sched)!;
+            const w = huntForayAt(atlas, home, animal.id, k, null, cls, leanAt(leans, k));
+            assert.ok(Math.hypot(at.x - w.x, at.z - w.z) < 1e-6, `${slug} step ${k}: where the server has it`);
+            const t = today.pose(animal, epochAt(k / 96), 1, ground, sched)!;
+            const f = forayAt(atlas, home, animal.id, k);
+            assert.ok(Math.hypot(t.x - f.x, t.z - f.z) < 1e-6, "off: today's foray");
+            if (cls === GEO_AMBUSH) assert.ok(Math.hypot(at.x - (home.x + 4), at.z - (home.z - 3)) <= Math.max(0.5, sheetOf(atlas, slug)!.len) + 0.02, `${slug} keeps to its spot`);
+        }
+    }
 });

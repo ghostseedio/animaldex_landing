@@ -18,6 +18,13 @@ export type ArkHunting = {
     tickedTo: number | null;
     /** Every living predator's next hunt (the Ark day from which it hunts; 0 = now), by animal id. */
     predators: Map<string, number>;
+    /**
+     * Hunt geometry (AnimalDex decision 500, `voyage_config.hunt_geometry`): on, each hunter's foray follows its way of
+     * hunting (`positions.ts` huntForayAt); `leans` are where the engine chose each one works ([x, z, fromStep, R] entries,
+     * a day before it uses them). Absent or false: today's forays.
+     */
+    geometry?: boolean;
+    leans?: Map<string, Array<Array<number | null>>>;
     meals: ArkHuntingMeal[];
 };
 
@@ -37,11 +44,14 @@ export function decodeArkHunting(raw: unknown): ArkHunting | null {
     if (!mode) return null;
     const startedAtMs = typeof row.started_at === "string" ? Date.parse(row.started_at) : finite(row.startedAtMs);
     const predators = new Map<string, number>();
+    const leans = new Map<string, Array<Array<number | null>>>();
     if (Array.isArray(row.predators)) {
         for (const item of row.predators) {
             if (!Array.isArray(item) || typeof item[0] !== "string" || !ID.test(item[0])) continue;
             const from = finite(item[1]);
             if (from !== null && from >= 0) predators.set(item[0], from);
+            const lean = decodeLeans(item[2]);
+            if (lean) leans.set(item[0], lean);
         }
     }
     const meals: ArkHuntingMeal[] = [];
@@ -60,8 +70,26 @@ export function decodeArkHunting(raw: unknown): ArkHunting | null {
         arkDay: finite(row.ark_day),
         tickedTo: finite(row.ticked_to),
         predators,
-        meals
+        meals,
+        ...(row.hunt_geometry === true ? {geometry: true, leans} : {})
     };
+}
+
+/** A predator's leans as the read sends them: [x|null, z|null, fromStep, R] entries, ascending; malformed ones dropped. */
+function decodeLeans(raw: unknown): Array<Array<number | null>> | null {
+    if (!Array.isArray(raw)) return null;
+    const out: Array<Array<number | null>> = [];
+    for (const e of raw) {
+        if (!Array.isArray(e) || e.length < 4) continue;
+        const x = e[0] === null ? null : finite(e[0]);
+        const z = e[1] === null ? null : finite(e[1]);
+        const k = finite(e[2]);
+        const r = finite(e[3]);
+        if ((e[0] !== null && x === null) || (e[1] !== null && z === null) || k === null || !Number.isInteger(k) || r === null) continue;
+        out.push([x, z, k, r]);
+    }
+    out.sort((a, b) => (a[2] as number) - (b[2] as number));
+    return out.length ? out : null;
 }
 
 /** `/api/ark/hunting`'s body (`{available, hunting: <answer>}`): the decoded answer, or null (pool, quietly). */
