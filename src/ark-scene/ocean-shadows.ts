@@ -13,7 +13,7 @@
  * most `SHADE_MOST` animals; written once a frame from the poses the scene worked out. Visual only.
  */
 
-import {BufferAttribute, BufferGeometry, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshLambertMaterial, Quaternion, Vector3, type Object3D} from "three";
+import {BufferAttribute, BufferGeometry, DoubleSide, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshLambertMaterial, Quaternion, Vector3, type Object3D} from "three";
 import {ARK_ENV} from "@/ark-scene/glsl";
 
 /** The most open-ocean animals shaded at once. */
@@ -106,35 +106,60 @@ export function shadeGeometry(): BufferGeometry {
     return geometry;
 }
 
+/**
+ * SEA-SURFACE (2026-11-24): a ray's own outline, unit (1 m nose to tail along +z, 1 m wingtip to wingtip): the broad
+ * head with its two lobes, the wings swept back to their points, the short tail. Soft as the round one: a plateau to
+ * 75% out, clear at its rim. (A manta cruising at the top showed as a round dark disc, not as a manta.)
+ */
+export const RAY_OUTLINE: ReadonlyArray<[number, number]> = [
+    [0, 0.42], [0.07, 0.5], [0.12, 0.44], [0.2, 0.34], [0.34, 0.18], [0.5, 0.02], [0.36, -0.04], [0.2, -0.14], [0.08, -0.24], [0.02, -0.32], [0.01, -0.5],
+    [-0.01, -0.5], [-0.02, -0.32], [-0.08, -0.24], [-0.2, -0.14], [-0.36, -0.04], [-0.5, 0.02], [-0.34, 0.18], [-0.2, 0.34], [-0.12, 0.44], [-0.07, 0.5]
+];
+
+export function outlineShadeGeometry(outline: ReadonlyArray<[number, number]>): BufferGeometry {
+    const pos: number[] = [];
+    const col: number[] = [];
+    const push = (p: readonly [number, number], k: number, alpha: number) => {
+        pos.push(p[0] * k, 0, p[1] * k);
+        col.push(0, 0.03, 0.06, alpha);
+    };
+    for (let i = 0; i < outline.length; i++) {
+        const a = outline[i];
+        const b = outline[(i + 1) % outline.length];
+        // (Wound to face up, +y: the outline runs clockwise seen from above.)
+        push([0, 0], 1, 1);
+        push(a, 0.75, 0.85);
+        push(b, 0.75, 0.85);
+        push(a, 0.75, 0.85);
+        push(a, 1, 0);
+        push(b, 0.75, 0.85);
+        push(b, 0.75, 0.85);
+        push(a, 1, 0);
+        push(b, 1, 0);
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
+    geometry.setAttribute("color", new BufferAttribute(new Float32Array(col), 4));
+    geometry.setAttribute("normal", new BufferAttribute(new Float32Array(pos.length).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+    geometry.computeBoundingSphere();
+    return geometry;
+}
+
+type ShadeLayer = {mesh: InstancedMesh; fade: InstancedBufferAttribute; count: number};
+
 export class OceanShadows {
-    private readonly mesh: InstancedMesh;
+    private readonly layers: ShadeLayer[];
     private readonly blows: InstancedMesh;
     private blowCount = 0;
-    private readonly fade: InstancedBufferAttribute;
     private readonly matrix = new Matrix4();
     private readonly position = new Vector3();
     private readonly scale = new Vector3();
     private readonly quaternion = new Quaternion();
     private readonly up = new Vector3(0, 1, 0);
-    private count = 0;
 
     constructor(parent: Object3D) {
-        const geometry = shadeGeometry();
-        this.fade = new InstancedBufferAttribute(new Float32Array(SHADE_MOST), 1);
-        geometry.setAttribute("aFade", this.fade);
-        const material = new MeshLambertMaterial({vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1});
-        material.onBeforeCompile = (shader) => {
-            shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nattribute float aFade;\nvarying float vFade;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvFade = aFade;");
-            shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vFade;").replace("#include <color_fragment>", "#include <color_fragment>\ndiffuseColor.a *= vFade;");
-        };
-        material.customProgramCacheKey = () => "ark-ocean-shadows";
-        this.mesh = new InstancedMesh(geometry, material, SHADE_MOST);
-        this.mesh.name = "ocean-shadows";
-        this.mesh.count = 0;
-        this.mesh.frustumCulled = false;
-        // (After the sea's surface, renderOrder 2; before the wakes, 3.)
-        this.mesh.renderOrder = 2.5;
-        parent.add(this.mesh);
+        // (Two layers: the round outline, and a ray's own; one draw call each, the ray's only while one is shaded.)
+        this.layers = [shadeGeometry(), outlineShadeGeometry(RAY_OUTLINE)].map((geometry, i) => this.layer(parent, geometry, i === 0 ? "ocean-shadows" : "ocean-shadows-rays"));
         this.blows = new InstancedMesh(plumeGeometry(), new MeshLambertMaterial({vertexColors: true, emissive: 0x6a7076, transparent: true, depthWrite: false}), 8);
         this.blows.name = "ocean-blows";
         this.blows.count = 0;
@@ -143,8 +168,27 @@ export class OceanShadows {
         parent.add(this.blows);
     }
 
+    private layer(parent: Object3D, geometry: BufferGeometry, name: string): ShadeLayer {
+        const fade = new InstancedBufferAttribute(new Float32Array(SHADE_MOST), 1);
+        geometry.setAttribute("aFade", fade);
+        const material = new MeshLambertMaterial({vertexColors: true, side: DoubleSide, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1});
+        material.onBeforeCompile = (shader) => {
+            shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nattribute float aFade;\nvarying float vFade;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvFade = aFade;");
+            shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vFade;").replace("#include <color_fragment>", "#include <color_fragment>\ndiffuseColor.a *= vFade;");
+        };
+        material.customProgramCacheKey = () => "ark-ocean-shadows";
+        const mesh = new InstancedMesh(geometry, material, SHADE_MOST);
+        mesh.name = name;
+        mesh.count = 0;
+        mesh.frustumCulled = false;
+        // (After the sea's surface, renderOrder 2; before the wakes, 3.)
+        mesh.renderOrder = 2.5;
+        parent.add(mesh);
+        return {mesh, fade, count: 0};
+    }
+
     begin(): void {
-        this.count = 0;
+        for (const layer of this.layers) layer.count = 0;
         this.blowCount = 0;
     }
 
@@ -158,16 +202,20 @@ export class OceanShadows {
         this.blows.setMatrixAt(this.blowCount++, this.matrix);
     }
 
-    /** An open-ocean animal at (x, z), heading `yaw`, `length` × `width` m, the top of its body at `top` (m, world). */
-    add(x: number, z: number, yaw: number, length: number, width: number, top: number): void {
-        if (this.count >= SHADE_MOST) return;
-        const alpha = shadeAlpha(ARK_ENV.seaLevel.value - top);
+    /**
+     * An open-ocean animal at (x, z), heading `yaw`, `length` × `width` m, the top of its body at `top` (m, world); a
+     * ray (`ray`) in its own outline, a little lighter (a broad flat body seen through the water, not a hole in it).
+     */
+    add(x: number, z: number, yaw: number, length: number, width: number, top: number, ray = false): void {
+        const layer = this.layers[ray ? 1 : 0];
+        if (layer.count >= SHADE_MOST) return;
+        const alpha = shadeAlpha(ARK_ENV.seaLevel.value - top) * (ray ? 0.7 : 1);
         if (alpha <= 0.005) return;
         this.quaternion.setFromAxisAngle(this.up, yaw);
         this.matrix.compose(this.position.set(x, ARK_ENV.seaLevel.value + 0.03, z), this.quaternion, this.scale.set(Math.max(width, 0.3), 1, Math.max(length, 0.5)));
-        this.mesh.setMatrixAt(this.count, this.matrix);
-        this.fade.setX(this.count, alpha);
-        this.count++;
+        layer.mesh.setMatrixAt(layer.count, this.matrix);
+        layer.fade.setX(layer.count, alpha);
+        layer.count++;
     }
 
     /** Done for this frame: drawn unless the camera is under the sea. */
@@ -175,17 +223,21 @@ export class OceanShadows {
         this.blows.count = this.blowCount;
         this.blows.visible = !underwater && this.blowCount > 0;
         if (this.blowCount) this.blows.instanceMatrix.needsUpdate = true;
-        this.mesh.count = this.count;
-        this.mesh.visible = !underwater && this.count > 0;
-        if (!this.count) return;
-        this.mesh.instanceMatrix.needsUpdate = true;
-        this.fade.needsUpdate = true;
+        for (const layer of this.layers) {
+            layer.mesh.count = layer.count;
+            layer.mesh.visible = !underwater && layer.count > 0;
+            if (!layer.count) continue;
+            layer.mesh.instanceMatrix.needsUpdate = true;
+            layer.fade.needsUpdate = true;
+        }
     }
 
     dispose(): void {
-        this.mesh.geometry.dispose();
-        (this.mesh.material as MeshLambertMaterial).dispose();
-        this.mesh.removeFromParent();
+        for (const layer of this.layers) {
+            layer.mesh.geometry.dispose();
+            (layer.mesh.material as MeshLambertMaterial).dispose();
+            layer.mesh.removeFromParent();
+        }
         this.blows.geometry.dispose();
         (this.blows.material as MeshLambertMaterial).dispose();
         this.blows.removeFromParent();

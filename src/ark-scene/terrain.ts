@@ -383,17 +383,6 @@ export function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture}
 /** How strongly the sun's caustics play on the sea floor (the layers addendum): by day, stronger seen from under the water. */
 export const ARK_CAUSTICS = {value: 0.25};
 
-/**
- * SEA-SURFACE: the reef's cover seen from above (`coral-cover.ts`; RGB its colour, linear, A how covered), over the
- * water's depth map's square. `reef-render.ts` sets it once the reef is grown; until then (and with no reef) clear.
- */
-const NO_CORAL = (() => {
-    const t = new DataTexture(new Uint8Array(4), 1, 1, RGBAFormat);
-    t.needsUpdate = true;
-    return t;
-})();
-export const ARK_CORAL: {value: DataTexture} = {value: NO_CORAL};
-
 function groundMaterial(): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.94, metalness: 0});
     const uniforms = {
@@ -970,7 +959,6 @@ uniform vec3 deep;
 uniform vec3 open;
 uniform vec3 shallow;
 uniform vec3 reef;
-uniform sampler2D coralMap;
 uniform vec3 lake;
 uniform vec3 skyHorizon;
 uniform vec3 skyZenith;
@@ -1044,13 +1032,6 @@ void main() {
     vec3 body = mix(shallow, open, smoothstep(0.2, 3.5, depth));
     body = mix(body, deep, smoothstep(4.0, 11.0, depth));
     body = mix(body, reef, reefy * (1.0 - smoothstep(2.0, 6.5, depth)) * 0.9);
-    // SEA-SURFACE: the reef's corals, sponges and seagrass seen through the water (their own colours where they grow,
-    // \`coral-cover.ts\`), the red going first with depth and gone into the blue by 11 m: the reef reads from a wide view.
-    // (Close by, under 40 m, the reef's own shapes are drawn and seen through the water: the cover comes in past them.)
-    vec4 coral = texture2D(coralMap, clamp(uv, 0.0, 1.0)) * inside * (1.0 - fresh);
-    float coralSeen = smoothstep(0.35, 0.9, coral.a) * (1.0 - smoothstep(3.0, 11.0, depth)) * smoothstep(40.0, 85.0, distanceToEye);
-    vec3 coralThrough = coral.rgb * mix(vec3(0.95, 0.9, 0.85), vec3(0.35, 0.65, 0.8), smoothstep(1.5, 9.0, depth)) * 0.8;
-    body = mix(body, coralThrough, coralSeen * 0.6);
     body = mix(body, lake * mix(1.0, 0.8, smoothstep(0.5, 3.0, depth)), fresh);
     // p5 (crater): fresh water deeper than the lake's and the river's (the crater lake's middle, 9 m): a deep blue-green.
     body = mix(body, vec3(0.012, 0.085, 0.13), 0.82 * smoothstep(4.0, 8.5, depth) * fresh);
@@ -1137,7 +1118,6 @@ function waterMesh(depth: DataTexture, fresh = false): {mesh: Mesh; material: Sh
                 open: {value: srgb(WATER.open)},
                 shallow: {value: srgb(WATER.shallow)},
                 reef: {value: srgb(WATER.reef)},
-                coralMap: {value: null},
                 lake: {value: srgb(WATER.lake)},
                 skyHorizon: {value: srgb("#e3d4bf")},
                 skyZenith: {value: srgb("#7fa2c0")},
@@ -1159,7 +1139,6 @@ function waterMesh(depth: DataTexture, fresh = false): {mesh: Mesh; material: Sh
     });
     material.uniforms.depthMap.value = depth;
     // Shared, live values.
-    material.uniforms.coralMap = ARK_CORAL;
     material.uniforms.arkTime = ARK_TIME;
     material.uniforms.arkWind = ARK_WIND;
     material.uniforms.sunDirection = ARK_SUN;

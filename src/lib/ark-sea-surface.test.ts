@@ -3,14 +3,12 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import {CORAL_TEXELS, coralCover, linearOf} from "@/ark-scene/coral-cover";
-import {reefGrowth} from "@/ark-scene/reef";
 import {PASS_SECONDS, SEA_FLIGHT_CLEAR, passAt, seaFlightAt, seaFlightKinds, seaFlightSpec, seaHome} from "@/ark-scene/sea-flight";
 import {CRUISE_CYCLE, surfaceCruiseAt, surfaceCruiseKinds, surfaceCruiseSpec} from "@/ark-scene/surface-cruise";
-import {RING_SECONDS, signRings, splashHeight, surfaceState, trackSurface, wakeLength, type SurfaceSample} from "@/ark-scene/surface-signs";
+import {RING_SECONDS, TRAIL_SECONDS, signRings, trailDab, splashHeight, surfaceState, trackSurface, type SurfaceSample} from "@/ark-scene/surface-signs";
 import {leapSpec} from "@/ark-scene/water-leaps";
 import {fitInWater, type WaterSpec} from "@/ark-scene/sea-depth";
-import {heightAt, TERRAIN_HALF} from "@/ark-scene/world";
+import {heightAt} from "@/ark-scene/world";
 
 const EPOCH = 1_795_521_600; // 2026-11-24 12:00 UTC
 const root = path.resolve(__dirname, "..", "..");
@@ -124,6 +122,13 @@ test("surface signs: a break as it comes up (and a blow for a breather), a ring 
     const again = trackSurface(track, sample(0.1, 20 * 0.08), EPOCH + 0.1 + 20 * 0.1);
     assert.equal(again.track.speed, track.speed);
     assert.ok(again.wake > 0.5);
+    // Wingtips at the very top, in and out by centimetres frame to frame: no signs (it was dozens of stacked rings).
+    let flick = track;
+    for (let i = 0; i < 30; i++) {
+        const next = trackSurface(flick, sample(i % 2 ? 0.01 : -0.06, 1.6), EPOCH + 2.15 + i * 0.03);
+        assert.equal(next.event, null, `flicker ${i}`);
+        flick = next.track;
+    }
     for (let i = 0; i < 20; i++) {
         const next = trackSurface(track, sample(0.1, 1.6), EPOCH + 2.2 + i * 0.1);
         track = next.track;
@@ -134,31 +139,12 @@ test("surface signs: a break as it comes up (and a blow for a breather), a ring 
     assert.equal(down.event?.kind, "dive");
     // A gap (not drawn, out of range): starts over, nothing told about it.
     assert.equal(trackSurface(down.track, sample(0.1, 1.6), EPOCH + 9).event, null);
-    assert.ok(wakeLength(4.5, 1) <= 10 && wakeLength(1, 0.5) >= 1.4);
-});
-
-// MARK: The reef from above
-
-test("coral cover: the reef's own growths where they grow, their own colours, nothing over land", () => {
-    const items = reefGrowth();
-    const cover = coralCover(items, TERRAIN_HALF);
-    assert.equal(cover.length, CORAL_TEXELS * CORAL_TEXELS * 4);
-    const texel = (2 * TERRAIN_HALF) / CORAL_TEXELS;
-    let covered = 0;
-    for (let i = 0; i < CORAL_TEXELS * CORAL_TEXELS; i++) {
-        if (!cover[i * 4 + 3]) continue;
-        covered++;
-        const x = -TERRAIN_HALF + ((i % CORAL_TEXELS) + 0.5) * texel;
-        const z = -TERRAIN_HALF + (Math.floor(i / CORAL_TEXELS) + 0.5) * texel;
-        assert.ok(heightAt(x, z) < 0.5, `cover over land at ${x.toFixed(0)}, ${z.toFixed(0)}`);
-    }
-    assert.ok(covered > 500, `covered texels ${covered}`);
-    // Its colours are the reef's own (each texel's a mix of the growths' there, softened at their edges: within their range).
-    const own = items.map((item) => linearOf(item.color).map((c) => Math.round(Math.min(c, 1) * 255)));
-    for (let c = 0; c < 3; c++) {
-        const low = Math.min(...own.map((rgb) => rgb[c]));
-        const high = Math.max(...own.map((rgb) => rgb[c]));
-        for (let i = 0; i < CORAL_TEXELS * CORAL_TEXELS; i += 7) if (cover[i * 4 + 3]) assert.ok(cover[i * 4 + c] >= low - 1 && cover[i * 4 + c] <= high + 1);
-    }
-    assert.deepEqual(coralCover(items, TERRAIN_HALF), cover, "the same for every viewer");
+    // A wake's dabs: faint, drifting out and widening, gone in TRAIL_SECONDS (a short soft V along its path, not lines
+    // off the frame), and no rings of their own.
+    const trail = {kind: "trail" as const, x: 0, z: 0, surface: 0, size: 4.5, start: 0, blow: false, strength: 1, yaw: 0};
+    const early = trailDab(trail, 1)!;
+    const late = trailDab(trail, TRAIL_SECONDS - 0.5)!;
+    assert.ok(early.alpha <= 0.1 && late.alpha < early.alpha && late.side > early.side && late.side < 4);
+    assert.equal(trailDab(trail, TRAIL_SECONDS + 0.1), null);
+    assert.equal(signRings(trail, 1).length, 0);
 });

@@ -6675,7 +6675,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // p2 (ocean): an open-ocean animal's shape on the water over it, seen from above (`ocean-shadows.ts`).
             if (entry.ocean) {
                 const shadows = (oceanShadows ??= new OceanShadows(scene));
-                shadows.add(where.x, where.z, where.yaw, entry.length, bodyShape(slug, entry.length).radius * 2, where.base + modelHeight);
+                // (SEA-SURFACE: a ray in its own outline, its wings as wide as it is long or more, not a round disc.)
+                const ray = /(^|-)(manta|ray|stingray|skate)(-|$)/.test(slug);
+                const width = bodyShape(slug, entry.length).radius * 2;
+                shadows.add(where.x, where.z, where.yaw, entry.length, ray ? Math.max(width, entry.length * 1.3) : width, where.base + modelHeight, ray);
                 // (A whale's blow from its head as it breathes at the surface: cetaceans by their model's body plan.)
                 if (where.water?.breath && model?.behaviour?.plan === "cetacean") shadows.blow(where.x + Math.sin(where.yaw) * entry.length * 0.42, where.z + Math.cos(where.yaw) * entry.length * 0.42, entry.length, where.water.breath);
             }
