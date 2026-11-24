@@ -1,0 +1,24 @@
+{
+ "about": "Lane SIG10 (2026-11-24, decision 424, most-seen first; tranche 6, the owner's go-ahead through the coordinator): sleeps buried. The night animals whose own sleep text says they spend the day buried in litter, rotting wood, sand or soil sleep in a `buried` posture (sleep.ts): sunk 45% of their height into the ground, the rest of the body showing so it can still be tapped and followed, and the card says it is buried only while it is. No clip and no schedule change: the sleep slots are the ones they had; only how the sleep is drawn. The mealworm beetle (10 alive aboard), the Asiatic rhinoceros beetle (9), the European rhinoceros beetle (8), the rugose hermit crab (8), the leaf-eating slug (8) and the Malayan box turtle (5, its other nights on the litter as before). Left out: the stingrays and the dusky sleeper (on the river bed: the water's bottom posture), Fowler's toad (buried for the winter, a day animal). The day-burying beetles take no `bury_sand` row: a rest's bury plays at night only, which their text does not say. Not taken this band, with why, in `notes`.",
+ "version": 1,
+ "additions": [],
+ "sleeps": [
+  {"slug": "mealworm-beetle", "posture": "buried", "field": "sleep", "quote": "Mainly active at night, avoiding light and staying buried in grain or litter by day."},
+  {"slug": "asiatic-rhinoceros-beetle", "posture": "buried", "field": "sleep", "quote": "By day they stay in their feeding tunnels or buried in the rotting material where they breed."},
+  {"slug": "european-rhinoceros-beetle", "posture": "buried", "field": "sleep", "quote": "Adults fly from dusk into the night and often come to lights, then bury themselves again before morning."},
+  {"slug": "rugose-hermit-crab", "posture": "buried", "field": "sleep", "quote": "Days are spent buried in damp sand or tucked under debris, often in clusters, which limits water loss."},
+  {"slug": "leaf-eating-slug", "posture": "buried", "alts": ["still"], "field": "sleep", "quote": "By day it burrows a short way into moist soil or lies flattened beneath stones, and dry spells keep it underground."},
+  {"slug": "malayan-box-turtle", "posture": "buried", "alts": ["flat"], "field": "sleep", "quote": "It rests buried in mud, under leaf litter or waterside plants, or on the bottom in shallow water."}
+ ],
+ "notes": [
+  {"slug": "european-crane-fly", "recipe": "-", "reason": "its one catalogue act (shedding a leg when grabbed) needs a leg-autotomy effect and a grab the engine makes"},
+  {"slug": "household-casebearer-moth", "recipe": "-", "reason": "its act is the caterpillar's sand-coated case: a prop"},
+  {"slug": "sooty-headed-bulbul", "recipe": "-", "reason": "mobbing a perched predator needs a new flight path (mob_dive) and a real predator"},
+  {"slug": "guinea-pig", "recipe": "-", "reason": "the freeze needs a startle the engine makes; the huddle's catalogue match (`cluster`) gathers ambient bugs, not guinea pigs"},
+  {"slug": "common-european-harvestman", "recipe": "-", "reason": "egg laying (dig) needs a dig clip its rig lacks and a lay the engine makes; the rest are looks, a pose or a new clip"},
+  {"slug": "orb-weaver-spider", "recipe": "-", "reason": "web spin, web pluck, hub pose and leaf retreat each need a new clip, pose or prop"},
+  {"slug": "yellow-spotted-millipede", "recipe": "-", "reason": "burying eggs needs a lay the engine makes, and its rig has no dig clip"},
+  {"slug": "alpaca", "recipe": "-", "reason": "the sentinel (one alert while the herd grazes) has no recipe; the dung pile is a mark"},
+  {"slug": "woodlouse-hunter-spider black-planthopper powder-blue-isopod great-green-bush-cricket", "recipe": "-", "reason": "each act answers a predator near or a touch: needs a threat the engine makes"}
+ ]
+}

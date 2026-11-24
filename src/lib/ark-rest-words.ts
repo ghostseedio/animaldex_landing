@@ -16,6 +16,7 @@ export const ARK_REST_KEYS: Record<string, keyof ArkRestWords> = {
     asleep_one_leg: "asleepOneLeg",
     asleep_water: "asleepWater",
     asleep_huddle: "asleepHuddle",
+    asleep_buried: "asleepBuried",
     resting: "resting",
     resting_den: "restingDen",
     dozing_sun: "dozingSun",

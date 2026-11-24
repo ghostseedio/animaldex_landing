@@ -75,6 +75,7 @@ export type ArkRestWords = {
     asleepOneLeg: string;
     asleepWater: string;
     asleepHuddle: string;
+    asleepBuried: string;
     resting: string;
     restingDen: string;
     dozingSun: string;
