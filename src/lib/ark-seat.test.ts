@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import {BoxGeometry, DoubleSide, Euler, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, Raycaster, Scene, Vector3} from "three";
+import {BoxGeometry, DoubleSide, Euler, Group, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, Raycaster, Scene, Vector3} from "three";
 import {SeatPass, seatKind, solidClass, HARD, ROCK, SOFT, TREE, type SeatHolder, type SeatInput, type SeatKind} from "@/ark-scene/seat";
 import {DrawnSolids, ALL, type SolidHit} from "@/ark-scene/seat/solids";
 import {TriGrid} from "@/ark-scene/seat/trigrid";
@@ -107,6 +107,56 @@ test("seat: the solids index reads every instance as placed (against three's Ray
         }
     }
     assert.ok(met > 60, `only ${met} faces met`);
+});
+
+test("seat: a level's mesh shown since the meshes were read is what the seats stand on the next frame (WILD-PERCH)", () => {
+    // The asset rocks' and trees' levels (`asset-rocks.ts` update): one InstancedMesh per level, empty and hidden until
+    // the camera brings an instance to it, then shown with the instance moved onto it from the level it was on.
+    const scene = new Scene();
+    const geometry = new IcosahedronGeometry(1, 2);
+    const near = new InstancedMesh(geometry, new MeshBasicMaterial(), 4);
+    const far = new InstancedMesh(geometry, new MeshBasicMaterial(), 4);
+    near.userData.kind = far.userData.kind = "asset-rock";
+    const at = new Matrix4().compose(new Vector3(10, 0, 10), new Quaternion(), new Vector3(1, 1, 1));
+    far.setMatrixAt(0, at);
+    far.count = 1;
+    near.count = 0;
+    near.visible = false;
+    scene.add(near, far);
+    scene.updateMatrixWorld(true);
+    const solids = new DrawnSolids(scene);
+    solids.force = true;
+    solids.begin(1);
+    const down = (): SolidHit[] => {
+        const hits: SolidHit[] = [];
+        solids.cast(10, 3, 10, 0, -4, 0, ALL, hits);
+        return hits;
+    };
+    assert.ok(down().some((hit) => hit.ny > 0 && Math.abs(hit.y - 1) < 0.05), "the rock, at its far level");
+    // The camera comes near: the instance moves to the near level, which is shown (no new reading of the meshes yet).
+    near.setMatrixAt(0, at);
+    near.count = 1;
+    near.visible = true;
+    near.instanceMatrix.needsUpdate = true;
+    far.count = 0;
+    far.visible = false;
+    far.instanceMatrix.needsUpdate = true;
+    const before = solids.version;
+    solids.begin(2);
+    const hits = down();
+    assert.ok(hits.some((hit) => hit.ny > 0 && Math.abs(hit.y - 1) < 0.05), "the rock, at its near level, the frame it is drawn there");
+    assert.ok(solids.version > before, "the seats round it are made again");
+    // And one hidden again (its parent's group turned off) is gone the frame it is.
+    const group = new Group();
+    scene.remove(near);
+    group.add(near);
+    scene.add(group);
+    scene.updateMatrixWorld(true);
+    solids.begin(31);
+    assert.ok(down().length > 0);
+    group.visible = false;
+    solids.begin(32);
+    assert.equal(down().length, 0, "nothing under a hidden group");
 });
 
 test("seat: what each drawn thing is to an animal", () => {
