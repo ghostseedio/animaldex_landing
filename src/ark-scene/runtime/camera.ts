@@ -263,8 +263,12 @@ export function sightExit(box: Box, p: Point, target: Point, margin: number): Po
     return {x: p.x + (target.x - p.x) * k, y: p.y + (target.y - p.y) * k, z: p.z + (target.z - p.z) * k};
 }
 
-/** The nearest the eye is brought to its target by `sightExit` (m): nearer than this, the box pushes by its nearest face. */
-const SIGHT_NEAREST = 2.5;
+/**
+ * The nearest the eye is brought to its target by `sightExit` (m): nearer than this, the box pushes by its nearest face.
+ * (It was 2.5: a cat on the lawn 1.6 m in front of a bay window, the eye orbiting into the bay was pushed back out by
+ * its side and held there, the bay's flank filling the view; it now comes through to the bay's near side.)
+ */
+const SIGHT_NEAREST = 1.5;
 
 /** A view of something: how far from it, the angle from straight above, the bearing (three's Spherical about the target). */
 export type CloseView = {distance: number; polar: number; azimuth: number};
