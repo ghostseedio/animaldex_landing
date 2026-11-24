@@ -148,7 +148,8 @@ import type {AntColonies, AntMember} from "@/ark-scene/ants/ant-draw";
 import type {AntFood, Disturb} from "@/ark-scene/ants/colony";
 import {AssetTrees} from "@/ark-scene/asset-trees";
 import {AssetFloor, AssetRocks} from "@/ark-scene/asset-rocks";
-import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
+import {ASSET_BASE, ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
+import {petCoatUniforms, setCoat} from "@/ark-scene/pet-coat";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {decodeVegetation, grassKey, type ArkVegetation} from "@/ark-scene/grass-grazed";
 import {seaEpochSeconds} from "@/ark-scene/fish-schools";
@@ -3589,7 +3590,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 level,
                 look: model.placeholder ? null : speciesLook(model.slug, model.behaviour?.plan, model.facing, source.geometry),
                 bodyMotion: level === "near" && !model.placeholder ? l2BodyUniforms(model.slug, model.behaviour) : null,
-                tailHabit: tailHabitOf(model.slug) // 3.3 batch (B): tail pump, cock and fan
+                tailHabit: tailHabitOf(model.slug), // 3.3 batch (B): tail pump, cock and fan
+                // Lane COATS: a plain cat's or dog's own coat (those two kinds only).
+                petCoat: model.placeholder ? null : petCoatUniforms(model.slug, level, library.versionOf(model.slug), options.assetBase ?? ASSET_BASE)
             });
             if (level === "near" && !model.placeholder) look.track(model.slug, material);
             // The placeholder figure (A13): warm clay from its own vertex colours, a little softer.
@@ -6273,7 +6276,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 level: "near",
                 look: speciesLook(model.slug, model.behaviour?.plan, model.facing, model.near?.geometry ?? rig.geometry),
                 bodyMotion: l2BodyUniforms(model.slug, model.behaviour),
-                tailHabit: tailHabitOf(model.slug) // 3.3 batch (B): tail pump, cock and fan
+                tailHabit: tailHabitOf(model.slug), // 3.3 batch (B): tail pump, cock and fan
+                // Lane COATS: the rig shares the near model's layout, so its coat map.
+                petCoat: petCoatUniforms(model.slug, "near", library.versionOf(model.slug), options.assetBase ?? ASSET_BASE)
             });
             look.track(model.slug, material);
             meshes.rigMaterial = material;
@@ -7536,6 +7541,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const lifted = selectedId === animal.id && shownDim <= 0.2 && where.water && entry.middle && entry.middle.y + modelHeight / 2 < waterSurfaceAt(entry.middle.x, entry.middle.z) - 0.05 && !swimFixOff();
             (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZW(index, entry.phase, lifted ? -(0.15 + 0.6 * lighting.daylight.night) : shownDim, entry.rest, defended || (slept ? packSleep(eyesOpenForDev ? 0 : slept.eyes, level === "near" && !sleepsStanding ? slept.curl : 0, slept.flick, slept.breath) : packSleep(0, 0, 0, 0)));
             setVary(mesh.geometry, index, animal.id);
+            setCoat(mesh.geometry, index, animal.model_slug, animal.coat);
             if (entry.power?.q) setVaryPower(mesh.geometry, mesh.material, index, entry.power.q, entry.power.look);
             // The head look (near only; it fades out as the animal falls asleep).
             const lookAttr = mesh.geometry.getAttribute("arkLook") as InstancedBufferAttribute | undefined;

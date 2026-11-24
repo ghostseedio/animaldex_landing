@@ -197,6 +197,12 @@ export type ArkAnimal = {
      */
     slot?: number | null;
     slot_rank?: number | null;
+    /**
+     * Lane COATS (2026-11-24, while the server's `pet_coats` switch is on): a plain Domestic Cat's or Dog's own coat,
+     * read once on the server from the capture photo that brought it aboard: colours only (`#rrggbb`; `white` the
+     * share of the coat that is white, 0-1). Absent: the kind's own skin. Drawn by `pet-coat.ts`.
+     */
+    coat?: ArkCoat | null;
     // The species' stats (docs/ark-next.md, stats addendum): looks and behaviour only. When the
     // snapshot carries none, the scene reads the catalogue's (`stats.ts`, `species-stats.json`).
     /** The five stats, 0–100. */
@@ -819,3 +825,6 @@ export type ArkLiveActs = {
     /** ARK-MATING-SHOWN: the layings (when each began, laid yet, the mother) and the clutches drawn, each where it is. */
     clutches?: {layings: Array<{key: string; start: number | null; laid: boolean; mother: string | null}>; kept: Array<{key: string; at: {x: number; y: number; z: number; size: number} | null}>};
 };
+
+/** A pet's own coat colours (`ArkAnimal.coat`): its main colour, a second (patches) or null, the white share 0-1. */
+export type ArkCoat = {base: string; second: string | null; white: number};
