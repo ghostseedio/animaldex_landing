@@ -255,6 +255,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const {modelBase} = await import("@/ark-scene/grounding/base");
     const {sampleTownGround} = await import("@/ark-scene/islands/town/ground");
     const {CANAL_LEVEL, townPlan} = await import("@/ark-scene/islands/town/plan");
+    const {buildingCameraBoxes} = await import("@/ark-scene/islands/town/render/building-parts");
     const [{zooSleepFrame, zooSwingFrame}, {hallClimbs}] = await Promise.all([import("@/ark-scene/islands/town/zoo-swing"), import("@/ark-scene/islands/town/render/zoo-houses")]); // ARK-JUNGLE
     const origin = options.origin ?? townWorldOrigin();
     let eaveDraw: ((x: number, y: number, z: number) => {x: number; y: number; z: number} | null) | null = null;
@@ -458,11 +459,9 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         drawnMask,
         contains: (x, z) => Math.abs(x - origin.x) <= half && Math.abs(z - origin.z) <= half,
         // (The town's boxes turn the other way round from the camera's: `geom.ts` toLocal against `camera.ts` penetration.)
-        cameraObstacles: () =>
-            townPlan().buildings.filter((building) => building.top > 1.2).map((building) => {
-                const ground = town.heightAt(building.at.x, building.at.z);
-                return {kind: "box" as const, x: origin.x + building.at.x, z: origin.z + building.at.z, y0: ground - 1, y1: ground + building.top, hx: building.at.w / 2, hz: building.at.d / 2, rotation: -building.at.rot, sight: true};
-            }),
+        // Each building's footprint, and the parts of it that stick out (a bay, a porch, a step, the eaves: drawn by
+        // `buildings.ts` and boxed from that drawing, `render/building-parts.ts`), so the eye stays out of a bay too.
+        cameraObstacles: () => buildingCameraBoxes(origin, (x, z) => town.heightAt(x, z), prepared?.cameraParts ?? undefined),
         heightAt: (x, z) => town.heightAt(x - origin.x, z - origin.z),
         drawnHeight: (x, z, near) => townDrawnHeight(x - origin.x, z - origin.z, undefined, near),
         drawnEave: (x, y, z) => {

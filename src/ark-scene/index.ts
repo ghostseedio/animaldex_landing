@@ -11308,7 +11308,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         controls.update();
         keepInWorld();
         fitCloseUp();
-        if (!options.recording) runtime.collide(controls.target, frameDt, controls.minDistance < 1);
+        if (!options.recording) {
+            runtime.collide(controls.target, frameDt, controls.minDistance < 1);
+            // A town building between the eye and what it looks at: the eye comes through toward it, nearer than the
+            // controls' minimum (`camera.ts` sightExit). Held there (`fitCloseUp` eases the minimum back up), or the
+            // next frame's controls put it back out to the minimum, in the wall, and it came to rest inside the building.
+            const held = camera.position.distanceTo(controls.target);
+            if (controls.minDistance >= 1 && held < controls.minDistance) controls.minDistance = Math.max(held, 1);
+        }
         perf.lap("camera");
         // Part B: which chunks are drawn from here, the edge haze, the memory check; the ground's hidden tiles let go.
         streamer.update(camera.position, camera.position.distanceTo(controls.target), FOV, width / Math.max(height, 1), now, controls.target);
