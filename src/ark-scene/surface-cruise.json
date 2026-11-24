@@ -1,0 +1,10 @@
+{
+ "about": "SEA-SURFACE (2026-11-24): the open-ocean swimmers that cruise at the very top of the water, and only those whose own stored text says so (production species_field_guide, read-only, quoted exactly). Each row: the share of its time it spends up there, how deep its highest point rides while it does (m under the surface: all of it under the water, which is opaque from above, so no tip of the model shows through as a speck; shallow enough that its wings push a wake above it), and the deciding quote and its field. The share is an estimate from the quote's frequency words ('much time'). A breach is NOT in here: the Giant Oceanic Manta Ray's stored text (spotlight, facts, traits, habitat, story) never says it leaves the water, so it has no row in water-leaps.json.",
+ "species": {
+  "giant-oceanic-manta-ray": {
+   "share": 0.4,
+   "depth": [0.05, 0.3],
+   "quote": ["It spends much time near the surface but has been recorded diving several hundred metres.", "typical_habitat"]
+  }
+ }
+}

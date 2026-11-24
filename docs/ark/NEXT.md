@@ -171,6 +171,11 @@ Under `~/animaldex-ark-handover-2026-11-11/ark/motion/next/` (none yet).
 - L1 (observation, for the lane): with no driver taking an animal, `LocoLayer.pose` still runs `plantClipFeet` for grounded
   clip feet, so "no driver" is not byte-for-byte the baked pose (within the visual tolerances so far). The driver's share
   ramps by frame `dt`, which is 0 with reduced motion and in the frozen-clock golden shots.
+- Reef from above (SEA-SURFACE, 2026-11-24; PR 138 dropped its coral cover): the reef reads as flat sand through the
+  water from a wide camera. A floor tint or decal over the reef (every variant tried in PR 138) reads as a muddy stain,
+  because the reef's real pieces are spread evenly. A faithful look from above needs a patchy layout in `reef.ts`:
+  clumps of coral heads and bommies with sand channels between them, placed from the reef's own data. That is a reef
+  layout task for the map/scenery lane, not a surface shader.
 
 ## Web deploy: decision 264's round (SEO, the landing page, the minimal /ark, the town's look)
 

@@ -252,6 +252,9 @@ import {islandOfAnimal, townWorldOrigin} from "@/ark-scene/islands";
 import {ARK_ISLANDS} from "@/ark-scene/islands"; // p2 (ocean)
 import {arkWorld} from "@/ark-scene/world"; // p2 (ocean)
 import {OCEAN_COLUMN, OCEAN_VIEW_MARGIN, oceanFix, roamsOpenOcean} from "@/ark-scene/open-ocean"; // p2 (ocean)
+import {seaFlightAt, seaFlightSpec, seaHome} from "@/ark-scene/sea-flight";
+import {CRUISE_SHALLOW, surfaceCruiseAt} from "@/ark-scene/surface-cruise";
+import {SIGN_RANGE, SurfaceSignsView} from "@/ark-scene/surface-signs";
 import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (ocean)
 import {PeopleFigures} from "@/ark-scene/humans/people-figures"; // p6 (people): the rigged bodies
 import {BeachProps} from "@/ark-scene/humans/beach-props"; // p5 (humans, quality pass)
@@ -660,6 +663,8 @@ type Entry = {
     drawnRig?: {rig: RigModel; mesh: InstancedMesh; index: number} | null;
     /** sig-young: its ride is on the water only; whether it rode last frame; where it was drawn; and the get-down or get-up it is easing through. */
     rideWaterOnly?: boolean;
+    /** SEA-SURFACE: where over the sea a seabird on the wing soars from (`sea-flight.ts` seaHome). */
+    seaHome?: {x: number; z: number};
     rideWas?: boolean;
     rideLast?: {x: number; z: number; base: number; yaw: number};
     rideBlend?: {from: {x: number; z: number; base: number; yaw: number}; at: number} | null;
@@ -5485,9 +5490,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (Its band in a working column of OCEAN_COLUMN m: 2–6 m under for an upper-water swimmer, not 13–35 m.)
         const floorY = Math.max(heightAt(fix.x, fix.z), -OCEAN_COLUMN);
         const spec = waterSpec(depth, floorY, entry.seed, clock, breath);
-        const pitch = reducedMotion ? 0 : swimPitch(depth, -floorY, entry.seed, clock, fix.speed);
+        // SEA-SURFACE: a kind whose text has it spend time near the surface (`surface-cruise.ts`, the manta) cruises at the
+        // very top for spells of its loop, level, its highest point `depth` m under: wholly under the water (no tip of it
+        // showing through the sea's top as a speck), its wake above it (in its spec, so the fit again at its drawn height
+        // keeps it there).
+        const cruise = reducedMotion ? null : surfaceCruiseAt(entry.animal.id, entry.animal.model_slug, clock);
+        if (cruise && cruise.k > 0) spec.cruise = cruise;
+        const pitch = (reducedMotion ? 0 : swimPitch(depth, -floorY, entry.seed, clock, fix.speed)) * (1 - (spec.cruise?.k ?? 0));
         const fitted = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
-        const base = spec.breath ? fitted : l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, pitch, ARK_ENVIRONMENT.seaLevel.value);
+        const base = spec.breath || spec.cruise ? fitted : l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, pitch, ARK_ENVIRONMENT.seaLevel.value);
         return {x: fix.x, z: fix.z, base, yaw: fix.yaw, pitch, roll: 0, afloat: true, water: spec};
     };
 
@@ -5626,6 +5637,24 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (entry.air > 0.001) {
             // A pair flies together: the mate a little behind on the first one's circle.
             const lead = entry.leader && !entry.leader.act && entry.leader.air > 0.5 ? entry.leader : null;
+            // SEA-SURFACE: a seabird that lives on the wing over the sea (`sea-flight.ts`, its own text: the frigatebird)
+            // soars in wide thermal circles, climbing and gliding down, and now and then passes low over the water.
+            const seaFlight = lead ? null : seaFlightSpec(entry.animal.model_slug);
+            if (seaFlight) {
+                const k = easeInOut(entry.air);
+                const ground = Math.max(place.ground, 0);
+                const flight = seaFlightAt(entry.animal.id, seaFlight, (entry.seaHome ??= seaHome(place, heightAt)), reducedMotion ? 0 : worldMs() / 1000, (x, z) => heightAt(x, z) < -0.5);
+                const over = Math.max(heightAt(flight.x, flight.z), ARK_ENVIRONMENT.seaLevel.value);
+                return {
+                    x: place.x + (flight.x - place.x) * k,
+                    z: place.z + (flight.z - place.z) * k,
+                    base: ground + (over + flight.altitude - ground) * k,
+                    yaw: place.yaw + (flight.yaw - place.yaw) * k,
+                    pitch: 0.95 * k,
+                    roll: flight.bank * k,
+                    afloat: k > 0.5
+                };
+            }
             const owner = lead ?? entry;
             const radius = 6 + owner.phase * 6;
             const angle = lead ? lead.loop - 0.22 * (entry.place.rank ?? 1) : entry.loop;
@@ -6575,6 +6604,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         streamSkipped = 0;
         const streaming = !streamer.allIn;
         oceanShadows?.begin(); // p2 (ocean)
+        surfaceSigns?.begin(); // SEA-SURFACE
         const pinnedNow = (entry: Entry) => entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id || Boolean(entry.visitor || entry.act || entry.moment || entry.held || cast?.pins.has(entry.animal.id));
         // Past the render distance: drawn only from the map view, and only when big on screen (a whale, an elephant: true
         // scale); otherwise skipped (a marker in the map view).
@@ -6708,9 +6738,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // p2 (ocean): an open-ocean animal's shape on the water over it, seen from above (`ocean-shadows.ts`).
             if (entry.ocean) {
                 const shadows = (oceanShadows ??= new OceanShadows(scene));
-                shadows.add(where.x, where.z, where.yaw, entry.length, bodyShape(slug, entry.length).radius * 2, where.base + modelHeight);
+                // (SEA-SURFACE: a ray in its own outline, its wings as wide as it is long or more, not a round disc.)
+                const ray = /(^|-)(manta|ray|stingray|skate)(-|$)/.test(slug);
+                const width = bodyShape(slug, entry.length).radius * 2;
+                shadows.add(where.x, where.z, where.yaw, entry.length, ray ? Math.max(width, entry.length * 1.3) : width, where.base + modelHeight, ray);
                 // (A whale's blow from its head as it breathes at the surface: cetaceans by their model's body plan.)
                 if (where.water?.breath && model?.behaviour?.plan === "cetacean") shadows.blow(where.x + Math.sin(where.yaw) * entry.length * 0.42, where.z + Math.cos(where.yaw) * entry.length * 0.42, entry.length, where.water.breath);
+            }
+            // SEA-SURFACE: the signs on the sea's surface where a real animal is at it (`surface-signs.ts`): rings and a
+            // splash or a blow as it comes up, a ring as it goes down or lands or takes off, a wake as it swims along the
+            // top. Sea water only, near enough to be seen, from above; a leap's own rings are its own.
+            if (!underwater && !entry.leapStep && !entry.act?.hidden && !entry.held) {
+                const sea = ARK_ENVIRONMENT.seaLevel.value;
+                if (where.base < sea + 1.5 && Math.abs(where.x - cameraPosition.x) < SIGN_RANGE && Math.abs(where.z - cameraPosition.z) < SIGN_RANGE && heightAt(where.x, where.z) < sea - 0.5 && waterTopAt(where.x, where.z) < sea + 0.02) {
+                    (surfaceSigns ??= new SurfaceSignsView(scene)).sample(entry.animal.id, {x: where.x, z: where.z, yaw: where.yaw, top: where.base + modelHeight, bottom: where.base, surface: sea, length: entry.length, breathes: Boolean(entry.depth?.breathes) && model?.behaviour?.plan !== "cetacean", shallow: where.water?.cruise ? CRUISE_SHALLOW : 0}, epochNow);
+                }
             }
             // Part B: where it is now, for the render distance; past it, not drawn (a marker in the map view).
             if (streaming) {
@@ -6759,6 +6801,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
 
         oceanShadows?.end(underwater); // p2 (ocean)
+        surfaceSigns?.end(epochNow, underwater); // SEA-SURFACE
         // The page's tap card says what the selected animal is doing now, from the same state.
         tellState();
         perf.lap("animals");
@@ -8036,6 +8079,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let oceanTraffic: OceanTrafficView | null = null;
     /** p2 (ocean): the open-ocean animals' shapes on the water, made with the first of them. */
     let oceanShadows: OceanShadows | null = null;
+    // SEA-SURFACE: the signs on the sea's surface (made the first time a real animal is at the sea's top near the camera).
+    let surfaceSigns: SurfaceSignsView | null = null;
     const stepLayers = (elapsed: number) => {
         const under = camera.position.y < -0.02 && heightAt(camera.position.x, camera.position.z) < -0.3;
         if (under !== underwater) {
@@ -12281,7 +12326,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // ARK-CONTACT (the owner's Cunner, 2026-11-21): the chosen one not drawn this frame (a pilchard's school between
             // its levels) is where its pose has it now, where the camera flies to and where it is drawn next: its lines
             // started 19 m off, at its place at the surface.
-            const chosenNow = !entry.middle && id === selectedId && !swimFixOff() ? middleNow(entry) : null;
+            // SEA-SURFACE: so is a flyer off the schedule on its own flight (the frigatebird's soaring over the sea), not
+            // drawn this frame: its place was where the camera went, 10–40 m from the bird, and it never moved there.
+            const flyingNow = !entry.middle && !entry.sched && !entry.act && !entry.moment && entry.air > 0.001;
+            const chosenNow = !entry.middle && (id === selectedId || flyingNow) && !swimFixOff() ? middleNow(entry) : null;
             const middle = entry.middle ?? chosenNow ?? (posed ? new Vector3(posed.x, posed.y + entry.drawnHeight * 0.5, posed.z) : new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z));
             // (V2 replay: how far under the water its middle is, where it swims: a shot films it from under the surface.)
             const top = waterTopAt(middle.x, middle.z);
@@ -12608,6 +12656,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             seaLook?.dispose();
             oceanTraffic?.dispose(); // p2 (ocean)
             oceanShadows?.dispose(); // p2 (ocean)
+            surfaceSigns?.dispose(); // SEA-SURFACE
             lighting.dispose();
             post.dispose();
             renderer.dispose();
