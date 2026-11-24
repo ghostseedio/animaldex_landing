@@ -24,7 +24,7 @@
 import type {AuditFeatures, AuditModel, AuditSample, AuditSubject, CameraResult, CameraStop} from "./types";
 import type {AuditFixture} from "./fixture";
 import type {SceneData} from "./scene-data";
-import {cameraHuntShares, type StopHunts} from "./camera-hunts";
+import {cameraHuntShares, huntCounts, type StopHunts} from "./camera-hunts";
 
 const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
 
@@ -365,13 +365,16 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
                   const huntOpen = new Map<string, {start: number; reacted: number | null; fled: boolean}>();
                   let inputsNow: import("@/ark-scene/reactive").ReactiveInput[] = [];
                   let indexNow = new Map<string, number>();
-                  /** A prey animal with one of its hunters (awake, on the ground) within 25 m: when it first reacts, whether it flees. */
+                  /**
+                   * A prey animal with one of its hunters (awake, on the ground) that matters to it: within 25 m and moving
+                   * (`huntCounts`), or still but close for its size. When it first reacts, whether it flees.
+                   */
                   const trackHunt = (me: import("@/ark-scene/reactive").ReactiveInput, o: {action: string; looking: string | null}, id: string, t: number) => {
                       if (me.shared.aloft) return;
                       let hunterNear: string | null = null;
                       for (const other of inputsNow) {
                           if (other.id === id || other.asleep || other.shared.aloft || !hunts(other.slug, me.slug)) continue;
-                          if (Math.hypot(other.shared.x - me.shared.x, other.shared.z - me.shared.z) <= 25) {
+                          if (huntCounts(Math.hypot(other.shared.x - me.shared.x, other.shared.z - me.shared.z), speedOf(other.id), me.length)) {
                               hunterNear = other.id;
                               break;
                           }
@@ -383,6 +386,10 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
                       if (row.reacted === null && (REACT.has(o.action) || looksAtHunter)) row.reacted = t - row.start;
                       if (o.action === "flee") row.fled = true;
                   };
+                  // (Each animal's ground speed over the last second, from its own drawn positions: `huntCounts`.)
+                  const lastAt = new Map<string, {t: number; x: number; z: number}>();
+                  const speeds = new Map<string, number>();
+                  const speedOf = (id: string) => speeds.get(id) ?? 0;
                   let offset: {x: number; z: number} | null = null;
                   for (let f = 0; f <= (WARM + SECONDS) * FPS; f++) {
                       const t = t0 + f / FPS;
@@ -424,6 +431,14 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
                       }
                       inputsNow = inputs;
                       indexNow = indexOf;
+                      for (const input of inputs) {
+                          const was = lastAt.get(input.id);
+                          if (!was) lastAt.set(input.id, {t, x: input.shared.x, z: input.shared.z});
+                          else if (t - was.t >= 1) {
+                              speeds.set(input.id, Math.hypot(input.shared.x - was.x, input.shared.z - was.z) / (t - was.t));
+                              lastAt.set(input.id, {t, x: input.shared.x, z: input.shared.z});
+                          }
+                      }
                       const hours = hoursAt(t);
                       const out = layer.step(inputs, {now: t, dt, hours, night: daylightAt(hours).night, weather: {rain: 0, wind: 0.3, windDirection: 0, fog: 0, storm: 0}, camera, sight: queries.sight, refuge: queries.refuge});
                       // (Hunts are timed from the stop's first frame, the layer fresh; the rest is measured after the warm-up.)

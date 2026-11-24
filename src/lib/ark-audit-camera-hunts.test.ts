@@ -4,7 +4,7 @@
  */
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {cameraHuntShares, type StopHunts} from "./ark-audit/camera-hunts";
+import {cameraHuntShares, huntCounts, HUNT_MOVING_MPS, type StopHunts} from "./ark-audit/camera-hunts";
 
 const stop = (encounters: number, reacted: number, fled: number, hunter = "h", prey = "p"): StopHunts => ({hunter, prey, encounters, reacted, fled});
 
@@ -32,4 +32,19 @@ test("camera hunts: stops with no hunter near are left out; none at all is null"
     const none = cameraHuntShares([stop(0, 0, 0)]);
     assert.equal(none.reactPct, null);
     assert.equal(none.fleePct, null);
+});
+
+test("camera hunts: a row is a hunter moving within sight, or still and close for the prey's size (fixed values)", () => {
+    // (A still Boelen's python 18-25 m from a jackdaw: no row; the same python on the move: a row.)
+    assert.equal(huntCounts(23, 0, 0.33), false);
+    assert.equal(huntCounts(23, 0.3, 0.33), true);
+    // (Beyond the sight radius never; within it, a still hunter by the prey's size class: 8, 15, 25 m.)
+    assert.equal(huntCounts(26, 2, 1), false);
+    assert.equal(huntCounts(7.9, 0, 0.1), true);
+    assert.equal(huntCounts(8.1, 0, 0.1), false);
+    assert.equal(huntCounts(14, 0, 1), true);
+    assert.equal(huntCounts(16, 0, 1), false);
+    assert.equal(huntCounts(24, 0, 2), true);
+    // (The threshold itself: standing drift is not moving.)
+    assert.equal(huntCounts(20, HUNT_MOVING_MPS, 0.5), false);
 });
