@@ -43,9 +43,13 @@ const seeded: Record<string, {plans: string[]; weight: number}> = {};
 // (`replaces`: held rows another file's addition now shows another way, not listed as held; `held`: rows held again, with why.)
 const replaced = new Set<string>();
 const heldWhy = new Map<string, string>();
+// (Lane SIG7: coat variants aboard as species of their own, with no row: each takes its parent's, less `without`.)
+type Coats = {of: string; without: string[]; slugs: string[]};
+const coats: Coats[] = [];
 for (const f of files) {
-    const j = JSON.parse(fs.readFileSync(path.join(root, "data/ark", f), "utf8")) as {additions: Addition[]; templates?: Record<string, {plans: string[]; weight: number}>; replaces?: Array<{slug: string; recipe: string}>; held?: Array<{slug: string; recipe: string; reason: string}> | Record<string, string>};
+    const j = JSON.parse(fs.readFileSync(path.join(root, "data/ark", f), "utf8")) as {additions: Addition[]; templates?: Record<string, {plans: string[]; weight: number}>; replaces?: Array<{slug: string; recipe: string}>; held?: Array<{slug: string; recipe: string; reason: string}> | Record<string, string>; coats?: Coats};
     additions.push(...j.additions);
+    if (j.coats) coats.push(j.coats);
     Object.assign(seeded, j.templates ?? {});
     for (const r of j.replaces ?? []) replaced.add(`${r.slug} ${r.recipe}`);
     // (A lane's held catalogue rows by name, which are not wave-1 rows, are its own list: only the wave-1 rows' are read here.)
@@ -220,6 +224,31 @@ for (const [key, reason] of holds) {
         style.src.social = {rule: `held (signature-holds.json): ${reason.slice(0, 160)}`};
     }
 }
+// (Lane SIG7: a coat variant (a bicolor domestic cat) is the same animal as its parent: its parent's row, sleep row and
+// sentences, less the acts whose clips its rig lacks. Only where the generator gave it no row of its own.)
+let coated = 0;
+for (const c of coats) {
+    const parent = table.species[c.of];
+    if (!parent) {
+        skipped.push(`${c.of} coats: no parent row`);
+        continue;
+    }
+    const fields = parent.split("|");
+    fields[0] = fields[0].split(",").filter((r) => r && !c.without.includes(r.slice(0, r.lastIndexOf(".")))).join(",");
+    const row = fields.join("|");
+    for (const slug of c.slugs) {
+        if (planOf.has(slug)) {
+            skipped.push(`${slug} coat of ${c.of}: it has a row of its own`);
+            continue;
+        }
+        table.species[slug] = row;
+        if (sleepTable.species[c.of]) sleepTable.species[slug] = sleepTable.species[c.of];
+        const own = Object.entries(lines.species[c.of] ?? {}).filter(([recipe]) => !c.without.includes(recipe));
+        if (own.length) lines.species[slug] = Object.fromEntries(own);
+        else delete lines.species[slug];
+        coated++;
+    }
+}
 // Wave 2, birds: the recipes (and the nests and flags the rows' sentences give), the roosts' sleep, the log lines.
 const birdReport = applyBirdRecipes(table, birds.rows);
 const birdSleep = applyBirdSleep(sleepTable, sleepStyles as unknown as {species: Array<Record<string, unknown>>}, birds.rows);
@@ -232,6 +261,6 @@ if (!dry) {
     fs.writeFileSync(sleepStylesPath, `${JSON.stringify(sleepStyles, null, 1)}\n`);
     fs.writeFileSync(linesPath, JSON.stringify(lines));
 }
-console.log(JSON.stringify({additions: additions.length, added, already: already.length, superseded, skipped: skipped.length, birds: {rows: birds.rows.length, added: birdReport.added.length, already: birdReport.already.length, missing: birdReport.missing.length, sleepRows: birdSleep, lines: birdLines, notShown: birds.notShown.map((n) => `${n.slug} ${n.was}`)}}, null, 1));
+console.log(JSON.stringify({additions: additions.length, added, already: already.length, superseded, coated, skipped: skipped.length, birds: {rows: birds.rows.length, added: birdReport.added.length, already: birdReport.already.length, missing: birdReport.missing.length, sleepRows: birdSleep, lines: birdLines, notShown: birds.notShown.map((n) => `${n.slug} ${n.was}`)}}, null, 1));
 if (skipped.length) console.log(skipped.join("\n"));
 if (birdReport.missing.length) console.log(birdReport.missing.join("\n"));

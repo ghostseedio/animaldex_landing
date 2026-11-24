@@ -1,0 +1,30 @@
+{
+ "about": "Lane SIG7 (2026-11-24, decision 424, most-seen first): the next most-seen species aboard without acts of their own, on clips their live v3 rigs have. `coats`: the domestic cat's coat variants (aboard as their own species, parent domestic-cat, basis domestic_parent) had no row at all, so none of the cat's acts; each takes the domestic cat's row, its sleep row and its sentences, less the acts on clips its rig lacks (dig, knead, stretch). The mallard's bath (`bathe~duck`) stays out on the water. Applied by scripts/ark-signature-recipes.mts. Strips: ~/AnimalDex-work/sig7/.",
+ "version": 1,
+ "templates": {
+  "bathe~duck": {"plans": ["flying_bird"], "weight": 3}
+ },
+ "additions": [
+  {"slug": "muscovy-duck", "name": "Muscovy Duck", "recipe": "ground_feed", "field": "evidence", "quote": "The bird spends much of its time walking and grazing on grass, insects, seeds and scraps on land rather than dabbling on water.", "line": "{aAnimal} is walking and grazing on the grass", "held": "a swimmer (move swim: `aquatic`) goes to every recipe goal by water (`recipeIntent` mode), and a flock of swimmers follows its leader on the water most slots, so an act on land never starts: the harness found no episode in 90 slots. Needs the trip mode taken from the goal, a schedule change for every swimming bird's ground acts."},
+  {"slug": "domestic-goose", "name": "Domestic Goose", "recipe": "ground_feed", "held": "a swimmer (move swim: `aquatic`) goes to every recipe goal by water (`recipeIntent` mode), and a flock of swimmers follows its leader on the water most slots, so an act on land never starts: the harness found no episode in 90 slots. Needs the trip mode taken from the goal, a schedule change for every swimming bird's ground acts."},
+  {"slug": "poodle", "name": "Poodle", "recipe": "play_run"},
+  {"slug": "poodle", "name": "Poodle", "recipe": "sniff_trail"},
+  {"slug": "cow", "name": "Cow", "recipe": "call_bout"},
+  {"slug": "cow", "name": "Cow", "recipe": "allogroom"},
+  {"slug": "mallard", "name": "Mallard", "recipe": "bathe~duck"}
+ ],
+ "coats": {
+  "of": "domestic-cat",
+  "without": ["dig_burrow~scrape", "knead_settle", "stretch_yawn~cat"],
+  "why": "their v3 rigs have no dig, knead or stretch clip (SIG5's kit acts are on the domestic cat's rig only)",
+  "slugs": ["domestic-cat-bicolor", "domestic-cat-brown-tabby", "domestic-cat-black", "domestic-cat-calico", "domestic-cat-tortoiseshell", "domestic-cat-dilute-calico"]
+ },
+ "notes": {
+  "domestic-pigeon": "no new act: its own display (court_display, the display clip), sun bathing and preening already run; its catalogue rows left (a flock's clattering take-off, sucking up water, a homing circle, roosting on a building's ledge) need a startle event, a new pose, a flight path or a ledge",
+  "daddy-long-legs-spider": "held: its rig has only walk, run, graze, groom and sleep; its rows (whirling in its web to a blur, the tangle web it hangs in) need a new pose and a web prop",
+  "goldfish, koi, guppy, siamese-fighting-fish": "held: no v3 rig",
+  "domestic-rabbit": "held: its rig has only walk, run, graze, browse and scan; the binky (a leap with a twist) needs a clip, and the freeze, zigzag and thump need a threat",
+  "domestic-goat": "browsing up a tree: the browse clip already plays in its schedule's browse beat; the rear clip is the clash's rear (horns forward), not a reach for leaves",
+  "red-junglefowl": "held: scratch_feed needs the scratch clip, which only the domestic chicken's rig has (graze alone is a peck, not a scratch)"
+ }
+}

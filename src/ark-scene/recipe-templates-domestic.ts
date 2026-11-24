@@ -14,7 +14,9 @@
  *   stretch_yawn~cat  a cat's long stretch (kit39c), a yawn, rest.
  *   tail_wave~still   a house gecko still on its wall, its tail waving slowly (kit42).
  *   scratch_feed      a hen raking the ground back with its feet, then pecking (kit36's scratch clip), walking home.
- *   ground_feed       walking about the grass, head down feeding (budgerigar, tree sparrow). The graze clip, by the
+ *   bathe~duck        a duck bathing out on open water, a shake, preening afloat (mallard; SIG7). The shake_off clip.
+ *   ground_feed       walking about the grass, head down feeding (budgerigar, tree sparrow; SIG7: muscovy duck,
+ *                     domestic goose, grazers on land). The graze clip, by the
  *                     `eat` block: a `peck` hold's bob reads as a walk's pace on a bird this small, so its walk plays instead.
  *
  * Data only, like the other templates: the engine (`behaviour-recipes.ts`) runs them. Nothing is caught.
@@ -209,5 +211,25 @@ export const DOMESTIC_TEMPLATES: Template[] = [
             {b: "rest", s: [8, 20]},
             {b: "tail_wave", s: [3, 6]}
         ]
+    }),
+    // A duck's bath (lane SIG7): out on open water, dipping and splashing, a shake, then preening where it floats. The plain
+    // `bathe` walks to the shallows and back out to the water_edge point, which on the lake's and river's steep banks is the
+    // bank's top about a metre above the water: a duck has no need to leave the water to bathe.
+    T({
+        id: "bathe~duck",
+        label: "bathes out on the water, splashing, then preens afloat",
+        kind: "stay",
+        goal: "water",
+        replaces: ["groom", "rest", "swim"],
+        doing: "groom",
+        hours: "day",
+        steps: [
+            {b: "swim", to: "water", r: 3},
+            {b: "bathe", s: [3, 5]},
+            {b: "shake_off", s: [0.8, 1.2]},
+            {b: "bathe", s: [2, 4]},
+            {b: "groom", s: [4, 8]}
+        ],
+        tail: [{b: "swim", to: "anchor"}]
     })
 ];

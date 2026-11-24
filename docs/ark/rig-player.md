@@ -75,7 +75,8 @@ The recipes lane's 70 named states (`ARK_RECIPE_STATES`, `docs/ark/behaviour-rec
 | scan | scan | loop |
 | peck, eat, pick_up, place | graze (head down) | loop |
 | perch | perch | loop |
-| shake, bathe | shake_off | once |
+| shake | shake_off | once |
+| bathe | shake_off, over and over while it bathes (SIG7) | loop |
 | sleep | sleep_one_leg, sleep_tuck, sleep_hang, sleep_curl, sleep_float, sleep_stand, sleep_side, sleep (v6) | loop |
 | rest, incubate | lie, bask, rest_one_leg (v6) | loop |
 | bask | bask, lie (v6) | loop |

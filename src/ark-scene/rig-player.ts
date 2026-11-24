@@ -1551,7 +1551,9 @@ export const RECIPE_CLIPS: Readonly<Record<string, RecipeClipRule>> = {
     place: {clips: ["graze"], play: "loop"},
     perch: {clips: ["perch"], play: "loop"},
     shake: {clips: ["shake_off"], play: "once"},
-    bathe: {clips: ["shake_off"], play: "once"},
+    // (Lane SIG7: a bath is dip after dip, the shake over and over while it lasts: played once, the 1.5 s shake held its last
+    // frame for the rest of a 3-6 s bathe, and with the clip carrying the attitude the bather sat still on the water.)
+    bathe: {clips: ["shake_off"], play: "loop"},
     // v6 (contract 8.5): the sleep and rest postures, and the behaviour clips.
     sleep: {clips: SLEEP_POSTURES, play: "loop"},
     rest: {clips: ["lie", "bask", "rest_one_leg"], play: "loop"},
