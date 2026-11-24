@@ -128,9 +128,11 @@ try {
     const langs = (arg("langs", "en,de,ar")).split(",");
     for (const [label, viewport, scale] of views) {
         for (const lang of label === "phone" ? langs : ["en"]) {
+            // The embed waits 2.5 s for its words and mounts no card without them: read them first.
+            await live(`/api/ark/words?lang=${encodeURIComponent(lang)}`);
             const page = await browser.newPage({viewport, deviceScaleFactor: scale});
             page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 200)));
-            await page.goto(`${base}/ark/embed.html?eatsoon=1&lang=${lang}`);
+            await page.goto(`${base}/ark/embed.html?eatsoon=1&hud=bars&lang=${lang}`);
             await page.waitForFunction(() => document.querySelector("canvas") && document.getElementById("ark-loader")?.style.display === "none", null, {timeout: 300000}).catch(() => null);
             await page.waitForTimeout(4000);
             for (const [who, animal] of [["hunter", hunter], ["grazer", grazer]]) {
