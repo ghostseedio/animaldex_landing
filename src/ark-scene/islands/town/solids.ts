@@ -13,6 +13,7 @@
  */
 
 import {corners, hashText, inBox, inPoly, local, rng, type Box} from "@/ark-scene/islands/town/geom";
+import {raisedPool} from "@/ark-scene/islands/town/raised-pool";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {townHouseholds, zooLayout, zooSpotsOf, type ZooEnclosure} from "@/ark-scene/islands/town/areas";
@@ -151,6 +152,8 @@ export function townSolids(open: readonly string[], plan: TownPlan = townPlan())
             else if (form === "paddock") scatterSolids(out, e);
         }
         if (form === "pool") scatterSolids(out, e);
+        const pool = raisedPool(e);
+        if (pool) out.push(pool);
         if (form === "paddock" || form === "pool") {
             // The keepers' shed at the back (`render/scenery.ts` enclosure); p4 (safari): none in a safari area.
             if (e.type !== "penguin_seal_pools" && !e.slot.safari) {

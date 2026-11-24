@@ -38,6 +38,7 @@ import {corners, inBox, sub, toLocal, type Box} from "@/ark-scene/islands/town/g
 import {aquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townWetlandOf} from "@/ark-scene/islands/town/wetland";
+import {raisedPool, raisedPoolDistance, RAISED_POOL_WATER} from "@/ark-scene/islands/town/raised-pool";
 import {gardenRoomOf, homeIndoors, roomCell, towerApartments, type IndoorPlace, type OutdoorPet} from "@/ark-scene/islands/town/home-rooms";
 
 /** The town's facts about a placed animal: its area, the spot's kind, the home, farm or enclosure, and its bounds. */
@@ -463,6 +464,10 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         // gfx (PLACE): inside its pen, its body clear of the rails (then clear of any building again, the pen's inside).
         if (info.pen) at = inPen(info.pen, info.penMargin ?? 0, at.x, at.z, length);
         else if (info.enclosureMargin !== undefined && info.enclosure) at = keepInside(maskBox(info.enclosure.mask), at.x, at.z, info.enclosureMargin);
+        // p3 (solid): a walker's body out of its enclosure's raised pool and its rim (its swimmers are on the water).
+        if (!held && base.where !== "pool" && info.enclosure) at = offRaisedPool(info.enclosure, at, drawnLength(animal, length), bound);
+        // (And a swimmer's step off its pool spot kept on the pool's water, never on the ground beside it at the water's height.)
+        else if (!held && base.where === "pool" && info.enclosure && raisedPool(info.enclosure)) at = inside(info.enclosure.pool, at.x, at.z, base.x, base.z);
         // (In the town every water is above the sea: a pool, the canal, a pond. The scene's water pose works from the sea's
         // level, so a swimmer here floats at its spot's surface, on its own ground: `water` stays false.)
         // (A raised pool's water is 0.45 m over the highest ground at its rim: a swimmer floats there, not under the rim.)
@@ -473,7 +478,7 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
             const kept = domeKeep(at.x, at.z, 0, 0, Math.min(length * 0.5, 2));
             at = base.where === "pool" ? intoLagoon(kept.x, kept.z) : {x: kept.x, z: kept.z};
         }
-        const pool = base.where === "pool" && info.enclosure?.pool ? (inDomeHost ? safariWaterLevel(DOME_LAGOON) : Math.max(...info.enclosure.pool.map((q) => townHeight(q.x, q.z))) + 0.45) : null;
+        const pool = base.where === "pool" && info.enclosure?.pool ? (inDomeHost ? safariWaterLevel(DOME_LAGOON) : Math.max(...info.enclosure.pool.map((q) => townHeight(q.x, q.z))) + RAISED_POOL_WATER) : null;
         const placement: Placement = {x: at.x, z: at.z, ground: pool ?? base.y, yaw: held ? held.yaw : yaw, water: false, sea: false};
         fresh.push({animal, memoKey, placement, info, rank, length});
         void WATER_WHERE;
@@ -681,6 +686,9 @@ function spreadZoo(animals: readonly ArkAnimal[], places: Map<string, Placement>
                 const kept = domeKeep(best.x, best.z, 0, 0, Math.min(f.length * 0.5, 2));
                 best = {x: kept.x, z: kept.z, room: best.room};
             }
+            // (p3 (solid): never spread into its enclosure's raised pool.)
+            const off = offRaisedPool(host, best, drawnLength(f.animal, f.length), frame ? null : host.mask);
+            best = {x: off.x, z: off.z, room: best.room};
             if (best.x !== f.placement.x || best.z !== f.placement.z) {
                 f.placement.x = best.x;
                 f.placement.z = best.z;
@@ -690,6 +698,45 @@ function spreadZoo(animals: readonly ArkAnimal[], places: Map<string, Placement>
         }
         group.push({x: f.placement.x, z: f.placement.z, length: f.length});
     }
+}
+
+/** Its body's length as drawn (m: its model's display size), at least its stats' (`placement`'s `length`). */
+function drawnLength(animal: ArkAnimal, length: number): number {
+    return Math.max(arkBody(animal, modelBase(animal.model_slug)?.plan ?? null).display, length);
+}
+
+/**
+ * p3 (solid): a walker's place out of its enclosure's raised pool (`raised-pool.ts`): its body clear of the rim's outside,
+ * the nearest such point inside its bound (`clearWithin`'s rings); unmoved where it is clear, or where there is no pool.
+ */
+function offRaisedPool(enclosure: Pick<ZooEnclosure, "id" | "pool" | "slot">, at: {x: number; z: number}, drawn: number, bound: Poly | null): {x: number; z: number} {
+    const pool = raisedPool(enclosure);
+    const radius = bodyClear(drawn);
+    if (!pool || raisedPoolDistance(pool, at.x, at.z) >= radius) return at;
+    // (Out through the nearest of its four sides, a hair past the body's clearance, else the next nearest inside the bound:
+    // a big pool (the penguins') is wider than `clearWithin`'s 3 m of rings.)
+    const c = Math.cos(pool.rot);
+    const n = Math.sin(pool.rot);
+    const dx = at.x - pool.x;
+    const dz = at.z - pool.z;
+    const lx = dx * c + dz * n;
+    const lz = -dx * n + dz * c;
+    const out = radius + 0.02;
+    const sides: Array<[number, number, number]> = [
+        [pool.hw + out, lz, pool.hw - lx],
+        [-pool.hw - out, lz, pool.hw + lx],
+        [lx, pool.hd + out, pool.hd - lz],
+        [lx, -pool.hd - out, pool.hd + lz]
+    ];
+    sides.sort((a, b) => a[2] - b[2]);
+    for (const [ux, uz] of sides) {
+        const x = pool.x + ux * c - uz * n;
+        const z = pool.z + ux * n + uz * c;
+        if (!bound || inPoly(bound, x, z)) return {x, z};
+    }
+    const p = {x: at.x, z: at.z};
+    clearWithin(p, radius, {blocked: (x, z, r) => raisedPoolDistance(pool, x, z) < r}, (x, z) => !bound || inPoly(bound, x, z));
+    return p;
 }
 
 let domeFloorMemo: number | null = null;

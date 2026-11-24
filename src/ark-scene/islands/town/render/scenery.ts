@@ -39,6 +39,7 @@ import {ruralEdge, ruralProps} from "@/ark-scene/islands/town/render/rural-edges
 import {RURAL_PENS} from "@/ark-scene/islands/town/rural";
 import {domeScenery} from "@/ark-scene/islands/town/render/dome";
 import {safariArea} from "@/ark-scene/islands/town/safari";
+import {RAISED_POOL_WATER} from "@/ark-scene/islands/town/raised-pool";
 import {bridgeAt, bridgeHeight, canalBridges, PARAPET} from "@/ark-scene/islands/town/canal-bridges";
 import {drawCanalBridge} from "@/ark-scene/islands/town/render/canal-bridges";
 
@@ -658,7 +659,7 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
         // A raised pool: its rim of rockwork stands on the ground, the water just under the rim.
         let ground = -Infinity;
         for (const q of e.pool) ground = Math.max(ground, H(q.x, q.z));
-        const level = ground + 0.45;
+        const level = ground + RAISED_POOL_WATER;
         fan(out.fresh, e.pool, centre, level);
         const f: Frame = {x: centre.x, y: ground, z: centre.z, rot: s.rot};
         const pw = Math.hypot(e.pool[1].x - e.pool[0].x, e.pool[1].z - e.pool[0].z);
