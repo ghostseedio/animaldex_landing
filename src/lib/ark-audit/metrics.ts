@@ -371,13 +371,18 @@ export class AuditMeter {
      */
     cameraStops(max = 40): Array<{epoch: number; prey: number; hunter: number}> {
         const close = this.encounterLog.filter((e) => e.nearest < 15 && e.hunter >= 0);
-        const hash = (n: number) => {
-            let h = 2166136261 ^ n;
+        // Each encounter's draw is its own (its prey's and hunter's ids and its start), never its index in the log:
+        // a species added to the catalogue adds its own encounters and moves no other stop (SPECIES-ANIM-B2,
+        // 2026-11-24: the index reshuffled all 8 stops when #112's 36 species came aboard the fixture, flee 76.9% to 47.5%).
+        const hash = (text: string) => {
+            let h = 2166136261;
+            for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
             h = Math.imul(h ^ (h >>> 15), 2246822507);
             h = Math.imul(h ^ (h >>> 13), 3266489909);
             return (h ^ (h >>> 16)) >>> 0;
         };
-        const sorted = close.map((e, k) => ({e, k: hash(k)})).sort((a, b) => a.k - b.k).map((x) => x.e);
+        const key = (e: (typeof close)[number]) => `${this.subjects[e.prey].id}|${this.subjects[e.hunter].id}|${e.start}`;
+        const sorted = close.map((e) => ({e, k: hash(key(e)), id: key(e)})).sort((a, b) => a.k - b.k || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).map((x) => x.e);
         const seen = new Set<string>();
         const out: Array<{epoch: number; prey: number; hunter: number}> = [];
         for (const e of sorted) {
