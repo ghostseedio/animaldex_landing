@@ -197,6 +197,24 @@ test("a lying pose is seated by its own lowest points, lowered by 15 cm at most 
     assert.equal(seatDrop(points, m, () => 1.3), 0);
 });
 
+test("a body turned over rests on its back as drawn, down or up, not on its belly (the dog and the horse rolling, lane SIG6)", async () => {
+    const {lowestPoints, turnedLowestPoints, restDrop} = await import("@/ark-scene/grounding/tips");
+    // A box's eight corners on one bone: 0.2 m wide (x), 0.3 m tall (y), its belly at y 0.
+    const corners = [-0.1, 0.1].flatMap((x) => [0, 0.3].flatMap((y) => [-0.4, 0.4].map((z) => [x, y, z])));
+    const attr = (values: number[][]) => ({count: values.length, getX: (i: number) => values[i][0], getY: (i: number) => values[i][1], getZ: (i: number) => values[i][2], getComponent: (i: number, k: number) => values[i][k]});
+    const geometry = {getAttribute: (name: string) => (name === "position" ? attr(corners) : name === "arkJoints" ? attr(corners.map(() => [0, 0, 0, 0])) : attr(corners.map(() => [1, 0, 0, 0])))};
+    const rig = {geometry, data: new Uint16Array([0x3c00, 0, 0, 0, 0, 0x3c00, 0, 0, 0, 0, 0x3c00, 0]), bones: 1};
+    // On its back: turned 180° about its length (z), drawn 0.35 m up over ground 0. Its back (y 0.3) is 5 cm over the
+    // ground; its belly's points (the model's own lowest) are 35 cm up.
+    const up = [-1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0.35, 0, 1];
+    assert.ok(Math.abs(restDrop(turnedLowestPoints(rig, 0), up, () => 0, 1) - 0.05) < 1e-3);
+    assert.ok(Math.abs(restDrop(lowestPoints(rig, 0, 4), up, () => 0, 1) - 0.35) < 1e-3);
+    // Drawn 0.2 m up instead: its back 10 cm into the ground, raised; and never past `most`.
+    const into = [-1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0.2, 0, 1];
+    assert.ok(Math.abs(restDrop(turnedLowestPoints(rig, 0), into, () => 0, 1) + 0.1) < 1e-3);
+    assert.ok(Math.abs(restDrop(turnedLowestPoints(rig, 0), into, () => 0, 0.04) + 0.04) < 1e-6);
+});
+
 test("a town eave's perch is drawn on the drawn roof: every eave perch has the drawn roof 0-3 cm under it (the ground dove beside the roof)", async () => {
     const {townAreas} = await import("@/ark-scene/islands/town/areas");
     const {townPlan} = await import("@/ark-scene/islands/town/plan");

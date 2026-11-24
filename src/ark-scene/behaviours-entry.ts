@@ -201,6 +201,8 @@ async function main() {
         if (params.get("inject")) scene.inject = params.get("inject")!;
         if (params.get("zone")) scene.zone = params.get("zone")!;
         if (params.get("hours")) scene.hours = Number(params.get("hours"));
+        // (Lane SIG6: on the town island, `&town=1`.)
+        if (params.get("town") === "1") scene.town = true;
         if (params.get("slug")) scene.cast = [{slug: params.get("slug")!, name: params.get("slug")!, n: Number(params.get("n") ?? 3)}];
     }
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
