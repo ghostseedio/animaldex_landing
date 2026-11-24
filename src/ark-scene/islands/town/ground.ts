@@ -216,6 +216,9 @@ export function townBuildingFloor(b: Box): number {
     return high + 0.15;
 }
 
+/** A farm pond's outline's bounds (`sampleTownGround`), by its outline. */
+const pondBounds = new WeakMap<object, ReturnType<typeof bounds>>();
+
 export function sampleTownGround(x: number, z: number): TownGroundSample {
     const inl = inland(x, z);
     const grade = streetGrade(x, z);
@@ -271,7 +274,9 @@ export function sampleTownGround(x: number, z: number): TownGroundSample {
     const plan = townPlan();
     for (const w of plan.waters) {
         if (w.kind !== "farm_pond") continue;
-        const b = bounds(w.poly);
+        // (Its bounds once, not at every sample: load-alloc.)
+        let b = pondBounds.get(w.poly);
+        if (!b) pondBounds.set(w.poly, (b = bounds(w.poly)));
         if (x < b.x0 - 4 || x > b.x1 + 4 || z < b.z0 - 4 || z > b.z1 + 4) continue;
         const cx = (b.x0 + b.x1) / 2;
         const cz = (b.z0 + b.z1) / 2;
