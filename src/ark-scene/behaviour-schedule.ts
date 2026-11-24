@@ -2250,7 +2250,17 @@ function placeOrder(animal: ScheduleAnimal): string {
     return `${animal.group?.leader.id ?? animal.id}|${animal.group ? 1 : 0}|${animal.id}`;
 }
 
-function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): {trips: Trip[]; dx: number; dy: number; dz: number; finish: Spot} {
+type Shadow = {trips: Trip[]; dx: number; dy: number; dz: number; finish: Spot};
+/**
+ * A herd member's place by its leader in a slot, remembered (pure in its id and slot). Its place keeps off the mates
+ * placed before it (`herdAvoid`), whose own finishes ask for their places in turn: unremembered, a paddock of sixteen
+ * asked round that chain every frame (the safari close-up's schedule went from 4 to 46 ms a frame).
+ */
+function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): Shadow {
+    return remember(memoOf(world, hoursAt, animal).shadows, slot, () => placeShadow(world, animal, slot, hoursAt));
+}
+
+function placeShadow(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): Shadow {
     const group = animal.group!;
     const start = slotStart(animal, slot);
     const end = start + SLOT_SECONDS;
@@ -2360,6 +2370,12 @@ function lastGoal(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
 
 /** Where a slot ends, worked out the same way by every caller (from its intent alone: never from the route there). */
 function finishOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt, depth = 0): Spot {
+    // (Remembered for the first ask (pure in its id and slot): a mate's finish is asked for by each animal placed after it.)
+    if (depth === 0) return remember(memoOf(world, hoursAt, animal).finishes, slot, () => findFinish(world, profile, animal, activity, slot, hoursAt, 0));
+    return findFinish(world, profile, animal, activity, slot, hoursAt, depth);
+}
+
+function findFinish(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt, depth: number): Spot {
     const i = intent(world, profile, animal, activity, slot, hoursAt);
     if (i.follow && animal.group) return shadowOf(world, animal, slot, hoursAt).finish;
     const settled = settle(world, profile, animal, slot, i, activity, hoursAt);
@@ -2422,7 +2438,7 @@ export function slotPlanAt(world: ScheduleWorld, profile: ArkBehaviourProfile, a
  * leader's flock and a predator's spacing all ask for the same leader's slot many times. Pure results, so this
  * changes nothing but the time taken. `forgetSchedules` after an animal's home, group or range changes.
  */
-type Memo = {intents: Map<number, Intent>; raw: Map<number, Intent>; placed: Map<number, Intent>; chains: Map<number, Array<Spot | null>>; trips: Map<number, Trip>};
+type Memo = {intents: Map<number, Intent>; raw: Map<number, Intent>; placed: Map<number, Intent>; chains: Map<number, Array<Spot | null>>; trips: Map<number, Trip>; shadows: Map<number, Shadow>; finishes: Map<number, Spot>};
 let memos = new WeakMap<ScheduleWorld, WeakMap<HoursAt, WeakMap<ScheduleAnimal, Memo>>>();
 function memoOf(world: ScheduleWorld, hoursAt: HoursAt, animal: ScheduleAnimal): Memo {
     let byClock = memos.get(world);
@@ -2430,7 +2446,7 @@ function memoOf(world: ScheduleWorld, hoursAt: HoursAt, animal: ScheduleAnimal):
     let byAnimal = byClock.get(hoursAt);
     if (!byAnimal) byClock.set(hoursAt, (byAnimal = new WeakMap()));
     let memo = byAnimal.get(animal);
-    if (!memo) byAnimal.set(animal, (memo = {intents: new Map(), raw: new Map(), placed: new Map(), chains: new Map(), trips: new Map()}));
+    if (!memo) byAnimal.set(animal, (memo = {intents: new Map(), raw: new Map(), placed: new Map(), chains: new Map(), trips: new Map(), shadows: new Map(), finishes: new Map()}));
     return memo;
 }
 function remember<T>(map: Map<number, T>, slot: number, make: () => T): T {
