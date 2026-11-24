@@ -842,7 +842,12 @@ export class SeatPass {
         let left = false;
         // (Not one whose body lies on a closed thing by another part of it than its feet: a frog on a rock's shoulder.)
         const nothing = held && !cling && gap > Math.max(0.1, height) && closedMin > Math.max(0.1, height);
-        if (nothing && this.besidesLeft <= 0 && !this.forced && !input.focus) waiting = true;
+        // (SMALL-PERCHER: moved onto a surface beside it and still on its way there: judged once it is there, not by the air
+        // it crosses. Judged on the way, a brimstone sliding onto a leaf 12 cm off found nothing under it half way, was
+        // put back where its own motion had it, 21 cm over the crown, and was never moved again.)
+        const arriving = s.sides > 0 && (s.x !== s.tx || s.y !== s.ty || s.z !== s.tz);
+        if (nothing && arriving) waiting = true;
+        else if (nothing && this.besidesLeft <= 0 && !this.forced && !input.focus) waiting = true;
         else if (nothing) {
             this.besidesLeft--;
             // (Moved onto a surface beside it and still with nothing under it: a sliver. It comes down where it is.)
