@@ -618,7 +618,7 @@ ${options.reflect ? REFLECT_FRAGMENT : ""}`);
         // Each animal its own tint and mottling (`ark-variation.ts`, liveliness).
         varyShader(shader, options.maxY - options.minY, power);
         // Lane COATS: a pet's own coat (its kind's materials only), set before the variation (which a coat skips).
-        coatShader(shader, options.petCoat ?? null);
+        coatShader(shader, options.petCoat ?? null, options.minY, options.maxY);
     };
     return material;
 }

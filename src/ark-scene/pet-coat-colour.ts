@@ -68,20 +68,26 @@ export function isGinger(hex: string): boolean {
 }
 
 /**
- * A coat colour as the scene draws it (0-255 sRGB): a mid-tone lifted (a photo's fur reads darker than the coat looks:
- * #4c453e, L 29, goes to about L 41, a mid brown-grey), black and white left as they are; a near-neutral grey held
- * neutral (its chroma pulled in) and nothing outside fur's hues (orange to yellow) more than faintly coloured.
+ * A coat colour as the scene draws it (0-255 sRGB): a dark mid-tone lifted (a photo's fur reads darker than the coat looks:
+ * #4c453e, L 29, goes to about L 40, a mid brown-grey), black left as it is, and nothing from L 48 up made any lighter
+ * (a light coat is never drawn brighter than its photo); a near-neutral (grey, cream, taupe) turned to fur's warm hue
+ * at a low chroma, so it keeps some warmth and never goes lilac or mauve, and nothing outside fur's hues more than
+ * faintly coloured.
  */
 export function drawnColour(hex: string): [number, number, number] {
     let [l, a, b] = hexToLab(hex);
-    l += 12 * smooth(20, 31, l) * (1 - smooth(45, 65, l));
+    l += 12 * smooth(20, 31, l) * (1 - smooth(36, 48, l));
     const chroma = Math.hypot(a, b);
     const hue = ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
-    let scale = chroma < 12 ? 0.6 : 1;
-    if (hue < 20 || hue > 105) scale = Math.min(scale, 4 / Math.max(chroma, 1e-6));
-    a *= Math.min(scale, 1);
-    b *= Math.min(scale, 1);
-    return labToRgb([l, a, b]);
+    if (chroma < 12) {
+        // A grey, cream or taupe: turned to fur's warm hue (a little warmth kept, never lilac or mauve).
+        // (A light one a little more: under the sky's cool light a cream at chroma 4 reads silver.)
+        const c = Math.max(chroma, 4 + 3 * smooth(40, 60, l));
+        return labToRgb([l, c * Math.cos((55 * Math.PI) / 180), c * Math.sin((55 * Math.PI) / 180)]);
+    }
+    // A coloured coat outside fur's hues (orange to yellow) is only faintly coloured.
+    const scale = hue < 20 || hue > 105 ? Math.min(1, 4 / chroma) : 1;
+    return labToRgb([l, a * scale, b * scale]);
 }
 
 export type CoatDraw = {base: [number, number, number]; second: [number, number, number]; white: number; keep: boolean};
@@ -89,8 +95,16 @@ export type CoatDraw = {base: [number, number, number]; second: [number, number,
 /** What the shader is given for a coat (`drawnColour` on both; a missing second is the base, so no patches show). */
 export function coatDraw(coat: ArkCoat): CoatDraw {
     const base = drawnColour(coat.base);
-    return {base, second: coat.second ? drawnColour(coat.second) : base, white: coat.white, keep: isGinger(coat.base)};
+    // A ginger keeps the kind's skin, unless it has a darker second colour and is not piebald (a red dog with a darker
+    // saddle): that one is drawn as its own warm coat, the second as soft shading on its back and ears (the shader), so
+    // no hard patches lie over the skin's pale feathering.
+    const darkerSecond = Boolean(coat.second) && hexToLab(coat.second as string)[0] < hexToLab(coat.base)[0] - 8;
+    const keep = isGinger(coat.base) && !(darkerSecond && coat.white < PIEBALD);
+    return {base, second: coat.second ? drawnColour(coat.second) : base, white: coat.white, keep};
 }
+
+/** From this white share up a coat is piebald: its second colour in hard patches; below it, soft shading on the back. */
+export const PIEBALD = 0.25;
 
 const pack = ([r, g, b]: [number, number, number]) => r * 65536 + g * 256 + b;
 

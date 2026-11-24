@@ -27,6 +27,16 @@ test("ginger and golden coats keep the kind's own skin; no other coat does", () 
     assert.equal(coatDraw({base: "#a47041", second: null, white: 0.53}).keep, true);
 });
 
+test("a red dog with a darker saddle is its own warm coat, not hard patches on the kind's skin; a piebald ginger keeps them", () => {
+    assert.equal(coatDraw({base: "#c67453", second: "#623222", white: 0.02}).keep, false);
+    assert.equal(coatDraw({base: "#c67453", second: "#623222", white: 0.4}).keep, true);
+    assert.equal(coatDraw({base: "#cca872", second: null, white: 0.16}).keep, true);
+});
+
+test("a light coat is never drawn lighter than its photo", () => {
+    for (const hex of ["#8a806c", "#cdc5bc", "#7b828c", "#af9c78"]) assert.ok(hexToLab(rgbHex(drawnColour(hex)))[0] <= hexToLab(hex)[0] + 0.5, hex);
+});
+
 test("a mid-tone is lifted to a mid brown-grey; black and white stay as they are", () => {
     const lifted = hexToLab(rgbHex(drawnColour(TABBY_AND_WHITE)))[0];
     assert.ok(lifted > 38 && lifted < 45, `#4c453e drawn at L ${lifted}`);
@@ -34,13 +44,16 @@ test("a mid-tone is lifted to a mid brown-grey; black and white stay as they are
     assert.ok(Math.abs(hexToLab(rgbHex(drawnColour(WHITE)))[0] - hexToLab(WHITE)[0]) < 1, WHITE);
 });
 
-test("a near-neutral grey is held neutral (never mauve)", () => {
-    const [, a, b] = hexToLab(rgbHex(drawnColour(GREY_TABBY)));
-    const [, a0, b0] = hexToLab(GREY_TABBY);
-    assert.ok(Math.hypot(a, b) < Math.hypot(a0, b0), "chroma pulled in");
-    // A purple-ish grey (hue outside fur's) is all but neutral.
+test("a near-neutral grey keeps a little warmth and is never mauve or lilac", () => {
+    for (const hex of [GREY_TABBY, "#9b8c8b", "#8f7e75", "#7b828c"]) {
+        const [, a, b] = hexToLab(rgbHex(drawnColour(hex)));
+        const hue = ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
+        assert.ok(hue > 40 && hue < 75 && Math.hypot(a, b) >= 3 && Math.hypot(a, b) <= 12, `${hex}: hue ${hue}`);
+    }
+    // A purple-ish grey is turned warm, not left mauve.
     const [, ap, bp] = hexToLab(rgbHex(drawnColour("#5a4d5c")));
-    assert.ok(Math.hypot(ap, bp) <= 4.5, "no mauve");
+    const hp = ((Math.atan2(bp, ap) * 180) / Math.PI + 360) % 360;
+    assert.ok(hp > 40 && hp < 75, `#5a4d5c: hue ${hp}`);
 });
 
 test("the coat rides in arkVary exactly, a Power's whole turns added after", () => {

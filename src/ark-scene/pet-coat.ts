@@ -14,7 +14,7 @@
  * average (base, second and white by their shares), which is all a far animal shows.
  */
 
-import {LinearFilter, NoColorSpace, TextureLoader, type BufferGeometry, type InstancedBufferAttribute, type Texture} from "three";
+import {LinearFilter, NoColorSpace, Vector2, TextureLoader, type BufferGeometry, type InstancedBufferAttribute, type Texture} from "three";
 import {ARK_VARY_ATTRIBUTE} from "@/ark-scene/ark-variation";
 import {COAT_SLUGS, coatDraw, coatVary} from "@/ark-scene/pet-coat-colour";
 import type {ArkCoat} from "@/ark-scene/types";
@@ -26,6 +26,9 @@ export const COAT_MAPS: Readonly<Record<string, {version: string; skinLum: numbe
 };
 
 export type PetCoatUniforms = {arkCoatMap: {value: Texture | null}; arkCoatReady: {value: number}; arkCoatSkinLum: {value: number}};
+
+/** The model's own height range (y), for the saddle: per material (the near, far and rig models differ). */
+type CoatShape = {arkCoatY: {value: [number, number]}};
 
 const maps = new Map<string, PetCoatUniforms>();
 
@@ -89,6 +92,8 @@ const VERTEX_DECLARATIONS = `
 #ifdef ARK_PET_COAT
 varying vec4 vArkCoatA;
 varying vec4 vArkCoatB;
+varying float vArkCoatHeight;
+uniform vec2 arkCoatY;
 vec3 arkCoatUnpack(float p) {
     p = floor(p + 0.5);
     float r = floor(p / 65536.0);
@@ -102,6 +107,7 @@ vec3 arkCoatUnpack(float p) {
 // (Decoded here, in the vertex shader's full precision: a 24-bit colour does not survive a fragment's mediump.)
 const VERTEX = `
 #ifdef ARK_PET_COAT
+vArkCoatHeight = clamp((position.y - arkCoatY.x) / max(arkCoatY.y - arkCoatY.x, 1e-4), 0.0, 1.0);
 if (arkVary.z < 0.0) {
     float arkCoatFrac = arkVary.x - floor(arkVary.x + 0.5);
     float arkCoatWhite = clamp((abs(arkCoatFrac) - 0.05) / 0.4, 0.0, 1.0);
@@ -118,6 +124,7 @@ const FRAGMENT_DECLARATIONS = `
 #ifdef ARK_PET_COAT
 varying vec4 vArkCoatA;
 varying vec4 vArkCoatB;
+varying float vArkCoatHeight;
 uniform sampler2D arkCoatMap;
 uniform float arkCoatReady;
 uniform float arkCoatSkinLum;
@@ -128,14 +135,17 @@ vec3 arkCoatShade(vec3 c, float l) {
     float mx = max(c.r, max(c.g, c.b));
     float spread = (mx - min(c.r, min(c.g, c.b))) / max(mx, 1e-4);
     float sat = clamp(spread * 1.6, 0.0, 1.0) * smoothstep(0.25, 0.5, spread);
-    l = l < 1.0 ? 1.0 - (1.0 - l) * 0.7 : min(l, 1.6);
+    // A light coat keeps its full shading (eased, it reads flat and plastic) and is never lit past its own colour by
+    // much (a cream or light grey is not silver-white); a darker one has its shadows eased and keeps its highlights.
+    float light = smoothstep(0.15, 0.45, dot(c, vec3(0.2126, 0.7152, 0.0722)));
+    l = l < 1.0 ? 1.0 - (1.0 - l) * mix(0.7, 0.95, light) : min(l, mix(1.6, 1.12, light));
     return c * pow(vec3(max(l, 1e-3)), vec3(1.0 - 0.25 * sat, 1.0, 1.0 + 0.45 * sat));
 }
 // How much of the skin's own stripes a coat keeps: a little on a mid-tone (a tabby's colours), least on a solid black,
 // dark chocolate or white.
 float arkCoatStripes(vec3 c) {
     float y = dot(c, vec3(0.2126, 0.7152, 0.0722));
-    return 0.08 + 0.22 * smoothstep(0.03, 0.08, y) * (1.0 - smoothstep(0.3, 0.55, y));
+    return 0.05 + 0.17 * smoothstep(0.03, 0.08, y) * (1.0 - smoothstep(0.2, 0.45, y));
 }
 #endif`;
 
@@ -147,18 +157,30 @@ if (vArkCoatA.w > -5.0) {
     float arkWhite = arkKeep ? -1.0 - vArkCoatA.w : vArkCoatA.w;
     vec3 arkBase = vArkCoatA.rgb;
     vec3 arkSecond = vArkCoatB.rgb;
-    const vec3 arkWhiteFur = vec3(0.83, 0.81, 0.77);
+    // White fur: a warm off-white (linear luminance 0.70), brought down to a light coat's own colour (a white dog's
+    // photo colour is its white: never drawn brighter than that), and to no less than 0.55 on a dark coat's white.
+    float arkBaseY = dot(arkBase, vec3(0.2126, 0.7152, 0.0722));
+    vec3 arkWhiteFur = vec3(0.74, 0.70, 0.62) * min(1.0, max(arkBaseY, 0.55) / 0.70);
     vec3 c;
 #ifdef USE_MAP
     if (arkCoatReady > 0.5) {
         vec4 m = texture2D(arkCoatMap, vMapUv);
-        float l = m.r * 2.0;
+        // (The skin's brightest strokes, a retriever's pale feathering, capped: they read as white flecks on another coat.)
+        float l = min(m.r * 2.0, 1.25);
         float soft = m.a * 2.0;
         c = arkKeep ? arkSkin : arkCoatShade(arkBase, mix(soft, l, arkCoatStripes(arkBase)));
-        float arkPatch = smoothstep(0.58, 0.64, fract(m.b + vArkCoatB.w));
+        // A piebald's second colour in hard patches; any other's as soft shading over its top (back, head and ears: the
+        // model's upper part, from its rest shape, so the feathering's every-way normals make no flecks), so a red dog's
+        // darker saddle is not a skin of blotches.
+        float arkPatch = arkWhite >= 0.25
+            ? smoothstep(0.58, 0.64, fract(m.b + vArkCoatB.w))
+            : smoothstep(0.5, 0.85, vArkCoatHeight) * 0.6;
         c = mix(c, arkCoatShade(arkSecond, mix(soft, l, arkCoatStripes(arkSecond))), arkPatch);
         float arkWhiteAt = arkWhite > 0.02 ? smoothstep(1.0 - arkWhite - 0.03, 1.0 - arkWhite + 0.03, m.g) : 0.0;
-        c = mix(c, arkCoatShade(arkWhiteFur, mix(soft, l, 0.1) * 0.5 + 0.5), arkWhiteAt);
+        // A little white (not a piebald) stays low: paws, legs, chest and belly, never flecked along the back (the
+        // feathering's cards rank unevenly up there).
+        if (arkWhite < 0.25) arkWhiteAt *= 1.0 - smoothstep(0.4, 0.55, vArkCoatHeight);
+        c = mix(c, arkCoatShade(arkWhiteFur, mix(soft, l, 0.25)), arkWhiteAt);
     } else
 #endif
     {
@@ -175,9 +197,10 @@ if (vArkCoatA.w > -5.0) {
  * Add the coat to a coat kind's shader (inside `onBeforeCompile`, after `varyShader`, so its colour is set before the
  * variation's, which a coat's negative z skips). A no-op unless the material defines ARK_PET_COAT.
  */
-export function coatShader(shader: {vertexShader: string; fragmentShader: string; uniforms: Record<string, {value: unknown}>}, uniforms: PetCoatUniforms | null) {
+export function coatShader(shader: {vertexShader: string; fragmentShader: string; uniforms: Record<string, {value: unknown}>}, uniforms: PetCoatUniforms | null, minY = 0, maxY = 1) {
     if (!uniforms) return;
-    Object.assign(shader.uniforms, uniforms);
+    const shape: CoatShape = {arkCoatY: {value: [minY, maxY]}};
+    Object.assign(shader.uniforms, uniforms, {arkCoatY: {value: new Vector2(...shape.arkCoatY.value)}});
     shader.vertexShader = shader.vertexShader
         .replace("#include <common>", `#include <common>${VERTEX_DECLARATIONS}`)
         .replace("#include <begin_vertex>", `#include <begin_vertex>${VERTEX}`);

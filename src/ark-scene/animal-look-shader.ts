@@ -475,6 +475,11 @@ export const LOOK_FINISH = `
 {
     float facing = saturate(dot(normal, normalize(vViewPosition)));
     vec3 tint = mix(vec3(1.0), diffuseColor.rgb * 2.4, arkLookA.x < 1.5 ? 0.6 : 0.2);
+#ifdef ARK_PET_COAT
+    // Lane COATS: a pet's rim all its own coat's colour (a white rim broken into strands read as white flecks on a
+    // dark coat, along the retriever's feathering).
+    tint = diffuseColor.rgb * 2.4;
+#endif
     float rimShape = pow(1.0 - facing, 3.0);
 #if ARK_LOOK_TIER > 0
     if (arkLookA.x < 0.5) {
