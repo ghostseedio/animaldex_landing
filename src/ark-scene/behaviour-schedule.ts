@@ -232,7 +232,7 @@ export type ScheduleAnimal = {
      * off: a tapir asleep in its paddock's corner had an elephant's goal beside it, both held to the corner by their keep
      * boxes, inside each other for seven seconds. Absent: no one.
      */
-    mates?: () => ReadonlyArray<{animal: ScheduleAnimal; profile: ArkBehaviourProfile}>;
+    mates?: () => ReadonlyArray<{animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity?: ArkBehaviourProfile["activity"] | null}>;
     /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
     roost?: Spot | null;
     /** Its own sleep, when it is active at any hour (`sleep-hours.ts` arkSleepOf): it sleeps in bouts of its own. */
@@ -934,7 +934,7 @@ function perchFits(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
  * every caller). A spot on a surface (a branch, a rock's face, a burrow's mouth) or off the ground (raised, in the
  * water) stays where it is.
  */
-function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, spot: Spot, still = false): Spot {
+function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, spot: Spot, still = false, avoid: ReadonlyArray<{x: number; z: number; reach: number}> = []): Spot {
     const nav = world.nav;
     if (!nav.colliders || onSurface(spot.point) || raised(world, spot) || wet(world, spot)) return spot;
     // (Where it lies still, a roost: its width; where it turns, its reach.)
@@ -945,7 +945,9 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
     // (A goal on its way: off its enclosure-mates' beds by both their reaches, `ScheduleAnimal.mates`.)
     // (Its own roost, when it has no bed handed out: off the beds handed out to the others, a babirusa's den spot by the
     // shed on a fallow deer's bed. Those only: theirs are known without asking their roosts.)
-    const beds = still ? (animal.bed ? null : handedBeds(animal)) : matesBeds(world, animal);
+    const own0 = still ? (animal.bed ? null : handedBeds(animal)) : matesBeds(world, animal);
+    // (And, a herd's member, off its leader and its herd-mates where they are then: `herdAvoid`.)
+    const beds = avoid.length ? [...(own0 ?? []), ...avoid] : own0;
     const own = beds ? bodyReachOf(animal, profile.slug) : 0;
     const offBeds = (x: number, z: number) => !beds || beds.every((b) => Math.hypot(x - b.x, z - b.z) >= own + b.reach);
     if (nav.fits(spot.x, spot.z, r, slope) && (!keep || inKeep(keep, spot.x, spot.z)) && offBeds(spot.x, spot.z)) return spot;
@@ -955,7 +957,12 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
     const seed = hashString(`${animal.id}#clear`);
     const turn = ((seed % 1000) / 1000) * Math.PI * 2;
     const out = ((Math.floor(seed / 1000) % 1000) / 1000) * 0.3;
-    for (let ring = 1; ring <= 12; ring++) {
+    // (Lane ELEPHANTS: with others to keep off, out to 8.4 m; none off them all, the one that fits furthest into the
+    // clear of them. An elephant's goal in a forest paddock's corner found no ring point fitting both and kept its spot,
+    // on another elephant.)
+    const rings = beds ? 24 : 12;
+    let best: {x: number; z: number; clear: number} | null = null;
+    for (let ring = 1; ring <= rings; ring++) {
         const d = ring * 0.35 + out;
         const n = Math.min(Math.max(8, Math.round((Math.PI * 2 * d) / 0.35)), 16);
         for (let k = 0; k < n; k++) {
@@ -965,12 +972,15 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
             if (!nav.fits(x, z, r, slope)) continue;
             // (Penned: inside its keep box, never in the strip behind a trough by the rails.)
             if (keep && !inKeep(keep, x, z)) continue;
-            if (!offBeds(x, z)) continue;
+            const clear = beds ? Math.min(...beds.map((b) => Math.hypot(x - b.x, z - b.z) - own - b.reach)) : 0;
+            if (clear < 0 && best && clear <= best.clear) continue;
             // (The way it came in, from the spot: never past a fence to its far side.)
             if (!nav.runClear({x: spot.x, z: spot.z}, {x, z}, 0.01)) continue;
-            return {...spot, x, y: topAt(world, x, z), z};
+            if (clear >= 0) return {...spot, x, y: topAt(world, x, z), z};
+            best = {x, z, clear};
         }
     }
+    if (best && beds && best.clear > Math.min(...beds.map((b) => Math.hypot(spot.x - b.x, spot.z - b.z) - own - b.reach))) return {...spot, x: best.x, y: topAt(world, best.x, best.z), z: best.z};
     return spot;
 }
 
@@ -1611,7 +1621,7 @@ function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
             const foot = world.nav.nearest(planned.to.x, planned.to.z, "walk", 0.5, 3, maxSlopeOf(animal), bodyReachOf(animal, profile.slug));
             if (foot) return {...planned, to: groundSpot(world, foot.x, foot.z), mode: planned.mode === "air" ? "air" : "ground"};
         }
-        const to = clearOfSolid(world, profile, animal, planned.to);
+        const to = clearOfSolid(world, profile, animal, planned.to, false, herdAvoid(world, profile, animal, slot, hoursAt));
         return to === planned.to ? planned : {...planned, to};
     });
 }
@@ -2191,6 +2201,55 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
 }
 
 /** A flock member's place beside its leader this slot, and its leader's trips over the slot. */
+/**
+ * Lane ELEPHANTS (2026-11-24, the owner: "elephant enclosure glitching when I get close"): where an animal's goal, or a
+ * herd member's place by its leader, keeps off on the ground. A herd member keeps off its leader, where the slot starts
+ * and ends. One kept with others (`ScheduleAnimal.mates`) keeps off those placed before it (`placeOrder`), where each is
+ * at the slot's end. Each spot comes with its body's reach. Before, a forest paddock's elephants were placed a metre or two
+ * from their leader and from each other, and its cassowaries' goals went onto a standing elephant. Nothing was checked,
+ * and they were drawn inside each other for up to two minutes while the collisions held them between the trees.
+ */
+function herdAvoid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): Array<{x: number; z: number; reach: number}> {
+    const group = animal.group;
+    if (flies(profile) || aquatic(profile)) return [];
+    const start = slotStart(animal, slot);
+    const end = start + SLOT_SECONDS - 0.001;
+    const out: Array<{x: number; z: number; reach: number}> = [];
+    if (group && !flies(group.profile) && !aquatic(group.profile)) {
+        const reach = bodyReachOf(group.leader, group.profile.slug);
+        for (const t of [start, end]) {
+            const trip = tripAt(world, group.profile, group.leader, t, hoursAt, group.activity);
+            for (const at of [basePoseOnTrip(world, trip, t), trip.to, trip.finish]) if (!("aloft" in at && at.aloft) && !raised(world, at as Spot) && !wet(world, at as Spot)) out.push({x: at.x, z: at.z, reach});
+        }
+    }
+    if (animal.mates) {
+        const mine = placeOrder(animal);
+        for (const m of animal.mates()) {
+            if (m.animal.id === animal.id || placeOrder(m.animal) >= mine || flies(m.profile) || aquatic(m.profile)) continue;
+            // (Where it goes and where it ends, in each of its slots this one overlaps: its stay's steps can take a
+            // grazer some metres from its goal.)
+            const reach = bodyReachOf(m.animal, m.profile.slug);
+            const first = slotOf(m.animal, start);
+            for (let k = first; k <= slotOf(m.animal, end); k++) {
+                const to = intent(world, m.profile, m.animal, m.activity, k, hoursAt).to;
+                for (const f of [to, finishOf(world, m.profile, m.animal, m.activity, k, hoursAt)]) {
+                    if (f && !raised(world, f) && !wet(world, f)) out.push({x: f.x, z: f.z, reach});
+                }
+            }
+        }
+    }
+    return out;
+}
+
+/**
+ * The order its enclosure's animals are placed in, each keeping off those before it (`herdAvoid`): a group together,
+ * its leader first, then its members, by id. Whatever an animal's place asks for (its leader's trip, an earlier mate's
+ * place, and that mate's leader's) comes before it in this order, so nothing asks round in a circle.
+ */
+function placeOrder(animal: ScheduleAnimal): string {
+    return `${animal.group?.leader.id ?? animal.id}|${animal.group ? 1 : 0}|${animal.id}`;
+}
+
 function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): {trips: Trip[]; dx: number; dy: number; dz: number; finish: Spot} {
     const group = animal.group!;
     const start = slotStart(animal, slot);
@@ -2214,7 +2273,16 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
     // (On its own bearing from its leader, as a herd member's own side (`memberSide`), each slot a little off it, wider
     // a try at a time: a school's members at random bearings stood in an even row now and then, like the herds.)
     const bearing = group.rank * 2.399963 + ((hashString(`${animal.id}#side`) % 1000) / 1000 - 0.5) * 0.5;
-    for (let attempt = 0; attempt < 6; attempt++) {
+    // (Lane ELEPHANTS: on the ground, a place its body fits at by its reach, inside its keep box, off its leader and the
+    // herd-mates placed before it (`herdAvoid`); tried wider a step at a time, and failing that the first walkable try.)
+    const ground = !at.aloft && !(at.y < surfaceY(world, at.x, at.z)) && !flies(group.profile);
+    const avoid = ground && world.nav.colliders ? herdAvoid(world, group.profile, animal, slot, hoursAt) : [];
+    const reach = avoid.length ? bodyReachOf(animal, group.profile.slug) : 0;
+    const fitsHere = (x: number, z: number) =>
+        world.nav.fits(x, z, reach, maxSlopeOf(animal)) && (!animal.keep || inKeep(animal.keep, x, z)) && avoid.every((b) => Math.hypot(x - b.x, z - b.z) >= reach + b.reach);
+    let fallback: {dx: number; dz: number} | null = null;
+    const tries = avoid.length ? 12 : 6;
+    for (let attempt = 0; attempt < tries; attempt++) {
         const a = pair ? (pair.pair + 1) * 2.399963 + (pairRandom!() - 0.5) * 0.5 : bearing + (random() - 0.5) * (0.7 + attempt * 0.6);
         const d = pair ? (0.8 + pairRandom!() * 2.2) * Math.max(animal.length, 0.3) * (1 + 0.35 * Math.sqrt(2 * pair.pair + 1)) : (0.8 + random() * 2.2) * spread;
         dx = Math.cos(a) * d;
@@ -2222,6 +2290,20 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
         if (pair) {
             dx += pair.side * Math.cos(a + Math.PI / 2) * Math.max(animal.length, 0.3) * 0.55;
             dz += pair.side * Math.sin(a + Math.PI / 2) * Math.max(animal.length, 0.3) * 0.55;
+        }
+        if (avoid.length) {
+            // (Wider each try past the sixth: an elephant by its leader needs four metres or so.)
+            if (attempt >= 6) {
+                dx *= 1 + 0.3 * (attempt - 5);
+                dz *= 1 + 0.3 * (attempt - 5);
+            }
+            if (fitsHere(at.x + dx, at.z + dz)) {
+                fallback = null;
+                break;
+            }
+            if (!fallback && world.nav.walkable(at.x + dx, at.z + dz)) fallback = {dx, dz};
+            if (attempt === tries - 1 && fallback) ({dx, dz} = fallback);
+            continue;
         }
         if (at.aloft || at.y < surfaceY(world, at.x, at.z) || world.nav.walkable(at.x + dx, at.z + dz)) break;
     }
@@ -2528,14 +2610,23 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     /** A walk's path; one its search gave up on (a long way round) on the same stretch of ground is searched further. */
     // (Its body's width: every run of its paths keeps clear of everything solid for it: collisions.)
     const bodyR = bodyRadiusOf(animal, profile.slug);
+    // (Lane ELEPHANTS: penned, its way inside its keep box. The walk grid knows only the fence, so a giraffe's way along
+    // its paddock's side ran a metre outside the box. The bound held its body at the box's edge, against a solid there,
+    // and the collisions' way out of the solid swapped sides as it turned: 3.3 m in a frame.)
+    const box = animal.keep ?? null;
+    // (Only a way that starts and ends in the box: one that leaves it on purpose, an alligator's into its river, is its own.)
+    const kept = (path: NavPoint[]): NavPoint[] => {
+        if (!box || path.length < 2 || !inKeep(box, path[0].x, path[0].z) || !inKeep(box, path[path.length - 1].x, path[path.length - 1].z)) return path;
+        return path.map((p) => (inKeep(box, p.x, p.z) ? p : {...p, ...intoKeep(box, p.x, p.z)}));
+    };
     const walkPath = (a: Spot, b: Spot, nodes: number): NavPoint[] => {
         const slope = maxSlopeOf(animal);
         const onto = onSurface(b.point);
         const path = world.nav.path(a, b, "walk", 0.5, nodes, slope, bodyR, onto);
         const end = path[path.length - 1];
-        if (Math.hypot(end.x - b.x, end.z - b.z) < 0.01) return path;
+        if (Math.hypot(end.x - b.x, end.z - b.z) < 0.01) return kept(path);
         const region = world.nav.region(a.x, a.z, slope, bodyR);
-        return region >= 0 && region === world.nav.region(b.x, b.z, slope, bodyR) ? world.nav.path(a, b, "walk", 0.5, 12000, slope, bodyR, onto) : path;
+        return kept(region >= 0 && region === world.nav.region(b.x, b.z, slope, bodyR) ? world.nav.path(a, b, "walk", 0.5, 12000, slope, bodyR, onto) : path);
     };
     const ground = (a: Spot, b: Spot, beat: ArkBeat = "walk") => {
         const path = walkPath(a, b, 900);

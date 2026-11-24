@@ -11,7 +11,7 @@
  *   node scripts/ark-zoo-close.mjs --snapshot /ark-local/live.json --out <dir>
  *        [--enclosures savanna_paddocks-1,childrens_farm-1]  (default: the elephants' and the three busiest outdoor ones)
  *        [--hour 11] [--frames 240 --hold 180] [--from 45 --to 4] [--every 2] [--label before]
- *        [--width 960 --height 600] [--gl metal]
+ *        [--width 960 --height 600] [--gl metal] [--follow <resident id prefix>]
  *        [--gate]       exit 1 when a resident glitches: drawn in and out more than 4 times, or a step between two drawn
  *                       frames bigger than its length's quarter and 0.5 m (a walk is centimetres a frame), or a turn of
  *                       more than 1 rad in a frame
@@ -47,6 +47,8 @@ const wanted = arg("enclosures", "");
 // `--drift` m off as the camera comes in: the page's zoom to the cursor moves the target as a viewer zooms).
 const passes = arg("passes", "fixed,drift").split(",");
 const drift = Number(arg("drift", "20"));
+// (`--follow <id prefix>`: the view's target on that resident every frame, wherever it goes: an elephant pair's close-up.)
+const follow = arg("follow", "");
 mkdirSync(out, {recursive: true});
 
 // MARK: the gate (a function: `--regate <label>.json` runs it again on a report already made, no browser)
@@ -276,6 +278,10 @@ for (const pass of passes) for (const enclosure of enclosures) {
         c.y += r.at.ground / list.length;
         c.z += r.at.z / list.length;
     }
+    if (follow) {
+        const f = list.find((r) => r.id.startsWith(follow));
+        if (f) Object.assign(c, {x: f.at.x, y: f.at.ground, z: f.at.z});
+    }
     const view = (distance, k = 1) => ({target: pass === "drift" ? {x: c.x + drift * (1 - k) * Math.cos(0.6), y: c.y, z: c.z - drift * (1 - k) * Math.sin(0.6)} : c, distance, polar: 1.12, azimuth: 0.6});
     await page.evaluate((v) => { window.__arkDebug.controls.minDistance = 0.05; window.__arkScene.setView(v); }, view(to));
     // (Models and rigs in, on the page's own frames.)
@@ -317,7 +323,12 @@ for (const pass of passes) for (const enclosure of enclosures) {
         // From `from` to `to` (m) on an even log scale, then held at `to`.
         const k = Math.min(i / Math.max(flyFrames - 1, 1), 1);
         const distance = from * Math.pow(to / from, k);
-        const row = await page.evaluate(({v, ids}) => {
+        const row = await page.evaluate(({v, ids, follow}) => {
+            if (follow) {
+                const e = window.__arkDebug.entries().find((q) => q.animal.id.startsWith(follow));
+                const at = e && window.__arkScene.locate(e.animal.id);
+                if (at) v = {...v, target: {x: at.x, y: at.ground, z: at.z}};
+            }
             window.__arkScene.setView(v);
             window.__step.run(1);
             const byId = new Map(window.__arkDebug.entries().map((e) => [e.animal.id, e]));
@@ -332,7 +343,7 @@ for (const pass of passes) for (const enclosure of enclosures) {
                     return {id, level: e.level, path: e.posePath ?? null, drawn: Boolean(m), x: m ? m.x : null, y: m ? m.y : null, z: m ? m.z : null, yaw: e.yawNow ?? null, rig: Boolean(e.rigOn), clip: e.rig?.now?.name ?? null, seatY: e.seat ? e.seat.y : null, apartX: e.apart ? e.apart.x : null, apartZ: e.apart ? e.apart.z : null, asleep: Boolean(e.state?.asleep), kind: e.state?.kind ?? e.state?.activity ?? null, sx: e.sched?.pose ? e.sched.pose.x : null, sz: e.sched?.pose ? e.sched.pose.z : null, sAt: e.sched?.at ?? null, px: e.place.x, pz: e.place.z, act: e.act ? (e.act.state ?? "act") : null, held: Boolean(e.held), res: e.residentAt ? [e.residentAt.x, e.residentAt.z] : null, rdx: e.reactive ? e.reactive.dx : null, rdz: e.reactive ? e.reactive.dz : null, ract: e.reactive ? e.reactive.action : null, seat: e.seat ? [e.seat.x, e.seat.z] : null, wander: e.wander ? [e.wander.x, e.wander.z] : null, role: e.act?.role ?? null, moment: e.moment?.kind ?? null, doing: e.sched?.pose?.doing ?? null, recipe: e.sched?.pose?.act?.kind ?? e.sched?.pose?.act?.name ?? null, wired: Boolean(e.sched?.wired), sched: Boolean(e.sched), ex: e.sched?.eased ? e.sched.eased.dx : null, ez: e.sched?.eased ? e.sched.eased.dz : null, seatOn: e.seat?.on ?? null, seatIn: e.seat?.inside ?? null, seatPushes: e.seat?.pushes ?? null};
                 })
             };
-        }, {v: view(distance, k), ids});
+        }, {v: view(distance, k), ids, follow});
         row.distance = distance;
         frames.push(row);
         if (i % every === 0) {
