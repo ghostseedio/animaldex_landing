@@ -45,7 +45,7 @@
  *   --interact                a reader touching the world throughout (a pointer move every 200 ms: the full frame rate,
  *                             the idle drift still turning the view) instead of an untouched page (30 fps after 5 s)
  *   --page embed|hero         `/ark/embed.html` (the apps' panel, the archipelago mount with its workers; the bundle is
- *                             built first) or the home page's hero (the embed in an iframe the hero's size, its
+ *                             built first, unless `--no-build`: the one already in public/ark/) or the home page's hero (the embed in an iframe the hero's size, its
  *                             refresh=600&idle=900) instead of the measurement page; with `--population-file` as the snapshot
  *   --perf                    `?perf=1`: the scene's own frame profiler (runtime/perf.ts), its sections in the report
  *   --network slow4g          Lighthouse's slow 4G (1.6 Mbit/s, 150 ms); text is served gzipped as the site's CDN does
@@ -178,7 +178,8 @@ writeFileSync(path.join(site, "measure.html"), `<!doctype html>
 // `--page embed|hero`: the apps' bundle and workers into public/ark/ (gitignored), as the site's build makes them.
 if (pageKind !== "measure") {
     const {execFileSync} = await import("node:child_process");
-    execFileSync(process.execPath, [path.join(root, "scripts/build-ark-bundle.mjs"), ...(buildEnv === "production" ? [] : ["--dev"]), ...(flag("profile") || flag("names") ? ["--names"] : [])], {stdio: "inherit"});
+    // (`--no-build`: the bundle already in public/ark/, as built: an A/B swaps two builds between interleaved runs.)
+    if (!flag("no-build")) execFileSync(process.execPath, [path.join(root, "scripts/build-ark-bundle.mjs"), ...(buildEnv === "production" ? [] : ["--dev"]), ...(flag("profile") || flag("names") ? ["--names"] : [])], {stdio: "inherit"});
     // The home page's hero (home-ark-hero.tsx): the embed in a frame the hero's size (the viewport less the 4rem header).
     writeFileSync(path.join(site, "hero.html"), `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
