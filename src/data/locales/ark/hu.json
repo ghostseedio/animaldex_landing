@@ -491,7 +491,15 @@
             "cycleCount": "{n} / {total}",
             "caredOwner": "A gazdája gondozza",
             "caredFarmer": "A gazda gondozza",
-            "caredKeeper": "Egy állatgondozó gondozza"
+            "caredKeeper": "Egy állatgondozó gondozza",
+            "eatSoon": "Zsákmány esélye a következő bárkanapon",
+            "eatSoonChance": "{percent} esély zsákmányra a következő bárkanapon",
+            "eatSoonHunting": "Most vadászik",
+            "eatSoonLater": "Nagyjából {time} múlva vadászik újra",
+            "eatSoonDormant": "Nyugalmi állapotban: nem eszik",
+            "eatSoonKept": "A gondozói etetik",
+            "eatSoonDaily": "Minden nap eszik",
+            "eatSoonShort": "Itt kevés az élelem"
         },
         "grew": {
             "line": "Erősebb lett: {stat} +{n} · {cause}",

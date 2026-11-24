@@ -491,7 +491,15 @@
             "cycleCount": "{n} از {total}",
             "caredOwner": "صاحبش از آن مراقبت می‌کند",
             "caredFarmer": "کشاورز از آن مراقبت می‌کند",
-            "caredKeeper": "یک نگهبان باغ‌وحش از آن مراقبت می‌کند"
+            "caredKeeper": "یک نگهبان باغ‌وحش از آن مراقبت می‌کند",
+            "eatSoon": "احتمال شکار در روز بعدی کشتی",
+            "eatSoonChance": "احتمال {percent} برای شکار در روز بعدی کشتی",
+            "eatSoonHunting": "اکنون در حال شکار",
+            "eatSoonLater": "حدود {time} دیگر دوباره شکار می‌کند",
+            "eatSoonDormant": "در خواب زمستانی: غذا نمی‌خورد",
+            "eatSoonKept": "مراقبانش به او غذا می‌دهند",
+            "eatSoonDaily": "هر روز غذا می‌خورد",
+            "eatSoonShort": "اینجا غذا کم است"
         },
         "grew": {
             "line": "قوی‌تر شد: {stat} +{n} · {cause}",

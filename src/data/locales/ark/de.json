@@ -491,7 +491,15 @@
             "cycleCount": "{n} von {total}",
             "caredOwner": "Versorgt von seinem Halter",
             "caredFarmer": "Versorgt vom Landwirt",
-            "caredKeeper": "Versorgt von einem Tierpfleger"
+            "caredKeeper": "Versorgt von einem Tierpfleger",
+            "eatSoon": "Chance auf Beute am nächsten Arche-Tag",
+            "eatSoonChance": "{percent} Chance auf Beute am nächsten Arche-Tag",
+            "eatSoonHunting": "Jagt gerade",
+            "eatSoonLater": "Jagt wieder in etwa {time}",
+            "eatSoonDormant": "In Ruhe: frisst nicht",
+            "eatSoonKept": "Wird von seinen Pflegern gefüttert",
+            "eatSoonDaily": "Frisst jeden Tag",
+            "eatSoonShort": "Hier ist das Futter knapp"
         },
         "grew": {
             "line": "Stärker geworden: {stat} +{n} · {cause}",

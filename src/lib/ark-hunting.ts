@@ -18,6 +18,12 @@ export type ArkHunting = {
     tickedTo: number | null;
     /** Every living predator's next hunt (the Ark day from which it hunts; 0 = now), by animal id. */
     predators: Map<string, number>;
+    /**
+     * EATSOON (AnimalDex migration 20261231200000, `voyage_hunting_v1`'s tuple `[id, from, find, catch, dormant?]`): the share
+     * of its recent due, awake steps in which the encounter test found prey it could take, its catch chance per attempt,
+     * and whether it is dormant now. Only for the predators whose tuple carries them; an older read sends none.
+     */
+    odds?: Map<string, {find: number | null; catch: number | null; dormant: boolean}>;
     meals: ArkHuntingMeal[];
 };
 
@@ -37,11 +43,19 @@ export function decodeArkHunting(raw: unknown): ArkHunting | null {
     if (!mode) return null;
     const startedAtMs = typeof row.started_at === "string" ? Date.parse(row.started_at) : finite(row.startedAtMs);
     const predators = new Map<string, number>();
+    const odds = new Map<string, {find: number | null; catch: number | null; dormant: boolean}>();
     if (Array.isArray(row.predators)) {
         for (const item of row.predators) {
             if (!Array.isArray(item) || typeof item[0] !== "string" || !ID.test(item[0])) continue;
             const from = finite(item[1]);
-            if (from !== null && from >= 0) predators.set(item[0], from);
+            if (from === null || from < 0) continue;
+            predators.set(item[0], from);
+            // ([id, from, find, catch] when it has both, a fifth 1 while dormant: [id, from, null, null, 1] with none yet.)
+            const find = finite(item[2]);
+            const chance = finite(item[3]);
+            const both = find !== null && chance !== null && find >= 0 && find <= 1 && chance >= 0 && chance <= 1;
+            const dormant = item[4] === 1 || item[4] === true;
+            if (both || dormant) odds.set(item[0], {find: both ? find : null, catch: both ? chance : null, dormant});
         }
     }
     const meals: ArkHuntingMeal[] = [];
@@ -60,6 +74,7 @@ export function decodeArkHunting(raw: unknown): ArkHunting | null {
         arkDay: finite(row.ark_day),
         tickedTo: finite(row.ticked_to),
         predators,
+        odds,
         meals
     };
 }

@@ -491,7 +491,15 @@
             "cycleCount": "{n} z {total}",
             "caredOwner": "Stará se o něj jeho majitel",
             "caredFarmer": "Stará se o něj farmář",
-            "caredKeeper": "Stará se o něj ošetřovatel"
+            "caredKeeper": "Stará se o něj ošetřovatel",
+            "eatSoon": "Šance na úlovek během příštího dne Archy",
+            "eatSoonChance": "{percent} šance na úlovek během příštího dne Archy",
+            "eatSoonHunting": "Právě loví",
+            "eatSoonLater": "Znovu loví asi za {time}",
+            "eatSoonDormant": "V klidovém stavu: nežere",
+            "eatSoonKept": "Krmí ho jeho chovatelé",
+            "eatSoonDaily": "Žere každý den",
+            "eatSoonShort": "Tady je málo potravy"
         },
         "grew": {
             "line": "Silnější: {stat} +{n} · {cause}",

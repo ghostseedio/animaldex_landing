@@ -491,7 +491,15 @@
             "cycleCount": "{total} میں سے {n}",
             "caredOwner": "اس کی دیکھ بھال اس کا مالک کرتا ہے",
             "caredFarmer": "اس کی دیکھ بھال کسان کرتا ہے",
-            "caredKeeper": "اس کی دیکھ بھال ایک نگران کرتا ہے"
+            "caredKeeper": "اس کی دیکھ بھال ایک نگران کرتا ہے",
+            "eatSoon": "اگلے کشتی کے دن میں شکار پکڑنے کا امکان",
+            "eatSoonChance": "اگلے کشتی کے دن میں شکار پکڑنے کا {percent} امکان",
+            "eatSoonHunting": "ابھی شکار کر رہا ہے",
+            "eatSoonLater": "تقریباً {time} بعد پھر شکار کرے گا",
+            "eatSoonDormant": "غیر فعال: نہیں کھا رہا",
+            "eatSoonKept": "دیکھ بھال کرنے والے کھلاتے ہیں",
+            "eatSoonDaily": "ہر روز کھاتا ہے",
+            "eatSoonShort": "یہاں خوراک کم ہے"
         },
         "grew": {
             "line": "مزید طاقتور: {stat} +{n} · {cause}",

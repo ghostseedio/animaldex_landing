@@ -491,7 +491,15 @@
             "cycleCount": "第 {n} 只，共 {total} 只",
             "caredOwner": "由主人照料",
             "caredFarmer": "由农场主照料",
-            "caredKeeper": "由饲养员照料"
+            "caredKeeper": "由饲养员照料",
+            "eatSoon": "下一个方舟日内捕获猎物的几率",
+            "eatSoonChance": "下一个方舟日内捕获猎物的几率为 {percent}",
+            "eatSoonHunting": "正在捕猎",
+            "eatSoonLater": "约 {time}后再次捕猎",
+            "eatSoonDormant": "休眠中：不进食",
+            "eatSoonKept": "由照料者喂食",
+            "eatSoonDaily": "每天进食",
+            "eatSoonShort": "这里食物短缺"
         },
         "grew": {
             "line": "变得更强：{stat} +{n} · {cause}",

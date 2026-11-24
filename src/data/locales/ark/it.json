@@ -491,7 +491,15 @@
             "cycleCount": "{n} di {total}",
             "caredOwner": "Accudito dal suo proprietario",
             "caredFarmer": "Accudito dal contadino",
-            "caredKeeper": "Accudito da un guardiano"
+            "caredKeeper": "Accudito da un guardiano",
+            "eatSoon": "Probabilità di catturare una preda nel prossimo giorno dell’Arca",
+            "eatSoonChance": "{percent} di probabilità di catturare una preda nel prossimo giorno dell’Arca",
+            "eatSoonHunting": "Sta cacciando",
+            "eatSoonLater": "Torna a cacciare tra circa {time}",
+            "eatSoonDormant": "In letargo: non mangia",
+            "eatSoonKept": "Lo nutrono i suoi custodi",
+            "eatSoonDaily": "Mangia ogni giorno",
+            "eatSoonShort": "Qui il cibo scarseggia"
         },
         "grew": {
             "line": "Più forte: {stat} +{n} · {cause}",

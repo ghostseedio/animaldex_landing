@@ -491,7 +491,15 @@
             "cycleCount": "{total}માંથી {n}",
             "caredOwner": "તેના માલિક તેની સંભાળ રાખે છે",
             "caredFarmer": "ખેડૂત તેની સંભાળ રાખે છે",
-            "caredKeeper": "એક પ્રાણીપાલક તેની સંભાળ રાખે છે"
+            "caredKeeper": "એક પ્રાણીપાલક તેની સંભાળ રાખે છે",
+            "eatSoon": "આગામી આર્ક દિવસમાં શિકાર પકડવાની શક્યતા",
+            "eatSoonChance": "આગામી આર્ક દિવસમાં શિકાર પકડવાની {percent} શક્યતા",
+            "eatSoonHunting": "હમણાં શિકાર કરે છે",
+            "eatSoonLater": "લગભગ {time} પછી ફરી શિકાર કરશે",
+            "eatSoonDormant": "નિષ્ક્રિય: ખાતું નથી",
+            "eatSoonKept": "તેની સંભાળ રાખનારા ખવડાવે છે",
+            "eatSoonDaily": "દરરોજ ખાય છે",
+            "eatSoonShort": "અહીં ખોરાકની અછત છે"
         },
         "grew": {
             "line": "વધુ મજબૂત: {stat} +{n} · {cause}",

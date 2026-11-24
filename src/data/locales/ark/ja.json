@@ -491,7 +491,15 @@
             "cycleCount": "{n} / {total}",
             "caredOwner": "飼い主が世話をしています",
             "caredFarmer": "農家が世話をしています",
-            "caredKeeper": "飼育員が世話をしています"
+            "caredKeeper": "飼育員が世話をしています",
+            "eatSoon": "次のアークの1日で獲物を捕らえる確率",
+            "eatSoonChance": "次のアークの1日で獲物を捕らえる確率 {percent}",
+            "eatSoonHunting": "狩りの最中",
+            "eatSoonLater": "約{time}後にまた狩りをする",
+            "eatSoonDormant": "休眠中：食べていない",
+            "eatSoonKept": "世話をする人が餌を与えている",
+            "eatSoonDaily": "毎日食べている",
+            "eatSoonShort": "ここは食べ物が乏しい"
         },
         "grew": {
             "line": "強くなった：{stat} +{n}・{cause}",

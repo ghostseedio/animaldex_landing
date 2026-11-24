@@ -491,7 +491,15 @@
             "cycleCount": "{n} / {total}",
             "caredOwner": "Sahibi bakıyor",
             "caredFarmer": "Çiftçi bakıyor",
-            "caredKeeper": "Bir bakıcı bakıyor"
+            "caredKeeper": "Bir bakıcı bakıyor",
+            "eatSoon": "Bir sonraki Gemi gününde av yakalama şansı",
+            "eatSoonChance": "Bir sonraki Gemi gününde {percent} av yakalama şansı",
+            "eatSoonHunting": "Şu an avlanıyor",
+            "eatSoonLater": "Yaklaşık {time} sonra yeniden avlanacak",
+            "eatSoonDormant": "Uyku hâlinde: yemiyor",
+            "eatSoonKept": "Bakıcıları besliyor",
+            "eatSoonDaily": "Her gün yiyor",
+            "eatSoonShort": "Burada yiyecek kıt"
         },
         "grew": {
             "line": "Güçlendi: {stat} +{n} · {cause}",

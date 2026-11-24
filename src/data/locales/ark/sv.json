@@ -491,7 +491,15 @@
             "cycleCount": "{n} av {total}",
             "caredOwner": "Sköts av sin ägare",
             "caredFarmer": "Sköts av bonden",
-            "caredKeeper": "Sköts av en djurskötare"
+            "caredKeeper": "Sköts av en djurskötare",
+            "eatSoon": "Chans till ett byte under nästa Ark-dag",
+            "eatSoonChance": "{percent} chans till ett byte under nästa Ark-dag",
+            "eatSoonHunting": "Jagar nu",
+            "eatSoonLater": "Jagar igen om ungefär {time}",
+            "eatSoonDormant": "I dvala: äter inte",
+            "eatSoonKept": "Matas av sina skötare",
+            "eatSoonDaily": "Äter varje dag",
+            "eatSoonShort": "Det är ont om föda här"
         },
         "grew": {
             "line": "Blev starkare: {stat} +{n} · {cause}",

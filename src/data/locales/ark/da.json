@@ -491,7 +491,15 @@
             "cycleCount": "{n} af {total}",
             "caredOwner": "Passes af sin ejer",
             "caredFarmer": "Passes af landmanden",
-            "caredKeeper": "Passes af en dyrepasser"
+            "caredKeeper": "Passes af en dyrepasser",
+            "eatSoon": "Chance for et bytte inden for den næste Ark-dag",
+            "eatSoonChance": "{percent} chance for et bytte inden for den næste Ark-dag",
+            "eatSoonHunting": "Jager nu",
+            "eatSoonLater": "Jager igen om cirka {time}",
+            "eatSoonDormant": "I dvale: spiser ikke",
+            "eatSoonKept": "Fodres af dem, der passer det",
+            "eatSoonDaily": "Spiser hver dag",
+            "eatSoonShort": "Der er knap føde her"
         },
         "grew": {
             "line": "Blev stærkere: {stat} +{n} · {cause}",

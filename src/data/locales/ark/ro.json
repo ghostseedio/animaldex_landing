@@ -491,7 +491,15 @@
             "cycleCount": "{n} din {total}",
             "caredOwner": "Îngrijit de stăpânul său",
             "caredFarmer": "Îngrijit de fermier",
-            "caredKeeper": "Îngrijit de un îngrijitor"
+            "caredKeeper": "Îngrijit de un îngrijitor",
+            "eatSoon": "Șansa unei prăzi în următoarea zi a Arcei",
+            "eatSoonChance": "{percent} șanse pentru o pradă în următoarea zi a Arcei",
+            "eatSoonHunting": "Vânează acum",
+            "eatSoonLater": "Vânează din nou în aproximativ {time}",
+            "eatSoonDormant": "În repaus: nu mănâncă",
+            "eatSoonKept": "Hrănit de îngrijitorii săi",
+            "eatSoonDaily": "Mănâncă în fiecare zi",
+            "eatSoonShort": "Aici hrana e puțină"
         },
         "grew": {
             "line": "Mai puternic: {stat} +{n} · {cause}",

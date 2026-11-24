@@ -491,7 +491,15 @@
             "cycleCount": "{n} de {total}",
             "caredOwner": "En té cura el seu propietari",
             "caredFarmer": "En té cura el pagès",
-            "caredKeeper": "En té cura un cuidador"
+            "caredKeeper": "En té cura un cuidador",
+            "eatSoon": "Probabilitat de caçar una presa el proper dia de l’Arca",
+            "eatSoonChance": "{percent} de probabilitat de caçar una presa el proper dia de l’Arca",
+            "eatSoonHunting": "Caçant ara",
+            "eatSoonLater": "Tornarà a caçar d’aquí a uns {time}",
+            "eatSoonDormant": "En letargia: no menja",
+            "eatSoonKept": "L’alimenten els seus cuidadors",
+            "eatSoonDaily": "Menja cada dia",
+            "eatSoonShort": "Aquí falta menjar"
         },
         "grew": {
             "line": "Més fort: {stat} +{n} · {cause}",
