@@ -6101,7 +6101,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const mealClip = mealState === "dig" && !recipeClip("dig", (name) => Boolean(clip(name))) ? "eat" : mealState;
         const recipeRaw = !state.flying && !reacted && (recipeAct || mealClip) ? recipeClip(sleepState(recipeAct?.state ?? mealClip), (name) => Boolean(clip(name))) : null;
         // A rig with a sit (a pilot cat's or dog's) rests sitting up rather than lying, about half of them (by its own phase).
-        const fromRecipe = recipeRaw?.name === "lie" && clip("sit") && entry.phase < 0.5 ? {...recipeRaw, name: "sit"} : recipeRaw;
+        // (Lane SIG5: never a bask: basking is lying broadside to the sun, a cat's loaf.)
+        const fromRecipe = recipeRaw?.name === "lie" && recipeAct?.state !== "bask" && clip("sit") && entry.phase < 0.5 ? {...recipeRaw, name: "sit"} : recipeRaw;
         let byRecipe = false;
         if (fromRecipe && !(watching && headDown(fromRecipe.name))) {
             if (fromRecipe.play === "distance") {

@@ -1,0 +1,20 @@
+{
+ "about": "The most-seen species' own acts (lane SIG5, 2026-11-24; decision 424: every species does its own signature behaviour, most-seen first), on clips their live v3 rigs have (src/ark-scene/recipe-templates-domestic.ts). Applied to src/ark-scene/recipes.json by scripts/ark-signature-recipes.mts. A line is given only where the species' own stored text states the behaviour (AnimalDex docs/ark/signature-behaviours.json), with its sentence; the others are drawn without a log line. Strips: ~/AnimalDex-work/sig5/t1-after and t1-before.",
+ "version": 1,
+ "templates": {
+  "play_run": {"plans": ["quadruped"], "weight": 4},
+  "sniff_trail": {"plans": ["quadruped"], "weight": 4},
+  "dig_burrow~scrape": {"plans": ["quadruped"], "weight": 3},
+  "bask_sun~loaf": {"plans": ["quadruped"], "weight": 4},
+  "ground_feed": {"plans": ["flying_bird", "walking_bird"], "weight": 5}
+ },
+ "additions": [
+  {"slug": "domestic-dog", "name": "Domestic Dog", "recipe": "play_run"},
+  {"slug": "domestic-dog", "name": "Domestic Dog", "recipe": "sniff_trail"},
+  {"slug": "domestic-horse", "name": "Domestic Horse", "recipe": "play_run"},
+  {"slug": "domestic-cat", "name": "Domestic Cat", "recipe": "dig_burrow~scrape"},
+  {"slug": "domestic-cat", "name": "Domestic Cat", "recipe": "bask_sun~loaf"},
+  {"slug": "budgerigar", "name": "Budgerigar", "recipe": "ground_feed", "field": "sleep", "quote": "Small parties fly to water soon after dawn to drink, then feed on the ground among the grasses.", "id": "0460706f-157c-4a90-a963-108f3e8b2668", "line": "{aAnimal} is feeding on the ground among the grasses"},
+  {"slug": "eurasian-tree-sparrow", "name": "Eurasian Tree Sparrow", "recipe": "ground_feed"}
+ ]
+}

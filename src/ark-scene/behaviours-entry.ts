@@ -795,9 +795,9 @@ async function main() {
                 if (!e.sched) continue;
                 for (let k = 0; k < 90 && found.length < 6; k++) {
                     const trip: Trip = tripAt(world, e.sched.profile, e.sched.animal, t0 + k * SLOT_SECONDS, () => scene.hours, e.animal.activity);
-                    if (trip.recipe !== wanted) continue;
-                    const ep = tripEpisode(world, trip);
-                    if (!ep) continue;
+                    // (Lane SIG5: a stay where it already is, a `goal: "here"` template, is the trip's episode though the trip names no recipe.)
+                    const ep = trip.recipe === wanted || !trip.recipe ? tripEpisode(world, trip) : null;
+                    if (!ep || ep.recipe !== wanted) continue;
                     found.push({id: e.animal.id, slot: trip.slot, t0: ep.t0, t1: ep.t1, anchor: ep.anchor, keys: ep.keys.map((key) => ({b: key.block.id, t0: key.t0, t1: key.t1, from: key.from, to: key.to, caught: key.catch ? key.catch.ok : null}))});
                     break;
                 }

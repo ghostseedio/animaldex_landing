@@ -4,12 +4,12 @@
  * clip is missing (a dog's bark, roll, play-bow; a cat's knead) waits for the rigging lane, never a stand-in.
  *
  *   play_run          a burst of play: tearing round in fast loops, then a look round (dog, horse). The run clip.
- *   sniff_trail       nose to the ground along a scent, a few steps at a time (dog). The graze clip (head down).
+ *   sniff_trail       nose to the ground along a scent, a few steps at a time (dog). The graze clip (head down), by the
+ *                     `eat` block: a `peck`'s 0.45 rad nose-down is added on top of the clip's own and doubles it.
  *   dig_burrow~scrape a cat's scrape in loose soil, covered over (the dug-soil mark). The dig clip.
- *   perch_watch       watching from a raised spot: a post, a log, a rock top (cat). The scan clip.
- *   rock_climb        up onto a rock top to stand and look out (goat). Walk, scan, call.
- *   butt_play         two of a herd rear and butt heads in play, any sex, any season (goat, sheep). The clash clip.
- *   ground_feed       hopping or walking about the grass, pecking at the grass (budgerigar, tree sparrow). The graze clip.
+ *   bask_sun~loaf     a cat loafing in the sun in place of a rest. The lie clip (a bask never sits: `index.ts`).
+ *   ground_feed       walking about the grass, head down feeding (budgerigar, tree sparrow). The graze clip, by the
+ *                     `eat` block: a `peck` hold's bob reads as a walk's pace on a bird this small, so its walk plays instead.
  *
  * Data only, like the other templates: the engine (`behaviour-recipes.ts`) runs them. Nothing is caught.
  */
@@ -50,11 +50,11 @@ export const DOMESTIC_TEMPLATES: Template[] = [
         doing: "wander",
         steps: [
             {b: "walk", to: "ground", near: "here", r: 3},
-            {b: "peck", s: [1.5, 3]},
+            {b: "eat", s: [1.5, 3]},
             {b: "walk", to: "ground", near: "here", r: 2.5},
-            {b: "peck", s: [1.5, 3]},
+            {b: "eat", s: [1.5, 3]},
             {b: "walk", to: "ground", near: "here", r: 2.5},
-            {b: "peck", s: [1, 2.5]}
+            {b: "eat", s: [1, 2.5]}
         ]
     }),
     // A cat's scrape: it digs a hollow in loose soil, looks round, and rakes the soil back over it.
@@ -73,61 +73,23 @@ export const DOMESTIC_TEMPLATES: Template[] = [
             {b: "dig", s: [1.5, 2.5]}
         ]
     }),
-    // A cat watching from a raised spot (its own text: "observe their surroundings from elevated perches").
+    // A cat loafing in the sun: lying broadside to it for a long while (the plain bask_sun replaces only a bask, which a
+    // cat's day never has; this one takes a rest).
     T({
-        id: "perch_watch",
-        label: "watches from a raised spot",
+        id: "bask_sun~loaf",
+        label: "lies loafing in the sun",
         kind: "stay",
-        goal: "lookout",
-        replaces: ["rest", "watch", "wander", "perch"],
-        doing: "watch",
-        hours: "day",
-        steps: [
-            {b: "scan", s: [6, 12]},
-            {b: "groom", s: [2, 4]},
-            {b: "scan", s: [6, 12]}
-        ]
-    }),
-    // A goat up on a rock top, standing and looking out, calling now and then.
-    T({
-        id: "rock_climb",
-        label: "climbs onto a rock to stand and look out",
-        kind: "stay",
-        goal: "rock",
-        replaces: ["rest", "watch", "wander", "bask"],
-        doing: "climb",
-        hours: "day",
-        steps: [
-            {b: "scan", s: [4, 8]},
-            {b: "call", s: [1, 2]},
-            {b: "scan", s: [5, 10]}
-        ]
-    }),
-    // Two of a herd, any sex and any season: a rear and a butt, a look, another butt (play, not a rut's contest).
-    T({
-        id: "butt_play",
-        label: "rears and butts heads in play",
-        kind: "pair",
         goal: "here",
-        replaces: [],
-        doing: "play",
+        replaces: ["rest", "idle", "watch", "bask"],
+        doing: "bask",
         hours: "day",
-        sex: "any",
-        steps: [
-            {b: "walk", to: "meet_far", face: "other"},
-            {b: "rear", s: [0.8, 1.2], face: "other"},
-            {b: "clash", to: "meet", face: "other"},
-            {b: "scan", s: [1, 2], face: "other"},
-            {b: "walk", to: "meet_far", face: "other"},
-            {b: "rear", s: [0.8, 1.2], face: "other"},
-            {b: "clash", to: "meet", face: "other"},
-            {b: "walk", to: "away", role: "b"}
-        ]
+        often: 0.5,
+        steps: [{b: "bask", s: [30, 90], face: "sun"}]
     }),
-    // A seed-eater about the grass: a few hops or steps, pecking at the grass.
+    // A seed-eater about the grass: a few steps, head down feeding, a few more.
     T({
         id: "ground_feed",
-        label: "feeds on the ground, pecking at the grass",
+        label: "feeds on the ground among the grass",
         kind: "stay",
         goal: "ground",
         replaces: ["forage", "graze"],
@@ -135,9 +97,9 @@ export const DOMESTIC_TEMPLATES: Template[] = [
         hours: "day",
         steps: [
             {b: "walk", to: "ground", near: "here", r: 1.2},
-            {b: "peck", s: [1.5, 3]},
+            {b: "eat", s: [1.5, 3]},
             {b: "walk", to: "ground", near: "here", r: 1},
-            {b: "peck", s: [1.5, 3]}
+            {b: "eat", s: [1.5, 3]}
         ],
         loop: 0
     })
