@@ -7,7 +7,7 @@
  * lean. The lean is worked out here by the engine's rule as retuned on review (AnimalDex `geometry.ts` searchScore /
  * ambushTraffic, `encounter.ts` chooseLean): of the prey homes' centres clamped to its foray radius (an ambusher's less a
  * body length), a searcher's is where its prey is richest within its detection range, an ambusher's where the most prey
- * traffic passes its reach (a water ambusher also counting land prey within its detection range that come to drink). The
+ * traffic passes its reach (a water ambusher choosing only among its water's points by the shore, and also counting land prey within its detection range that come to drink). The
  * fixture has no flow_costs weights (every prey counts 1) and uses the base detection range (no search_ability). The world clock is jumped through an
  * Ark day (`setClockScale(1, at)`); at each step the scene's own position of the hunter is read (`locate`), and frames
  * are taken from above. One sheet per scene: the frames, and a map of the hunter's path in the scene (on) next to the
@@ -22,7 +22,7 @@ import path from "node:path";
 import {createRequire} from "node:module";
 import {fileURLToPath} from "node:url";
 import sharp from "sharp";
-import {ARK_DAY_MS, decodeAtlas, detectionRange, forayAt, forayRadius, homeOf, huntGeometryOf, sheetOf, stepIndex, strikeLengths, type HuntGeometryTable, type Sheet} from "../src/ark-scene/positions/positions";
+import {ARK_DAY_MS, decodeAtlas, detectionRange, forayAt, forayRadius, homeOf, huntGeometryOf, mediumAt, sheetOf, stepIndex, strikeLengths, type HuntGeometryTable, type Sheet} from "../src/ark-scene/positions/positions";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arg = (name: string, fallback: string) => {
@@ -39,7 +39,7 @@ const ALL: Scene[] = [
     {key: "fox", hunter: ["red-fox", "Red Fox"], prey: ["american-red-squirrel", "American Red Squirrel"], zone: "woodland", title: "Red Fox (pounce: searcher) works towards where the squirrels are, never past its range"},
     {key: "gecko", hunter: ["common-house-gecko", "Common House Gecko"], prey: ["green-planthopper", "Green Planthopper"], zone: "farm_garden", title: "Common House Gecko (dash: sit-and-wait) keeps to one spot by its prey"},
     {key: "turtle", hunter: ["alligator-snapping-turtle", "Alligator Snapping Turtle"], prey: ["turtle-frog", "Turtle Frog"], zone: "river_lake", title: "Alligator Snapping Turtle (lunge with its tongue lure) keeps to one spot"},
-    {key: "croc", hunter: ["saltwater-crocodile", "Saltwater Crocodile"], prey: ["water-deer", "Water Deer"], zone: "wetland", title: "Saltwater Crocodile (lurk) waits at the water where deer come to drink"}
+    {key: "croc", hunter: ["saltwater-crocodile", "Saltwater Crocodile"], prey: ["water-deer", "Water Deer"], zone: "wetland", slot: 1, title: "Saltwater Crocodile (lurk) waits at the water where deer come to drink"}
 ];
 const scenes = arg("scenes", "fox,gecko,turtle,croc").split(",").map((k) => ALL.find((s) => s.key === k)!).filter(Boolean);
 
@@ -50,11 +50,31 @@ const START = Date.parse("2026-08-01T00:00:00Z");
 const id = (k: number, i: number) => `0000feed-0000-4000-8000-${(k * 256 + i).toString(16).padStart(12, "0")}`;
 const sp = (k: number) => `5bec1e50-0000-4000-8000-${k.toString(16).padStart(12, "0")}`;
 /** The hunter's slot: of slots 0-39, the one with the most prey homes (slots 0-39) within its foray radius plus detection range (a picture fixture's choice, so there is prey to work towards or wait for). */
+/** The engine's `waterSpots` (AnimalDex geometry.ts, coordinator 11-24): where a water ambusher may wait, on a grid of mask
+ * cells within `cap` of home: an amphibious one in the water within max(length, a cell) of the land. (A fish's rule, its
+ * prey's places kept in its own water, and the perch rule for flying ones have no scene here.) */
+function waterSpots(home: NonNullable<ReturnType<typeof homeOf>>, cap: number): Array<{x: number; z: number}> {
+    const cell = (atlas.islands[home.island || "wild"] as {mask: {cell: number}} | undefined)?.mask.cell ?? 2;
+    const sh = home.sheet;
+    const wet = (m: number) => m === 1 || m === 2;
+    const near = Math.max(sh.len, cell), n = Math.floor(cap / cell), out: Array<{x: number; z: number}> = [];
+    for (let j = -n; j <= n; j++) for (let i = -n; i <= n; i++) {
+        const x = home.x + i * cell, z = home.z + j * cell;
+        if (Math.hypot(x - home.x, z - home.z) > cap || !wet(mediumAt(atlas, home.island, x, z))) continue;
+        let shore = false;
+        for (let a = 0; a < 8 && !shore; a++) if (mediumAt(atlas, home.island, x + near * Math.cos((a * Math.PI) / 4), z + near * Math.sin((a * Math.PI) / 4)) === 0) shore = true;
+        if (shore) out.push({x, z});
+    }
+    return out;
+}
+
 function hunterSlot(sc: {hunter: [string, string]; prey: [string, string]; zone: string}): number {
     let best = 3, most = -1;
     for (let slot = 0; slot < 40; slot++) {
         const h = homeOf(atlas, {zone: sc.zone, slug: sc.hunter[0], speciesId: sp(0), slot, rank: 0});
         if (!h) continue;
+        // (A water ambusher: only a home with water to wait in within its reach.)
+        if (h.sheet.amphibious && huntGeometryOf(GEO, sc.hunter[0]) !== 1 && !waterSpots(h, Math.max(forayRadius(h.sheet) - Math.max(0.5, h.sheet.len), 0)).length) continue;
         const reachM = forayRadius(h.sheet) + detectionRange(h.sheet);
         let n = 0;
         for (let q = 0; q < 40; q++) {
@@ -101,7 +121,9 @@ for (const s of scenes) {
     const hunterSlug = s.hunter[0];
     const cls = huntGeometryOf(GEO, hunterSlug);
     const sheet = sheetOf(atlas, hunterSlug)!;
-    const HUNTER_SLOT = hunterSlot(s);
+    // (The croc: slot 1, a wetland home 6 m from a channel with deer drinking within its sight; the most-prey slot, 17, has
+    // none within sight of its water's shore, so by the rule it keeps to its home on the land and shows nothing.)
+    const HUNTER_SLOT = arg("slot", "") !== "" ? Number(arg("slot", "")) : (s as {slot?: number}).slot ?? hunterSlot(s);
     const home = homeOf(atlas, {zone: s.zone, slug: hunterSlug, speciesId: sp(0), slot: HUNTER_SLOT, rank: 0})!;
     // Four prey at the slots whose homes are nearest its home.
     const R = forayRadius(sheet);
@@ -132,10 +154,13 @@ for (const s of scenes) {
     }, 0);
     let lean = {x: home.x, z: home.z};
     let best = 0, bestD = Infinity;
-    for (const q of preyHomes) {
+    // (A water ambusher's candidates are its water by the shore, in grid order; anyone else's the prey homes' centres, clamped.)
+    const cands = water && sheet.amphibious ? waterSpots(home, lim) : preyHomes.map((q) => {
         const dd = Math.hypot(q.h.x - home.x, q.h.z - home.z);
         const f = dd > lim ? lim / dd : 1;
-        const pt = {x: home.x + (q.h.x - home.x) * f, z: home.z + (q.h.z - home.z) * f};
+        return {x: home.x + (q.h.x - home.x) * f, z: home.z + (q.h.z - home.z) * f};
+    });
+    for (const pt of cands) {
         const sc = score(pt.x, pt.z), dh = Math.hypot(pt.x - home.x, pt.z - home.z);
         if (sc > best || (sc === best && sc > 0 && dh < bestD)) [lean, best, bestD] = [pt, sc, dh];
     }
