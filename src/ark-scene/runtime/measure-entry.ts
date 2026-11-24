@@ -86,25 +86,51 @@ const round = (value: number) => Math.round(value * 10) / 10;
         const islands = params.get("islands") === "1";
         let islandOptions: Record<string, unknown> = {};
         let prebuildSnapshot = snapshot;
+        // The town as the app builds it (islands/archipelago.ts): its heavy work in its own worker
+        // (`./ark-town-worker.js`), started beside the wild island's prebuild; then its meshes made from the worker's
+        // answer on the main thread. (Before, this page worked the whole town out on the main thread, a path no user
+        // takes: that build's garbage was the gate's load-time peak.) Unlike the app, the town is made before the mount
+        // and mounted with the wild island, not attached after the first frame.
+        let makeTown: (() => Promise<{town: unknown; where: string; ms: number; worker: unknown}>) | null = null;
         if (islands) {
             const kept = new Set(["house", "farm", "zoo"]);
             snapshot = {...snapshot, animals: snapshot.animals.map((animal) => {
                 const own = animal as typeof animal & {island?: string | null; area?: string | null};
                 return {...animal, island: own.island ?? (own.area && kept.has(own.area) ? "town" : "wild")} as typeof animal;
             })};
-            const [{arkIslandSnapshot}, {loadTownScene}] = await Promise.all([import("@/lib/ark-islands"), import("@/ark-scene/islands/scene")]);
+            const [{arkIslandSnapshot}, {startTown}, {enclosuresIn, launchEnclosures}, {townWorldOrigin}] = await Promise.all([
+                import("@/lib/ark-islands"),
+                import("@/ark-scene/islands/town/prebuild"),
+                import("@/ark-scene/islands/town/areas"),
+                import("@/ark-scene/islands")
+            ]);
             const split = arkIslandSnapshot as unknown as (s: typeof snapshot, island: "wild" | "town") => typeof snapshot;
             const townTier = quality === "high" || quality === "medium" || quality === "low" ? quality : "medium";
-            const town = await (loadTownScene as unknown as (o: {tier: string; animals: unknown[]}) => Promise<unknown>)({tier: townTier, animals: split(snapshot, "town").animals});
+            const townAnimals = split(snapshot, "town").animals;
+            const open = enclosuresIn(townAnimals);
+            const origin = townWorldOrigin();
+            const start = startTown({animals: townAnimals, origin, open: open.length ? open : launchEnclosures()}, {workerUrl: "./ark-town-worker.js"});
+            makeTown = async () => {
+                const [{loadTownScene}, townPrepared] = await Promise.all([import("@/ark-scene/islands/scene"), start.collect()]);
+                const town = await loadTownScene({tier: townTier, animals: townAnimals, origin, prepared: townPrepared});
+                return {town, where: townPrepared.where, ms: townPrepared.ms, worker: townPrepared.worker ?? null};
+            };
             const wild = split(snapshot, "wild");
             prebuildSnapshot = wild;
-            islandOptions = {island: town, wildAnimals: wild.animals, openIsland: "wild"};
+            islandOptions = {wildAnimals: wild.animals, openIsland: "wild"};
         }
         // `?pan=town`: after the opening, the camera flies to the town (and stays).
         const pan = params.get("pan");
         // `?prebuild=1`: the mount's heavy work in the prebuild worker first (runtime/prebuild.ts).
         let prepared: ArkPrepared | null = null;
         if (params.get("prebuild") === "1") prepared = await prepareArk({snapshot: prebuildSnapshot, workerUrl: "./ark-prebuild-worker.js", placesWorkerUrl: "./ark-prebuild-places-worker.js"});
+        // (The town's worker ran beside the prebuild; its answer is taken now and the town's meshes made.)
+        let townBuild: {where: string; ms: number; worker: unknown} | null = null;
+        if (makeTown) {
+            const made = await makeTown();
+            islandOptions = {...islandOptions, island: made.town};
+            townBuild = {where: made.where, ms: made.ms, worker: made.worker};
+        }
         const el = document.getElementById("ark") as HTMLElement;
         let firstFrame = 0;
         const mountStart = performance.now();
@@ -285,6 +311,8 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 viewport: {width: innerWidth, height: innerHeight, dpr: devicePixelRatio},
                 runtime,
                 prepared,
+                // (Islands mode: where the town was worked out, `worker` as in the app, and its time.)
+                townBuild,
                 animals: snapshot.animals.length,
                 samples
             }
