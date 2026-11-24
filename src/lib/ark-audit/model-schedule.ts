@@ -24,6 +24,7 @@
 import type {AuditFeatures, AuditModel, AuditSample, AuditSubject, CameraResult, CameraStop} from "./types";
 import type {AuditFixture} from "./fixture";
 import type {SceneData} from "./scene-data";
+import {cameraHuntShares, type StopHunts} from "./camera-hunts";
 
 const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
 
@@ -341,6 +342,7 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
               let groupAllSame = 0;
               const actions = new Map<string, number>();
               const huntRows: Array<{reacted: number | null; fled: boolean}> = [];
+              const huntStops: StopHunts[] = [];
               let used = 0;
               for (const stop of stops) {
                   // (The layer runs only for scheduled animals, as `stepReactive` does: a micro or burrow prey is skipped.)
@@ -454,7 +456,9 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
                           if (new Set(list).size === 1) groupAllSame++;
                       }
                   }
-                  for (const row of Array.from(huntOpen.values())) huntRows.push(row);
+                  const stopRows = Array.from(huntOpen.values());
+                  for (const row of stopRows) huntRows.push(row);
+                  huntStops.push({hunter: subjects[stop.hunter]?.slug ?? "", prey: subjects[stop.prey]?.slug ?? "", encounters: stopRows.length, reacted: stopRows.filter((r) => r.reacted !== null).length, fled: stopRows.filter((r) => r.fled).length});
               }
               const pct = (n: number, d: number) => (d ? Math.round((1000 * n) / d) / 10 : null);
               const times = huntRows.filter((r) => r.reacted !== null).map((r) => r.reacted!).sort((a, b) => a - b);
@@ -466,7 +470,8 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
                   secondsPerStop: SECONDS,
                   tier,
                   heads: {animals: headAnimals.size, turned: headTurned.size, turnedPct: pct(headTurned.size, headAnimals.size), framesTurnedPct: pct(turnedFrames, agentFrames)},
-                  hunts: {encounters: huntRows.length, reacted, fled, reactPct: pct(reacted, huntRows.length), fleePct: pct(fled, huntRows.length), medianSecondsToReact: times.length ? Math.round(times[Math.floor(times.length / 2)] * 10) / 10 : null},
+                  // (React and flee: each stop's own share, averaged over the stops, `camera-hunts.ts`; pooled kept beside.)
+                  hunts: {encounters: huntRows.length, reacted, fled, ...cameraHuntShares(huntStops), medianSecondsToReact: times.length ? Math.round(times[Math.floor(times.length / 2)] * 10) / 10 : null, stops: huntStops},
                   variety: {groupFrames, allSame: groupAllSame, allSamePct: pct(groupAllSame, groupFrames)},
                   actions: Object.fromEntries(Array.from(actions.entries()).sort((a, b) => b[1] - a[1]).map(([k, n]) => [k, pct(n, agentFrames) ?? 0])),
                   ms: Date.now() - started
