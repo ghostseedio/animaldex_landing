@@ -216,7 +216,7 @@ test("rig reactive clips: a flee runs by distance (walks while still slow), a se
 test("rig recipe states: every named state of the behaviour recipes is mapped to clips or has its fallback beat, once", async () => {
     const {ARK_RECIPE_STATES} = await import("@/ark-scene/behaviour-blocks");
     const {RECIPE_CLIPS, RECIPE_FALLBACK, recipeClip} = await import("@/ark-scene/rig-player");
-    assert.equal(ARK_RECIPE_STATES.length, 70);
+    assert.equal(ARK_RECIPE_STATES.length, 72); // (Lane SIG5: + knead, scratch)
     for (const state of ARK_RECIPE_STATES) {
         const mapped = state in RECIPE_CLIPS;
         const fallback = state in RECIPE_FALLBACK;
@@ -405,4 +405,28 @@ test("rig caps: letting go leaves room for the species rigged at once", () => {
         assert.equal(rigOverKeep(c, kept, 24, room), false);
         assert.equal(rigRoom(c, kept), true);
     }
+});
+
+test("rig lie retarget (lane SIG5): a clip on the pilot's own lie is carried onto the posed lie, its motion kept", async () => {
+    const {retargetRows, RETARGETED_ONTO_POSED_LIE} = await import("@/ark-scene/rig-player");
+    const {DataUtils} = await import("three");
+    assert.deepEqual([...RETARGETED_ONTO_POSED_LIE], ["roll", "dust_bathe", "wallow"]);
+    // 3×4 row-major rigid matrices: a turn about y by `a`, then a move by t.
+    const m = (a: number, t: [number, number, number]) => [Math.cos(a), 0, Math.sin(a), t[0], 0, 1, 0, t[1], -Math.sin(a), 0, Math.cos(a), t[2]];
+    const mul = (a: number[], b: number[]) => Array.from({length: 12}, (_, k) => {
+        const i = Math.floor(k / 4), j = k % 4;
+        return a[i * 4] * b[j] + a[i * 4 + 1] * b[4 + j] + a[i * 4 + 2] * b[8 + j] + (j === 3 ? a[i * 4 + 3] : 0);
+    });
+    const ownLie = m(0.3, [0.1, -0.2, 0.05]);
+    const posed = m(-0.5, [0, -0.35, 0.1]);
+    const kick = m(0.4, [0, 0.02, 0]);
+    // Two bones; rows: 0 the own lie, 1 the posed lie, 2–3 the clip (on the own lie, then kicked from it).
+    const rows = [ownLie, posed, ownLie, mul(ownLie, kick)];
+    const data = new Uint16Array(rows.length * 2 * 12);
+    rows.forEach((row, r) => [0, 1].forEach((b) => row.forEach((v, k) => (data[(r * 2 + b) * 12 + k] = DataUtils.toHalfFloat(v)))));
+    const out = retargetRows(data, 2, 0, 1, 2, 2);
+    const near = (got: ArrayLike<number>, want: number[], at: number, what: string) => want.forEach((v, k) => assert.ok(Math.abs(got[at + k] - v) < 6e-3, `${what} [${k}] ${got[at + k]} vs ${v}`));
+    near(out, posed, 0, "its first frame is the posed lie");
+    near(out, posed, 12, "every bone");
+    near(out, mul(posed, kick), 24, "its kick is kept, from the posed lie");
 });

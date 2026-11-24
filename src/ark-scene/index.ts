@@ -424,6 +424,10 @@ const swimFixOff = () => process.env.NODE_ENV !== "production" && (globalThis as
 const FLYERS = ARK_FLYERS;
 /** A catch lying on its side (rad): over onto its flank, not quite flat. */
 const LYING_ROLL = 1.42;
+/** Lane SIG5: a recipe state its rig plays in place (a loop or a one-shot, not a gait by distance) carries its own tilt. */
+const CARRIED_PLAYS: ReadonlySet<string> = new Set(["loop", "once"]);
+/** ...except the body's roll in a roll on the ground: the clip pedals the legs on the lying pose, the block turns the body over. */
+const ROLLED_ON_CLIP: ReadonlySet<string> = new Set(["roll", "dust_bathe", "wallow"]);
 /** A meal act's states the rig plays from its own clips (`rig-player.ts` RECIPE_CLIPS): feeding, a glance up, lying up. */
 const MEAL_CLIP_STATES = new Set(["eat", "scan", "rest", "bask", "dig"]);
 
@@ -5247,6 +5251,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (act && act.episode === "sleep") entry.sleepAct = {pitch: act.pitch, roll: act.roll, hang: hangAct};
         else if (!sleepT) entry.sleepAct = null;
         const actShare = act && act.episode === "sleep" ? sleepStages(sleepT).roll : 1;
+        // (Lane SIG5, with SPECIES-ANIM-A2: a rig that plays the act's state on a clip of its own carries the attitude in that
+        // clip: a dog's dig already tips its front end down, so the block's 0.4 rad nose-down on top of it doubled it. The
+        // block's tilt stays the fallback for a rig without the clip. A roll on the ground keeps its turn over: the lying
+        // clip pedals the legs, the block rolls the body.)
+        const carried = Boolean(act && act.episode !== "sleep" && entry.rig && entry.rig.weight > 0.5 && act.state && CARRIED_PLAYS.has(recipeClip(sleepState(act.state), (name) => Boolean(rigs.clip(entry.animal.model_slug, name)))?.play ?? ""));
+        const actPitchShare = carried ? 0 : actShare;
+        const actRollShare = carried && !ROLLED_ON_CLIP.has(act?.state ?? "") ? 0 : actShare;
         const after = !act || act.episode !== "sleep" ? entry.sleepAct ?? null : null;
         const afterShare = after ? sleepStages(sleepT).roll : 0;
         // ARK-ANIM (round 4): a bat roosting hangs under its limb from its feet, head down, its body below the limb,
@@ -5301,8 +5312,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             base: ashore ? ground : at.y,
             yaw: (at.aloft ? wing.yaw : at.yaw) + glance,
             // A recipe's attitude on top (a plunge nose down, an up-end, a roll in the dust).
-            pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actShare : 0) + (after ? after.pitch * afterShare : 0),
-            roll: (circling ? wing.roll * entry.air : 0) + (act ? act.roll * actShare : 0) + (after ? after.roll * afterShare : 0),
+            pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actPitchShare : 0) + (after ? after.pitch * afterShare : 0),
+            roll: (circling ? wing.roll * entry.air : 0) + (act ? act.roll * actRollShare : 0) + (after ? after.roll * afterShare : 0),
             // (Over water: the sea's below 0, or (lane MA3 water 2) a lake's or a river's above its bed, the v2 lake at 6 m: it
             // read as dry ground there, and a swimmer out of its band was stood on the bed by its feet, a metre down.)
             afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0 || ground < waterTop - 0.02 || diving,

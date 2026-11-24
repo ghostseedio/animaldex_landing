@@ -805,8 +805,23 @@ export function prepareRigPoses(rig: LocoRig, slug: string, plan: string | null,
                 QUADRUPED_LYING_HELD.forEach((name) => delete clips[name]);
                 // (And, under the gate, every other clip on its own lying pose: the lion's lying feed, groom and yawn would
                 // jump from the posed lie to the pilot's crouch. A rig with no lying clip of its own keeps its wallow and roll.)
+                // (Lane SIG5, the coordinator's decision with SPECIES-ANIM-A2: a roll, a dust bathe and a wallow on the pilot's own lie
+                // are carried over onto the posed lie, per bone, so they start and end on the pose the scene draws: Kit34's dog and
+                // horse rolls were dropped here and the act played the standing idle tipped over.)
+                const carried: RigClipData[] = [];
+                if (gateOn && ownClip) {
+                    const lieAt = posed.rows.clips.find((clip) => clip.name === "lie")!.row;
+                    for (const name of RETARGETED_ONTO_POSED_LIE) {
+                        const clip = clips[name];
+                        if (!clip || clipBase(clip) !== "lying") continue;
+                        const at = rowsData.length / (bones * 12);
+                        rowsData = appendRows(rowsData, retargetRows(rowsData, bones, ownClip.row, lieAt, clip.row, clip.rows));
+                        carried.push({...clip, row: at});
+                    }
+                }
                 if (gateOn && ownClip) for (const [name, clip] of Object.entries(clips)) if (clipBase(clip) === "lying" || clipBase(clip) === "side") delete clips[name];
                 for (const clip of posed.rows.clips) clips[clip.name] = clip;
+                for (const clip of carried) clips[clip.name] = clip;
                 chose = "posed";
             }
         }
@@ -961,6 +976,53 @@ export function posedLieRows(rig: LocoRig, geometry: BufferGeometry, data: Uint1
         for (let i = 0; i < per; i++) out[o + i] = DataUtils.toHalfFloat(row[i]);
     });
     return {check: pose.check, rows: {data: out, clips: posedLieClips(own)}, measure};
+}
+
+/** Lane SIG5: the clips on a pilot's own lie that are carried over onto the posed lie (`prepareRigPoses`), not dropped. */
+export const RETARGETED_ONTO_POSED_LIE: readonly string[] = ["roll", "dust_bathe", "wallow"];
+
+/**
+ * Lane SIG5: a clip on one lying pose moved onto another, bone by bone: each frame's matrix S(f) becomes
+ * to · from⁻¹ · S(f), where `from` is the pose the clip was made on (the pilot's own lie, its first frame) and `to` the
+ * pose it should play on (the posed lie). A frame equal to `from` comes out as `to` exactly; the clip's motion away
+ * from its lie is kept, turned and moved with each bone. Rows are 3×4 row-major half floats, 12 a bone.
+ */
+export function retargetRows(data: Uint16Array, bones: number, fromRow: number, toRow: number, clipRow: number, rows: number): Float32Array {
+    const per = bones * 12;
+    const f = (row: number, b: number, k: number) => DataUtils.fromHalfFloat(data[row * per + b * 12 + k]);
+    const out = new Float32Array(rows * per);
+    const delta = new Float64Array(12);
+    for (let b = 0; b < bones; b++) {
+        // from⁻¹ (rigid: Rᵀ, −Rᵀt; a lie's bone matrices carry no scale), then delta = to · from⁻¹.
+        const r = [0, 1, 2, 4, 5, 6, 8, 9, 10].map((k) => f(fromRow, b, k));
+        const t = [f(fromRow, b, 3), f(fromRow, b, 7), f(fromRow, b, 11)];
+        const inv = [r[0], r[3], r[6], -(r[0] * t[0] + r[3] * t[1] + r[6] * t[2]), r[1], r[4], r[7], -(r[1] * t[0] + r[4] * t[1] + r[7] * t[2]), r[2], r[5], r[8], -(r[2] * t[0] + r[5] * t[1] + r[8] * t[2])];
+        mul34(Array.from({length: 12}, (_, k) => f(toRow, b, k)), inv, delta);
+        const frame = new Float64Array(12);
+        const res = new Float64Array(12);
+        for (let i = 0; i < rows; i++) {
+            for (let k = 0; k < 12; k++) frame[k] = f(clipRow + i, b, k);
+            mul34(delta, frame, res);
+            for (let k = 0; k < 12; k++) out[i * per + b * 12 + k] = res[k];
+        }
+    }
+    return out;
+}
+
+/** a · b for 3×4 row-major affine matrices (the implied bottom row 0 0 0 1). */
+function mul34(a: ArrayLike<number>, b: ArrayLike<number>, out: Float64Array): void {
+    for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 4; j++) {
+            out[i * 4 + j] = a[i * 4] * b[j] + a[i * 4 + 1] * b[4 + j] + a[i * 4 + 2] * b[8 + j] + (j === 3 ? a[i * 4 + 3] : 0);
+        }
+    }
+}
+
+function appendRows(data: Uint16Array, rows: Float32Array): Uint16Array {
+    const out = new Uint16Array(data.length + rows.length);
+    out.set(data, 0);
+    for (let i = 0; i < rows.length; i++) out[data.length + i] = DataUtils.toHalfFloat(rows[i]);
+    return out;
 }
 
 /** The posed lie's clips after a rig's own `own` rows: the way down, the way up, and the held lie (as `lie` and `sleep`). */
@@ -1444,6 +1506,10 @@ export type RecipeClipRule = {clips: readonly string[]; play: "distance" | "loop
 const SLEEP_POSTURES = ["sleep_one_leg", "sleep_tuck", "sleep_hang", "sleep_curl", "sleep_float", "sleep_stand", "sleep_side", "sleep"] as const;
 export const RECIPE_CLIPS: Readonly<Record<string, RecipeClipRule>> = {
     walk: {clips: ["walk", "slither", "hop"], play: "distance"},
+    // (Lane SIG5: a cat's knead, its forepaws treading before it settles; SPECIES-ANIM-A2 Kit34.)
+    knead: {clips: ["knead"], play: "loop"},
+    // (Lane SIG5: a hen raking the ground back with its feet; SPECIES-ANIM-A2 kit36.)
+    scratch: {clips: ["scratch", "graze"], play: "loop"},
     run: {clips: ["run", "walk"], play: "distance"},
     stalk: {clips: ["walk"], play: "distance"},
     crawl: {clips: ["walk", "slither"], play: "distance"},
