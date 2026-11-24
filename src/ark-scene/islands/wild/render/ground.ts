@@ -30,14 +30,35 @@ export const WILD_LAKE_COLOUR = new Color(0.16, 0.42, 0.36);
 export function freshWaterGeometry(ground: GroundArrays & {freshLevels: Float32Array}): BufferGeometry {
     const size = ground.size;
     const positions: number[] = [];
+    const levels = ground.freshLevels;
+    const p = ground.positions;
+    // (Load-alloc: a quad's four corners, levels and points as plain numbers, not five arrays a quad over the 230k quads.)
     for (let row = 0; row < size - 1; row++) {
         for (let column = 0; column < size - 1; column++) {
-            const corners = [row * size + column, row * size + column + 1, (row + 1) * size + column + 1, (row + 1) * size + column];
-            const levels = corners.map((i) => ground.freshLevels[i]);
-            if (levels.every((l) => Number.isNaN(l))) continue;
-            const top = Math.max(...levels.filter((l) => !Number.isNaN(l)));
-            const at = corners.map((i, k) => [ground.positions[i * 3], Number.isNaN(levels[k]) ? top : levels[k], ground.positions[i * 3 + 2]]);
-            positions.push(...at[0], ...at[3], ...at[1], ...at[3], ...at[2], ...at[1]);
+            const i0 = row * size + column;
+            const i1 = row * size + column + 1;
+            const i2 = (row + 1) * size + column + 1;
+            const i3 = (row + 1) * size + column;
+            const l0 = levels[i0];
+            const l1 = levels[i1];
+            const l2 = levels[i2];
+            const l3 = levels[i3];
+            const n0 = Number.isNaN(l0);
+            const n1 = Number.isNaN(l1);
+            const n2 = Number.isNaN(l2);
+            const n3 = Number.isNaN(l3);
+            if (n0 && n1 && n2 && n3) continue;
+            // (The highest of those it has: Math.max over the same numbers.)
+            let top = -Infinity;
+            if (!n0) top = Math.max(top, l0);
+            if (!n1) top = Math.max(top, l1);
+            if (!n2) top = Math.max(top, l2);
+            if (!n3) top = Math.max(top, l3);
+            const y0 = n0 ? top : l0;
+            const y1 = n1 ? top : l1;
+            const y2 = n2 ? top : l2;
+            const y3 = n3 ? top : l3;
+            positions.push(p[i0 * 3], y0, p[i0 * 3 + 2], p[i3 * 3], y3, p[i3 * 3 + 2], p[i1 * 3], y1, p[i1 * 3 + 2], p[i3 * 3], y3, p[i3 * 3 + 2], p[i2 * 3], y2, p[i2 * 3 + 2], p[i1 * 3], y1, p[i1 * 3 + 2]);
         }
     }
     const geometry = new BufferGeometry();
