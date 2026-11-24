@@ -11,6 +11,8 @@
  *   knead_settle      a cat treading with its forepaws, then settling to rest (Kit34's knead clip).
  *   dig_burrow~hole   a dog digging a hole, a look round, digging on (Kit34's dig clip; the dug-soil mark).
  *   play_run~bow      a dog's play-bow (kit38's display clip), then the play run.
+ *   stretch_yawn~cat  a cat's long stretch (kit39c), a yawn, rest.
+ *   tail_wave~still   a house gecko still on its wall, its tail waving slowly (kit42).
  *   scratch_feed      a hen raking the ground back with its feet, then pecking (kit36's scratch clip), walking home.
  *   ground_feed       walking about the grass, head down feeding (budgerigar, tree sparrow). The graze clip, by the
  *                     `eat` block: a `peck` hold's bob reads as a walk's pace on a bird this small, so its walk plays instead.
@@ -178,5 +180,34 @@ export const DOMESTIC_TEMPLATES: Template[] = [
             {b: "scan", s: [1.5, 3]}
         ],
         tail: [{b: "walk", to: "anchor"}]
+    }),
+    // A cat's stretch on waking (kit39c's stretch clip, 3 s once: forepaws out, chest down, rump up), a yawn, then rest.
+    T({
+        id: "stretch_yawn~cat",
+        label: "stretches long, forepaws out, and yawns",
+        kind: "stay",
+        goal: "here",
+        replaces: ["rest", "groom", "watch"],
+        doing: "rest",
+        steps: [
+            {b: "stretch", s: [3, 3.3]},
+            {b: "yawn", s: [1, 1.8]},
+            {b: "rest", s: [3, 8]}
+        ]
+    }),
+    // A house gecko still on its wall or rock, waving its tail slowly from side to side (kit42's tail_wave clip).
+    T({
+        id: "tail_wave~still",
+        label: "lies still, waving its tail slowly from side to side",
+        kind: "stay",
+        goal: "here",
+        replaces: ["rest", "watch", "idle", "bask"],
+        doing: "rest",
+        often: 0.6,
+        steps: [
+            {b: "tail_wave", s: [4, 8]},
+            {b: "rest", s: [8, 20]},
+            {b: "tail_wave", s: [3, 6]}
+        ]
     })
 ];

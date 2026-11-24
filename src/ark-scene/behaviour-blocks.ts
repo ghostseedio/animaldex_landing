@@ -129,6 +129,8 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         // Comfort
         B({id: "groom", label: "groom or preen itself", motion: "hold", states: ["groom"], beat: "preen"}),
         B({id: "scratch", label: "scratch the ground back with the feet", motion: "hold", states: ["scratch"], beat: "peck", pitch: 0.3, fx: "dirt", fxAt: "during"}),
+        B({id: "tail_wave", label: "wave its tail slowly from side to side", motion: "hold", states: ["tail_wave"], beat: "rest"}),
+        B({id: "butt", label: "butt heads, braced", motion: "hold", states: ["butt"], beat: "rest"}),
         B({id: "knead", label: "knead with the forepaws", motion: "hold", states: ["knead"], beat: "rest"}),
         B({id: "groom_other", label: "groom another", motion: "hold", states: ["groom_other"], beat: "preen", pitch: 0.2}),
         B({id: "bathe", label: "bathe (splash in the shallows)", motion: "hold", states: ["bathe"], beat: "shake", pitch: 0.35, rollWave: 0.25, heave: -0.05, rate: 3, wet: true, fx: "splash", fxAt: "during"}),

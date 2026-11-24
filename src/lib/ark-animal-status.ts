@@ -135,7 +135,9 @@ const RECIPE_ACTIVITY: Record<string, ArkActivityKey> = {
     "dig_burrow~hole": "digging",
     knead_settle: "resting",
     scratch_feed: "food",
-    "play_run~bow": "playing"
+    "play_run~bow": "playing",
+    "stretch_yawn~cat": "resting",
+    "tail_wave~still": "resting"
 };
 
 /** What a recipe episode is, as the card says it (null: one that says no more than its doing). */

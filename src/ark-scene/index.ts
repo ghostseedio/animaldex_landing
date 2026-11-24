@@ -432,6 +432,8 @@ const ROLLED_ON_CLIP: ReadonlySet<string> = new Set(["roll", "dust_bathe", "wall
 const ROLL_GETS_UP: ReadonlySet<string> = new Set(["get_up", "lie_down", "lie"]);
 /** Lane SIG6: the most a body turned over on its own clip is moved onto its back or side, either way (body lengths). */
 const ROLLED_REST_MOST = 0.5;
+/** Lane SIG5: how far a dabbler floats lower while up-ended on its own clip (body lengths): its front half under. */
+const DABBLE_SINK = 0.25;
 /** A meal act's states the rig plays from its own clips (`rig-player.ts` RECIPE_CLIPS): feeding, a glance up, lying up. */
 const MEAL_CLIP_STATES = new Set(["eat", "scan", "rest", "bask", "dig"]);
 
@@ -5191,6 +5193,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // In the water: where it goes is the schedule's; how deep, its own place in its species' band (`sea-depth.ts`,
         // each animal its own depth, so a school is spread up and down), up to the surface on its breath, fitted at its drawn size.
         const act = (at as RecipePose).act;
+        const carried = Boolean(act && act.episode !== "sleep" && entry.rig && entry.rig.weight > 0.5 && act.state && CARRIED_PLAYS.has(recipeClip(sleepState(act.state), (name) => Boolean(rigs.clip(entry.animal.model_slug, name)))?.play ?? ""));
         // (`schedule-water.ts`: in the water, the band wins over the schedule's own height; a recipe act of its own, a dive, keeps its height.)
         // (Part C: the water's surface there, the sea's 0 or the bigger wild island's lake and river at their own level.)
         // (Lane MA3: the higher of the drawn lattice's surface and the schedule's own water level, `waterLevelAt`: the
@@ -5235,7 +5238,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (A penguin lies down to swim: `swimBodyPitch`; a floater rides its kind's way, a duck tail up: `floatPitch`. A
             // recipe's attitude on top: an up-end tips it nose down.)
             const ride = spec.motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : spec.motion === "float" ? floatPitch(band.kind) : 0;
-            return {x: at.x, z: at.z, base, yaw, pitch: ride + (act && act.episode !== "sleep" ? act.pitch : 0), roll: act && act.episode !== "sleep" ? act.roll : 0, afloat: true, water: spec, ...(surface ? {surface} : {})};
+            // (Lane SIG5: an act its rig plays on its own clip carries its tilt (a mallard's dabble, kit41, tips 55° itself), and a
+            // dabbler up-ended so floats lower, its front half under the water.)
+            const dabbleSink = carried && act?.state === "upend" ? entry.length * DABBLE_SINK : 0;
+            return {x: at.x, z: at.z, base: base - dabbleSink, yaw, pitch: ride + (act && act.episode !== "sleep" && !carried ? act.pitch : 0), roll: act && act.episode !== "sleep" && !carried ? act.roll : 0, afloat: true, water: spec, ...(surface ? {surface} : {})};
         }
         // Under the surface in its own act (a dive): where the act has it, swimming (lane MA3: it walked and hopped there).
         const diving = Boolean(band) && Boolean(act?.own) && !at.aloft && ground < waterTop - 0.02 && at.y < waterTop - 0.06;
@@ -5261,7 +5267,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // clip: a dog's dig already tips its front end down, so the block's 0.4 rad nose-down on top of it doubled it. The
         // block's tilt stays the fallback for a rig without the clip. A roll on the ground keeps its turn over: the lying
         // clip pedals the legs, the block rolls the body.)
-        const carried = Boolean(act && act.episode !== "sleep" && entry.rig && entry.rig.weight > 0.5 && act.state && CARRIED_PLAYS.has(recipeClip(sleepState(act.state), (name) => Boolean(rigs.clip(entry.animal.model_slug, name)))?.play ?? ""));
         const actPitchShare = carried ? 0 : actShare;
         // (Lane SIG6: and a roll's turn over only on the clip itself, eased in as it fades in: turned while still on its feet or
         // on its way down, a standing horse went over about its feet and was seated on its back with its legs a body's

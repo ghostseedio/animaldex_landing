@@ -1502,12 +1502,17 @@ export function flightClip(input: FlightClipInput): string | null {
  * a rig clip expresses: the clips to try in order, and how they play (by the distance covered, as a loop, or once
  * from the start). The table of what is mapped and what falls back is in docs/ark/rig-player.md.
  */
-export type RecipeClipRule = {clips: readonly string[]; play: "distance" | "loop" | "once"; playFor?: Readonly<Record<string, "distance" | "loop" | "once">>; still?: string};
+export type RecipeClipRule = {clips: readonly string[]; play: "distance" | "loop" | "once"; playFor?: Readonly<Record<string, "distance" | "loop" | "once">>; still?: string | readonly string[]};
 const SLEEP_POSTURES = ["sleep_one_leg", "sleep_tuck", "sleep_hang", "sleep_curl", "sleep_float", "sleep_stand", "sleep_side", "sleep"] as const;
 export const RECIPE_CLIPS: Readonly<Record<string, RecipeClipRule>> = {
     walk: {clips: ["walk", "slither", "hop"], play: "distance"},
     // (Lane SIG5: a cat's knead, its forepaws treading before it settles; SPECIES-ANIM-A2 Kit34.)
     knead: {clips: ["knead"], play: "loop"},
+    // (Lane SIG5: a cat's stretch, kit39c, once; a gecko's slow tail wave, kit42.)
+    stretch: {clips: ["stretch"], play: "once"},
+    tail_wave: {clips: ["tail_wave"], play: "loop"},
+    // (Lane SIG5: the clash itself, kit40's butt, held braced where the rivals meet, legs planted.)
+    butt: {clips: ["butt"], play: "once"},
     // (Lane SIG5: a hen raking the ground back with its feet; SPECIES-ANIM-A2 kit36.)
     scratch: {clips: ["scratch", "graze"], play: "loop"},
     run: {clips: ["run", "walk"], play: "distance"},
@@ -1518,7 +1523,8 @@ export const RECIPE_CLIPS: Readonly<Record<string, RecipeClipRule>> = {
     push: {clips: ["walk"], play: "distance"},
     charge: {clips: ["run", "walk"], play: "distance"},
     // A run at the rival, then the clash itself where they meet (contract 8.4: after the run).
-    clash: {clips: ["run", "walk"], play: "distance", still: "clash"},
+    // (Lane SIG5: a goat's or a sheep's butt, kit40, where the rig has it.)
+    clash: {clips: ["run", "walk"], play: "distance", still: ["clash", "butt"]},
     climb: {clips: ["climb"], play: "distance"},
     swim: {clips: ["swim", "slither", "paddle"], play: "loop", playFor: {paddle: "distance"}},
     leap: {clips: ["leap"], play: "once"},
@@ -1536,7 +1542,8 @@ export const RECIPE_CLIPS: Readonly<Record<string, RecipeClipRule>> = {
     hop_out: {clips: ["exit_water"], play: "once"},
     surface: {clips: ["surface"], play: "once"},
     dive: {clips: ["dive"], play: "once"},
-    upend: {clips: ["upend"], play: "loop"},
+    // (Lane SIG5: a mallard's dabble, kit41: tipped 55° nose-down about its middle; the rig's old upend only stretches the neck.)
+    upend: {clips: ["dabble", "upend"], play: "loop"},
     scan: {clips: ["scan"], play: "loop"},
     peck: {clips: ["graze"], play: "loop"},
     eat: {clips: ["graze"], play: "loop"},
@@ -1567,7 +1574,8 @@ export const RECIPE_CLIPS: Readonly<Record<string, RecipeClipRule>> = {
     tool: {clips: ["strike"], play: "once"},
     fight: {clips: ["fight"], play: "loop"},
     box: {clips: ["fight"], play: "loop"},
-    rear: {clips: ["fight"], play: "loop"},
+    // (Lane SIG5: a goat's rear, kit40: up on its hind legs, horns forward, once.)
+    rear: {clips: ["rear", "fight"], play: "loop", playFor: {rear: "once"}},
     dig: {clips: ["dig"], play: "loop"},
     mark: {clips: ["dig"], play: "loop"},
     bury: {clips: ["dig"], play: "loop"},
@@ -1584,7 +1592,6 @@ export const RECIPE_FALLBACK: Readonly<Record<string, string>> = {
     crouch: "pause",
     sweep: "peck",
     drum: "peck",
-    stretch: "rest",
     yawn: "rest",
     freeze: "pause",
     strike_feet: "glide"
@@ -1599,7 +1606,7 @@ export function recipeClip(state: string | null | undefined, has: (name: string)
     if (!rule) return null;
     const name = rule.clips.find((clip) => has(clip));
     if (!name) return null;
-    const still = rule.still && has(rule.still) ? rule.still : undefined;
+    const still = (typeof rule.still === "string" ? [rule.still] : rule.still ?? []).find((name) => has(name));
     return {name, play: rule.playFor?.[name] ?? rule.play, ...(still ? {still} : {})};
 }
 

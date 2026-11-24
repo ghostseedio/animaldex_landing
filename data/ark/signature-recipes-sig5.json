@@ -10,10 +10,12 @@
   "knead_settle": {"plans": ["quadruped"], "weight": 4},
   "dig_burrow~hole": {"plans": ["quadruped"], "weight": 3},
   "play_run~bow": {"plans": ["quadruped"], "weight": 4},
+  "stretch_yawn~cat": {"plans": ["quadruped"], "weight": 3},
+  "tail_wave~still": {"plans": ["quadruped", "lizard", "reptile"], "weight": 4},
   "scratch_feed": {"plans": ["flying_bird", "walking_bird"], "weight": 5}
  },
  "held": [
-  {"slug": "domestic-dog", "recipe": "roll", "reason": "SIG5 tranche 2: with the lie retarget the dog's roll plays on its posed lie and the block turns it over, but the 0.86 m dog is drawn a hand above its shadow while on its back (~/AnimalDex-work/sig5/t2-after/roll-dog). The horse's is seated. Held until the turned-over body is seated by its lowest point."}
+  {"slug": "domestic-dog", "recipe": "roll", "reason": "SIG5 tranche 3: still drawn a hand above its shadow on its back with the rolled body seated by its lowest points (~/AnimalDex-work/sig5/t3-after/roll-dog); the horse's roll is seated. The float is not the clip's lowest point: to find what lifts the turned-over dog."}
  ],
  "additions": [
   {"slug": "domestic-dog", "name": "Domestic Dog", "recipe": "play_run~bow"},
@@ -25,6 +27,8 @@
   {"slug": "eurasian-tree-sparrow", "name": "Eurasian Tree Sparrow", "recipe": "ground_feed"},
   {"slug": "domestic-cat", "name": "Domestic Cat", "recipe": "knead_settle"},
   {"slug": "domestic-chicken", "name": "Domestic Chicken", "recipe": "scratch_feed"},
+  {"slug": "domestic-cat", "name": "Domestic Cat", "recipe": "stretch_yawn~cat"},
+  {"slug": "common-house-gecko", "name": "Common House Gecko", "recipe": "tail_wave~still"},
   {"slug": "domestic-dog", "name": "Domestic Dog", "recipe": "dig_burrow~hole"}
  ]
 }

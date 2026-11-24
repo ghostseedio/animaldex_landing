@@ -2095,7 +2095,7 @@ function pairMeeting(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, l
     return episode;
 }
 
-function pairEpisode(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): Episode | null {
+export function pairEpisode(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): Episode | null {
     const list = links.get(owner.animal);
     if (!list) return null;
     const species = speciesRecipes(owner.slug);

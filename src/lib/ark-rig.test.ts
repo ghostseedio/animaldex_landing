@@ -216,7 +216,7 @@ test("rig reactive clips: a flee runs by distance (walks while still slow), a se
 test("rig recipe states: every named state of the behaviour recipes is mapped to clips or has its fallback beat, once", async () => {
     const {ARK_RECIPE_STATES} = await import("@/ark-scene/behaviour-blocks");
     const {RECIPE_CLIPS, RECIPE_FALLBACK, recipeClip} = await import("@/ark-scene/rig-player");
-    assert.equal(ARK_RECIPE_STATES.length, 72); // (Lane SIG5: + knead, scratch)
+    assert.equal(ARK_RECIPE_STATES.length, 74); // (Lane SIG5: + knead, scratch, tail_wave, butt)
     for (const state of ARK_RECIPE_STATES) {
         const mapped = state in RECIPE_CLIPS;
         const fallback = state in RECIPE_FALLBACK;
