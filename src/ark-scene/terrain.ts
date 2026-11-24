@@ -1053,10 +1053,10 @@ void main() {
     // sand round it (the grazing halo of a real patch reef: the fish that shelter on it crop the grass and algae near it).
     float far = (1.0 - smoothstep(3.0, 11.0, depth)) * smoothstep(40.0, 85.0, distanceToEye);
     float coralSeen = smoothstep(0.5, 0.75, coral.a) * far;
-    float halo = smoothstep(0.04, 0.16, coral.a) * (1.0 - smoothstep(0.24, 0.5, coral.a)) * far;
-    vec3 living = mix(coral.rgb * 0.62, vec3(0.045, 0.12, 0.085), 0.25);
+    float halo = smoothstep(0.02, 0.22, coral.a) * (1.0 - smoothstep(0.2, 0.5, coral.a)) * far;
+    vec3 living = coral.rgb * 0.72;
     vec3 coralThrough = living * mix(vec3(0.95, 0.9, 0.85), vec3(0.35, 0.65, 0.8), smoothstep(1.5, 9.0, depth));
-    body = mix(body, body * 1.22 + vec3(0.03, 0.035, 0.025), halo * 0.55);
+    body = mix(body, body * 1.2 + vec3(0.03, 0.035, 0.025), halo * 0.4);
     body = mix(body, coralThrough, coralSeen * 0.78);
     body = mix(body, lake * mix(1.0, 0.8, smoothstep(0.5, 3.0, depth)), fresh);
     // p5 (crater): fresh water deeper than the lake's and the river's (the crater lake's middle, 9 m): a deep blue-green.

@@ -15,6 +15,7 @@
  */
 
 import type {ReefItem, ReefKind} from "@/ark-scene/reef";
+import {noise} from "@/ark-scene/world";
 
 /** The map's side (texels): about 1 m a texel over the v2 island's 528 m square (1 MB). */
 export const CORAL_TEXELS = 512;
@@ -69,6 +70,9 @@ export function linearOf(hex: string): [number, number, number] {
     return [linear(((n >> 16) & 255) / 255), linear(((n >> 8) & 255) / 255), linear((n & 255) / 255)];
 }
 
+/** The reef's own accents (`reef.ts` COLOURS): a brain coral's green, a boulder's mauve, a staghorn's dark brown. */
+const ACCENTS = ["#86a06a", "#a07f86", "#94785a"].map((hex) => linearOf(hex));
+
 /**
  * The cover map: RGBA bytes, `size`², over the square [−half, half]² (x along the rows, z down the columns, as the water
  * depth map). RGB the colour of the growth with the biggest share of the texel (linear, ×255), A how covered (0…255).
@@ -118,6 +122,28 @@ export function coralCover(items: readonly ReefItem[], half: number, size = CORA
     for (const along of [1, size]) {
         boxBlur(alpha, size, along, 1, BLUR);
         boxBlur(tint, size, along, 3, BLUR);
+    }
+    // REEF-PATCHES (the coordinator's review: "a flat brown map with neat outline rings"):
+    // - the rim's fall-off is uneven (a noise field ~4 m across scales the cover where it thins out), so the water's pale
+    //   halo round a patch is soft and wide in places, narrow or gone in others, never a ring of one width;
+    // - the patches' tone varies over ~10 m with the reef's own accents (a brain coral's green, a boulder's mauve, a
+    //   staghorn's dark brown), so neighbouring patches are greener, darker or purplish, not one flat tan.
+    for (let i = 0; i < size * size; i++) {
+        if (alpha[i] <= 0.004) continue;
+        const x = -half + ((i % size) + 0.5) * texel;
+        const z = -half + (Math.floor(i / size) + 0.5) * texel;
+        const rim = 0.3 + 1.2 * noise(x * 0.24 + 5.3, z * 0.24 - 9.1);
+        const firm = Math.min(Math.max((alpha[i] - 0.35) / 0.25, 0), 1);
+        const scale = rim + (1 - rim) * firm;
+        alpha[i] *= scale;
+        for (let c = 0; c < 3; c++) tint[i * 3 + c] *= scale;
+        const which = noise(x * 0.085 - 13.7, z * 0.085 + 7.3);
+        const strength = Math.max(noise(x * 0.11 + 41.1, z * 0.11 - 3.9) - 0.25, 0) * 1.4;
+        const accent = which < 0.42 ? ACCENTS[0] : which < 0.58 ? ACCENTS[1] : ACCENTS[2];
+        for (let c = 0; c < 3; c++) tint[i * 3 + c] += (accent[c] * alpha[i] - tint[i * 3 + c]) * Math.min(strength, 0.75);
+        // (And head by head, a few metres across: some heads darker (toward the staghorn's brown), some paler.)
+        const head = noise(x * 0.32 - 2.7, z * 0.32 + 8.9);
+        if (head < 0.45) for (let c = 0; c < 3; c++) tint[i * 3 + c] += (ACCENTS[2][c] * alpha[i] - tint[i * 3 + c]) * (0.45 - head) * 1.4;
     }
     const out = new Uint8Array(size * size * 4);
     for (let i = 0; i < size * size; i++) {

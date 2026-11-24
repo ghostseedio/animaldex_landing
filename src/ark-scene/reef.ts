@@ -176,7 +176,7 @@ function bedFrom(x: number, z: number, s: GroundSample, slope: number): SeaBed {
     const depth = Math.max(-s.height, 0);
     const cliff = coastCliff(Math.atan2(z, x));
     // Patch reefs: knolls of framework, more of them toward the reef's middle, sand channels between.
-    const framework = s.reef > 0.3 ? patchReef(x, z, s.reef) : 0;
+    const framework = s.reef > 0.3 ? Math.max(patchReef(x, z, s.reef), reefCore(x, z)) : 0;
     let substrate: Substrate = "sand";
     if (framework > 0.5) substrate = "reef";
     else if (slope > 0.42 || (cliff > 0.3 && s.inland > -22 && depth > 1.2)) substrate = "rock";
@@ -230,6 +230,29 @@ const PATCH_LAYERS = [
     {seed: "reef-knoll", cell: 14, radius: [2.2, 4.8], presence: [0.45, 0.72]},
     {seed: "reef-bommie", cell: 7, radius: [0.9, 1.9], presence: [0.18, 0.42]}
 ] as const;
+
+/**
+ * The main reef (REEF-PATCHES, the coordinator's review): a dense, unbroken reef where it is looked at from under the
+ * water, round the reef site (its anemone patch and cleaning station) and round the head the close-up looks at, where
+ * the green turtle rests and rises to breathe. Ragged, about 15 m across each way from its two middles; the patches
+ * (`patchReef`) are the outer and shallow reef round it. 0…1.
+ */
+export function reefCore(x: number, z: number): number {
+    const site = ZONE_SITES.coral_reef;
+    let best = 0;
+    for (const [dx, dz, radius] of REEF_CORE) {
+        const d = Math.hypot(x - (site.x + dx), z - (site.z + dz));
+        const edge = radius * (0.8 + 0.4 * noise(x * 0.16 + 31, z * 0.16 - 17));
+        best = Math.max(best, 1 - smoothstep(edge * 0.8, edge * 1.05, d));
+    }
+    return best;
+}
+
+/** The main reef's middles (m from the reef site) and reach: the site's own, and the close-up head's (about 22, 18). */
+const REEF_CORE: ReadonlyArray<readonly [number, number, number]> = [
+    [0, 0, 15],
+    [21, 19, 14]
+];
 
 /** The sea bed at a point: its depth, slope and what it is made of. */
 export function seaBedAt(x: number, z: number): SeaBed {
@@ -371,7 +394,8 @@ export function reefGrowth(): ReefItem[] {
                         if (under.depth >= CORAL_MIN_DEPTH) put("encrusting", ex, ez, under, local);
                     }
                     // Dense on the knolls' tops, thinner on their flanks.
-                    const cover = 0.22 + 0.5 * bed.framework;
+                    // (REEF-PATCHES: a patch as dense as the old carpet was: the heads are in the patches, not thinned.)
+                    const cover = 0.28 + 0.6 * bed.framework;
                     if (roll > cover) continue;
                     const band = BANDS.find((b) => bed.depth < b.to) ?? BANDS[BANDS.length - 1];
                     put(pick(band.mix, kindRoll), x, z, bed, local);

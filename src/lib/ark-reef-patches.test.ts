@@ -1,14 +1,14 @@
 /**
- * REEF-PATCHES (2026-11-24): the live reef (the v2 wild island's) is separate patch reefs with sand channels between,
- * not one mass. Before, one noise threshold grew a single blob ~60 m across (89% of its coral in one connected piece,
+ * REEF-PATCHES (2026-11-24): the live reef (the v2 wild island's) is a dense main reef where it is seen from under the
+ * water, with separate patch reefs and sand channels round it, not one mass. Before, one noise threshold grew a single blob ~60 m across (89% of its coral in one connected piece,
  * 61% of the reef circle covered), which from above read as a tan stain over the lagoon.
  */
 // (First: the bigger wild island, v2, what islands mode shows, before anything samples the world.)
 import "@/lib/ark-world-v2-first";
 import assert from "node:assert/strict";
 import test from "node:test";
-import {patchReef, reefCloseupSpot, reefGrowth, reefLandmarks} from "@/ark-scene/reef";
-import {heightAt, TERRAIN_HALF, ZONE_SITES} from "@/ark-scene/world";
+import {CORAL_MIN_DEPTH, patchReef, reefCloseupSpot, reefCore, reefGrowth, reefLandmarks} from "@/ark-scene/reef";
+import {heightAt, sampleGround, TERRAIN_HALF, ZONE_SITES} from "@/ark-scene/world";
 import {coralCover, CORAL_TEXELS, linearOf} from "@/ark-scene/coral-cover";
 
 test("REEF-PATCHES: the reef's coral heads are separate patches with sand channels between", () => {
@@ -43,9 +43,21 @@ test("REEF-PATCHES: the reef's coral heads are separate patches with sand channe
     }
     sizes.sort((a, b) => b - a);
     const cover = grid.size / total;
-    assert.ok(cover > 0.2 && cover < 0.5, `about a third of the reef's circle is coral, the rest sand: ${cover.toFixed(2)}`);
-    assert.ok(sizes.filter((s) => s >= 3).length >= 8, `at least 8 separate patches: ${sizes.slice(0, 10).join(",")}`);
-    assert.ok(sizes[0] / grid.size < 0.45, `no one patch is most of the reef: ${(sizes[0] / grid.size).toFixed(2)}`);
+    assert.ok(cover > 0.4 && cover < 0.56, `about half the reef's circle is coral, the rest sand: ${cover.toFixed(2)}`);
+    // The main reef (where it is seen from under the water) is one dense piece; round it, separate patches.
+    assert.ok(sizes.filter((s) => s >= 3).length >= 6, `the main reef and at least 5 separate patches: ${sizes.slice(0, 10).join(",")}`);
+    let inCore = 0;
+    let coreCells = 0;
+    for (let i = -17; i < 17; i++) {
+        for (let j = -17; j < 17; j++) {
+            const x = site.x + (i + 0.5) * cell;
+            const z = site.z + (j + 0.5) * cell;
+            if (reefCore(x, z) < 0.99 || sampleGround(x, z).height > -CORAL_MIN_DEPTH - 0.6) continue;
+            coreCells++;
+            if (grid.has(`${i},${j}`)) inCore++;
+        }
+    }
+    assert.ok(coreCells > 100 && inCore / coreCells > 0.6, `the main reef is dense, as the old carpet was: ${inCore} of ${coreCells} cells`);
 });
 
 test("REEF-PATCHES: the patch field is pure, 0 off the reef, and the close-up reef keeps its heads and fish landmarks", () => {
@@ -101,9 +113,8 @@ test("REEF-PATCHES: from above (the water's cover map) the reef is separate dark
         pieces.push(n);
     }
     pieces.sort((a, b) => b - a);
-    assert.ok(pieces.filter((n) => n >= 4).length >= 6, `separate patches from above: ${pieces.slice(0, 10).join(",")}`);
-    assert.ok(pieces[0] / coral.size < 0.5, `no one patch is most of it: ${(pieces[0] / coral.size).toFixed(2)}`);
-    assert.ok(clear / all > 0.25, `clear sand channels: ${(clear / all).toFixed(2)} of the circle`);
+    assert.ok(pieces.filter((n) => n >= 4).length >= 6, `the main reef and separate patches from above: ${pieces.slice(0, 10).join(",")}`);
+    assert.ok(clear / all > 0.2, `clear sand channels: ${(clear / all).toFixed(2)} of the circle`);
 });
 
 test("coral cover: the reef's own growths where they grow, their own colours, nothing over land", () => {
