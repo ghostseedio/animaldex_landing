@@ -315,7 +315,11 @@ export const SEPARATION_ROUNDS = 8;
  * in the moment: every viewer eases the same pushes the same way. A slow push turns no body: a resting animal is nudged
  * as it faces; a walker's way bends by its push's slow drift, a few degrees off its heading at most.
  */
-export const SEPARATION_EASE = 4;
+// (0.5, lane TOWNOVERLAP 2026-11-24: at 4, one that walked into another just after a moment had no push until the next
+// and was eased out over the one after: a horse stood inside a grazing donkey for 3.2 s, the town's paddocks' horses in
+// each other. Eased over half a second the push still never steps more than a few centimetres a frame:
+// `ark-collide-between-moments.test.ts`.)
+export const SEPARATION_EASE = 0.5;
 
 /** The moments either side of `epoch` the push is worked out at, and how far between them (0-1, smoothstepped). */
 export function separationMoments(epoch: number): {q0: number; q1: number; s: number} {

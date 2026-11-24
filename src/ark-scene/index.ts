@@ -2413,6 +2413,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const yaw = walk ? walk.yaw : plot.rotation + (((hamletHash(entry.animal.id) >>> 5) % 628) / 100);
         return {x: at.x, y: Math.max(heightAt(at.x, at.z), 0), z: at.z, yaw, aloft: false};
     };
+    // Lane TOWNOVERLAP (2026-11-24: horses in the town's rural-paddock-2 stood and walked inside each other and the
+    // donkeys): one in an act of its own (a dung pause, a mate search's walk, a meal's approach: an act with no partner)
+    // was out of the collisions altogether, so its neighbours were eased off nothing and walked through it, and the
+    // scene's `keepApart` shoved them off its spot at once (a horse grooming beside a donkey went 1.43 m in a frame as
+    // the donkey paused). It stays among them as a body held where its act has it: the others are eased round it.
+    const collideActing = (entry: Entry) => Boolean(entry.act && !entry.act.hidden && !entry.act.role && !entry.visitor && entry.sched?.wired && !entry.moment);
+    const actBody = (act: ActPose): ResolvePose => ({x: act.x, y: act.base, z: act.z, yaw: act.yaw, aloft: false, still: true, fixed: true});
     const collisions = new CollideLayer<Entry>({
         // (Part C, one world: the wild island's colliders and the town's as one set, each island's animals among their own.)
         colliders: () => (collisionsOn && world ? sceneColliders(world, townWorld) : null),
@@ -2423,9 +2430,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return {id: entry.animal.id, radius: shape.radius, half: shape.half, height: shape.height, group: entry.place.leader ?? entry.animal.id, huddles: HUDDLED.has(sleepStyle(entry.animal.model_slug).social), ...(walker ? {maxSlope: maxSlopeOf(entry.sched!.animal) * 2} : {})};
         },
         slope: (x, z) => Math.max(Math.abs(heightAt(x + 1, z) - heightAt(x - 1, z)), Math.abs(heightAt(x, z + 1) - heightAt(x, z - 1))) / 2,
-        base: (entry, epoch) => (scheduled(entry) && entry.sched?.wired ? collideInput(entry, sharedBase(entry, epoch), epoch) : entry.place.hamlet ? residentBase(entry) : null),
-        everyone: () => entries.filter((entry) => (scheduled(entry) && entry.sched!.wired && entry.sched!.pose) || (entry.place.hamlet && !entry.visitor && entry.residentAt)),
-        last: (entry) => (entry.sched?.pose ? {x: entry.sched.pose.x, z: entry.sched.pose.z, at: entry.sched.at} : entry.residentAt ?? null),
+        base: (entry, epoch) => (collideActing(entry) ? actBody(entry.act!) : scheduled(entry) && entry.sched?.wired ? collideInput(entry, sharedBase(entry, epoch), epoch) : entry.place.hamlet ? residentBase(entry) : null),
+        everyone: () => entries.filter((entry) => (scheduled(entry) && entry.sched!.wired && entry.sched!.pose) || collideActing(entry) || (entry.place.hamlet && !entry.visitor && entry.residentAt)),
+        last: (entry) => (collideActing(entry) ? {x: entry.act!.x, z: entry.act!.z, at: worldMs() / 1000} : entry.sched?.pose ? {x: entry.sched.pose.x, z: entry.sched.pose.z, at: entry.sched.at} : entry.residentAt ?? null),
         // (A resident walks its door route over a door beat: never faster than 3 m/s.)
         speed: (entry) => (entry.sched ? bodyLengthsPerSecond(entry.sched.profile) * Math.max(entry.full, 0.05) * Math.max(runFactor(entry.sched.profile), 1) * 1.5 : 3)
     });
@@ -4436,14 +4443,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const d = Math.hypot(dx, dz);
                 const room = (a.entry.length + f.entry.length) * 0.55;
                 if (d >= room) continue;
-                const onGround = Math.abs(a.pose.base - Math.max(heightAt(a.pose.x, a.pose.z), 0)) < 0.05;
                 // (Straight off it; one standing exactly on it steps off along its own heading.)
                 const ux = d > 1e-4 ? dx / d : Math.sin(a.pose.yaw);
                 const uz = d > 1e-4 ? dz / d : Math.cos(a.pose.yaw);
-                // (Off an act at once, as before: the act's spot is where it is, not a neighbour going by.)
-                a.pose.x += ux * (room - d);
-                a.pose.z += uz * (room - d);
-                if (onGround) a.pose.base = Math.max(heightAt(a.pose.x, a.pose.z), 0);
+                // (Off an act's spot eased, as off a neighbour: put on at once, a pause beginning beside it shoved it a body's
+                // width in a frame: a giraffe 3.1 m by a mate search's spot, a horse 1.43 m by a donkey's dung pause.)
+                want(a.entry, ux * (room - d), uz * (room - d));
             }
             for (let j = 0; j < near.length; j++) {
                 if (i === j) continue;
@@ -10467,7 +10472,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 for (const drop of dungDrops(e.animal.id, diet, epoch, day)) {
                     let place = dungPlaces.get(drop.key);
                     if (place === undefined) {
-                        const p = schedulePose(e, drop.at);
+                        // Lane TOWNOVERLAP: where it stands as drawn when the drop is fresh (its schedule's pose with the
+                        // collisions, `stepSchedule`), so its pause begins where it is; from its schedule's pose bare, it
+                        // stepped back into the neighbour it had been eased off (a donkey 0.65 m into a horse in a frame).
+                        // (Fresh: fallen since the list was last made, standing still: where it stands now is where it stood then.)
+                        const fresh = e.sched.collided && !at.moving && epoch - drop.at >= 0 && epoch - drop.at < 2.5 ? at : null;
+                        const p = fresh ?? schedulePose(e, drop.at);
                         const later = schedulePose(e, drop.at + DUNG_PAUSE_SECONDS);
                         // (Not in the air, not in the water, not asleep in its den.)
                         place = p.aloft || heightAt(p.x, p.z) < 0.05 || p.doing === "sleep" ? null : {x: p.x, z: p.z, yaw: p.yaw, still: Math.hypot(later.x - p.x, later.z - p.z) < 0.3};
@@ -11619,7 +11629,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)

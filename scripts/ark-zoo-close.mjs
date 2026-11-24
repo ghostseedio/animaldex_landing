@@ -15,13 +15,16 @@
  *        [--gate]       exit 1 when a resident glitches: drawn in and out more than 4 times, or a step between two drawn
  *                       frames bigger than its length's quarter and 0.5 m (a walk is centimetres a frame), or a turn of
  *                       more than 1 rad in a frame
+ *                       or two bodies inside each other (their collision capsules more than 8 cm deep beyond touching)
+ *                       for more than --overlap-frames (10) frames running
+ *        [--regate <label>.json]  the gate again on a report already made (no browser), with its deepest overlaps
  *        [--dump-leaders]  who each zoo resident keeps to, and where both are placed (<label>-leaders.json), then exits
  *
  * Writes <out>/<label>-<enclosure>/NNNN.jpg, <out>/<label>-<enclosure>.mp4, <out>/<label>-<enclosure>-strip.jpg and
  * <out>/<label>.json (every frame's rows and the per-animal summary). Nothing is uploaded; models come from the public bucket.
  */
 import {execFileSync} from "node:child_process";
-import {createReadStream, existsSync, mkdirSync, rmSync, statSync, writeFileSync} from "node:fs";
+import {createReadStream, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync} from "node:fs";
 import {createServer} from "node:http";
 import path from "node:path";
 
@@ -45,6 +48,108 @@ const wanted = arg("enclosures", "");
 const passes = arg("passes", "fixed,drift").split(",");
 const drift = Number(arg("drift", "20"));
 mkdirSync(out, {recursive: true});
+
+// MARK: the gate (a function: `--regate <label>.json` runs it again on a report already made, no browser)
+function gate(report) {
+const failures = [];
+for (const e of report.enclosures) {
+    for (const a of e.animals) {
+        const why = [];
+        if (a.drawnFlips > 4) why.push(`drawn in and out ${a.drawnFlips} times`);
+        // (A step between two drawn frames: the first difference, not the second's jitter.)
+        const rows = e.frames.map((f) => f.animals.find((x) => x.id.slice(0, 8) === a.id));
+        let step = 0;
+        let turn = 0;
+        for (let i = 1; i < rows.length; i++) {
+            const p = rows[i - 1];
+            const q = rows[i];
+            if (!p?.drawn || !q?.drawn) continue;
+            step = Math.max(step, Math.hypot(q.x - p.x, q.z - p.z));
+            if (p.yaw !== null && q.yaw !== null) turn = Math.max(turn, Math.abs(Math.atan2(Math.sin(q.yaw - p.yaw), Math.cos(q.yaw - p.yaw))));
+        }
+        if (step > Math.max(0.5, a.length * 0.25)) why.push(`a ${step.toFixed(2)} m step in a frame`);
+        if (turn > 1) why.push(`a ${turn.toFixed(2)} rad turn in a frame`);
+        a.step = +step.toFixed(3);
+        a.turn = +turn.toFixed(3);
+        if (why.length) failures.push(`${e.pass} ${e.enclosure} ${a.slug} ${a.id}: ${why.join(", ")}`);
+    }
+}
+// Two bodies inside each other: their bodies as the collisions have them (`collide/bodies.ts`: a capsule along its heading,
+// from `body-shapes.json`), deeper than `INSIDE` beyond touching, for more than `--overlap-frames` frames running.
+const SHAPES = JSON.parse(readFileSync(path.resolve("src/ark-scene/collide/body-shapes.json"), "utf8")).shapes;
+const INSIDE = 0.08;
+const overlapFrames = Number(arg("overlap-frames", "10"));
+const bodyOf = (slug, length) => {
+    const code = SHAPES[slug];
+    const [w, , l] = code && code.length === 6 ? [0, 2, 4].map((i) => parseInt(code.slice(i, i + 2), 36) / 100) : [0.35, 0.5, 1];
+    const radius = Math.max((w * length) / 2, 0.005);
+    return {radius, half: Math.max((l * length) / 2 - radius, 0)};
+};
+/** The closest two points' distance of two segments in the ground plane. */
+const segDistance = (ax, az, bx, bz, cx, cz, dx, dz) => {
+    const pts = [];
+    const onto = (px, pz, x1, z1, x2, z2) => {
+        const vx = x2 - x1;
+        const vz = z2 - z1;
+        const l = vx * vx + vz * vz;
+        const t = l < 1e-9 ? 0 : Math.min(Math.max(((px - x1) * vx + (pz - z1) * vz) / l, 0), 1);
+        return Math.hypot(px - (x1 + vx * t), pz - (z1 + vz * t));
+    };
+    // (Crossing: zero; else the least of the four ends onto the other.)
+    const side = (px, pz, x1, z1, x2, z2) => Math.sign((x2 - x1) * (pz - z1) - (z2 - z1) * (px - x1));
+    if (side(ax, az, cx, cz, dx, dz) * side(bx, bz, cx, cz, dx, dz) < 0 && side(cx, cz, ax, az, bx, bz) * side(dx, dz, ax, az, bx, bz) < 0) return 0;
+    pts.push(onto(ax, az, cx, cz, dx, dz), onto(bx, bz, cx, cz, dx, dz), onto(cx, cz, ax, az, bx, bz), onto(dx, dz, ax, az, bx, bz));
+    return Math.min(...pts);
+};
+const depthOf = (a, ba, b, bb) => {
+    const fa = [Math.sin(a.yaw ?? 0) * ba.half, Math.cos(a.yaw ?? 0) * ba.half];
+    const fb = [Math.sin(b.yaw ?? 0) * bb.half, Math.cos(b.yaw ?? 0) * bb.half];
+    return ba.radius + bb.radius - segDistance(a.x - fa[0], a.z - fa[1], a.x + fa[0], a.z + fa[1], b.x - fb[0], b.z - fb[1], b.x + fb[0], b.z + fb[1]);
+};
+for (const e of report.enclosures) {
+    const body = new Map(e.animals.map((a) => [a.id, bodyOf(a.slug, a.length)]));
+    const slug = new Map(e.animals.map((a) => [a.id, a.slug]));
+    const runs = new Map();
+    const worst = new Map();
+    e.overlaps = [];
+    for (const f of e.frames) {
+        const drawn = f.animals.filter((r) => r.drawn && body.get(r.id.slice(0, 8)));
+        const now = new Set();
+        for (let i = 0; i < drawn.length; i++) {
+            for (let j = i + 1; j < drawn.length; j++) {
+                const a = drawn[i];
+                const b = drawn[j];
+                const ba = body.get(a.id.slice(0, 8));
+                const bb = body.get(b.id.slice(0, 8));
+                // (A recipe's pair may touch; so may two asleep together: the collisions' own allowances, roughly.)
+                const deep = depthOf(a, ba, b, bb) - 0.1 * Math.min(ba.radius, bb.radius);
+                if (deep <= INSIDE || (a.asleep && b.asleep)) continue;
+                const key = `${a.id.slice(0, 8)}|${b.id.slice(0, 8)}`;
+                now.add(key);
+                const run = (runs.get(key) ?? 0) + 1;
+                runs.set(key, run);
+                const was = worst.get(key);
+                if (!was || run > was.n) worst.set(key, {n: run, frame: f.frame, deep: Math.max(deep, was?.deep ?? 0), a: {act: a.act, role: a.role, moment: a.moment, doing: a.doing, asleep: a.asleep}, b: {act: b.act, role: b.role, moment: b.moment, doing: b.doing, asleep: b.asleep}});
+                else was.deep = Math.max(was.deep, deep);
+            }
+        }
+        for (const k of [...runs.keys()]) if (!now.has(k)) runs.delete(k);
+    }
+    worst.forEach((w, key) => {
+        const [a, b] = key.split("|");
+        e.overlaps.push({a: `${slug.get(a)} ${a}`, b: `${slug.get(b)} ${b}`, ...w, deep: +w.deep.toFixed(2)});
+        if (w.n > overlapFrames) failures.push(`${e.pass} ${e.enclosure} ${slug.get(a)} ${a} inside ${slug.get(b)} ${b} for ${w.n} frames, ${w.deep.toFixed(2)} m deep (to frame ${w.frame}; ${JSON.stringify(w.a)} / ${JSON.stringify(w.b)})`);
+    });
+}
+return failures;
+}
+if (arg("regate", "")) {
+    const report = JSON.parse(readFileSync(arg("regate", ""), "utf8"));
+    const failures = gate(report);
+    console.log(failures.length ? `GLITCHES (${failures.length}):\n  ${failures.join("\n  ")}` : "no glitches");
+    for (const e of report.enclosures) for (const o of e.overlaps.sort((p, q) => q.n - p.n).slice(0, 6)) console.log(`  ${e.pass} ${e.enclosure} ${o.a} | ${o.b}: ${o.n} frames, ${o.deep} m`);
+    process.exit(process.argv.includes("--gate") && failures.length ? 1 : 0);
+}
 
 const TYPES = {".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".wasm": "application/wasm", ".webp": "image/webp", ".png": "image/png", ".glb": "model/gltf-binary", ".bin": "application/octet-stream", ".m4a": "audio/mp4", ".hdr": "application/octet-stream", ".ktx2": "image/ktx2", ".map": "application/json", ".css": "text/css"};
 const server = createServer((request, response) => {
@@ -136,7 +241,8 @@ console.log("on", await page.evaluate(() => window.__arkScene.island?.()), "entr
 
 /** Each enclosure's residents (the scene's own roster) and the middle of where they are. */
 const residents = (enclosure) => page.evaluate((enclosure) => {
-    const list = window.__arkDebug.entries().filter((e) => !e.ghost && !e.visitor && e.animal.enclosure === enclosure);
+    // (A zoo enclosure by its residents' enclosure; a town farm's pen, `rural-paddock-2`, by its kept animals' town place.)
+    const list = window.__arkDebug.entries().filter((e) => !e.ghost && !e.visitor && (e.animal.enclosure === enclosure || window.__arkDebug.townPlace?.(e.animal.id)?.place === enclosure));
     return list.map((e) => ({id: e.animal.id, slug: e.animal.model_slug, length: e.length, at: window.__arkScene.locate(e.animal.id)})).filter((r) => r.at);
 }, enclosure);
 const counts = await page.evaluate(() => {
@@ -223,7 +329,7 @@ for (const pass of passes) for (const enclosure of enclosures) {
                     const e = byId.get(id);
                     if (!e) return {id, gone: true};
                     const m = e.middle;
-                    return {id, level: e.level, path: e.posePath ?? null, drawn: Boolean(m), x: m ? m.x : null, y: m ? m.y : null, z: m ? m.z : null, yaw: e.yawNow ?? null, rig: Boolean(e.rigOn), clip: e.rig?.now?.name ?? null, seatY: e.seat ? e.seat.y : null, apartX: e.apart ? e.apart.x : null, apartZ: e.apart ? e.apart.z : null, asleep: Boolean(e.state?.asleep), kind: e.state?.kind ?? e.state?.activity ?? null, sx: e.sched?.pose ? e.sched.pose.x : null, sz: e.sched?.pose ? e.sched.pose.z : null, sAt: e.sched?.at ?? null, px: e.place.x, pz: e.place.z, act: e.act ? (e.act.state ?? "act") : null, held: Boolean(e.held), res: e.residentAt ? [e.residentAt.x, e.residentAt.z] : null, rdx: e.reactive ? e.reactive.dx : null, rdz: e.reactive ? e.reactive.dz : null, ract: e.reactive ? e.reactive.action : null, seat: e.seat ? [e.seat.x, e.seat.z] : null, wander: e.wander ? [e.wander.x, e.wander.z] : null};
+                    return {id, level: e.level, path: e.posePath ?? null, drawn: Boolean(m), x: m ? m.x : null, y: m ? m.y : null, z: m ? m.z : null, yaw: e.yawNow ?? null, rig: Boolean(e.rigOn), clip: e.rig?.now?.name ?? null, seatY: e.seat ? e.seat.y : null, apartX: e.apart ? e.apart.x : null, apartZ: e.apart ? e.apart.z : null, asleep: Boolean(e.state?.asleep), kind: e.state?.kind ?? e.state?.activity ?? null, sx: e.sched?.pose ? e.sched.pose.x : null, sz: e.sched?.pose ? e.sched.pose.z : null, sAt: e.sched?.at ?? null, px: e.place.x, pz: e.place.z, act: e.act ? (e.act.state ?? "act") : null, held: Boolean(e.held), res: e.residentAt ? [e.residentAt.x, e.residentAt.z] : null, rdx: e.reactive ? e.reactive.dx : null, rdz: e.reactive ? e.reactive.dz : null, ract: e.reactive ? e.reactive.action : null, seat: e.seat ? [e.seat.x, e.seat.z] : null, wander: e.wander ? [e.wander.x, e.wander.z] : null, role: e.act?.role ?? null, moment: e.moment?.kind ?? null, doing: e.sched?.pose?.doing ?? null, recipe: e.sched?.pose?.act?.kind ?? e.sched?.pose?.act?.name ?? null, wired: Boolean(e.sched?.wired), sched: Boolean(e.sched)};
                 })
             };
         }, {v: view(distance, k), ids});
@@ -292,29 +398,7 @@ for (const pass of passes) for (const enclosure of enclosures) {
     }
 }
 // MARK: the gate
-const failures = [];
-for (const e of report.enclosures) {
-    for (const a of e.animals) {
-        const why = [];
-        if (a.drawnFlips > 4) why.push(`drawn in and out ${a.drawnFlips} times`);
-        // (A step between two drawn frames: the first difference, not the second's jitter.)
-        const rows = e.frames.map((f) => f.animals.find((x) => x.id.slice(0, 8) === a.id));
-        let step = 0;
-        let turn = 0;
-        for (let i = 1; i < rows.length; i++) {
-            const p = rows[i - 1];
-            const q = rows[i];
-            if (!p?.drawn || !q?.drawn) continue;
-            step = Math.max(step, Math.hypot(q.x - p.x, q.z - p.z));
-            if (p.yaw !== null && q.yaw !== null) turn = Math.max(turn, Math.abs(Math.atan2(Math.sin(q.yaw - p.yaw), Math.cos(q.yaw - p.yaw))));
-        }
-        if (step > Math.max(0.5, a.length * 0.25)) why.push(`a ${step.toFixed(2)} m step in a frame`);
-        if (turn > 1) why.push(`a ${turn.toFixed(2)} rad turn in a frame`);
-        a.step = +step.toFixed(3);
-        a.turn = +turn.toFixed(3);
-        if (why.length) failures.push(`${e.pass} ${e.enclosure} ${a.slug} ${a.id}: ${why.join(", ")}`);
-    }
-}
+const failures = gate(report);
 console.log(failures.length ? `GLITCHES (${failures.length}):\n  ${failures.join("\n  ")}` : "no glitches");
 writeFileSync(path.join(out, `${label}.json`), JSON.stringify({...report, failures, errors: errors.slice(0, 20)}));
 console.log("errors", errors.slice(0, 5));
