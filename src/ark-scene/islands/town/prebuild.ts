@@ -18,6 +18,7 @@ import type {TownBuildData} from "@/ark-scene/islands/town/render/index";
 import type {TownPlace} from "@/ark-scene/islands/town/placement";
 import type {Placement} from "@/ark-scene/placement";
 import type {TownSamplerData} from "@/ark-scene/islands/town/sampler";
+import type {BuildingCamera} from "@/ark-scene/islands/town/render/building-parts";
 
 /** `hold`: the worker keeps its answer until the page sends `{type: "send"}` (`startTown`'s `collect`). */
 export type TownPrebuildRequest = {animals: ArkAnimal[]; origin: {x: number; z: number}; open: string[]; hold?: boolean};
@@ -29,8 +30,10 @@ export type TownPrebuild = {
     placed: {places: Array<[string, Placement]>; town: Array<[string, TownPlace]>; open: string[]};
     sampler: TownSamplerData;
     colliders: Collider[];
+    /** The buildings for the camera: their drawn tops and parts out of their footprints (`render/building-parts.ts`). */
+    cameraParts?: BuildingCamera[];
     ms: number;
-    /** Each step's time in the worker (ms): plan, areas, ground, scenery, buildings, zoo, places, raster, colliders, pack. */
+    /** Each step's time in the worker (ms): plan, areas, ground, scenery, buildings, zoo, places, raster, colliders, cameraParts, pack. */
     steps?: Record<string, number>;
 };
 
@@ -130,6 +133,7 @@ export type TownPrepared = {
     built: TownBuildData | null;
     sampler: TownSamplerData | null;
     colliders: Collider[] | null;
+    cameraParts?: BuildingCamera[] | null;
     where: "worker" | "main";
     /** From asking the worker to the answer primed (ms). */
     ms: number;
@@ -174,6 +178,7 @@ export function startTown(request: TownPrebuildRequest, options: {workerUrl?: st
             built: answer.built,
             sampler: answer.sampler,
             colliders: answer.colliders,
+            cameraParts: answer.cameraParts ?? null,
             where: "worker",
             ms: Math.round(done - started),
             worker: {ms: answer.ms, steps: answer.steps ?? {}, collectedAfter: Math.round(collected - started), waited: Math.round(answered - collected), prime: Math.round(done - answered)}

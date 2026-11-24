@@ -347,7 +347,16 @@ export function collideCamera(obstacles: CameraObstacles, camera: Vector3, targe
             if (obstacle.kind === "box" && obstacle.sight) {
                 // A building of the town: toward what the eye looks at, gliding (about a quarter of a second), so the
                 // view comes through the wall to its near side instead of cutting there.
-                const out = sightExit(obstacle, camera, target, margin);
+                let out = sightExit(obstacle, camera, target, margin);
+                // On through any other building box the line meets on its way out (a porch or a bay in front of the
+                // wall): out of them all, not into the next, where the two pushed the eye to and fro and it rested in the wall.
+                for (let hop = 0; out && hop < 4; hop++) {
+                    const from: Point = out;
+                    const next = obstacles.near(from.x, from.z).find((other) => other !== obstacle && other.kind === "box" && other.sight && !inside(other, target, 0.05) && inside(other, from, margin));
+                    if (!next || next.kind !== "box") break;
+                    out = sightExit(next, from, target, margin) ?? out;
+                    if (out === from) break;
+                }
                 if (out && Math.hypot(out.x - target.x, out.y - target.y, out.z - target.z) >= SIGHT_NEAREST) {
                     const glide = ease(options.dt, 0.08);
                     camera.x += (out.x - camera.x) * glide;
@@ -362,7 +371,48 @@ export function collideCamera(obstacles: CameraObstacles, camera: Vector3, targe
             camera.z += hit.nz * hit.depth * k;
         }
     }
+    if (!options.closeUp) unstick(obstacles, camera, target, margin, options.ground ?? heightAt);
     return Math.hypot(camera.x - start.x, camera.y - start.y, camera.z - start.z);
+}
+
+/** The town's building boxes (`sight`) a point is inside, grown by `grow`; not those the target is inside. */
+function buildingsHolding(obstacles: CameraObstacles, p: Point, target: Point, grow: number): Box[] {
+    const held: Box[] = [];
+    for (const o of obstacles.near(p.x, p.z)) if (o.kind === "box" && o.sight && inside(o, p, grow) && !inside(o, target, 0.05)) held.push(o);
+    return held;
+}
+
+/**
+ * Still inside a building's box after both passes and in another's margin too (a porch in front of the wall: each box
+ * pushed the eye out of itself into the other's margin, to and fro, and it came to rest in the wall): straight out to
+ * the nearest point, past a side or over the top `margin` off or just under it (a balcony's slab, a shop's canopy:
+ * boxes keep no margin below), over the ground, that is inside none of them.
+ */
+function unstick(obstacles: CameraObstacles, camera: Vector3, target: Point, margin: number, groundAt: (x: number, z: number) => number) {
+    const held = buildingsHolding(obstacles, camera, target, 0);
+    // (Inside one alone, it is on its way out: the glide toward the target, `sightExit`, is the design.)
+    if (!held.length || buildingsHolding(obstacles, camera, target, margin + 0.02).length < 2) return;
+    let best: Point | null = null;
+    let bestD = Infinity;
+    const off = margin + 0.01;
+    for (const box of held) {
+        const cos = Math.cos(box.rotation);
+        const sin = Math.sin(box.rotation);
+        const dx = camera.x - box.x;
+        const dz = camera.z - box.z;
+        const lx = dx * cos - dz * sin;
+        const lz = dx * sin + dz * cos;
+        // (Back from the box's frame: the inverse turn.)
+        const back = (x: number, z: number, y: number): Point => ({x: box.x + x * cos + z * sin, y, z: box.z - x * sin + z * cos});
+        for (const p of [back(box.hx + off, lz, camera.y), back(-box.hx - off, lz, camera.y), back(lx, box.hz + off, camera.y), back(lx, -box.hz - off, camera.y), back(lx, lz, box.y1 + off), back(lx, lz, box.y0 - 0.01)]) {
+            const d = Math.hypot(p.x - camera.x, p.y - camera.y, p.z - camera.z);
+            if (d < bestD && p.y > Math.max(groundAt(p.x, p.z), 0) + 0.03 && !buildingsHolding(obstacles, p, target, 0).length) {
+                best = p;
+                bestD = d;
+            }
+        }
+    }
+    if (best) camera.set(best.x, best.y, best.z);
 }
 
 /** The share of a gap closed in `dt` seconds by an exponential approach with time constant `tau` (1 when dt is 0: snap). */
