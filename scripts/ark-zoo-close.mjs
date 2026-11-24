@@ -11,7 +11,7 @@
  *   node scripts/ark-zoo-close.mjs --snapshot /ark-local/live.json --out <dir>
  *        [--enclosures savanna_paddocks-1,childrens_farm-1]  (default: the elephants' and the three busiest outdoor ones)
  *        [--hour 11] [--frames 240 --hold 180] [--from 45 --to 4] [--every 2] [--label before]
- *        [--width 960 --height 600] [--gl metal] [--follow <resident id prefix>]
+ *        [--width 960 --height 600] [--gl metal] [--follow <resident id>[,<id>]] [--azimuth <rad>]
  *        [--gate]       exit 1 when a resident glitches: drawn in and out more than 4 times, or a step between two drawn
  *                       frames bigger than its length's quarter and 0.5 m (a walk is centimetres a frame), or a turn of
  *                       more than 1 rad in a frame
@@ -47,8 +47,27 @@ const wanted = arg("enclosures", "");
 // `--drift` m off as the camera comes in: the page's zoom to the cursor moves the target as a viewer zooms).
 const passes = arg("passes", "fixed,drift").split(",");
 const drift = Number(arg("drift", "20"));
-// (`--follow <id prefix>`: the view's target on that resident every frame, wherever it goes: an elephant pair's close-up.)
-const follow = arg("follow", "");
+// (`--follow <id>[,<id>]`: the view's target on those residents' middle every frame, wherever they go: an elephant pair's close-up; full ids are selected first so they join.)
+const follows = arg("follow", "").split(",").filter(Boolean);
+// (`--azimuth`: the view's turn about the target, rad; 0.6 by default.)
+const azimuth = Number(arg("azimuth", "0.6"));
+/** The followed residents' middle on the page (their mean, each by the scene's `locate`), and how far apart the first two are (m). */
+const followAt = (follows) => {
+    const at = [];
+    for (const f of follows) {
+        const e = window.__arkDebug.entries().find((q) => q.animal.id.startsWith(f));
+        const l = e && window.__arkScene.locate(e.animal.id);
+        if (l) at.push({x: l.x, y: l.ground, z: l.z});
+    }
+    if (!at.length) return null;
+    const m = {x: 0, y: 0, z: 0, n: at.length, apart: at.length > 1 ? Math.hypot(at[0].x - at[1].x, at[0].z - at[1].z) : null};
+    for (const a of at) {
+        m.x += a.x / at.length;
+        m.y += a.y / at.length;
+        m.z += a.z / at.length;
+    }
+    return m;
+};
 mkdirSync(out, {recursive: true});
 
 // MARK: the gate (a function: `--regate <label>.json` runs it again on a report already made, no browser)
@@ -266,8 +285,26 @@ if (process.argv.includes("--dump-leaders")) {
 }
 const report = {label, hour, flyFrames, holdFrames, from, to, enclosures: []};
 for (const pass of passes) for (const enclosure of enclosures) {
-    // (The town lets its animals join by where the camera is: stand over the enclosure first, on the page's own frames.)
+    // (The town lets its animals join by where the camera is: stand over the enclosure first, on the page's own frames.
+    // With `--follow`, stand over that resident's own place first, so it and its neighbours are drawn and in the list.)
+    if (follows.length) {
+        // (Far from the camera it is not joined yet: the host's own select, close up, flies there and joins it; `--follow` takes full ids for that.)
+        if (follows[0].length === 36) console.log("select", await page.evaluate((id) => typeof window.__arkScene.select === "function" ? (window.__arkScene.select(id, true), "ok") : "no select", follows[0]));
+        let at = null;
+        for (let k = 0; k < 45; k++) {
+            await wait(1000);
+            at = await page.evaluate(followAt, follows);
+            if (at && at.n === follows.length && k >= 12) break;
+        }
+        await page.evaluate(() => window.__arkScene.select?.(null));
+        console.log("follow", follows.join(","), JSON.stringify(at));
+        if (at) {
+            await page.evaluate((v) => { window.__arkDebug.controls.minDistance = 0.05; window.__arkScene.setView(v); }, {target: at, distance: to, polar: 1.12, azimuth});
+            await wait(8000);
+        }
+    }
     let list = await residents(enclosure);
+    for (const f of follows) if (!list.some((r) => r.id.startsWith(f))) console.log(enclosure, "followed resident", f, "not in this enclosure's drawn list");
     if (!list.length) {
         console.log(enclosure, "no residents drawn");
         continue;
@@ -278,11 +315,11 @@ for (const pass of passes) for (const enclosure of enclosures) {
         c.y += r.at.ground / list.length;
         c.z += r.at.z / list.length;
     }
-    if (follow) {
-        const f = list.find((r) => r.id.startsWith(follow));
-        if (f) Object.assign(c, {x: f.at.x, y: f.at.ground, z: f.at.z});
+    if (follows.length) {
+        const at = await page.evaluate(followAt, follows);
+        if (at) Object.assign(c, {x: at.x, y: at.y, z: at.z});
     }
-    const view = (distance, k = 1) => ({target: pass === "drift" ? {x: c.x + drift * (1 - k) * Math.cos(0.6), y: c.y, z: c.z - drift * (1 - k) * Math.sin(0.6)} : c, distance, polar: 1.12, azimuth: 0.6});
+    const view = (distance, k = 1) => ({target: pass === "drift" ? {x: c.x + drift * (1 - k) * Math.cos(0.6), y: c.y, z: c.z - drift * (1 - k) * Math.sin(0.6)} : c, distance, polar: 1.12, azimuth});
     await page.evaluate((v) => { window.__arkDebug.controls.minDistance = 0.05; window.__arkScene.setView(v); }, view(to));
     // (Models and rigs in, on the page's own frames.)
     for (let k = 0; k < 60; k++) {
@@ -323,17 +360,21 @@ for (const pass of passes) for (const enclosure of enclosures) {
         // From `from` to `to` (m) on an even log scale, then held at `to`.
         const k = Math.min(i / Math.max(flyFrames - 1, 1), 1);
         const distance = from * Math.pow(to / from, k);
-        const row = await page.evaluate(({v, ids, follow}) => {
-            if (follow) {
-                const e = window.__arkDebug.entries().find((q) => q.animal.id.startsWith(follow));
-                const at = e && window.__arkScene.locate(e.animal.id);
-                if (at) v = {...v, target: {x: at.x, y: at.ground, z: at.z}};
+        const row = await page.evaluate(({v, ids, follows, followAt}) => {
+            let pair = null;
+            if (follows.length) {
+                const at = (0, eval)(followAt)(follows);
+                if (at) {
+                    v = {...v, target: {x: at.x, y: at.y, z: at.z}};
+                    pair = at.apart;
+                }
             }
             window.__arkScene.setView(v);
             window.__step.run(1);
             const byId = new Map(window.__arkDebug.entries().map((e) => [e.animal.id, e]));
             const cam = window.__arkDebug.camera;
             return {
+                pair,
                 frame: window.__step.frame(),
                 camera: {x: cam.position.x, y: cam.position.y, z: cam.position.z, near: cam.near, far: cam.far},
                 animals: ids.map((id) => {
@@ -343,7 +384,7 @@ for (const pass of passes) for (const enclosure of enclosures) {
                     return {id, level: e.level, path: e.posePath ?? null, drawn: Boolean(m), x: m ? m.x : null, y: m ? m.y : null, z: m ? m.z : null, yaw: e.yawNow ?? null, rig: Boolean(e.rigOn), clip: e.rig?.now?.name ?? null, seatY: e.seat ? e.seat.y : null, apartX: e.apart ? e.apart.x : null, apartZ: e.apart ? e.apart.z : null, asleep: Boolean(e.state?.asleep), kind: e.state?.kind ?? e.state?.activity ?? null, sx: e.sched?.pose ? e.sched.pose.x : null, sz: e.sched?.pose ? e.sched.pose.z : null, sAt: e.sched?.at ?? null, px: e.place.x, pz: e.place.z, act: e.act ? (e.act.state ?? "act") : null, held: Boolean(e.held), res: e.residentAt ? [e.residentAt.x, e.residentAt.z] : null, rdx: e.reactive ? e.reactive.dx : null, rdz: e.reactive ? e.reactive.dz : null, ract: e.reactive ? e.reactive.action : null, seat: e.seat ? [e.seat.x, e.seat.z] : null, wander: e.wander ? [e.wander.x, e.wander.z] : null, role: e.act?.role ?? null, moment: e.moment?.kind ?? null, doing: e.sched?.pose?.doing ?? null, recipe: e.sched?.pose?.act?.kind ?? e.sched?.pose?.act?.name ?? null, wired: Boolean(e.sched?.wired), sched: Boolean(e.sched), ex: e.sched?.eased ? e.sched.eased.dx : null, ez: e.sched?.eased ? e.sched.eased.dz : null, seatOn: e.seat?.on ?? null, seatIn: e.seat?.inside ?? null, seatPushes: e.seat?.pushes ?? null};
                 })
             };
-        }, {v: view(distance, k), ids, follow});
+        }, {v: view(distance, k), ids, follows, followAt: `(${followAt})`});
         row.distance = distance;
         frames.push(row);
         if (i % every === 0) {
@@ -352,6 +393,10 @@ for (const pass of passes) for (const enclosure of enclosures) {
         }
     }
     await page.evaluate(() => window.__step.free());
+    if (follows.length > 1) {
+        const apart = frames.map((f) => f.pair).filter((d) => d != null).sort((a, b) => a - b);
+        if (apart.length) console.log("followed pair apart (m): min", apart[0].toFixed(2), "median", apart[apart.length >> 1].toFixed(2), "max", apart[apart.length - 1].toFixed(2), "frames", apart.length);
+    }
     if (process.argv.includes("--trap-acts")) writeFileSync(path.join(out, `${name}-acts.json`), JSON.stringify(await page.evaluate(() => window.__actWrites), null, 1));
     // MARK: per animal
     const slugOf = new Map(list.map((r) => [r.id, r.slug]));
