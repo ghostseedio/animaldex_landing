@@ -139,7 +139,14 @@ try {
                 await page.evaluate((id) => window.postMessage({type: "ark:select", id, closeUp: true}, "*"), animal.id);
                 await page.waitForSelector("[data-testid=ark-card-eat-soon]", {timeout: 60000}).catch(() => null);
                 await page.waitForTimeout(6000);
-                const said = await page.evaluate(() => ({card: document.querySelector("[data-testid=ark-card-eat-soon]")?.textContent ?? null, kind: document.querySelector("[data-testid=ark-card-eat-soon]")?.getAttribute("data-kind") ?? null, bars: document.querySelector("[data-ark-bars-soon]")?.textContent ?? null}));
+                const said = await page.evaluate(() => {
+                    // What covers the floating bars (the buttons and chips over the view): must be nothing.
+                    const bars = document.querySelector("[data-ark-bars=selected]")?.getBoundingClientRect();
+                    const over = [...document.querySelectorAll('#ark-ui #ark-ticker, #ark-ui #ark-aboard > button, #ark-ui [role="switch"], #ark-sound')].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 1 && r.height > 1);
+                    const hit = (r) => bars && r.left < bars.right && r.right > bars.left && r.top < bars.bottom && r.bottom > bars.top;
+                    const box = (r) => [r.left, r.top, r.right, r.bottom].map(Math.round);
+                    return {card: document.querySelector("[data-testid=ark-card-eat-soon]")?.textContent ?? null, kind: document.querySelector("[data-testid=ark-card-eat-soon]")?.getAttribute("data-kind") ?? null, bars: document.querySelector("[data-ark-bars-soon]")?.textContent ?? null, barsBox: bars ? box(bars) : null, covered: over.filter(hit).map(box)};
+                });
                 const file = path.join(out, `${label}-${lang}-${who}.png`);
                 await page.screenshot({path: file});
                 log.push({file, who, name: animal.name, lang, ...said, engineOdds: odds.get(animal.id) ?? null});
