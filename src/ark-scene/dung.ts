@@ -76,25 +76,43 @@ export function sniffsAfter(key: string): boolean {
     return unit(`${key}:sniff`) < SNIFF_SHARE;
 }
 
+/** Where its mark lies: under its tail, half its length behind where its day has it (`p`, facing `yaw`). */
+export function dungMarkAt(p: {x: number; z: number}, yaw: number, length: number): {x: number; z: number} {
+    return {x: p.x - Math.sin(yaw) * length * 0.5, z: p.z - Math.cos(yaw) * length * 0.5};
+}
+
+/** How long the turn round to sniff it, and the turn back, take (s). */
+const SNIFF_TURN = 1.5;
+
 /**
- * Its pose while it pauses for one (`s` seconds since it fell, at the mark `p`, facing `yaw`), or null when over.
- * A meat eater squats (its rear lowered); a plant eater just stands. Then, sometimes, it turns and sniffs.
+ * Its pose while it pauses for one (`s` seconds since it fell, where its day has it `p`, facing `yaw`), or null when over
+ * (`length`: its body's, kept for the callers; the mark's place is `dungMarkAt`'s).
+ * A meat eater squats (its rear lowered); a plant eater just stands. Then, sometimes, it turns round on the spot (its
+ * head comes to the mark under its tail, `dungMarkAt`), sniffs it, and turns back.
+ *
+ * ZOOGLITCH (the owner, 2026-11-24: zoo enclosures "glitch when I get close"): it stays where its day has it, start to
+ * end, and ends facing as it began. It stood half its length ahead of its day's place (to bring the mark under its tail)
+ * and ended turned round a quarter of its length back: an elephant of the live Ark's savanna went 2.2 m forward as the
+ * pause began, and 1.1 m and half a turn in one frame as it ended.
  */
 export function dungPose(p: {x: number; z: number}, yaw: number, base: number, diet: DungDiet, length: number, key: string, s: number): ActPose | null {
     const sniff = sniffsAfter(key);
-    const end = DUNG_PAUSE_SECONDS + (sniff ? DUNG_SNIFF_SECONDS + 1.5 : 0);
+    const end = DUNG_PAUSE_SECONDS + (sniff ? DUNG_SNIFF_SECONDS + SNIFF_TURN : 0);
     if (s < 0 || s >= end) return null;
-    // (It stands a little ahead of the mark: the mark is under its tail.)
-    const ahead = {x: p.x + Math.sin(yaw) * length * 0.5, z: p.z + Math.cos(yaw) * length * 0.5};
-    const mk = (yawNow: number, state: string, pitch: number): ActPose => ({x: ahead.x, z: ahead.z, base, yaw: yawNow, pitch, roll: 0, scale: 1, dim: 0, hidden: false, state, speed: 0});
+    const mk = (yawNow: number, state: string, pitch: number): ActPose => ({x: p.x, z: p.z, base, yaw: yawNow, pitch, roll: 0, scale: 1, dim: 0, hidden: false, state, speed: 0});
     if (s < DUNG_PAUSE_SECONDS) {
         const k = Math.min(s / 0.8, 1, (DUNG_PAUSE_SECONDS - s) / 0.8);
         return mk(yaw, "scan", diet === "plants" ? 0 : -0.16 * Math.max(k, 0));
     }
+    // Round (SNIFF_TURN s), the sniff, and back (SNIFF_TURN s, ending as it began).
     const t = s - DUNG_PAUSE_SECONDS;
-    const turn = Math.min(t / 1.5, 1);
-    const e = turn * turn * (3 - 2 * turn);
-    return {...mk(yaw + Math.PI * e, turn < 1 ? "walk" : "eat", turn < 1 ? 0 : 0.12), x: ahead.x - Math.sin(yaw) * length * 0.25 * e, z: ahead.z - Math.cos(yaw) * length * 0.25 * e, meal: undefined};
+    const smooth = (u: number) => {
+        const c = Math.min(Math.max(u, 0), 1);
+        return c * c * (3 - 2 * c);
+    };
+    const round = smooth(t / SNIFF_TURN) - smooth((t - DUNG_SNIFF_SECONDS) / SNIFF_TURN);
+    const turning = t < SNIFF_TURN || t > DUNG_SNIFF_SECONDS;
+    return {...mk(yaw + Math.PI * round, turning ? "walk" : "eat", 0.12 * round), meal: undefined};
 }
 
 /**
