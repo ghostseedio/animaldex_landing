@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {matingPose, matingScript, meetingSpot, type MatingBody} from "@/ark-scene/live-matings";
-import {LiveSeeking, seekPose, SEEK_LOOK, SEEK_WALK} from "@/ark-scene/live-seeking";
+import {LiveSeeking, seekLive, seekPose, SEEK_LOOK, SEEK_WALK} from "@/ark-scene/live-seeking";
 import type {ActPose} from "@/ark-scene/acts";
 
 const body = (x: number, z: number, o: Partial<MatingBody> = {}): MatingBody => ({x, z, pace: 1, length: 1, height: 0.5, plan: "mammal", courtship: null, male: null, ...o});
@@ -101,6 +101,122 @@ test("the seeking layer: only while its day has it about on the ground, never ov
     layer.step(20);
     assert.equal(es[0].act, null, "let go once the state has gone");
     assert.equal(layer.size, 0);
+});
+
+/**
+ * ZOOGLITCH (the owner, 2026-11-24: zoo enclosures "glitch when I get close"): the scene's loop in small. Each frame the
+ * seeking layer steps, then the scene poses every animal in range (`posedAt`) and draws the ones whose pose is in view.
+ * The live Ark's mate-seeking eland: its day has it in view, its loop (three lengths out) takes it out of view.
+ */
+function seekingScene(rule: "drawn" | "posed") {
+    type E = {id: string; held?: boolean; visitor?: boolean; act: ActPose | null; posedAt?: number; drawn: boolean; drawnAt: {x: number; z: number} | null};
+    const eland: E = {id: "eland", act: null, drawn: false, drawnAt: null};
+    // (The camera close on its day's place: a metre and a half of the loop out, it is off the screen.)
+    const inView = (x: number) => x < 1.5;
+    let now = 0;
+    const layer = new LiveSeeking<E>({
+        // The rule before: drawn this frame (`middle`). After: posed by the scene in the last second (`seekLive`).
+        find: () => (rule === "drawn" ? (eland.drawn ? eland : null) : seekLive(eland, now) ? eland : null),
+        scheduleAt: () => ({x: 0, z: 0, yaw: 0, doing: "wander", aloft: false}),
+        ground: flat,
+        walk: () => 1.2,
+        length: () => 2.5,
+        setAct: (e, pose) => {
+            e.act = pose;
+        },
+        busy: () => false
+    });
+    layer.set(["eland"], -100);
+    const frames: Array<{acting: boolean; at: {x: number; z: number} | null}> = [];
+    for (let i = 0; i < 1800; i++) {
+        layer.step(now);
+        // The scene: its pose (the act's, else its day's), posed whether or not in view; drawn only in view.
+        const at = eland.act ? {x: eland.act.x, z: eland.act.z} : {x: 0, z: 0};
+        eland.posedAt = now;
+        eland.drawn = inView(at.x);
+        eland.drawnAt = eland.drawn ? at : null;
+        frames.push({acting: Boolean(eland.act), at: eland.drawnAt});
+        now += 1 / 60;
+    }
+    let flips = 0;
+    let jump = 0;
+    for (let i = 1; i < frames.length; i++) {
+        if (frames[i].acting !== frames[i - 1].acting) flips++;
+        const a = frames[i - 1].at;
+        const b = frames[i].at;
+        if (a && b) jump = Math.max(jump, Math.hypot(b.x - a.x, b.z - a.z));
+    }
+    return {flips, jump, drawnFlips: frames.slice(1).filter((f, i) => Boolean(f.at) !== Boolean(frames[i].at)).length};
+}
+
+test("zoo close-up: taken only while drawn, the seeking act flickered (the eland's 13 m blink)", () => {
+    const before = seekingScene("drawn");
+    assert.ok(before.flips > 6, `the act came and went: ${before.flips} times in 30 s`);
+});
+
+test("zoo close-up: taken while the scene poses it, the act holds and nothing jumps", () => {
+    const after = seekingScene("posed");
+    assert.equal(after.flips, 1, "taken once and held: it never comes and goes");
+    assert.ok(after.drawnFlips <= 2, `drawn in and out at most once each way as it walks its loop (${after.drawnFlips})`);
+    assert.ok(after.jump < 0.1, `no jump between frames (${after.jump.toFixed(3)} m)`);
+});
+
+test("seekLive: posed in the last second, never whether drawn", () => {
+    assert.equal(seekLive({posedAt: 10}, 10.5), true);
+    assert.equal(seekLive({posedAt: 10}, 11.5), false, "out of range a second: let go");
+    assert.equal(seekLive({}, 10), false, "never posed");
+    assert.equal(seekLive({posedAt: 10, held: true}, 10), false);
+    assert.equal(seekLive({posedAt: 10, visitor: true}, 10), false);
+});
+
+test("the seeking act eases out from its day's place when it starts, however long the state has been on", () => {
+    type E = {act: ActPose | null};
+    const e: E = {act: null};
+    let found = false;
+    const layer = new LiveSeeking<E>({find: () => (found ? e : null), scheduleAt: () => ({x: 5, z: 5, yaw: 0, doing: "wander", aloft: false}), ground: flat, walk: () => 1, length: () => 2, setAct: (x, pose) => (x.act = pose), busy: () => false});
+    layer.set(["a"], 0);
+    layer.step(500);
+    assert.equal(e.act, null, "not posed by the scene: nothing");
+    found = true;
+    layer.step(1000);
+    assert.deepEqual([e.act!.x, e.act!.z], [5, 5], "its first frame: where its day has it (it came into range: no jump onto its loop)");
+    let most = 0;
+    let last = {x: 5, z: 5};
+    for (let t = 1000; t < 1006; t += 1 / 60) {
+        layer.step(t);
+        most = Math.max(most, Math.hypot(e.act!.x - last.x, e.act!.z - last.z));
+        last = {x: e.act!.x, z: e.act!.z};
+    }
+    assert.ok(Math.hypot(last.x - 5, last.z - 5) > 1, "then out on its loop");
+    assert.ok(most < 0.15, `walking there, never a jump (${most.toFixed(3)} m a frame)`);
+});
+
+test("the seeking loop keeps inside its enclosure (its bound), on the ground there", () => {
+    type E = {act: ActPose | null};
+    const e: E = {act: null};
+    const fence = 5.5;
+    const layer = new LiveSeeking<E>({
+        find: () => e,
+        scheduleAt: () => ({x: 5, z: 5, yaw: 0, doing: "wander", aloft: false}),
+        ground: (x) => x * 0.01,
+        walk: () => 1,
+        length: () => 4,
+        setAct: (x, pose) => (x.act = pose),
+        busy: () => false,
+        bound: (_, pose) => {
+            pose.x = Math.min(pose.x, fence);
+        }
+    });
+    layer.set(["a"], 0);
+    let outside = 0;
+    let off = 0;
+    for (let t = 0; t < 60; t += 0.1) {
+        layer.step(t);
+        if (e.act!.x > fence + 1e-9) outside++;
+        off = Math.max(off, Math.abs(e.act!.base - e.act!.x * 0.01));
+    }
+    assert.equal(outside, 0, "never past its fence");
+    assert.ok(off < 1e-9, "on the ground where the bound put it");
 });
 
 test("a clutch's countdown: the bar from the laying to the hatching, about how long in words, gone once due", async () => {

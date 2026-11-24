@@ -279,7 +279,7 @@ import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating tap)
 import {CLUTCH_FRAME_POLAR, CLUTCH_SHOWN_SECONDS, clutchFrame, clutchSize, kinFrameApart, seenAt} from "@/ark-scene/live/breed-focus"; // 3.3 fix (breeding taps)
 import {LiveBirths, newbornScale} from "@/ark-scene/live-births";
-import {LiveSeeking} from "@/ark-scene/live-seeking";
+import {LiveSeeking, seekLive} from "@/ark-scene/live-seeking";
 import {LiveJourneys} from "@/ark-scene/live-journeys"; // MATE-FINDING (decision 432)
 import {LiveClutches} from "@/ark-scene/live-clutches";
 import {reproOf, ReproFx} from "@/ark-scene/repro"; // REAL-REPRODUCTION (decision 440)
@@ -308,7 +308,7 @@ import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 import {defenceMoveOf, defencePack, defenceSaid, disturbedNow, escapesRunning, holdsNow, newDefenceState, predatorBeside, stepDefence, type DefenceSpec, type DefenceState} from "@/ark-scene/defence-moves";
 // p3 (shake): shaking off the water after a swim.
 import {SHAKE_LINE, shakePackOf, shakeStartOf} from "@/ark-scene/water-shake";
-import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, DUNG_VISIT_CROWD, DUNG_VISIT_METRES, dungAlpha, dungDiet, dungDrops, dungPose, dungVisitPose, eatsDung, leavesDung} from "@/ark-scene/dung";
+import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, DUNG_VISIT_CROWD, DUNG_VISIT_METRES, dungAlpha, dungDiet, dungDrops, dungMarkAt, dungPose, dungVisitPose, eatsDung, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
 import {speciesCare} from "@/lib/ark-age";
 // 3.3 batch (C): young with their recorded mother
@@ -623,6 +623,8 @@ type Entry = {
     apart?: {x: number; z: number};
     /** Development (ARK-CONTACT round 4): which path set its pose this frame. */
     posePath?: string;
+    /** ZOOGLITCH: when the frame last worked out its pose (the scene's clock, s), in view or not: `live-seeking.ts` seekLive. */
+    posedAt?: number;
     /** Powers you can see (decision 420, `power-show.ts`): its kind's mechanism (false: none) and what it shows now. */
     powerKind?: ArkPower | false;
     power?: ArkPowerFrame | null;
@@ -2198,11 +2200,49 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const onIt = list.filter((e) => e.sched && !e.visitor);
         const sizes = new Map<Entry, number>();
         for (const e of onIt) if (e.leader?.sched) sizes.set(e.leader, (sizes.get(e.leader) ?? 1) + 1);
+        // ZOOGLITCH (the owner, 2026-11-24: zoo enclosures "glitch when I get close"): a kept town animal keeps to its
+        // placement's leader whether or not that leader is drawn one by one. Wired only to a leader out as an animal of
+        // its own, a follower roamed about its own place while the leader stood as a resting figure, and the camera
+        // coming in (`near-kept.ts` brings a zoo enclosure out whole) wired it to the leader: the live Ark's paddock-2
+        // elephant, its leader in paddock 1, went 37 m in a frame to the fence nearest its leader. Not drawn, the leader
+        // is the same schedule animal it would be drawn (a kept animal keeps its home: no spacing moves it), and the
+        // group's size is the whole snapshot's, not the drawn ones'.
+        const keptTown = (e: Entry) => Boolean(island && townIds.has(e.animal.id) && island.kept(e.animal.id));
+        const snapshotById = new Map(current.animals.map((animal) => [animal.id, animal]));
+        const keptSizes = new Map<string, number>();
+        for (const e of onIt) {
+            const lead = e.place.leader;
+            if (!lead || lead === e.animal.id || !keptTown(e) || keptSizes.has(lead)) continue;
+            let n = 1;
+            placedAll.forEach((place, id) => {
+                if (id !== lead && place.leader === lead && snapshotById.get(id)?.model_slug === e.animal.model_slug) n++;
+            });
+            keptSizes.set(lead, n);
+        }
+        const standIns = new Map<string, Sched | null>();
+        const keptLeader = (e: Entry): {animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkAnimal["activity"]} | null => {
+            const id = e.place.leader;
+            if (!id || id === e.animal.id || !keptTown(e)) return null;
+            const out = entryById.get(id);
+            if (out?.sched) return {animal: out.sched.animal, profile: out.sched.profile, activity: out.animal.activity};
+            const animal = snapshotById.get(id);
+            const place = placedAll.get(id);
+            if (!animal || !place) return null;
+            let sched = standIns.get(id);
+            if (sched === undefined) standIns.set(id, (sched = makeSched(animal, place, arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan).display)));
+            return sched ? {animal: sched.animal, profile: sched.profile, activity: animal.activity} : null;
+        };
         // (Worked out now, set when the spacing is done: until then the schedules run as they were wired before.)
         const groups = new Map<Entry, ScheduleGroup | null>();
         for (const e of onIt) {
             const own = e.sched!;
-            const leader = e.leader && e.leader.sched && e.leader.animal.model_slug === e.animal.model_slug && (GROUPED.has(own.profile.social) || groupLives(e.animal.model_slug)) ? e.leader : null;
+            const grouped = GROUPED.has(own.profile.social) || groupLives(e.animal.model_slug);
+            const kept = grouped ? keptLeader(e) : null;
+            if (kept && snapshotById.get(e.place.leader!)?.model_slug === e.animal.model_slug) {
+                groups.set(e, {leader: kept.animal, profile: kept.profile, activity: kept.activity, rank: Math.max(e.place.rank ?? 1, 1), size: Math.max(keptSizes.get(e.place.leader!) ?? 2, 2)});
+                continue;
+            }
+            const leader = e.leader && e.leader.sched && e.leader.animal.model_slug === e.animal.model_slug && grouped ? e.leader : null;
             groups.set(e, leader ? {leader: leader.sched!.animal, profile: leader.sched!.profile, activity: leader.animal.activity, rank: Math.max(e.place.rank ?? 1, 1), size: sizes.get(leader) ?? 2} : null);
         }
         // (Who really leads a group: only members that are grouped count, a species that does not flock leads nobody.)
@@ -2254,7 +2294,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // A group's members share their leader's place and range (they roost and roam round it).
             for (const e of onIt) {
                 const lead = e.sched!.animal.group?.leader;
-                if (!lead || !spaced.has(e.leader!.animal.id)) continue;
+                // (A kept follower whose leader is not drawn one by one has no `leader` entry: its home is kept anyway.)
+                if (!lead || !e.leader || !spaced.has(e.leader.animal.id)) continue;
                 e.sched!.animal.home = {...lead.home};
                 e.sched!.animal.range = lead.range;
                 const shift = shifts.get(e.leader!.animal.id);
@@ -6483,7 +6524,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let snapEased = false;
     let snapNow = false;
     const IDLE_ABILITIES = {jaw: false, eyes: true, nose: false, tail: false};
+    /** ZOOGLITCH: the scene's clock at the last frame's poses (`updateInstances`), for `seekLive`. */
+    let posedNow = 0;
     const updateInstances = (now: number) => {
+        posedNow = now;
         const dt = reducedMotion || !lastUpdate ? 0 : Math.min(now - lastUpdate, 0.1);
         frameDt = dt;
         lastUpdate = now;
@@ -6642,6 +6686,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const modelScale = model ? entry.length / model.bodyLength : 1;
             const modelHeight = model ? model.height * modelScale : entry.length * 0.6;
             if (model && entry.rig) stepWander(entry, modelScale, dt, now);
+            entry.posedAt = now;
             const where = pose(entry, model, modelHeight, now);
             // p2 (ocean): an open-ocean animal's shape on the water over it, seen from above (`ocean-shadows.ts`).
             if (entry.ocean) {
@@ -10430,7 +10475,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     }
                     if (!place) continue;
                     const age = epoch - drop.at;
-                    marks.push({key: drop.key, x: place.x, y: 0, z: place.z, kind: "dung", flattened: false, size: Math.min(Math.max(e.length * 0.08, 0.05), 0.3), amount: 1, alpha: dungAlpha(age), seed: drop.key});
+                    // (Under its tail: its pause keeps it where its day has it, `dungPose`.)
+                    const mark = dungMarkAt(place, place.yaw, e.length);
+                    marks.push({key: drop.key, x: mark.x, y: 0, z: mark.z, kind: "dung", flattened: false, size: Math.min(Math.max(e.length * 0.08, 0.05), 0.3), amount: 1, alpha: dungAlpha(age), seed: drop.key});
                     if (place.still && age < DUNG_PAUSE_SECONDS + DUNG_SNIFF_SECONDS + 2) pauses.push({entry: e, key: drop.key, at: drop.at, place});
                 }
             }
@@ -10580,9 +10627,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * two seconds (the read changes every 45).
      */
     const liveSeeking = new LiveSeeking<Entry>({
+        // ZOOGLITCH: posed by the frame, not drawn by it (`seekLive`): drawn is what the act changes, and gated on it the
+        // act came and went every frame or two (the savanna paddock's mate-seeking eland, 13 m between its two places).
         find: (id) => {
             const e = entryById.get(id);
-            return e && !e.held && !e.visitor && e.middle ? e : null;
+            return e && seekLive(e, posedNow) ? e : null;
         },
         scheduleAt: (entry, epoch) => {
             if (!entry.sched || !world || reducedMotion) return null;
@@ -10595,7 +10644,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setAct: (entry, pose) => {
             entry.act = pose;
         },
-        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id) || liveBirths.pins().includes(entry.animal.id) || liveJourneys.pins().includes(entry.animal.id))
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id) || liveBirths.pins().includes(entry.animal.id) || liveJourneys.pins().includes(entry.animal.id)),
+        // ZOOGLITCH: a zoo resident's or a penned animal's loop inside its fence: an act's pose skips the bound its
+        // schedule's pose gets (`poseCore`), and the loop reaches three lengths out (a giraffe's 12 m in a 28 m paddock).
+        bound: (entry, pose) => {
+            if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, pose);
+        }
     });
     /**
      * MATE-FINDING (decision 432): the record's trips to a far mate (`live-journeys.ts`): from its old home to its new one,

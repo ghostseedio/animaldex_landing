@@ -8,6 +8,18 @@
  *
  * A meal, a mating, a birth or a moment has the animal first (`busy`). It eases in when the state arrives and out when
  * it goes, so nobody jumps.
+ *
+ * ZOOGLITCH (the owner, 2026-11-24: zoo enclosures "glitch when I get close"): who takes the act must never depend on
+ * the act's own outcome. The scene's host took only an animal drawn this frame (`middle`); the loop (three of its
+ * lengths out, an eland's 7.6 m, a giraffe's 12 m) put it out of view or into another level, so the next frame it was not
+ * drawn, lost the act, was drawn back where its day has it, and took the act again: the live Ark's mate-seeking eland in
+ * the savanna paddock blinked in and out every frame or two with the camera still, 13 m between its two places, and a
+ * giraffe beside it, shoved off the act's spot at once (`keepApart`) on the frames the act was there, snapped 3.1 m back
+ * and forth with it. Now an
+ * animal the scene poses (`seekLive`: posed in the last second, whatever its act) takes it; one that starts the act eases
+ * out from where its day has it (`EASE`), so one coming into range never jumps onto its loop; and its loop keeps inside
+ * its enclosure or pen (`bound`: an act's pose skips the bound its schedule's pose gets, and the loop reaches three
+ * lengths out).
  */
 
 import type {ActPose} from "@/ark-scene/acts";
@@ -21,7 +33,21 @@ export type LiveSeekingHost<E> = {
     length: (entry: E) => number;
     setAct: (entry: E, pose: ActPose | null) => void;
     busy: (entry: E) => boolean;
+    /** Its hard bound (a zoo enclosure's mask, a pen's rails), moving the pose's x and z in place; absent: none. */
+    bound?: (entry: E, pose: ActPose) => void;
 };
+
+/** How recently (s) the scene must have posed an animal for it to take the act (`seekLive`). */
+export const SEEK_POSED_WITHIN = 1;
+
+/**
+ * Whether an animal takes the seeking act: aboard, not the visitor, and posed by the scene in the last
+ * `SEEK_POSED_WITHIN` seconds (`posedAt`, the scene's clock, set for every animal it works a pose out for, in view or
+ * not). Never whether it is drawn: drawn is what the act itself changes.
+ */
+export function seekLive(e: {held?: boolean; visitor?: boolean; posedAt?: number}, now: number): boolean {
+    return !e.held && !e.visitor && e.posedAt !== undefined && now - e.posedAt >= 0 && now - e.posedAt < SEEK_POSED_WITHIN;
+}
 
 /** One loop: walking this long (s), then looking about this long. */
 export const SEEK_WALK = 9;
@@ -73,7 +99,8 @@ export function seekPose(id: string, at: {x: number; z: number; yaw: number}, t:
 
 export class LiveSeeking<E> {
     private ids = new Map<string, {since: number; until: number | null}>();
-    private acting = new Set<E>();
+    /** Those acting now, and since when (s, the shared clock): one that starts eases out from its day's place. */
+    private acting = new Map<E, number>();
 
     constructor(private readonly host: LiveSeekingHost<E>) {}
 
@@ -97,14 +124,14 @@ export class LiveSeeking<E> {
     }
 
     clear(): void {
-        this.acting.forEach((e) => this.host.setAct(e, null));
+        this.acting.forEach((_, e) => this.host.setAct(e, null));
         this.acting.clear();
         this.ids.clear();
     }
 
     step(epoch: number): void {
         const h = this.host;
-        const acting = new Set<E>();
+        const acting = new Map<E, number>();
         for (const [id, s] of Array.from(this.ids)) {
             if (s.until !== null && epoch - s.until > EASE) {
                 this.ids.delete(id);
@@ -114,10 +141,18 @@ export class LiveSeeking<E> {
             if (!entry || h.busy(entry)) continue;
             const at = h.scheduleAt(entry, epoch);
             if (!at || at.aloft || !ABOUT.has(at.doing)) continue;
-            h.setAct(entry, seekPose(id, at, epoch, h.length(entry), h.walk(entry), this.reach(s, epoch), h.ground));
-            acting.add(entry);
+            const since = this.acting.get(entry) ?? epoch;
+            const pose = seekPose(id, at, epoch, h.length(entry), h.walk(entry), Math.min(this.reach(s, epoch), ease((epoch - since) / EASE)), h.ground);
+            if (h.bound) {
+                const x = pose.x;
+                const z = pose.z;
+                h.bound(entry, pose);
+                if (pose.x !== x || pose.z !== z) pose.base = h.ground(pose.x, pose.z);
+            }
+            h.setAct(entry, pose);
+            acting.set(entry, since);
         }
-        this.acting.forEach((e) => {
+        this.acting.forEach((_, e) => {
             if (!acting.has(e) && !h.busy(e)) h.setAct(e, null);
         });
         this.acting = acting;
