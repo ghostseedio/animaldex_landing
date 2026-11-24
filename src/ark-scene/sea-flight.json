@@ -1,0 +1,14 @@
+{
+ "about": "SEA-SURFACE (2026-11-24): the seabirds that live on the wing over the open sea, and only those whose own stored text says so (the catalogue's species_spotlight, interesting_facts and signature_traits, read-only, quoted exactly). Each row: how it soars (thermal circles, their radius in m), how high the thermal takes it and back (m over the sea, the cycle in s), and how often it passes low over the water (a pass every so many s, its lowest height in m). The heights, the cycle and the pass rate are estimates scaled to the Ark's view (the frigatebirds tracked off French Guiana climbed to about 2,500 m: on the Ark the thermal tops out where the island view still sees it). A low pass is a flight pass only: nothing is caught, nothing is eaten (meals are the engine's). Not on the behaviour schedule (the depth classifier holds it off the water: `schedule-water.ts`), so this is its whole day, by night as by day (its text).",
+ "species": {
+  "magnificent-frigatebird": {
+   "radius": [26, 40],
+   "climb": [14, 46],
+   "cycle": 240,
+   "pass": [170, 0.7],
+   "soar": ["Birds tracked from a colony off French Guiana rode thermals by night as well as by day, at times climbing to about 2,500 metres.", "interesting_facts"],
+   "wings": ["Wings spanning about 2.3 metres carry a body of only around 1.5 kilograms, giving this seabird among the lowest weight-to-wing-area ratios of any bird.", "species_spotlight"],
+   "low": ["Its feathers are not waterproof and its legs are tiny, so it does not settle on the sea. Food is picked from the surface in flight.", "species_spotlight"]
+  }
+ }
+}

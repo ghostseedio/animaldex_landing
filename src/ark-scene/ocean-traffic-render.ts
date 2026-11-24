@@ -128,9 +128,10 @@ export function ferryGeometry(): BufferGeometry {
  * A wake, one unit long (scaled by its length both ways), trailing aft (−z) from the stern at its origin: the two arms
  * of the Kelvin wedge (19.5° each side, widening as they go) and the propeller's churn between them. Each strip is soft
  * across (clear at its edges, foam along its middle) and broken along its length (streaks of more and less foam, a
- * fixed pattern), white with an alpha fading to nothing at its end. RGBA vertex colours, normals up.
+ * fixed pattern), white with an alpha fading to nothing at its end. RGBA vertex colours, normals up. `churn` false: the
+ * two arms only (an animal's wake, which has no propeller).
  */
-export function wakeGeometry(): BufferGeometry {
+export function wakeGeometry(churn = true): BufferGeometry {
     const pos: number[] = [];
     const col: number[] = [];
     const nor: number[] = [];
@@ -164,7 +165,7 @@ export function wakeGeometry(): BufferGeometry {
     const spread = Math.tan((19.5 * Math.PI) / 180);
     const fade = (d: number) => Math.max(0, 1 - d) ** 2;
     for (const side of [-1, 1]) strip(side + 2, (d) => side * (0.035 + spread * d), (d) => 0.02 + 0.07 * d, (d) => 0.7 * fade(d));
-    strip(0, () => 0, (d) => 0.07 + 0.16 * d, (d) => 0.9 * Math.max(0, 1 - d * 1.6) ** 1.5);
+    if (churn) strip(0, () => 0, (d) => 0.07 + 0.16 * d, (d) => 0.9 * Math.max(0, 1 - d * 1.6) ** 1.5);
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
     geometry.setAttribute("normal", new BufferAttribute(new Float32Array(nor), 3));
