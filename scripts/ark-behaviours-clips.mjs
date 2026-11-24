@@ -153,10 +153,30 @@ for (const name of scenes) {
     if (name.startsWith("rt_")) {
         // Reptile signatures (lane SIG2-REPTILES): the recipe's episode of the cast, found from the schedule: a frame at the
         // middle of each of its steps (the long holds at their start and end too), each framed close from the animal's side.
-        const found = await page.evaluate(() => window.__behaviours.episode());
+        // (Lane SIG5: `--from <an after run's summary.json>`: the before strip, the same animal at the same moments with the
+        // row given by `inject` (the species' row as it was), whatever it does then.)
+        const from = arg("from", "") ? JSON.parse(readFileSync(arg("from", ""), "utf8"))[name] : null;
+        const found = from ? null : await page.evaluate(() => window.__behaviours.episode());
         const dir = path.join(out, name);
         rmSync(dir, {recursive: true, force: true});
         mkdirSync(dir, {recursive: true});
+        if (from) {
+            const labels = [];
+            for (let i = 0; i < from.shots.length; i++) {
+                const plus = Number(/\(\+([0-9.]+) s\)/.exec(from.shots[i])?.[1] ?? "0");
+                const was = from.shots[i].split(":")[0].replace(/^\d+ /, "");
+                const note = await page.evaluate(async ([id, at, lengths]) => window.__behaviours.recipeShot(id, at, lengths), [from.episode.id, from.episode.t0 + plus, Number(arg("lengths", "0")) || null]);
+                await page.evaluate((t) => (document.getElementById("note").textContent = t), `${name}  before: at "${was}"`);
+                labels.push(`${String(i).padStart(2, "0")} before, at ${was}: ${note}`);
+                await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+            }
+            writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+            execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=4x${Math.ceil(labels.length / 4)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+            summary[name] = {errors: errors.slice(0, 10), episode: from.episode, shots: labels};
+            console.log(name, labels.join("\n"));
+            await context.close();
+            continue;
+        }
         const episode = (found ?? [])[Number(arg("pick", "0"))];
         if (!episode) {
             console.log(name, "no episode of the recipe in the search window", JSON.stringify(found));

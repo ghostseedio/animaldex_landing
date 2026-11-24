@@ -125,7 +125,13 @@ const RECIPE_ACTIVITY: Record<string, ArkActivityKey> = {
     scent_mark: "wandering",
     murmuration: "flying",
     v_formation: "flying",
-    mixed_follow: "wandering"
+    mixed_follow: "wandering",
+    // (Lane SIG5: the most-seen species' own acts, `recipe-templates-domestic.ts`.)
+    play_run: "playing",
+    sniff_trail: "wandering",
+    ground_feed: "food",
+    "dig_burrow~scrape": "digging",
+    "bask_sun~loaf": "basking"
 };
 
 /** What a recipe episode is, as the card says it (null: one that says no more than its doing). */

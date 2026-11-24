@@ -6101,7 +6101,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const mealClip = mealState === "dig" && !recipeClip("dig", (name) => Boolean(clip(name))) ? "eat" : mealState;
         const recipeRaw = !state.flying && !reacted && (recipeAct || mealClip) ? recipeClip(sleepState(recipeAct?.state ?? mealClip), (name) => Boolean(clip(name))) : null;
         // A rig with a sit (a pilot cat's or dog's) rests sitting up rather than lying, about half of them (by its own phase).
-        const fromRecipe = recipeRaw?.name === "lie" && clip("sit") && entry.phase < 0.5 ? {...recipeRaw, name: "sit"} : recipeRaw;
+        // (Lane SIG5: never a bask: basking is lying broadside to the sun, a cat's loaf.)
+        const fromRecipe = recipeRaw?.name === "lie" && recipeAct?.state !== "bask" && clip("sit") && entry.phase < 0.5 ? {...recipeRaw, name: "sit"} : recipeRaw;
         let byRecipe = false;
         if (fromRecipe && !(watching && headDown(fromRecipe.name))) {
             if (fromRecipe.play === "distance") {
@@ -11526,7 +11527,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         dogWalks: () => ({walked: townHumans.dogs.map((d) => ({id: d.id, walker: d.walker, x: d.x, y: d.y, z: d.z, yaw: d.yaw, sniffing: d.sniffing})), pins: walkPins.slice(), live: Array.from(dogActs.keys()), pairs: dogWalks.pairing.walkerOf.size, home: dogWalks.pairing.home.length}), // p5 (humans, dogs)
         rigState: (id: string) => {
             const e = allEntries().find((x) => x.animal.id === id);
-            return e ? {rigOn: Boolean(e.rigOn), weight: e.rig?.weight ?? 0, clip: e.rig?.now?.name ?? null, level: e.level ?? null} : null;
+            return e ? {rigOn: Boolean(e.rigOn), weight: e.rig?.weight ?? 0, clip: e.rig?.now?.name ?? null, level: e.level ?? null, reactive: e.reactive ? `${e.reactive.action}:${e.reactive.headWeight.toFixed(2)}` : null} : null;
         },
         setHome: (id: string, x: number, z: number) => {
             const entry = findEntry(id);
