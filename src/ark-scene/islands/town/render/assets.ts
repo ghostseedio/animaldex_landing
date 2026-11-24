@@ -189,7 +189,27 @@ export class TownAssets {
             const g = geometry as BufferGeometry;
             // (The flowers' and lily pads' morph targets are their own sway, not drawn instanced.)
             if (Object.keys(g.morphAttributes).length) g.morphAttributes = {};
-            // Nothing reads a tree's arrays back (no culling by bounds, no picking): the page's copies go once on the GPU.
+            // Nothing draws from a tree's arrays again (no culling by bounds, no picking): the page's copies go once on the GPU.
+            // (SMALL-PERCHER: the seat pass reads a tree's triangles where animals are held on it, a crane fly on a cherry's
+            // crown, a squirrel on its trunk; with the copies gone it found no tree there at all and left each where its
+            // perch point put it, centimetres off the drawn crown. Its box is kept, and the seat pass reads the file again
+            // for the few trees an animal is on (`seat/solids.ts` trianglesOf): its positions and triangles only, let go
+            // with its grid, so the phone's heap keeps what lane GC gave it.)
+            g.computeBoundingBox();
+            const file = `${this.base}/${lod.file}`;
+            const loader = this.loader!;
+            g.userData.seatArrays = () =>
+                loader.loadAsync(file).then((again) => {
+                    let found: BufferGeometry | null = null;
+                    again.scene.traverse((object) => {
+                        if (!found && (object as Mesh).isMesh) found = (object as Mesh).geometry as BufferGeometry;
+                    });
+                    if (!found) return null;
+                    const copy = new BufferGeometry();
+                    copy.setAttribute("position", (found as BufferGeometry).getAttribute("position"));
+                    copy.setIndex((found as BufferGeometry).index);
+                    return copy;
+                });
             for (const name of Object.keys(g.attributes)) {
                 const attribute = g.attributes[name];
                 if (attribute instanceof BufferAttribute) attribute.onUpload(releaseArray);
