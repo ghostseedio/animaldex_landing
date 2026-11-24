@@ -761,6 +761,57 @@ function climbFoot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
 }
 
 /**
+ * A clinger's crawl from the ground to the ground round whatever solid stands on its straight line (SPECIES-ANIM-B2,
+ * 2026-11-24): the shortest way through a ring of points round each solid thing near the line (just past its reach, on
+ * ground its body fits at), joined only where a straight run is clear. The corners in order, ends included; null when
+ * there is no way round. It stays a crawl (a climber keeps to its slope), only never through a rock: a common wall
+ * gecko's 22 m forage ran 0.52 m into a boulder, rock:decor1205. (Walking it on the ground instead ran it down the
+ * slope as a walker, cliffs 33 to 78, and the nav had no way round there.)
+ */
+const CRAWL_RING = 12;
+const CRAWL_REACH_MAX = 12;
+export function crawlRound(world: ScheduleWorld, from: Spot, to: Spot, bodyR: number): Array<{x: number; z: number}> | null {
+    const solid = world.nav.colliders;
+    if (!solid) return null;
+    const flat = Math.hypot(to.x - from.x, to.z - from.z);
+    const near = solid.near((from.x + to.x) / 2, (from.z + to.z) / 2, flat / 2 + CRAWL_REACH_MAX, []).filter((c) => c.reach <= CRAWL_REACH_MAX);
+    const nodes: Array<{x: number; z: number}> = [{x: from.x, z: from.z}, {x: to.x, z: to.z}];
+    for (const c of near) {
+        const r = c.reach + bodyR + 0.3;
+        for (let k = 0; k < CRAWL_RING; k++) {
+            const a = (k / CRAWL_RING) * Math.PI * 2;
+            const x = c.cx + Math.sin(a) * r;
+            const z = c.cz + Math.cos(a) * r;
+            if (!solid.blocked(x, z, bodyR) && world.sampler.heightAt(x, z) > 0) nodes.push({x, z});
+        }
+    }
+    // (Dijkstra over the clear straight runs; the node count is small: a few rings.)
+    const n = nodes.length;
+    const dist = new Array<number>(n).fill(Infinity);
+    const prev = new Array<number>(n).fill(-1);
+    const done = new Array<boolean>(n).fill(false);
+    dist[0] = 0;
+    for (;;) {
+        let u = -1;
+        for (let i = 0; i < n; i++) if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
+        if (u < 0 || u === 1) break;
+        done[u] = true;
+        for (let v = 0; v < n; v++) {
+            if (done[v]) continue;
+            const d = dist[u] + Math.hypot(nodes[v].x - nodes[u].x, nodes[v].z - nodes[u].z);
+            if (d < dist[v] && solid.segmentClear(nodes[u].x, nodes[u].z, nodes[v].x, nodes[v].z, bodyR)) {
+                dist[v] = d;
+                prev[v] = u;
+            }
+        }
+    }
+    if (dist[1] === Infinity) return null;
+    const way: Array<{x: number; z: number}> = [];
+    for (let i = 1; i >= 0; i = prev[i]) way.unshift(nodes[i]);
+    return way;
+}
+
+/**
  * A perch up on a surface (a rock's top, a branch, a ledge) its body fits on (collisions): nothing solid but what it is on
  * (its rock and the rocks touching it, its tree) within its reach there. A crocodile on a small rock top beside a taller
  * rock does not; it rests at the rock's foot instead.
@@ -2445,7 +2496,19 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                 if (fromUp) climb(from, footA);
                 if (Math.hypot(footB.x - footA.x, footB.z - footA.z) > 0.05) ground(footA, footB);
                 if (toUp) climb(footB, to);
-            } else climb(from, to);
+            } else {
+                // (SPECIES-ANIM-B2, 2026-11-24: from the ground to the ground with something solid on the straight line, it
+                // crawls round it, corner to corner (`crawlRound`); clear, the straight line as before.)
+                const round = world.nav.colliders && !fromUp && !toUp && !world.nav.colliders.segmentClear(from.x, from.z, to.x, to.z, bodyR) ? crawlRound(world, from, to, bodyR) : null;
+                if (round && round.length > 2) {
+                    let at = from;
+                    for (let i = 1; i < round.length; i++) {
+                        const next = i === round.length - 1 ? to : groundSpot(world, round[i].x, round[i].z);
+                        climb(at, next);
+                        at = next;
+                    }
+                } else climb(from, to);
+            }
             break;
         }
         default:
