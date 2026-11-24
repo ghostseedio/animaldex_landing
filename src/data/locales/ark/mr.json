@@ -491,7 +491,15 @@
             "cycleCount": "{total} पैकी {n}",
             "caredOwner": "याची काळजी याचा मालक घेतो",
             "caredFarmer": "याची काळजी शेतकरी घेतो",
-            "caredKeeper": "याची काळजी एक रखवालदार घेतो"
+            "caredKeeper": "याची काळजी एक रखवालदार घेतो",
+            "eatSoon": "पुढच्या आर्क दिवसात शिकार मिळण्याची शक्यता",
+            "eatSoonChance": "पुढच्या आर्क दिवसात शिकार मिळण्याची {percent} शक्यता",
+            "eatSoonHunting": "आता शिकार करत आहे",
+            "eatSoonLater": "सुमारे {time} नंतर पुन्हा शिकार करेल",
+            "eatSoonDormant": "सुप्त: खात नाही",
+            "eatSoonKept": "काळजी घेणारे खाऊ घालतात",
+            "eatSoonDaily": "दररोज खातो",
+            "eatSoonShort": "इथे अन्नाची टंचाई आहे"
         },
         "grew": {
             "line": "अधिक बळकट: {stat} +{n} · {cause}",

@@ -491,7 +491,15 @@
             "cycleCount": "{total}টির মধ্যে {n}",
             "caredOwner": "এর মালিক এর যত্ন নেন",
             "caredFarmer": "কৃষক এর যত্ন নেন",
-            "caredKeeper": "একজন চিড়িয়াখানার রক্ষক এর যত্ন নেন"
+            "caredKeeper": "একজন চিড়িয়াখানার রক্ষক এর যত্ন নেন",
+            "eatSoon": "পরের আর্ক দিনে শিকার ধরার সম্ভাবনা",
+            "eatSoonChance": "পরের আর্ক দিনে শিকার ধরার সম্ভাবনা {percent}",
+            "eatSoonHunting": "এখন শিকার করছে",
+            "eatSoonLater": "প্রায় {time} পরে আবার শিকার করবে",
+            "eatSoonDormant": "সুপ্ত: খাচ্ছে না",
+            "eatSoonKept": "যত্নকারীরা খাওয়ায়",
+            "eatSoonDaily": "প্রতিদিন খায়",
+            "eatSoonShort": "এখানে খাবারের অভাব"
         },
         "grew": {
             "line": "আরও শক্তিশালী: {stat} +{n} · {cause}",

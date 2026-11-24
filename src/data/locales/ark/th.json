@@ -491,7 +491,15 @@
             "cycleCount": "{n} จาก {total}",
             "caredOwner": "เจ้าของดูแลอยู่",
             "caredFarmer": "เกษตรกรดูแลอยู่",
-            "caredKeeper": "ผู้ดูแลสัตว์ดูแลอยู่"
+            "caredKeeper": "ผู้ดูแลสัตว์ดูแลอยู่",
+            "eatSoon": "โอกาสจับเหยื่อได้ในวันถัดไปของเรือโนอาห์",
+            "eatSoonChance": "โอกาส {percent} ที่จะจับเหยื่อได้ในวันถัดไปของเรือโนอาห์",
+            "eatSoonHunting": "กำลังล่าเหยื่อ",
+            "eatSoonLater": "จะล่าอีกครั้งในอีกราว {time}",
+            "eatSoonDormant": "จำศีล: ไม่กินอาหาร",
+            "eatSoonKept": "ผู้ดูแลให้อาหาร",
+            "eatSoonDaily": "กินทุกวัน",
+            "eatSoonShort": "ที่นี่อาหารขาดแคลน"
         },
         "grew": {
             "line": "แข็งแกร่งขึ้น: {stat} +{n} · {cause}",

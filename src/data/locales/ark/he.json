@@ -491,7 +491,15 @@
             "cycleCount": "{n} מתוך {total}",
             "caredOwner": "מטופל בידי בעליו",
             "caredFarmer": "מטופל בידי החקלאי",
-            "caredKeeper": "מטופל בידי מטפל בגן החיות"
+            "caredKeeper": "מטופל בידי מטפל בגן החיות",
+            "eatSoon": "סיכוי לטרף ביום התיבה הבא",
+            "eatSoonChance": "סיכוי של {percent} לטרף ביום התיבה הבא",
+            "eatSoonHunting": "צד עכשיו",
+            "eatSoonLater": "יצוד שוב בעוד כ-{time}",
+            "eatSoonDormant": "בתרדמה: לא אוכל",
+            "eatSoonKept": "מאכילים אותו המטפלים בו",
+            "eatSoonDaily": "אוכל כל יום",
+            "eatSoonShort": "יש כאן מחסור במזון"
         },
         "grew": {
             "line": "התחזק: {stat} +{n} · {cause}",

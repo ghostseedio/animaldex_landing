@@ -491,7 +491,15 @@
             "cycleCount": "{n} з {total}",
             "caredOwner": "Про нього дбає господар",
             "caredFarmer": "Про нього дбає фермер",
-            "caredKeeper": "Про нього дбає доглядач"
+            "caredKeeper": "Про нього дбає доглядач",
+            "eatSoon": "Шанс упіймати здобич наступного дня Ковчега",
+            "eatSoonChance": "{percent} шансу впіймати здобич наступного дня Ковчега",
+            "eatSoonHunting": "Зараз полює",
+            "eatSoonLater": "Знову полюватиме приблизно за {time}",
+            "eatSoonDormant": "У сплячці: не їсть",
+            "eatSoonKept": "Годують ті, хто доглядає",
+            "eatSoonDaily": "Їсть щодня",
+            "eatSoonShort": "Тут бракує їжі"
         },
         "grew": {
             "line": "Став сильнішим: {stat} +{n} · {cause}",

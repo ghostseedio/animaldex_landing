@@ -491,7 +491,15 @@
             "cycleCount": "{total} ਵਿੱਚੋਂ {n}",
             "caredOwner": "ਇਸ ਦੀ ਦੇਖਭਾਲ ਇਸ ਦਾ ਮਾਲਕ ਕਰਦਾ ਹੈ",
             "caredFarmer": "ਇਸ ਦੀ ਦੇਖਭਾਲ ਕਿਸਾਨ ਕਰਦਾ ਹੈ",
-            "caredKeeper": "ਇਸ ਦੀ ਦੇਖਭਾਲ ਇੱਕ ਰਖਵਾਲਾ ਕਰਦਾ ਹੈ"
+            "caredKeeper": "ਇਸ ਦੀ ਦੇਖਭਾਲ ਇੱਕ ਰਖਵਾਲਾ ਕਰਦਾ ਹੈ",
+            "eatSoon": "ਅਗਲੇ ਆਰਕ ਦਿਨ ਵਿੱਚ ਸ਼ਿਕਾਰ ਫੜਨ ਦੀ ਸੰਭਾਵਨਾ",
+            "eatSoonChance": "ਅਗਲੇ ਆਰਕ ਦਿਨ ਵਿੱਚ ਸ਼ਿਕਾਰ ਫੜਨ ਦੀ {percent} ਸੰਭਾਵਨਾ",
+            "eatSoonHunting": "ਹੁਣ ਸ਼ਿਕਾਰ ਕਰ ਰਿਹਾ ਹੈ",
+            "eatSoonLater": "ਲਗਭਗ {time} ਬਾਅਦ ਫਿਰ ਸ਼ਿਕਾਰ ਕਰੇਗਾ",
+            "eatSoonDormant": "ਸੁਸਤ: ਨਹੀਂ ਖਾ ਰਿਹਾ",
+            "eatSoonKept": "ਦੇਖਭਾਲ ਕਰਨ ਵਾਲੇ ਖੁਆਉਂਦੇ ਹਨ",
+            "eatSoonDaily": "ਹਰ ਦਿਨ ਖਾਂਦਾ ਹੈ",
+            "eatSoonShort": "ਇੱਥੇ ਭੋਜਨ ਦੀ ਘਾਟ ਹੈ"
         },
         "grew": {
             "line": "ਹੋਰ ਤਕੜਾ: {stat} +{n} · {cause}",

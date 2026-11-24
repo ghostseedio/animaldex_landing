@@ -491,7 +491,15 @@
             "cycleCount": "{n} من {total}",
             "caredOwner": "يعتني به صاحبه",
             "caredFarmer": "يعتني به المزارع",
-            "caredKeeper": "يعتني به أحد حرّاس حديقة الحيوان"
+            "caredKeeper": "يعتني به أحد حرّاس حديقة الحيوان",
+            "eatSoon": "فرصة اصطياد فريسة خلال يوم الفُلك القادم",
+            "eatSoonChance": "فرصة {percent} لاصطياد فريسة خلال يوم الفُلك القادم",
+            "eatSoonHunting": "يصطاد الآن",
+            "eatSoonLater": "يصطاد مجددًا بعد نحو {time}",
+            "eatSoonDormant": "في سبات: لا يأكل",
+            "eatSoonKept": "يطعمه من يرعاه",
+            "eatSoonDaily": "يأكل كل يوم",
+            "eatSoonShort": "الطعام شحيح هنا"
         },
         "grew": {
             "line": "أصبح أقوى: {stat} +{n} · {cause}",

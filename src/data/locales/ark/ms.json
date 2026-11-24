@@ -491,7 +491,15 @@
             "cycleCount": "{n} daripada {total}",
             "caredOwner": "Dijaga oleh pemiliknya",
             "caredFarmer": "Dijaga oleh petani",
-            "caredKeeper": "Dijaga oleh seorang penjaga"
+            "caredKeeper": "Dijaga oleh seorang penjaga",
+            "eatSoon": "Peluang menangkap mangsa dalam hari Bahtera seterusnya",
+            "eatSoonChance": "Peluang {percent} menangkap mangsa dalam hari Bahtera seterusnya",
+            "eatSoonHunting": "Sedang memburu",
+            "eatSoonLater": "Memburu lagi dalam kira-kira {time}",
+            "eatSoonDormant": "Dorman: tidak makan",
+            "eatSoonKept": "Diberi makan oleh penjaganya",
+            "eatSoonDaily": "Makan setiap hari",
+            "eatSoonShort": "Makanan berkurangan di sini"
         },
         "grew": {
             "line": "Lebih kuat: {stat} +{n} · {cause}",

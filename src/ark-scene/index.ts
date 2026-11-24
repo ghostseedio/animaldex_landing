@@ -274,6 +274,7 @@ import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
 import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
+import {arkEatSoon, arkEatSoonOn, arkEatSoonPercent} from "@/lib/ark-eat-soon";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating tap)
@@ -2716,7 +2717,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             since: flow ? flow.since : plan?.since ?? null,
             goal: plan?.goal ?? null,
             log: arkStatusLog(scheduleLog, record),
-            bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), fed, energy, bornDay: animal.born_ark_day ?? null, lifespanDays: animal.lifespan_days ?? null, lifespanEstimate: animal.lifespan_estimate === true})
+            bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), fed, energy, bornDay: animal.born_ark_day ?? null, lifespanDays: animal.lifespan_days ?? null, lifespanEstimate: animal.lifespan_estimate === true}),
+            // EATSOON (behind `?eatsoon=1`): its chance of a catch in the next Ark day, from the engine's next hunt and its
+            // two numbers on the hunting read, or how it is fed. Worked out here (the selected animal, about once a second).
+            ...(arkEatSoonOn() ? {eatSoon: arkEatSoon({animal, window: hunting.active ? hunting.window(animal, epoch) : null, odds: hunting.odds(animal.id)})} : {})
         };
     };
     const energyOf = (subject: ScheduleSubject, epoch: number) => {
@@ -2932,7 +2936,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (Its species' name over them, as its card has it: never a nickname. Under it, "Brought by @handle" only when the
         // server names its founder: docs/ark/CAPTURE-MEDIA-CONTRACT.md section 1.)
         (selectionBars ??= new ArkSelectionBars(labelLayer, reducedMotion, options.onSelectionLink ?? null))
-            .set(selectedStatus.bars, entry.animal.name, extras, {animalId: entry.animal.id, slug: entry.animal.model_slug}, rhythmState, heartsOf(entry.animal.id));
+            .set(selectedStatus.bars, entry.animal.name, extras, {animalId: entry.animal.id, slug: entry.animal.model_slug}, rhythmState, heartsOf(entry.animal.id), selectedStatus.eatSoon?.kind === "chance" ? arkEatSoonPercent(selectedStatus.eatSoon.value, document.documentElement.lang || "en") : null);
         if (signature === toldStatus) return;
         toldStatus = signature;
         options.onStatus?.(entry.animal.id, selectedStatus);

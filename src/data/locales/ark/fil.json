@@ -491,7 +491,15 @@
             "cycleCount": "{n} sa {total}",
             "caredOwner": "Inaalagaan ng may-ari nito",
             "caredFarmer": "Inaalagaan ng magsasaka",
-            "caredKeeper": "Inaalagaan ng isang tagapag-alaga"
+            "caredKeeper": "Inaalagaan ng isang tagapag-alaga",
+            "eatSoon": "Tsansang makahuli sa susunod na araw ng Arka",
+            "eatSoonChance": "{percent} na tsansang makahuli sa susunod na araw ng Arka",
+            "eatSoonHunting": "Nangangaso ngayon",
+            "eatSoonLater": "Mangangaso muli sa loob ng mga {time}",
+            "eatSoonDormant": "Dormant: hindi kumakain",
+            "eatSoonKept": "Pinapakain ng mga tagapag-alaga nito",
+            "eatSoonDaily": "Kumakain araw-araw",
+            "eatSoonShort": "Kulang ang pagkain dito"
         },
         "grew": {
             "line": "Lumakas: {stat} +{n} · {cause}",
