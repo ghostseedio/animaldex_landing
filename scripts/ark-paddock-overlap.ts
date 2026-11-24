@@ -8,14 +8,14 @@
  * step the collisions' push takes in a frame, and how many frames one is drawn across a fence from where its day has it.
  *
  *   npx tsx scripts/ark-paddock-overlap.ts --snapshot public/ark-local/live.json [--pens rural-paddock-2,rural-paddock-1]
- *        [--from <epoch s>] [--minutes 20] [--fps 60]
+ *        [--from <epoch s>] [--minutes 20] [--fps 60] [--world v2] [--old]
  *
  * Prints each pen's worst pairs and a total; exits 1 with `--gate` when any pair is inside the other for more than a second.
  */
 import {readFileSync} from "node:fs";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {arkIslandSnapshot} from "@/lib/ark-islands";
-import {keepInPen, placeTownAnimals} from "@/ark-scene/islands/town/placement";
+import {keepInPen, penKeep, placeTownAnimals} from "@/ark-scene/islands/town/placement";
 import {townColliderSet} from "@/ark-scene/islands/town/colliders";
 import {townWorldSampler} from "@/ark-scene/islands/town/sampler";
 import {townWorldOrigin} from "@/ark-scene/islands";
@@ -27,6 +27,7 @@ import {overlapOf, SEPARATION_EASE, SEPARATION_SLACK, type ResolveBody, type Res
 import {displayLength} from "@/ark-scene/sizes";
 import {collideBlocked, collideSegmentClear, setIslandColliders} from "@/ark-scene/collide";
 import {setRecipeColliders} from "@/ark-scene/behaviour-recipes";
+import {setArkWorld} from "@/ark-scene/world";
 
 const arg = (name: string, fallback: string) => {
     const at = process.argv.indexOf(`--${name}`);
@@ -42,7 +43,11 @@ const pens = new Set(arg("pens", "rural-paddock-2,rural-paddock-1").split(","));
 const fps = Number(arg("fps", "60"));
 const minutes = Number(arg("minutes", "20"));
 const from = Number(arg("from", "1796032800"));
+// (`--old`: as before lane PENKEEP: the collisions know no pen, the bound keeps clear by its margin's circle.)
+const old = process.argv.includes("--old");
 
+// (`--world v2`: the bigger wild island, the town further out, as the live Ark and the browser probe have it.)
+if (arg("world", "v1") === "v2") setArkWorld("v2");
 const origin = townWorldOrigin();
 const town = arkIslandSnapshot(snapshot, "town");
 const placed = placeTownAnimals(town.animals);
@@ -77,7 +82,7 @@ const baseOf = (it: Item, epoch: number): ResolvePose & {moving: boolean} => {
     const pose = poseOnTrip(world, tripAt(world, it.profile, it.sched, epoch, hours), epoch);
     return {x: pose.x, y: pose.y, z: pose.z, yaw: pose.yaw, aloft: pose.aloft, asleep: pose.beat === "sleep", still: !pose.aloft && !pose.moving, moving: pose.moving};
 };
-const layer = new CollideLayer<Item>({colliders: () => set, body: (it) => it.body, base: (it, epoch) => baseOf(it, epoch), everyone: () => items, last: (it) => it.last, speed: () => 7});
+const layer = new CollideLayer<Item>({colliders: () => set, body: (it) => it.body, base: (it, epoch) => baseOf(it, epoch), everyone: () => items, last: (it) => it.last, speed: () => 7, keep: (it) => (!old && it.box ? penKeep(it.box, it.margin, origin.x, origin.z) : null)});
 
 const inside = new Map<string, {now: number; longest: number; total: number; deepest: number}>();
 let step = 0;
@@ -85,6 +90,10 @@ let step = 0;
 let across = 0;
 const acrossAt: string[] = [];
 let stepAt = "";
+let boundFrames = 0;
+let boundJump = 0;
+let boundJumpAt = "";
+const boundBy = new Map<Item, number>();
 const push = new Map<Item, {x: number; z: number}>();
 const frames = Math.round(minutes * 60 * fps);
 for (let f = 0; f < frames; f++) {
@@ -93,7 +102,17 @@ for (let f = 0; f < frames; f++) {
         const base = baseOf(it, epoch);
         const at = {...layer.apply(it, epoch, base)};
         // (Then the scene's hard bound: a kept animal inside its pen, clear of its rails, `islands/scene.ts` bound.)
-        if (it.box) keepInPen(it.box, it.margin, at, origin.x, origin.z, set);
+        const layered = {x: at.x, z: at.z};
+        if (it.box) keepInPen(it.box, it.margin, at, origin.x, origin.z, set, old ? null : {...it.body, yaw: base.yaw, y: base.y});
+        // (How far the bound moved the collisions' answer, and the most it ever moved it from one frame to the next.)
+        const bounded = Math.hypot(at.x - layered.x, at.z - layered.z);
+        if (bounded > 1e-4) boundFrames++;
+        const wasBound = boundBy.get(it) ?? 0;
+        if (Math.abs(bounded - wasBound) > boundJump) {
+            boundJump = Math.abs(bounded - wasBound);
+            boundJumpAt = `${it.slug} ${it.id.slice(0, 8)} at +${(f / fps).toFixed(1)} s`;
+        }
+        boundBy.set(it, bounded);
         it.last = {x: at.x, z: at.z, at: epoch};
         const now = {x: at.x - base.x, z: at.z - base.z};
         if ((now.x || now.z) && !collideSegmentClear(base.x, base.z, at.x, at.z, 0)) {
@@ -130,9 +149,10 @@ for (let f = 0; f < frames; f++) {
 const rows = Array.from(inside.entries()).sort((a, b) => b[1].longest - a[1].longest);
 const total = rows.reduce((n, [, s]) => n + s.total, 0);
 const overSecond = rows.filter(([, s]) => s.longest > 1).length;
-console.log(`SEPARATION_EASE ${SEPARATION_EASE} s; ${items.length} residents of ${Array.from(pens).join(", ")}; ${minutes} min at ${fps} fps from ${from}`);
+console.log(`${old ? "OLD (no keep box, margin-circle bound); " : ""}SEPARATION_EASE ${SEPARATION_EASE} s; ${items.length} residents of ${Array.from(pens).join(", ")}; ${minutes} min at ${fps} fps from ${from}`);
 console.log(`pairs ever inside each other: ${rows.length}; inside for over a second at a time: ${overSecond}; pair-seconds inside, all told: ${total.toFixed(1)}`);
 for (const [key, s] of rows.slice(0, 10)) console.log(`  ${key}: longest ${s.longest.toFixed(2)} s, all told ${s.total.toFixed(1)} s, ${s.deepest.toFixed(2)} m deep`);
 console.log(`frames drawn across a fence from its day's pose: ${across}${acrossAt.length ? ` (${acrossAt.join("; ")})` : ""}`);
 console.log(`biggest push step in a frame: ${step.toFixed(3)} m (${stepAt})`);
+console.log(`frames the pen bound moved the collisions' answer: ${boundFrames}; its biggest change in a frame: ${boundJump.toFixed(3)} m (${boundJumpAt})`);
 if (process.argv.includes("--gate") && overSecond) process.exit(1);

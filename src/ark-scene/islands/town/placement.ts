@@ -35,6 +35,8 @@ import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
 import {corners, inBox, sub, toLocal, type Box} from "@/ark-scene/islands/town/geom";
+import {bodyClear as standsClear, inKeep, keepBoxOf, keepGive, pushOut, type KeepBox, type ResolveBody} from "@/ark-scene/collide/resolve";
+import type {ColliderSet} from "@/ark-scene/collide/colliders";
 import {aquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townWetlandOf} from "@/ark-scene/islands/town/wetland";
@@ -834,7 +836,7 @@ export function zooMargin(mask: Poly, length: number): number {
  * the pen (a garden room, a trough, a bush by the rails) goes on to the nearest point in the pen a body of `margin`'s
  * width stands clear at (rings a quarter metre apart, the same for every viewer); none within 3 m: where the rails put it.
  */
-export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}, ox = 0, oz = 0, solid?: {blocked: (x: number, z: number, radius: number) => boolean} | null): void {
+export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}, ox = 0, oz = 0, solid?: {blocked: (x: number, z: number, radius: number) => boolean} | null, body?: PenBody | null): void {
     const c = Math.cos(pen.rot);
     const s = Math.sin(pen.rot);
     const dx = pose.x - ox - pen.x;
@@ -843,17 +845,49 @@ export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}
     const lz = -dx * s + dz * c;
     const hx = Math.max(pen.w / 2 - margin, 0);
     const hz = Math.max(pen.d / 2 - margin, 0);
-    if (Math.abs(lx) <= hx && Math.abs(lz) <= hz) return;
+    // (A micrometre's give: the collisions' answer on the inset itself, `collide/resolve.ts` intoKeep, is kept as it is.)
+    if (Math.abs(lx) <= hx + 1e-6 && Math.abs(lz) <= hz + 1e-6) return;
+    // Lane PENKEEP: and theirs for a body wedged by the rails against something in the pen: within the keep's give, clear.
+    if (body && solid && "near" in solid && "distance" in solid) {
+        const keep = penKeep(pen, margin, ox, oz);
+        if (inKeep(keep, pose.x, pose.z, keepGive(keep, body)) && standsClear(solid as ColliderSet, body, {x: pose.x, y: body.y ?? -Infinity, z: pose.z, yaw: body.yaw, aloft: false}, pose.x, pose.z)) return;
+    }
     const qx = Math.min(Math.max(lx, -hx), hx);
     const qz = Math.min(Math.max(lz, -hz), hz);
     pose.x = ox + pen.x + qx * c - qz * s;
     pose.z = oz + pen.z + qx * s + qz * c;
     if (!solid) return;
+    // Lane PENKEEP (2026-11-24): with its body, off what stands in the pen as the collisions put it off (`pushOut`, its
+    // capsule as it faces, inside the same keep box), not by a circle of the margin's width (1.65 m round a horse: no
+    // point by a paddock's trough was clear of it, and the nearest that was swapped sides, 5 m across the trough in a frame).
+    if (body && "near" in solid && "distance" in solid) {
+        const out = pushOut(solid as ColliderSet, body, {x: pose.x, y: body.y ?? -Infinity, z: pose.z, yaw: body.yaw, aloft: false}, penKeep(pen, margin, ox, oz));
+        pose.x = out.x;
+        pose.z = out.z;
+        return;
+    }
     clearWithin(pose, Math.min(Math.max(margin - 0.15, 0.05), 1.8), solid, (x, z) => {
         const ex = x - ox - pen.x;
         const ez = z - oz - pen.z;
         return Math.abs(ex * c + ez * s) <= hx + 1e-6 && Math.abs(-ex * s + ez * c) <= hz + 1e-6;
     });
+}
+
+/** A body for a pen's bound (`keepInPen`): the collisions' body (`collide/bodies.ts`), the way it faces and its feet's height. */
+export type PenBody = ResolveBody & {yaw: number; y?: number};
+
+const PEN_KEEPS = new WeakMap<Box, Map<string, KeepBox>>();
+/**
+ * Lane PENKEEP: a pen's keep box (`collide/resolve.ts` KeepBox: the pen, `margin` in from its rails, world frame with the
+ * island at `ox`, `oz`), one object per pen and margin, for the collisions (`CollideHooks.keep`) and the bound alike.
+ */
+export function penKeep(pen: Box, margin: number, ox = 0, oz = 0): KeepBox {
+    let byMargin = PEN_KEEPS.get(pen);
+    if (!byMargin) PEN_KEEPS.set(pen, (byMargin = new Map()));
+    const key = `${margin},${ox},${oz}`;
+    let k = byMargin.get(key);
+    if (!k) byMargin.set(key, (k = keepBoxOf(pen, margin, ox, oz)));
+    return k;
 }
 
 /**
