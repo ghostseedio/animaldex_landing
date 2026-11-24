@@ -3814,5 +3814,6 @@ const KIT: ScheduleKit = {
     basePose: basePoseOnTrip,
     flies,
     aquatic,
-    floats
+    floats,
+    amphibious
 };

@@ -1,0 +1,8 @@
+{
+ "about": "Lane SIG9 (2026-11-24): swimming birds walk ashore for a land goal (`behaviour-recipes.ts` goalSpot and the trip mode from the goal). The muscovy duck's and the domestic goose's walk on the grass to feed (`ground_feed`, SIG7's rows) are released in `signature-recipes-sig7.json`. `bathe~duck` bathes where its trip brought it (no first swim of its own, which found no open water within 3 m about a quarter of the time and cut the bath to a 0.8 s swim home), so the muscovy's bath, held in SIG8, is released there. `withdraw`: the bufflehead's strut on land, which could not run before and would now; its courtship is on the water.",
+ "version": 1,
+ "additions": [],
+ "withdraw": [
+  {"slug": "bufflehead", "recipe": "strut_display", "reason": "its courtship is on the water (head-bobbing and short display flights), never a strut on land; a ground goal could not run for a swimmer before SIG9, and would now"}
+ ]
+}

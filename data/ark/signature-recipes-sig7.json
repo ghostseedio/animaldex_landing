@@ -5,8 +5,8 @@
   "bathe~duck": {"plans": ["flying_bird"], "weight": 3}
  },
  "additions": [
-  {"slug": "muscovy-duck", "name": "Muscovy Duck", "recipe": "ground_feed", "field": "evidence", "quote": "The bird spends much of its time walking and grazing on grass, insects, seeds and scraps on land rather than dabbling on water.", "line": "{aAnimal} is walking and grazing on the grass", "held": "a swimmer (move swim: `aquatic`) goes to every recipe goal by water (`recipeIntent` mode), and a flock of swimmers follows its leader on the water most slots, so an act on land never starts: the harness found no episode in 90 slots. Needs the trip mode taken from the goal, a schedule change for every swimming bird's ground acts."},
-  {"slug": "domestic-goose", "name": "Domestic Goose", "recipe": "ground_feed", "held": "a swimmer (move swim: `aquatic`) goes to every recipe goal by water (`recipeIntent` mode), and a flock of swimmers follows its leader on the water most slots, so an act on land never starts: the harness found no episode in 90 slots. Needs the trip mode taken from the goal, a schedule change for every swimming bird's ground acts."},
+  {"slug": "muscovy-duck", "name": "Muscovy Duck", "recipe": "ground_feed", "field": "evidence", "quote": "The bird spends much of its time walking and grazing on grass, insects, seeds and scraps on land rather than dabbling on water.", "line": "{aAnimal} is walking and grazing on the grass"},
+  {"slug": "domestic-goose", "name": "Domestic Goose", "recipe": "ground_feed"},
   {"slug": "poodle", "name": "Poodle", "recipe": "play_run"},
   {"slug": "poodle", "name": "Poodle", "recipe": "sniff_trail"},
   {"slug": "cow", "name": "Cow", "recipe": "call_bout"},
