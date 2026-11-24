@@ -324,8 +324,8 @@ export type WaterSpec = {
     /** A floater's bob on the water now, −1…1 of FLOAT_BOB of its height (Ark ducks); absent: none. */
     bob?: number;
     /**
-     * SEA-SURFACE: up at the very top (`surface-cruise.ts`, the manta): `k` 0…1 of the way up, its middle `depth` m under
-     * the surface there (its wingtips breaking it). Absent: none.
+     * SEA-SURFACE: up at the very top (`surface-cruise.ts`, the manta): `k` 0…1 of the way up, its highest point `depth` m
+     * under the surface there (all of it hidden). Absent: none.
      */
     cruise?: {k: number; depth: number};
 };
@@ -380,7 +380,7 @@ export function fitInWater(spec: WaterSpec, height: number): {base: number; midd
     middle = Math.max(middle, spec.floorY + FLOOR_CLEAR + height / 2);
     middle = Math.min(middle, top - SURFACE_CLEAR - height / 2);
     if (spec.breath > 0) middle += (top - BREATH_MIDDLE * height - middle) * spec.breath;
-    if (spec.cruise && spec.cruise.k > 0) middle += (top - spec.cruise.depth - middle) * spec.cruise.k;
+    if (spec.cruise && spec.cruise.k > 0) middle += (top - spec.cruise.depth - height / 2 - middle) * spec.cruise.k;
     return {base: middle - height / 2, middle};
 }
 

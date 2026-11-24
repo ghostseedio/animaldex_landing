@@ -4,8 +4,9 @@
  * says they spend time near the surface (`surface-cruise.json`, the quote and its field).
  *
  * On its loop (`open-ocean.ts`) it spends its row's share of the time up there, in spells of a few minutes on the shared
- * clock: it rises over `CRUISE_EASE` s, cruises with its back `depth` m under (wandering slowly within its row's range,
- * so its wingtips break the surface on the upstroke) and goes down again. The rest of the time it swims in its band as
+ * clock: it rises over `CRUISE_EASE` s, cruises with its highest point `depth` m under (wandering slowly within its row's
+ * range: all of it under, since a tip poking through the opaque sea read from above as a white speck on its own
+ * silhouette; its wake still forms above it, `CRUISE_SHALLOW`) and goes down again. The rest of the time it swims in its band as
  * before. Pure in (id, slug, epoch seconds): every viewer sees the same. Visual only.
  */
 
@@ -19,6 +20,8 @@ const ROWS = (table as unknown as {species: Record<string, Row>}).species;
 export const CRUISE_CYCLE = 420;
 /** Rising to the top and going down again (s). */
 export const CRUISE_EASE = 25;
+/** How far under the surface a cruiser's top still counts as at it for its wake (m; past the row's deepest). */
+export const CRUISE_SHALLOW = 0.35;
 
 export type CruiseSpec = {share: number; depth: [number, number]; quote: string};
 
@@ -37,7 +40,7 @@ const smooth = (t: number) => {
 };
 
 /**
- * At `seconds` (epoch): how far up into its cruise it is (`k`, 0 in its band … 1 at the top) and how deep its back rides
+ * At `seconds` (epoch): how far up into its cruise it is (`k`, 0 in its band … 1 at the top) and how deep its highest point rides
  * there (m under the surface). `k` 0 for a kind without a row.
  */
 export function surfaceCruiseAt(id: string, slug: string, seconds: number): {k: number; depth: number} {

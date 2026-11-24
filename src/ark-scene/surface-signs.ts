@@ -15,13 +15,13 @@
  *
  * A whale's blow is `ocean-shadows.ts`'s and a leap's rings are `water-leaps.ts`'s (not drawn twice here). Sea water
  * only (not the lake, the river or a pond), and only within `SIGN_RANGE` of the camera, from above (none from under the
- * sea). The tracking is pure (the tests run it in node); `SurfaceSignsView` draws it: two instanced meshes (the splashes
- * and blows, the wakes' dabs; two draw calls, transparent, after the sea's surface) of at most `SPLASH_MOST` and
- * `DAB_MOST`, and the rings through the scene's own ring marks. Visual only.
+ * sea). The tracking is pure (the tests run it in node); `SurfaceSignsView` draws it: three instanced meshes (the soft
+ * puffs of the splashes and blows, the wakes' dabs, the thin uneven water rings; three draw calls, transparent, after
+ * the sea's surface) of at most `SPLASH_MOST`, `DAB_MOST` and `RING_MOST`. Not the scene's ring marks: those are
+ * crisp bright selection-style rings; these are water. Visual only.
  */
 
 import {BufferAttribute, BufferGeometry, DoubleSide, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshLambertMaterial, Quaternion, Vector3, type Object3D} from "three";
-import {plumeGeometry} from "@/ark-scene/ocean-shadows";
 
 /** How far from the camera the signs are drawn (m): a wide view over the sea is ~100–200 m from what it shows. */
 export const SIGN_RANGE = 320;
@@ -37,9 +37,11 @@ export const DAB_MOST = 160;
 export const WAKE_FROM = 0.12;
 export const WAKE_FULL = 0.7;
 /** How long a splash, a blow and the rings last (s). */
-export const SPLASH_SECONDS = 1.3;
-export const BLOW_SECONDS = 1.7;
-export const RING_SECONDS = 3;
+export const SPLASH_SECONDS = 0.9;
+export const BLOW_SECONDS = 1.3;
+export const RING_SECONDS = 2;
+/** The most rings drawn at once. */
+export const RING_MOST = 48;
 
 /** Where a body is against the surface: wholly under it, in it (some of it out), wholly above it. */
 export type SurfaceState = "under" | "at" | "air";
@@ -53,7 +55,12 @@ export function surfaceState(top: number, bottom: number, surface: number, was: 
     return "at";
 }
 
-export type SurfaceSample = {x: number; z: number; yaw: number; top: number; bottom: number; surface: number; length: number; breathes: boolean};
+/**
+ * `shallow`: how far under the surface its top may be and still count as at it (m; 0 by default). A cruiser (the manta,
+ * `surface-cruise.ts`) swims with its highest point just under the water, wholly hidden, and its wings still push the
+ * water into a wake above it.
+ */
+export type SurfaceSample = {x: number; z: number; yaw: number; top: number; bottom: number; surface: number; length: number; breathes: boolean; shallow?: number};
 export type SignTrack = {state: SurfaceState; x: number; z: number; t: number; speed: number; told?: number};
 /** The least time between one animal's surface events (s): one surfacing is one sign. */
 export const EVENT_GAP = 2.5;
@@ -69,7 +76,7 @@ const wakeStrength = (speed: number) => Math.min(Math.max((speed - WAKE_FROM) / 
  * is told about what it did meanwhile.
  */
 export function trackSurface(track: SignTrack | null, sample: SurfaceSample, t: number): {track: SignTrack; event: SignEvent | null; wake: number} {
-    const state = surfaceState(sample.top, sample.bottom, sample.surface, track?.state ?? null);
+    const state = surfaceState(sample.top + (sample.shallow ?? 0), sample.bottom, sample.surface, track?.state ?? null);
     const dt = track ? t - track.t : 0;
     // (A second look in the same frame keeps its track: its speed is over time, not between two looks at once.)
     if (track && dt <= 0 && dt > -1) return {track, event: null, wake: state === "at" ? wakeStrength(track.speed) : 0};
@@ -94,18 +101,77 @@ export function signRings(event: SignEvent, age: number): Array<{radius: number;
     if (event.kind === "trail") return [];
     if (age < 0 || age > RING_SECONDS) return [];
     const size = Math.min(event.size, 5);
-    const rings = [{radius: size * (0.45 + age * (event.kind === "break" ? 0.9 : 0.7)), alpha: 0.9 * (1 - age / RING_SECONDS) ** 1.4}];
-    if (event.kind === "break" && age > 0.45) rings.push({radius: size * (0.3 + (age - 0.45) * 0.65), alpha: 0.65 * (1 - (age - 0.45) / (RING_SECONDS - 0.45)) ** 1.4});
+    // (Faint water rings, not marks: thin, uneven, widening and gone in RING_SECONDS.)
+    const rings = [{radius: size * (0.4 + age * (event.kind === "break" ? 0.8 : 0.6)), alpha: 0.4 * (1 - age / RING_SECONDS) ** 1.5}];
+    if (event.kind === "break" && age > 0.3) rings.push({radius: size * (0.3 + (age - 0.3) * 0.55), alpha: 0.28 * (1 - (age - 0.3) / (RING_SECONDS - 0.3)) ** 1.5});
     return rings;
 }
 
-/** A splash's or a blow's height (m) at `age` s: up quickly, then falling and gone. 0 once over (or none for it). */
-export function splashHeight(event: SignEvent, age: number): number {
+/**
+ * A splash's or a blow's puff at `age` s: its size (m across, soft), how high its middle has risen (m) and its alpha.
+ * Null once over (or none for it). A soft brief puff of mist that swells, rises a little and thins away; not a spike.
+ */
+export function splashPuff(event: SignEvent, age: number): {size: number; rise: number; alpha: number} | null {
     const seconds = event.blow ? BLOW_SECONDS : SPLASH_SECONDS;
-    if (event.kind !== "break" || age < 0 || age > seconds) return 0;
-    const top = event.blow ? Math.min(Math.max(event.size * 0.55, 0.35), 1.2) : Math.min(Math.max(event.size * 0.35, 0.2), 1.4);
-    const up = Math.min(age / 0.25, 1);
-    return top * up * (1 - (age / seconds) ** 2);
+    if (event.kind !== "break" || age < 0 || age > seconds) return null;
+    const full = event.blow ? Math.min(Math.max(event.size * 0.6, 0.4), 1.4) : Math.min(Math.max(event.size * 0.45, 0.25), 1.4);
+    const u = age / seconds;
+    const swell = 1 - (1 - Math.min(age / 0.35, 1)) ** 2;
+    return {size: full * (0.35 + 0.65 * swell), rise: full * (0.25 + 0.35 * u), alpha: (event.blow ? 0.45 : 0.55) * Math.min(age / 0.1, 1) * (1 - u) ** 1.6};
+}
+
+/** A soft puff, 1 m across, its middle at y = 0: three crossed upright discs, white, clear at their rims. Normals up. */
+export function puffGeometry(): BufferGeometry {
+    const pos: number[] = [];
+    const col: number[] = [];
+    const n = 12;
+    for (let k = 0; k < 3; k++) {
+        const turn = (k / 3) * Math.PI;
+        const ax = Math.cos(turn);
+        const az = Math.sin(turn);
+        for (let i = 0; i < n; i++) {
+            const a0 = (i / n) * Math.PI * 2;
+            const a1 = ((i + 1) / n) * Math.PI * 2;
+            pos.push(0, 0, 0, ax * Math.cos(a0) * 0.5, Math.sin(a0) * 0.5, az * Math.cos(a0) * 0.5, ax * Math.cos(a1) * 0.5, Math.sin(a1) * 0.5, az * Math.cos(a1) * 0.5);
+            col.push(1, 1, 1, 0.7, 1, 1, 1, 0, 1, 1, 1, 0);
+        }
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
+    geometry.setAttribute("color", new BufferAttribute(new Float32Array(col), 4));
+    geometry.setAttribute("normal", new BufferAttribute(new Float32Array(pos.length).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+    geometry.computeBoundingSphere();
+    return geometry;
+}
+
+/**
+ * A water ring, radius 1 m, flat: a thin band soft at both edges, uneven along its round (stronger and fainter
+ * stretches, a gap or two), pale. Scaled by its radius; a different turn each so no two look the same.
+ */
+export function ringGeometry(): BufferGeometry {
+    const pos: number[] = [];
+    const col: number[] = [];
+    const n = 64;
+    const band = [0.955, 0.985, 1.015, 1.045];
+    const soft = [0, 1, 1, 0];
+    const along = (a: number) => Math.max(0, Math.min(1, 0.55 + 0.45 * Math.sin(a * 3 + 0.7) * Math.cos(a * 5 + 1.9) + 0.25 * Math.sin(a * 11)));
+    for (let i = 0; i < n; i++) {
+        const a0 = (i / n) * Math.PI * 2;
+        const a1 = ((i + 1) / n) * Math.PI * 2;
+        for (let j = 0; j < band.length - 1; j++) {
+            const v = (a: number, k: number) => {
+                pos.push(Math.cos(a) * band[k], 0, Math.sin(a) * band[k]);
+                col.push(0.86, 0.93, 0.96, soft[k] * along(a));
+            };
+            v(a0, j), v(a1, j), v(a1, j + 1), v(a0, j), v(a1, j + 1), v(a0, j + 1);
+        }
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
+    geometry.setAttribute("color", new BufferAttribute(new Float32Array(col), 4));
+    geometry.setAttribute("normal", new BufferAttribute(new Float32Array(pos.length).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+    geometry.computeBoundingSphere();
+    return geometry;
 }
 
 /**
@@ -138,6 +204,8 @@ export function dabGeometry(): BufferGeometry {
     return geometry;
 }
 
+const UP = new Vector3(0, 1, 0);
+
 /** How long an event is live (s). */
 export const eventSeconds = (event: SignEvent) => (event.kind === "trail" ? TRAIL_SECONDS : RING_SECONDS);
 
@@ -158,6 +226,8 @@ export class SurfaceSignsView {
     private readonly dabs: InstancedMesh;
     private readonly dabFade: InstancedBufferAttribute;
     private readonly splashFade: InstancedBufferAttribute;
+    private readonly rings: InstancedMesh;
+    private readonly ringFade: InstancedBufferAttribute;
     private readonly tracks = new Map<string, SignTrack>();
     private events: SignEvent[] = [];
     private readonly trailAt = new Map<string, number>();
@@ -169,17 +239,22 @@ export class SurfaceSignsView {
     private readonly seen = new Map<string, number>();
 
     constructor(parent: Object3D) {
-        const plume: BufferGeometry = plumeGeometry();
+        const puff: BufferGeometry = puffGeometry();
         this.splashFade = new InstancedBufferAttribute(new Float32Array(SPLASH_MOST), 1);
-        plume.setAttribute("aFade", this.splashFade);
-        this.splashes = new InstancedMesh(plume, fadeMaterial(0x6a7076, "ark-surface-splashes"), SPLASH_MOST);
+        puff.setAttribute("aFade", this.splashFade);
+        this.splashes = new InstancedMesh(puff, fadeMaterial(0x7a8086, "ark-surface-splashes"), SPLASH_MOST);
         this.splashes.name = "surface-splashes";
+        const ring = ringGeometry();
+        this.ringFade = new InstancedBufferAttribute(new Float32Array(RING_MOST), 1);
+        ring.setAttribute("aFade", this.ringFade);
+        this.rings = new InstancedMesh(ring, fadeMaterial(0x5a6066, "ark-surface-rings"), RING_MOST);
+        this.rings.name = "surface-rings";
         const dab = dabGeometry();
         this.dabFade = new InstancedBufferAttribute(new Float32Array(DAB_MOST), 1);
         dab.setAttribute("aFade", this.dabFade);
         this.dabs = new InstancedMesh(dab, fadeMaterial(0x4a5056, "ark-surface-dabs"), DAB_MOST);
         this.dabs.name = "surface-wakes";
-        for (const mesh of [this.splashes, this.dabs]) {
+        for (const mesh of [this.splashes, this.dabs, this.rings]) {
             mesh.count = 0;
             mesh.frustumCulled = false;
             mesh.visible = false;
@@ -214,24 +289,38 @@ export class SurfaceSignsView {
         if (this.events.length > EVENTS_MOST) this.events.shift();
     }
 
-    /** Every live event's rings now, for the scene's ring marks. */
-    rings(t: number, push: (x: number, y: number, z: number, radius: number, alpha: number) => void): void {
-        for (const event of this.events) for (const ring of signRings(event, t - event.start)) push(event.x, event.surface + 0.03, event.z, ring.radius, ring.alpha);
-    }
 
     /** Done for this frame: the splashes and blows drawn, the finished events and the tracks not seen dropped. */
     end(t: number, underwater: boolean): void {
         this.events = this.events.filter((event) => t - event.start <= eventSeconds(event) && t >= event.start - 1);
         let splashes = 0;
+        let rings = 0;
         for (const event of this.events) {
-            if (splashes >= SPLASH_MOST) break;
-            const height = splashHeight(event, t - event.start);
-            if (height <= 0.01) continue;
-            this.quaternion.identity();
-            this.matrix.compose(this.position.set(event.x, event.surface + 0.05, event.z), this.quaternion, this.scale.set(height * (event.blow ? 0.6 : 0.9), height, height * (event.blow ? 0.6 : 0.9)));
-            this.splashes.setMatrixAt(splashes, this.matrix);
-            this.splashFade.setX(splashes, event.blow ? 0.8 : 0.95);
-            splashes++;
+            const age = t - event.start;
+            const puff = splashes < SPLASH_MOST ? splashPuff(event, age) : null;
+            if (puff && puff.alpha > 0.005) {
+                this.quaternion.identity();
+                this.matrix.compose(this.position.set(event.x, event.surface + puff.rise, event.z), this.quaternion, this.scale.set(puff.size, puff.size * 0.8, puff.size));
+                this.splashes.setMatrixAt(splashes, this.matrix);
+                this.splashFade.setX(splashes, puff.alpha);
+                splashes++;
+            }
+            // (Each event's rings turned its own way: the unevenness of one is not the next one's.)
+            const turn = (event.start * 7.3 + event.x) % (Math.PI * 2);
+            for (const ring of signRings(event, age)) {
+                if (rings >= RING_MOST || ring.alpha <= 0.005) continue;
+                this.quaternion.setFromAxisAngle(UP, turn + ring.radius * 0.3);
+                this.matrix.compose(this.position.set(event.x, event.surface + 0.035, event.z), this.quaternion, this.scale.set(ring.radius, 1, ring.radius));
+                this.rings.setMatrixAt(rings, this.matrix);
+                this.ringFade.setX(rings, ring.alpha);
+                rings++;
+            }
+        }
+        this.rings.count = rings;
+        this.rings.visible = !underwater && rings > 0;
+        if (rings) {
+            this.rings.instanceMatrix.needsUpdate = true;
+            this.ringFade.needsUpdate = true;
         }
         let dabs = 0;
         for (const event of this.events) {
@@ -270,7 +359,7 @@ export class SurfaceSignsView {
     }
 
     dispose(): void {
-        for (const mesh of [this.splashes, this.dabs]) {
+        for (const mesh of [this.splashes, this.dabs, this.rings]) {
             mesh.geometry.dispose();
             (mesh.material as MeshLambertMaterial).dispose();
             mesh.removeFromParent();

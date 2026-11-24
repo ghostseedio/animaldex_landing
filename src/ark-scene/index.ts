@@ -252,7 +252,7 @@ import {ARK_ISLANDS} from "@/ark-scene/islands"; // p2 (ocean)
 import {arkWorld} from "@/ark-scene/world"; // p2 (ocean)
 import {OCEAN_COLUMN, OCEAN_VIEW_MARGIN, oceanFix, roamsOpenOcean} from "@/ark-scene/open-ocean"; // p2 (ocean)
 import {seaFlightAt, seaFlightSpec, seaHome} from "@/ark-scene/sea-flight";
-import {surfaceCruiseAt} from "@/ark-scene/surface-cruise";
+import {CRUISE_SHALLOW, surfaceCruiseAt} from "@/ark-scene/surface-cruise";
 import {SIGN_RANGE, SurfaceSignsView} from "@/ark-scene/surface-signs";
 import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (ocean)
 import {PeopleFigures} from "@/ark-scene/humans/people-figures"; // p6 (people): the rigged bodies
@@ -5435,8 +5435,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const floorY = Math.max(heightAt(fix.x, fix.z), -OCEAN_COLUMN);
         const spec = waterSpec(depth, floorY, entry.seed, clock, breath);
         // SEA-SURFACE: a kind whose text has it spend time near the surface (`surface-cruise.ts`, the manta) cruises at the
-        // very top for spells of its loop, its middle `depth` m under, level, its wingtips breaking the water (in its
-        // spec, so the fit again at its drawn height keeps it there).
+        // very top for spells of its loop, level, its highest point `depth` m under: wholly under the water (no tip of it
+        // showing through the sea's top as a speck), its wake above it (in its spec, so the fit again at its drawn height
+        // keeps it there).
         const cruise = reducedMotion ? null : surfaceCruiseAt(entry.animal.id, entry.animal.model_slug, clock);
         if (cruise && cruise.k > 0) spec.cruise = cruise;
         const pitch = (reducedMotion ? 0 : swimPitch(depth, -floorY, entry.seed, clock, fix.speed)) * (1 - (spec.cruise?.k ?? 0));
@@ -6688,7 +6689,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!underwater && !entry.leapStep && !entry.act?.hidden && !entry.held) {
                 const sea = ARK_ENVIRONMENT.seaLevel.value;
                 if (where.base < sea + 1.5 && Math.abs(where.x - cameraPosition.x) < SIGN_RANGE && Math.abs(where.z - cameraPosition.z) < SIGN_RANGE && heightAt(where.x, where.z) < sea - 0.5 && waterTopAt(where.x, where.z) < sea + 0.02) {
-                    (surfaceSigns ??= new SurfaceSignsView(scene)).sample(entry.animal.id, {x: where.x, z: where.z, yaw: where.yaw, top: where.base + modelHeight, bottom: where.base, surface: sea, length: entry.length, breathes: Boolean(entry.depth?.breathes) && model?.behaviour?.plan !== "cetacean"}, epochNow);
+                    (surfaceSigns ??= new SurfaceSignsView(scene)).sample(entry.animal.id, {x: where.x, z: where.z, yaw: where.yaw, top: where.base + modelHeight, bottom: where.base, surface: sea, length: entry.length, breathes: Boolean(entry.depth?.breathes) && model?.behaviour?.plan !== "cetacean", shallow: where.water?.cruise ? CRUISE_SHALLOW : 0}, epochNow);
                 }
             }
             // Part B: where it is now, for the render distance; past it, not drawn (a marker in the map view).
@@ -7794,8 +7795,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (age > 0.5) ringList.push({x: ring.x, y: ring.y + 0.03, z: ring.z, radius: ring.size * (0.3 + (age - 0.5) * 0.7), color: ARRIVAL, alpha: 0.7 * (1 - (age - 0.5) / 2.5) ** 1.4});
             }
         }
-        // SEA-SURFACE: and the rings where a real animal came up, went down, landed or took off at the sea's top.
-        surfaceSigns?.rings(worldMs() / 1000, (x, y, z, radius, alpha) => ringList.push({x, y, z, radius, color: ARRIVAL, alpha}));
         // 3.3 batch (D): and the rings of a laying dragonfly's taps.
         if (dipRipples.size) dipRipples.each(epochNow, (x, y, z, radius, alpha) => ringList.push({x, y, z, radius, color: ARRIVAL, alpha}));
         // The animals that glow, at night: a soft glow on each.

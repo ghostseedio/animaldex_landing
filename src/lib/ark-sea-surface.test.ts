@@ -4,8 +4,8 @@ import {readFileSync} from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import {PASS_SECONDS, SEA_FLIGHT_CLEAR, passAt, seaFlightAt, seaFlightKinds, seaFlightSpec, seaHome} from "@/ark-scene/sea-flight";
-import {CRUISE_CYCLE, surfaceCruiseAt, surfaceCruiseKinds, surfaceCruiseSpec} from "@/ark-scene/surface-cruise";
-import {RING_SECONDS, TRAIL_SECONDS, signRings, trailDab, splashHeight, surfaceState, trackSurface, type SurfaceSample} from "@/ark-scene/surface-signs";
+import {CRUISE_CYCLE, CRUISE_SHALLOW, surfaceCruiseAt, surfaceCruiseKinds, surfaceCruiseSpec} from "@/ark-scene/surface-cruise";
+import {RING_SECONDS, TRAIL_SECONDS, signRings, trailDab, splashPuff, surfaceState, trackSurface, type SurfaceSample} from "@/ark-scene/surface-signs";
 import {leapSpec} from "@/ark-scene/water-leaps";
 import {fitInWater, type WaterSpec} from "@/ark-scene/sea-depth";
 import {heightAt} from "@/ark-scene/world";
@@ -22,7 +22,7 @@ test("sea rows: only kinds whose own stored text says so, each with its quote", 
     assert.deepEqual(surfaceCruiseKinds(), ["giant-oceanic-manta-ray"]);
     assert.match(surfaceCruiseSpec("giant-oceanic-manta-ray")!.quote, /spends much time near the surface/);
     const cruise = surfaceCruiseSpec("giant-oceanic-manta-ray")!;
-    assert.deepEqual(cruise.depth, [0.3, 1.0]);
+    assert.deepEqual(cruise.depth, [0.05, 0.3]);
     // No breach: the manta's stored text never says it leaves the water (no leap row; the cruise row's file says why).
     assert.equal(leapSpec("giant-oceanic-manta-ray"), null);
     const about = JSON.parse(readFileSync(path.join(root, "src/ark-scene/surface-cruise.json"), "utf8")).about as string;
@@ -31,7 +31,7 @@ test("sea rows: only kinds whose own stored text says so, each with its quote", 
 
 // MARK: The manta at the top
 
-test("manta: at the top for its share of the time, its back 0.3–1 m under, easing in and out; the same for every viewer", () => {
+test("manta: at the top for its share of the time, its top 0.05–0.3 m under (none of it showing), easing in and out; the same for every viewer", () => {
     const id = "f9abebf2-manta";
     let up = 0;
     let jumps = 0;
@@ -41,7 +41,7 @@ test("manta: at the top for its share of the time, its back 0.3–1 m under, eas
         assert.ok(at.k >= 0 && at.k <= 1);
         if (at.k > 0.99) {
             up++;
-            assert.ok(at.depth >= 0.3 - 1e-9 && at.depth <= 1.0 + 1e-9, `depth ${at.depth}`);
+            assert.ok(at.depth >= 0.05 - 1e-9 && at.depth <= 0.3 + 1e-9, `depth ${at.depth}`);
         }
         if (Math.abs(at.k - last) > 0.1) jumps++;
         last = at.k;
@@ -51,12 +51,17 @@ test("manta: at the top for its share of the time, its back 0.3–1 m under, eas
     assert.ok(share > 0.25 && share < 0.4, `share at the top ${share.toFixed(2)}`);
     assert.equal(jumps, 0, "it eases up and down, never jumps");
     assert.equal(surfaceCruiseAt(id, "blue-whale", EPOCH).k, 0);
-    // In the water's fit (the scene fits it again at its drawn height): up at the top its middle is `depth` under, so the
-    // wingtips of a 2 m tall drawn manta break the surface; in its band it stays under.
+    // Its top hidden 0.3 m under still pushes a wake (the cruiser's margin); anything else that deep is under.
+    let cruiser = trackSurface(null, {x: 0, z: 0, yaw: 0, top: -0.3, bottom: -2.3, surface: 0, length: 4, breathes: false, shallow: CRUISE_SHALLOW}, EPOCH);
+    for (let i = 1; i <= 10; i++) cruiser = trackSurface(cruiser.track, {x: i * 0.1, z: 0, yaw: 0, top: -0.3, bottom: -2.3, surface: 0, length: 4, breathes: false, shallow: CRUISE_SHALLOW}, EPOCH + i * 0.1);
+    assert.ok(cruiser.wake > 0 && cruiser.track.state === "at");
+    assert.equal(surfaceState(-0.3, -2.3, 0), "under");
+    // In the water's fit (the scene fits it again at its drawn height): up at the top its highest point is `depth` under,
+    // so no part of a 2 m tall drawn manta shows through the surface; in its band it stays deeper.
     const band: WaterSpec = {motion: "swim", floorY: -40, depth: 4, aboveFloor: false, breath: 0};
     assert.ok(fitInWater(band, 2).base + 2 < 0);
-    const top = fitInWater({...band, cruise: {k: 1, depth: 0.5}}, 2);
-    assert.ok(Math.abs(top.middle + 0.5) < 1e-9 && top.base + 2 > 0);
+    const top = fitInWater({...band, cruise: {k: 1, depth: 0.2}}, 2);
+    assert.ok(Math.abs(top.base + 2 + 0.2) < 1e-9 && top.base + 2 < 0);
 });
 
 // MARK: The frigatebird on the wing
@@ -106,7 +111,10 @@ test("surface signs: a break as it comes up (and a blow for a breather), a ring 
     step = trackSurface(step.track, sample(0.1), EPOCH + 0.1);
     assert.equal(step.event?.kind, "break");
     assert.equal(step.event?.blow, true);
-    assert.ok(splashHeight(step.event!, 0.3) > 0.2);
+    const puff = splashPuff(step.event!, 0.3)!;
+    assert.ok(puff.alpha > 0.1 && puff.alpha <= 0.45 && puff.size > 0.2, "a soft puff of mist, not a bright cone");
+    assert.equal(splashPuff(step.event!, 2), null);
+    assert.ok(signRings(step.event!, 0.1).every((ring) => ring.alpha <= 0.4), "thin faint rings, not bright selection rings");
     assert.equal(signRings(step.event!, RING_SECONDS + 0.1).length, 0);
     assert.equal(signRings(step.event!, 1).length, 2);
     // Swimming along the top at 0.8 m/s: a wake; held still: none.
