@@ -67,6 +67,24 @@ export function plainColour(colour: [number, number, number]): [number, number, 
     return [colour[0], colour[1], colour[2] + (colour[2] < 0.5 ? 0.25 : -0.25) / 255];
 }
 
+/**
+ * Load-alloc: the colour `plainColour` or `encodeColourTag` (by `tag`) gives, in `TONE`, from its channels: the same
+ * arithmetic, no array a corner (the town's build writes some two million corners; their colours' arrays were garbage).
+ */
+const TONE = new Float64Array(3);
+const toneByte = (v: number) => Math.min(Math.max(Math.round(v * 255), 0), 254);
+function toneOf(r: number, g: number, b: number, tag: number): void {
+    if (tag) {
+        TONE[0] = (toneByte(r) + (tag + 0.5) / 16) / 255;
+        TONE[1] = (toneByte(g) + 0.5) / 255;
+        TONE[2] = (toneByte(b) + 0.25) / 255;
+    } else {
+        TONE[0] = r;
+        TONE[1] = g;
+        TONE[2] = decodeColourTag(r, g, b, COLOUR_TAG_TOLERANCE * 2) ? b + (b < 0.5 ? 0.25 : -0.25) / 255 : b;
+    }
+}
+
 export class Geo {
     readonly pos: number[] = [];
     readonly nor: number[] = [];
@@ -107,13 +125,16 @@ export class Geo {
         nx /= length;
         ny /= length;
         nz /= length;
-        const col = this.surface ? encodeColourTag(colour, this.surface) : plainColour(colour);
-        for (const p of [a, b, c]) {
-            this.pos.push(p[0], p[1], p[2]);
-            this.nor.push(nx, ny, nz);
-            this.col.push(col[0], col[1], col[2]);
-            this.extra.push(this.tag);
-        }
+        // (Load-alloc: the three corners written in turn, no array of them and none of the colour.)
+        toneOf(colour[0], colour[1], colour[2], this.surface);
+        const r = TONE[0];
+        const g = TONE[1];
+        const bl = TONE[2];
+        const tag = this.tag;
+        this.pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+        this.nor.push(nx, ny, nz, nx, ny, nz, nx, ny, nz);
+        this.col.push(r, g, bl, r, g, bl, r, g, bl);
+        this.extra.push(tag, tag, tag);
     }
 
     /** Draws with a surface kind set (then puts it back). */
@@ -284,36 +305,48 @@ export class Geo {
         const mean = [0, 0, 0];
         for (let i = 0; i < m.colors.length; i++) mean[i % 3] += m.colors[i];
         for (let k = 0; k < 3; k++) mean[k] = mean[k] / (m.colors.length / 3) || 1;
-        const point = (i: number): V3 => {
+        // Each corner: its point, its normal (under a stretch: divided by the stretch, then turned) and its tint, written
+        // straight in (load-alloc: three arrays a corner were made and dropped, some 300 faces a rock).
+        const tag = this.tag;
+        const surface = this.surface;
+        const corner = (i: number) => {
             const lx = (m.positions[i * 3] - mx) * kx;
             const lz = (m.positions[i * 3 + 2] - mz) * kz;
-            return [x + lx * c - lz * si, y + m.positions[i * 3 + 1] * ky, z + lx * si + lz * c];
-        };
-        // (A normal under a stretch: divided by the stretch, then turned.)
-        const normal = (i: number): V3 => {
+            this.pos.push(x + lx * c - lz * si, y + m.positions[i * 3 + 1] * ky, z + lx * si + lz * c);
             const nx = m.normals[i * 3] / kx;
             const ny = m.normals[i * 3 + 1] / ky;
             const nz = m.normals[i * 3 + 2] / kz;
             const l = Math.hypot(nx, ny, nz) || 1;
-            return [(nx * c - nz * si) / l, ny / l, (nx * si + nz * c) / l];
+            this.nor.push((nx * c - nz * si) / l, ny / l, (nx * si + nz * c) / l);
+            toneOf(
+                colour[0] * Math.min(Math.max(m.colors[i * 3] / mean[0], 0.4), 1.5),
+                colour[1] * Math.min(Math.max(m.colors[i * 3 + 1] / mean[1], 0.4), 1.5),
+                colour[2] * Math.min(Math.max(m.colors[i * 3 + 2] / mean[2], 0.4), 1.5),
+                surface
+            );
+            this.col.push(TONE[0], TONE[1], TONE[2]);
+            this.extra.push(tag);
         };
-        const tint = (i: number): [number, number, number] => [0, 1, 2].map((k) => colour[k] * Math.min(Math.max(m.colors[i * 3 + k] / mean[k], 0.4), 1.5)) as [number, number, number];
         for (let f = 0; f < m.index.length; f += 3) {
-            const [a, b, d] = [m.index[f], m.index[f + 1], m.index[f + 2]];
-            this.triShaded(point(a), point(b), point(d), normal(a), normal(b), normal(d), tint(a), tint(b), tint(d));
+            corner(m.index[f]);
+            corner(m.index[f + 1]);
+            corner(m.index[f + 2]);
         }
     }
 
     /** A triangle with its own normal and colour at each corner (smooth shading), wound as `tri`. */
     triShaded(a: V3, b: V3, c: V3, na: V3, nb: V3, nc: V3, ca: [number, number, number], cb: [number, number, number], cc: [number, number, number]) {
-        const corners: Array<[V3, V3, [number, number, number]]> = [[a, na, ca], [b, nb, cb], [c, nc, cc]];
-        for (const [p, n, colour] of corners) {
-            const col = this.surface ? encodeColourTag(colour, this.surface) : plainColour(colour);
-            this.pos.push(p[0], p[1], p[2]);
-            this.nor.push(n[0], n[1], n[2]);
-            this.col.push(col[0], col[1], col[2]);
-            this.extra.push(this.tag);
-        }
+        // (Load-alloc: no array of the corners, nor of each colour.)
+        const tag = this.tag;
+        this.pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+        this.nor.push(na[0], na[1], na[2], nb[0], nb[1], nb[2], nc[0], nc[1], nc[2]);
+        toneOf(ca[0], ca[1], ca[2], this.surface);
+        this.col.push(TONE[0], TONE[1], TONE[2]);
+        toneOf(cb[0], cb[1], cb[2], this.surface);
+        this.col.push(TONE[0], TONE[1], TONE[2]);
+        toneOf(cc[0], cc[1], cc[2], this.surface);
+        this.col.push(TONE[0], TONE[1], TONE[2]);
+        this.extra.push(tag, tag, tag);
     }
 
     /**

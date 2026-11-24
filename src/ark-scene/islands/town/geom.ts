@@ -43,8 +43,12 @@ export function corners(b: Box): Poly {
 }
 
 export function inBox(b: Box, x: number, z: number, margin = 0): boolean {
-    const p = toLocal(b, x, z);
-    return Math.abs(p.x) <= b.w / 2 + margin && Math.abs(p.z) <= b.d / 2 + margin;
+    // (`toLocal`'s sums, without its object: asked at every ground sample, load-alloc.)
+    const c = Math.cos(b.rot);
+    const s = Math.sin(b.rot);
+    const dx = x - b.x;
+    const dz = z - b.z;
+    return Math.abs(dx * c + dz * s) <= b.w / 2 + margin && Math.abs(-dx * s + dz * c) <= b.d / 2 + margin;
 }
 
 /** Signed distance (m) from a point to a box's edge: negative inside. */
