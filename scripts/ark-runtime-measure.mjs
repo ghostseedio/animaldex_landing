@@ -159,9 +159,10 @@ await build({
     define: {"process.env.NODE_ENV": JSON.stringify(buildEnv)},
     logLevel: "warning"
 });
-// The prebuild worker (`--prebuild`), and the scale populations (`--population 1x`, from scripts/ark-scale-fixture.mts).
-for (const [entry, out] of [["prebuild-worker.ts", "ark-prebuild-worker.js"], ["prebuild-places-worker.ts", "ark-prebuild-places-worker.js"]]) {
-    await build({entryPoints: [path.join(root, "src/ark-scene/runtime", entry)], outfile: path.join(site, out), bundle: true, format: "iife", platform: "browser", target: ["es2020"], minify: true, tsconfig: path.join(root, "tsconfig.json"), define: {"process.env.NODE_ENV": JSON.stringify(buildEnv)}, logLevel: "warning"});
+// The prebuild workers (`--prebuild`), the town's worker (`--islands`: the page builds the town in it, as the app does),
+// and the scale populations (`--population 1x`, from scripts/ark-scale-fixture.mts).
+for (const [entry, out] of [["runtime/prebuild-worker.ts", "ark-prebuild-worker.js"], ["runtime/prebuild-places-worker.ts", "ark-prebuild-places-worker.js"], ["islands/town/prebuild-worker.ts", "ark-town-worker.js"]]) {
+    await build({entryPoints: [path.join(root, "src/ark-scene", entry)], outfile: path.join(site, out), bundle: true, format: "iife", platform: "browser", target: ["es2020"], minify: true, tsconfig: path.join(root, "tsconfig.json"), define: {"process.env.NODE_ENV": JSON.stringify(buildEnv)}, logLevel: "warning"});
 }
 for (const scale of ["1x", "3x"]) {
     const from = path.join(root, ".ark-golden", "site", `population-${scale}.json`);
@@ -786,6 +787,8 @@ for (const deviceName of devices) {
             triangles: r.stats?.triangles ?? null,
             runtime: r.runtime,
             prepared: r.prepared,
+            // (Islands mode: where the town was worked out, `worker` as in the app.)
+            townBuild: r.townBuild ?? null,
             animals: r.animals,
             tasks,
             longFrames: frames.filter((frame) => frame.blocking > 0 || frame.ms > 100).slice(0, 40),
