@@ -358,3 +358,31 @@ export function leapSplashes(step: LeapStep): number[] {
     if (step.style === "glide" && step.tap > 0) return [step.out, step.tap + GLIDE_TAP * 0.3, step.back];
     return [step.out, step.back];
 }
+
+/** While a whale sails it keeps this share of its cruise (SPECIES-ANIM-B2). */
+export const SAIL_PACE = 0.04;
+/** After a sail it makes up the time it held at this share over its cruise (+30%, out of sight of the pace). */
+export const SAIL_CATCH_UP = 0.3;
+
+/**
+ * How many seconds behind its own loop a sailing whale is at a moment (epoch s): its open-ocean place (`oceanFix`) is
+ * read at the clock minus this, so it holds nearly still with its flukes up while it sails, then makes the time up at
+ * `SAIL_CATCH_UP` over its cruise, with no jump (SPECIES-ANIM-B2, 2026-11-24: a "sailing" whale slid head down 100 to
+ * 400 m along its loop at 1.6 m/s). Pure: from its own sails in this engine tick and the one before (the longest hold,
+ * 246 s, is made up in 820 s, well inside a tick), the same for every viewer.
+ */
+export function sailDelay(id: string, slug: string, length: number, epoch: number): number {
+    const spec = leapSpec(slug);
+    if (!spec || spec.style !== "sail") return 0;
+    const tick = Math.floor(epoch / LEAP_TICK_SECONDS);
+    let delay = 0;
+    let at = (tick - 1) * LEAP_TICK_SECONDS;
+    for (const step of [...leapsInTick(id, slug, length, tick - 1), ...leapsInTick(id, slug, length, tick)]) {
+        if (step.from >= epoch) break;
+        delay = Math.max(0, delay - (step.from - at) * SAIL_CATCH_UP);
+        const end = Math.min(step.to, epoch);
+        delay += (end - step.from) * (1 - SAIL_PACE);
+        at = end;
+    }
+    return Math.max(0, delay - (epoch - at) * SAIL_CATCH_UP);
+}

@@ -124,3 +124,27 @@ test("a glide: out, low over the water, a tail-tap down to the water half way, o
         assert.deepEqual(leapSplashes(g).length, 3);
     }
 });
+
+test("a sailing whale holds nearly still and makes the time up after, with no jump (SPECIES-ANIM-B2)", async () => {
+    const {sailDelay, leapsInTick, LEAP_TICK_SECONDS, SAIL_PACE} = await import("@/ark-scene/water-leaps");
+    const id = "whale-a";
+    const slug = "southern-right-whale";
+    let sails = 0;
+    for (let tick = 535000; tick < 535040; tick++) {
+        for (const s of leapsInTick(id, slug, 14, tick)) {
+            if (s.style !== "sail") continue;
+            sails++;
+            // During the sail its loop clock moves at SAIL_PACE of real time.
+            const mid = (s.from + s.to) / 2;
+            const loop = (t: number) => t - sailDelay(id, slug, 14, t);
+            assert.ok(Math.abs((loop(mid + 10) - loop(mid)) / 10 - SAIL_PACE) < 1e-6, "held");
+        }
+        // Never a jump: one second of real time is between SAIL_PACE and 1 + SAIL_CATCH_UP seconds of its loop.
+        for (let t = tick * LEAP_TICK_SECONDS; t < (tick + 1) * LEAP_TICK_SECONDS; t += 7) {
+            const step = 1 - (sailDelay(id, slug, 14, t + 1) - sailDelay(id, slug, 14, t));
+            assert.ok(step > SAIL_PACE - 1e-6 && step < 1.3 + 1e-6, `${t}: ${step}`);
+        }
+    }
+    assert.ok(sails > 10, `${sails} sails`);
+    assert.equal(sailDelay(id, "humpback-whale", 14, 1794442000), 0, "no sail, no delay");
+});
