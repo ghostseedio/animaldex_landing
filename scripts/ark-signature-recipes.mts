@@ -44,7 +44,9 @@ const seeded: Record<string, {plans: string[]; weight: number}> = {};
 const replaced = new Set<string>();
 const heldWhy = new Map<string, string>();
 // (Lane SIG7: coat variants aboard as species of their own, with no row: each takes its parent's, less `without`.)
-type Coats = {of: string; without: string[]; slugs: string[]};
+// (SPECIES-ANIM-B2, 2026-11-24: `over`, a breed is its parent too: it takes the parent's row over the generator's own,
+// whose row for a domestic breed is a plain quadruped's, none of its parent's acts.)
+type Coats = {of: string; without: string[]; slugs: string[]; over?: boolean};
 const coats: Coats[] = [];
 // (Lane SIG9: `withdraw`, a generated row a lane takes out of the table again, with why: one that reads wrong once it can
 // run, a bufflehead's strut on land when its courtship is on the water.)
@@ -251,7 +253,7 @@ for (const c of coats) {
     fields[0] = fields[0].split(",").filter((r) => r && !c.without.includes(r.slice(0, r.lastIndexOf(".")))).join(",");
     const row = fields.join("|");
     for (const slug of c.slugs) {
-        if (planOf.has(slug)) {
+        if (planOf.has(slug) && !c.over) {
             skipped.push(`${slug} coat of ${c.of}: it has a row of its own`);
             continue;
         }

@@ -1,0 +1,31 @@
+{
+ "about": "Lane SPECIES-ANIM-B2 (2026-11-24, coordinator after SIG7): the 18 cat breeds aboard as species of their own (Abyssinian to Turkish Van) take the domestic cat's row, its sleep row and its sentences, as SIG7's coat variants do (`coats` in signature-recipes-sig7.json), less the acts on clips their live v3 rigs lack. Each breed's rig (ark-rig/v3 manifest, 2026-11-24) has lie but no dig, knead or stretch clip, so the loaf comes in and the scrape, the knead and the stretch stay out. `over`: the breeds have generated rows of their own (#112), a plain quadruped's; the cat's row replaces them. Applied by scripts/ark-signature-recipes.mts. Strips: ~/AnimalDex-work/species-anim-b2/cats/.",
+ "version": 1,
+ "additions": [],
+ "coats": {
+  "of": "domestic-cat",
+  "without": ["dig_burrow~scrape", "knead_settle", "stretch_yawn~cat"],
+  "why": "each breed's live v3 rig has the lie clip (bask_sun~loaf) but no dig, knead or stretch clip (SIG5's kit acts are on the domestic cat's rig only)",
+  "over": true,
+  "slugs": [
+   "abyssinian-cat",
+   "american-curl-cat",
+   "american-shorthair-cat",
+   "birman-cat",
+   "burmese-cat",
+   "cornish-rex-cat",
+   "devon-rex-cat",
+   "domestic-longhair-cat",
+   "exotic-shorthair-cat",
+   "manx-cat",
+   "norwegian-forest-cat",
+   "oriental-shorthair-cat",
+   "russian-blue-cat",
+   "savannah-cat",
+   "selkirk-rex-cat",
+   "siberian-cat",
+   "tonkinese-cat",
+   "turkish-van-cat"
+  ]
+ }
+}
