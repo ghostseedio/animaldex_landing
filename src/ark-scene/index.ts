@@ -111,7 +111,7 @@ import {floatOver} from "@/ark-scene/water-float"; // p3 (zoofix)
 import {breathAt, depthSeed, fitInWater, floatPitch, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, waterSurfaceAt, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {tripBreath} from "@/ark-scene/breath-trip";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
-import {leapAt, leapBoutsIn, leapPose, leapShown, leapSplashes, sailTail, tailEnd, type LeapBody, type LeapStep, type LeapStyle} from "@/ark-scene/water-leaps";
+import {leapAt, leapBoutsIn, leapPose, leapShown, leapSplashes, sailDelay, sailTail, tailEnd, type LeapBody, type LeapStep, type LeapStyle} from "@/ark-scene/water-leaps";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
 import {ARK_SCENE_MODULES, type ArkSceneModule} from "@/ark-scene/scene-modules";
@@ -3009,14 +3009,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const animal = findEntry(s.id)?.animal;
                 return animal ? hunting.hunting(animal, start + MOMENT_WINDOW_SECONDS) && !hunting.hunting(animal, start) : false;
             }).map((subject) => ({subject, at: start})) : [];
+            // ARK-FISH: a leap out of the water (its kind's own text; behaviour, never a catch). SPECIES-ANIM-B2, 2026-11-24:
+            // said on time, alongside the window's other line, for the bouts beginning in the window under way now (the
+            // next one), not the one just done: a glide is over in 2 to 4 s, and the line came 5 to 10 s after it began,
+            // only when nothing else was said.
+            const leap = leapMomentIn(w, start + MOMENT_WINDOW_SECONDS, start + 2 * MOMENT_WINDOW_SECONDS, subjects);
+            if (leap) moments.push(leap);
             const moment = pickMoment(w, subjects, forays);
             const entry = moment ? findEntry(moment.animalId) : null;
-            if (!moment || !entry) {
-                // ARK-FISH: else a leap out of the water that begins in the window (its kind's own text; behaviour, never a catch).
-                const leap = leapMomentIn(w, start, start + MOMENT_WINDOW_SECONDS, subjects);
-                if (leap) moments.push(leap);
-                continue;
-            }
+            if (!moment || !entry) continue;
             // (Not the same kind of line again so soon: "heading home" × 6 at dusk reads like a machine.)
             const repeatKey = moment.kind === "doing" ? `doing:${moment.activity}` : moment.kind;
             const lastSaid = momentLastSaid.get(repeatKey);
@@ -5391,9 +5392,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // p2 (ocean): the open ocean's wild animals (`open-ocean.ts`): who goes out from the record (islands mode, the v2
     // world), where on its loop from the shared clock; its depth, breath and pitch the sea's own, as `waterPose`'s.
     const oceanRoams = (entry: Entry) => (entry.ocean ??= Boolean(options.wildAnimals) && arkWorld() === "v2" && !entry.visitor && !townIds.has(entry.animal.id) && roamsOpenOcean(entry.animal, entry.depth, entry.trueLength));
+    const oceanHeld = (entry: Entry) => (reducedMotion ? 0 : sailDelay(entry.animal.id, entry.animal.model_slug, entry.trueLength, worldMs() / 1000));
     const oceanPose = (entry: Entry, depth: SpeciesDepth, modelHeight: number): Pose => {
         const clock = reducedMotion ? 0 : clockNow();
-        const fix = oceanFix(entry.animal, entry.length, clock);
+        // (SPECIES-ANIM-B2: a sailing whale holds nearly still with its flukes up, then makes the time up: `sailDelay`.)
+        const fix = oceanFix(entry.animal, entry.length, clock - oceanHeld(entry));
         // (Its breath as everywhere: awake on the schedule, its breathe trip's (every third slot); else the clock's cycle.)
         const sched = entry.sched;
         const breath = reducedMotion ? 0 : sched?.pose && scheduled(entry) ? scheduledBreath(sched) ?? breathAt(entry.seed, clock, true) : entry.state.breathing ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
@@ -6736,11 +6739,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             !reducedMotion &&
             rigs.walks(c.entry.animal.model_slug) && c.entry.air <= 0.001 && !c.entry.visitor && !c.pose.afloat && gaitMoving(c.entry.gait, c.entry.length) && rigs.available(c.entry.animal.model_slug);
         const chosen = (entry: Entry) => entry.animal.id === selectedId || entry.animal.id === followId;
+        // (SPECIES-ANIM-B2: a whale's sail or a flyingfish's glide under way is drawn on its full model, at its true size,
+        // first after the one chosen: ranked by size on screen, the moment fell to a token or an icon from the overview.)
+        const leaping = (entry: Entry) => entry.leapStep?.style === "sail" || entry.leapStep?.style === "glide";
         const nearWanted = candidates
-            .filter((c) => c.visible && !c.skip && c.model?.near && (c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0) + ((c.entry.air > 0.5 || c.entry.rig?.flying) && rigs.mayFly(c.entry.animal.model_slug) ? FLIGHT_RIG_EXTRA : 0) || (movingRig(c) && (c.entry.level === "near" || c.distance < MOVING_RIG_WITHIN)) || nearBySize(c.entry.length, c.distance, height, FOV)))
+            .filter((c) => c.visible && !c.skip && c.model?.near && (c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0) + ((c.entry.air > 0.5 || c.entry.rig?.flying) && rigs.mayFly(c.entry.animal.model_slug) ? FLIGHT_RIG_EXTRA : 0) || (movingRig(c) && (c.entry.level === "near" || c.distance < MOVING_RIG_WITHIN)) || nearBySize(c.entry.length, c.distance, height, FOV) || leaping(c.entry)))
             // (Largest on screen first at true size: a whale far off before a beetle near by. The one chosen or followed
             // before all: among forty birds in an aviary the near cap could pass it by, close up on its far model.)
-            .sort((a, b) => Number(chosen(b.entry)) - Number(chosen(a.entry)) || screenWeight(b.entry.length, b.distance) - screenWeight(a.entry.length, a.distance));
+            .sort((a, b) => Number(chosen(b.entry)) - Number(chosen(a.entry)) || Number(leaping(b.entry)) - Number(leaping(a.entry)) || screenWeight(b.entry.length, b.distance) - screenWeight(a.entry.length, a.distance));
         const nearIds = new Set<string>();
         const nearSpecies = new Set<string>();
         const cap = caps();
@@ -6753,7 +6759,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         runtime.usedNear(nearSpecies);
         // Models for the MODEL_CAP largest on screen (true scale: a whale far off before a beetle near by); past that, icons.
-        const modelled = new Set(candidates.filter((c) => c.visible && !c.skip && c.model?.far).sort((a, b) => screenWeight(b.entry.length, b.distance) - screenWeight(a.entry.length, a.distance)).slice(0, cap.models).map((c) => c.entry.animal.id));
+        const modelled = new Set(candidates.filter((c) => c.visible && !c.skip && c.model?.far).sort((a, b) => Number(leaping(b.entry)) - Number(leaping(a.entry)) || screenWeight(b.entry.length, b.distance) - screenWeight(a.entry.length, a.distance)).slice(0, cap.models).map((c) => c.entry.animal.id));
 
         // Rigs: the viewer's own, the one looked at or followed, then the nearest, within the caps (none with reduced motion).
         rigs.caps = liteOn() ? RIG_CAPS_LITE : RIG_CAPS;
@@ -12130,7 +12136,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!entry) return null;
             const ground = Math.max(entry.place.ground, 0);
             // p2 (ocean): one out in the open ocean not drawn yet is where its loop has it now, not at its old place.
-            const sea = !entry.middle && entry.depth && oceanRoams(entry) ? oceanFix(entry.animal, entry.length, clockNow()) : null;
+            const sea = !entry.middle && entry.depth && oceanRoams(entry) ? oceanFix(entry.animal, entry.length, clockNow() - oceanHeld(entry)) : null;
             if (sea) return {x: sea.x, y: ARK_ENVIRONMENT.seaLevel.value - 4, z: sea.z, ground: 0, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: sea.yaw};
             // (Out of the picture, it is not drawn: where its act poses it, else where its day last had it, else its place.)
             const posed = entry.act && !entry.act.hidden ? {x: entry.act.x, y: entry.act.base, z: entry.act.z} : entry.sched?.pose ?? null;
