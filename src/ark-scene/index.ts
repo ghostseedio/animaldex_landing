@@ -429,6 +429,9 @@ const LYING_ROLL = 1.42;
 const CARRIED_PLAYS: ReadonlySet<string> = new Set(["loop", "once"]);
 /** ...except the body's roll in a roll on the ground: the clip pedals the legs on the lying pose, the block turns the body over. */
 const ROLLED_ON_CLIP: ReadonlySet<string> = new Set(["roll", "dust_bathe", "wallow"]);
+/** Lane SIG7: a bath's dip and rock are the block's: its shake_off clip shakes the feathers but carries no attitude, so a
+ * mallard bathing on its clip alone sat level and still on the water. */
+const TILT_OVER_CLIP: ReadonlySet<string> = new Set(["bathe"]);
 /** Lane SIG6: the clips a rolled body gets up by, held as it was (`rollHeld`). */
 const ROLL_GETS_UP: ReadonlySet<string> = new Set(["get_up", "lie_down", "lie"]);
 /** Lane SIG6: the most a body turned over on its own clip is moved onto its back or side, either way (body lengths). */
@@ -5197,7 +5200,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // In the water: where it goes is the schedule's; how deep, its own place in its species' band (`sea-depth.ts`,
         // each animal its own depth, so a school is spread up and down), up to the surface on its breath, fitted at its drawn size.
         const act = (at as RecipePose).act;
-        const carried = Boolean(act && act.episode !== "sleep" && entry.rig && entry.rig.weight > 0.5 && act.state && CARRIED_PLAYS.has(recipeClip(sleepState(act.state), (name) => Boolean(rigs.clip(entry.animal.model_slug, name)))?.play ?? ""));
+        const carried = Boolean(act && act.episode !== "sleep" && entry.rig && entry.rig.weight > 0.5 && act.state && !TILT_OVER_CLIP.has(act.state) && CARRIED_PLAYS.has(recipeClip(sleepState(act.state), (name) => Boolean(rigs.clip(entry.animal.model_slug, name)))?.play ?? ""));
         // (`schedule-water.ts`: in the water, the band wins over the schedule's own height; a recipe act of its own, a dive, keeps its height.)
         // (Part C: the water's surface there, the sea's 0 or the bigger wild island's lake and river at their own level.)
         // (Lane MA3: the higher of the drawn lattice's surface and the schedule's own water level, `waterLevelAt`: the
