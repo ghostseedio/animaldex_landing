@@ -30,6 +30,6 @@
     {"id": "species always in step", "problem": "7 Variety", "source": "audit", "path": "variety.speciesAlwaysInStep", "max": 90},
     {"id": "mean distinct states in a group of 4", "problem": "7 Variety", "source": "audit", "path": "variety.meanDistinctStates", "min": 2},
     {"id": "samples on the wrong surface (%)", "problem": "Env", "source": "audit", "path": "environment.invalidSurface.sharePct", "max": 1.5},
-    {"id": "animals sinking into the ground", "problem": "Env", "source": "audit", "path": "environment.sinking.animals", "max": 15}
+    {"id": "animals sinking into the ground", "problem": "Env", "source": "audit", "path": "environment.sinking.animals", "max": 20, "why": "SPECIES-ANIM-B2 (2026-11-24, coordinator: the stable fixture's one-time re-baseline): the fixture's clusters now take their own slug-hash slots, so a different set of small ground invertebrates lands on the points whose drawn height sits under the ground. The class is the same, every one of them below the ground in all 2,880 samples: main + the ledge fix 13 (carpenter ants x4, lasioglossum bees x4, pacific mole crabs x3, common prawn, yellow-spotted millipede), the stable fixture 18 (semaphore crabs x4, eciton army ants x4, wasp spiders x2, driver ant, ant-mimic mantis, common limpet, soil centipede, flat porcelain crab, marbled locust, red slug, velvet swimming crab). No sinking code changed; adding species no longer moves this sample."}
   ]
 }
