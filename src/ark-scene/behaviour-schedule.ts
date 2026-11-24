@@ -2270,11 +2270,17 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         // (MA1: its leader not up in the air where it joins it (down already, or not off yet): it walks or swims there.)
         const afoot = now.mode !== "water" && !leaderAt(start + catchUp).aloft;
         const joinWet = wet(world, join);
+        // (SPECIES-ANIM-B2, 2026-11-24: its walk to its leader goes the nav's way round, as every other walk does: a
+        // greater flamingo's straight 120 m catch-up from its wetland ran through the hamlet, over two garden pickets.)
+        const swimsUp = now.mode === "water" || (afoot && joinWet && wet(world, from));
+        const footWay = afoot && !swimsUp ? world.nav.path(from, join, "walk", 0.5, 900, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug)) : null;
+        if (footWay && footWay.length && Math.hypot(footWay[footWay.length - 1].x - join.x, footWay[footWay.length - 1].z - join.z) > 0.01) footWay.push({x: join.x, z: join.z});
+        const footLength = footWay && footWay.length >= 2 ? pathLength(footWay) : flat;
         const legs: Leg[] = [
-            now.mode === "water" || (afoot && joinWet && wet(world, from))
+            swimsUp
                 ? {mode: "water", from, to: join, path: [from, join], length: flat, seconds: catchUp, beat: "swim"}
                 : afoot
-                  ? {mode: "ground", from, to: join, path: [from, join], length: flat, seconds: Math.max(catchUp, flat / Math.max(pace, 0.05)), beat: "walk"}
+                  ? {mode: "ground", from, to: join, path: footWay && footWay.length >= 2 ? footWay : [from, join], length: footLength, seconds: Math.max(catchUp, footLength / Math.max(pace, 0.05)), beat: "walk"}
                   : {mode: "air", from, to: join, path: [from, join], length: flat, seconds: catchUp, beat: "fly", cruise: Math.max(cruise * 0.5, 1), plan: catchUpPlan(paces, flat, catchUp, Math.max(cruise * 0.5, 1))},
         ];
         legs[0].seconds = Math.min(legs[0].seconds, SLOT_SECONDS - 4);
