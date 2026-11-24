@@ -30,7 +30,7 @@ import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, PACE_CAP, runFactor, swi
 import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
 import {bodyShape} from "@/ark-scene/collide/bodies";
 import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
-import {colliderDistance, type Collider} from "@/ark-scene/collide/colliders";
+import {colliderDistance, type Collider, type ColliderSet} from "@/ark-scene/collide/colliders";
 import {inKeep, intoKeep, type KeepBox} from "@/ark-scene/collide/resolve";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {allAttachPoints, type AttachPoint as SceneryPoint} from "@/ark-scene/sampler";
@@ -790,9 +790,27 @@ function climbFoot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
  */
 const CRAWL_RING = 12;
 const CRAWL_REACH_MAX = 12;
-export function crawlRound(world: ScheduleWorld, from: Spot, to: Spot, bodyR: number): Array<{x: number; z: number}> | null {
+// (The same crawl is asked for again and again, a forager going between the same spots all day: kept per collider set
+// and ground (neither changes once built), at most CRAWL_KEPT a world before it starts over.)
+const CRAWL_KEPT = 4096;
+const crawlKept = new WeakMap<ColliderSet, WeakMap<object, Map<string, ReadonlyArray<{x: number; z: number}> | null>>>();
+export function crawlRound(world: ScheduleWorld, from: Spot, to: Spot, bodyR: number): ReadonlyArray<{x: number; z: number}> | null {
     const solid = world.nav.colliders;
     if (!solid) return null;
+    let bySampler = crawlKept.get(solid);
+    if (!bySampler) crawlKept.set(solid, (bySampler = new WeakMap()));
+    let kept = bySampler.get(world.sampler);
+    if (!kept) bySampler.set(world.sampler, (kept = new Map()));
+    const key = `${from.x},${from.z},${to.x},${to.z},${bodyR}`;
+    const hit = kept.get(key);
+    if (hit !== undefined) return hit;
+    if (kept.size >= CRAWL_KEPT) kept.clear();
+    const way = crawlSearch(world, solid, from, to, bodyR);
+    kept.set(key, way);
+    return way;
+}
+
+function crawlSearch(world: ScheduleWorld, solid: ColliderSet, from: Spot, to: Spot, bodyR: number): Array<{x: number; z: number}> | null {
     const flat = Math.hypot(to.x - from.x, to.z - from.z);
     const near = solid.near((from.x + to.x) / 2, (from.z + to.z) / 2, flat / 2 + CRAWL_REACH_MAX, []).filter((c) => c.reach <= CRAWL_REACH_MAX);
     const nodes: Array<{x: number; z: number}> = [{x: from.x, z: from.z}, {x: to.x, z: to.z}];
@@ -805,27 +823,75 @@ export function crawlRound(world: ScheduleWorld, from: Spot, to: Spot, bodyR: nu
             if (!solid.blocked(x, z, bodyR) && world.sampler.heightAt(x, z) > 0) nodes.push({x, z});
         }
     }
-    // (Dijkstra over the clear straight runs; the node count is small: a few rings.)
+    // (A* over the runs between them, each run's clearance checked only when it is the next one taken (a lazy edge),
+    // never for the hundreds of runs a search never reaches: the same shortest way as checking every one first. The
+    // straight distance to the end is the estimate; ties go to the earlier-reached corner, then the lower index.)
     const n = nodes.length;
-    const dist = new Array<number>(n).fill(Infinity);
-    const prev = new Array<number>(n).fill(-1);
-    const done = new Array<boolean>(n).fill(false);
-    dist[0] = 0;
-    for (;;) {
-        let u = -1;
-        for (let i = 0; i < n; i++) if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
-        if (u < 0 || u === 1) break;
-        done[u] = true;
+    const dist = new Float64Array(n).fill(Infinity);
+    const prev = new Int32Array(n).fill(-1);
+    const done = new Uint8Array(n);
+    const left = (i: number) => Math.hypot(nodes[1].x - nodes[i].x, nodes[1].z - nodes[i].z);
+    // (A binary heap of candidate runs u -> v: key f = g + left(v), then the order u was reached, then v.)
+    const hf: number[] = [];
+    const hg: number[] = [];
+    const ho: number[] = [];
+    const hu: number[] = [];
+    const hv: number[] = [];
+    const less = (a: number, b: number) => hf[a] < hf[b] || (hf[a] === hf[b] && (ho[a] < ho[b] || (ho[a] === ho[b] && hv[a] < hv[b])));
+    const swap = (a: number, b: number) => {
+        [hf[a], hf[b]] = [hf[b], hf[a]];
+        [hg[a], hg[b]] = [hg[b], hg[a]];
+        [ho[a], ho[b]] = [ho[b], ho[a]];
+        [hu[a], hu[b]] = [hu[b], hu[a]];
+        [hv[a], hv[b]] = [hv[b], hv[a]];
+    };
+    const push = (f: number, g: number, o: number, u: number, v: number) => {
+        let i = hf.length;
+        hf.push(f), hg.push(g), ho.push(o), hu.push(u), hv.push(v);
+        while (i > 0) {
+            const up = (i - 1) >> 1;
+            if (!less(i, up)) break;
+            swap(i, up);
+            i = up;
+        }
+    };
+    const pop = () => {
+        const last = hf.length - 1;
+        swap(0, last);
+        const out = {g: hg.pop()!, u: hu.pop()!, v: hv.pop()!};
+        hf.pop(), ho.pop();
+        let i = 0;
+        for (;;) {
+            const l = 2 * i + 1;
+            const r = l + 1;
+            let m = i;
+            if (l < hf.length && less(l, m)) m = l;
+            if (r < hf.length && less(r, m)) m = r;
+            if (m === i) break;
+            swap(i, m);
+            i = m;
+        }
+        return out;
+    };
+    let order = 0;
+    const settle = (u: number, g: number, from: number) => {
+        done[u] = 1;
+        dist[u] = g;
+        prev[u] = from;
+        const o = order++;
         for (let v = 0; v < n; v++) {
             if (done[v]) continue;
-            const d = dist[u] + Math.hypot(nodes[v].x - nodes[u].x, nodes[v].z - nodes[u].z);
-            if (d < dist[v] && solid.segmentClear(nodes[u].x, nodes[u].z, nodes[v].x, nodes[v].z, bodyR)) {
-                dist[v] = d;
-                prev[v] = u;
-            }
+            const d = g + Math.hypot(nodes[v].x - nodes[u].x, nodes[v].z - nodes[u].z);
+            push(d + left(v), d, o, u, v);
         }
+    };
+    settle(0, 0, -1);
+    while (hf.length && !done[1]) {
+        const {g, u, v} = pop();
+        if (done[v] || !solid.segmentClear(nodes[u].x, nodes[u].z, nodes[v].x, nodes[v].z, bodyR)) continue;
+        settle(v, g, u);
     }
-    if (dist[1] === Infinity) return null;
+    if (!done[1]) return null;
     const way: Array<{x: number; z: number}> = [];
     for (let i = 1; i >= 0; i = prev[i]) way.unshift(nodes[i]);
     return way;
