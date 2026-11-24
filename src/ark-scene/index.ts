@@ -124,7 +124,7 @@ import {ArkPost, arkCpuScoreMs, lowerTier, tierFor, tierTrialFailed, tierTrialOn
 import {ArkPerf, arkPerfAsked} from "@/ark-scene/runtime/perf";
 import {ArkFramePacer, SLOW_CPU_MS} from "@/ark-scene/runtime/pace";
 import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize, screenWeight, SWIMMING_PLANS} from "@/ark-scene/sizes";
-import {CAMERA_RANGE, closeUpViews, fitAboveCard, fitWhole, meetDistance, type CloseView} from "@/ark-scene/runtime/camera";
+import {CAMERA_RANGE, closeUpViews, fitAboveCard, fitWhole, meetDistance, viewReachPull, worldEdge, type CloseView} from "@/ark-scene/runtime/camera";
 import {easeLift, tinyLift} from "@/ark-scene/tiny-lift";
 import {Sight} from "@/ark-scene/runtime/sight";
 import {flightHeading, newFlightHeading, type FlightHeadingState} from "@/ark-scene/flight-heading";
@@ -7940,16 +7940,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** Kept over either island or the strait between (a capsule from the wild island to the town): the move back in, or null. */
     const keepInCapsule = (x: number, z: number): {dx: number; dz: number} | null => {
         // p2 (ocean): in islands mode from the start (the town's origin before it is in), out over the open ocean's loops too.
-        const o = island?.origin ?? townWorldOrigin();
-        const l2 = o.x * o.x + o.z * o.z || 1;
-        const t = Math.min(Math.max((x * o.x + z * o.z) / l2, 0), 1);
-        const cx = o.x * t;
-        const cz = o.z * t;
-        const radius = WORLD_RADIUS + ((island?.worldRadius ?? ARK_ISLANDS.town.half * 0.92) - WORLD_RADIUS) * t + (arkWorld() === "v2" ? OCEAN_VIEW_MARGIN : 0); // p2 (ocean)
-        const d = Math.hypot(x - cx, z - cz);
-        if (d <= radius) return null;
-        const pull = 1 - radius / d;
-        return {dx: (cx - x) * pull, dz: (cz - z) * pull};
+        // FOLLOW-REACH: a followed animal's own place is in reach too (`camera.ts` viewReachPull), within the world's edge.
+        const origin = island?.origin ?? townWorldOrigin();
+        return viewReachPull(x, z, {origin, r0: WORLD_RADIUS, r1: island?.worldRadius ?? ARK_ISLANDS.town.half * 0.92, margin: arkWorld() === "v2" ? OCEAN_VIEW_MARGIN : 0, edge: worldEdge(arkWorld())}, followedPlace());
+    };
+    /** FOLLOW-REACH: where the followed animal is now (its drawn middle), or null when none is followed. */
+    const followedPlace = (): {x: number; z: number} | null => {
+        const entry = followId ? findEntry(followId) : null;
+        return entry?.middle ? {x: entry.middle.x, z: entry.middle.z} : null;
     };
     /** The island the view is over now (the nearer along the strait), told to the page when it changes. */
     let islandNear: "wild" | "town" = "wild";
@@ -7992,13 +7990,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             camera.position.x += capsule.dx;
             camera.position.z += capsule.dz;
         } else if (!island && reach > WORLD_RADIUS) {
-            const pull = WORLD_RADIUS / reach;
-            const dx = target.x * pull - target.x;
-            const dz = target.z * pull - target.z;
-            target.x += dx;
-            target.z += dz;
-            camera.position.x += dx;
-            camera.position.z += dz;
+            // (One island, v1: a disc round the centre; a followed animal's place is in reach too, as above.)
+            const pull = viewReachPull(target.x, target.z, {origin: {x: 0, z: 0}, r0: WORLD_RADIUS, r1: WORLD_RADIUS, margin: 0, edge: worldEdge(arkWorld())}, followedPlace());
+            if (pull) {
+                target.x += pull.dx;
+                target.z += pull.dz;
+                camera.position.x += pull.dx;
+                camera.position.z += pull.dz;
+            }
         }
         // (V2 replay: under a shot's cast the bed as it is drawn, where that lies under the analytic one: a lake's.)
         const seabed = shotClosest !== null ? Math.min(heightAt(target.x, target.z), standGround(target.x, target.z)) : heightAt(target.x, target.z);
