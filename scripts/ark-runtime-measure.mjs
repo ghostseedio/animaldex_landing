@@ -449,6 +449,31 @@ for (const deviceName of devices) {
         cdp.on("Network.dataReceived", (event) => chunks.push({at: Date.now(), bytes: event.encodedDataLength ?? 0, url: urls.get(event.requestId) ?? ""}));
         cdp.on("Network.loadingFinished", (event) => received.push({at: Date.now(), bytes: event.encodedDataLength ?? 0, url: urls.get(event.requestId) ?? "", start: started.get(event.requestId) ?? null}));
         if (network) await cdp.send("Network.emulateNetworkConditions", network);
+        // `--alloc 26`: a sampling allocation profile from navigation to that second, garbage included (what a load's
+        // transient peak is made of), top allocators written to `<device>-<run>-alloc.txt`.
+        const allocUntil = Number(arg("alloc", "0"));
+        if (allocUntil > 0) {
+            await cdp.send("HeapProfiler.enable");
+            await cdp.send("HeapProfiler.startSampling", {samplingInterval: 65536, includeObjectsCollectedByMajorGC: true, includeObjectsCollectedByMinorGC: true});
+            setTimeout(async () => {
+                try {
+                    const {profile} = await cdp.send("HeapProfiler.stopSampling");
+                    const self = new Map();
+                    const visit = (node, stack) => {
+                        const key = `${node.callFrame.functionName || "(anonymous)"} ${node.callFrame.url.split("/").pop()}:${node.callFrame.lineNumber + 1}`;
+                        const chain = [key, ...stack].slice(0, 4).join(" < ");
+                        if (node.selfSize) self.set(chain, (self.get(chain) ?? 0) + node.selfSize);
+                        for (const child of node.children ?? []) visit(child, [key, ...stack]);
+                    };
+                    visit(profile.head, []);
+                    const total = [...self.values()].reduce((a, b) => a + b, 0);
+                    const top = [...self.entries()].sort((a, b) => b[1] - a[1]).slice(0, 60).map(([key, bytes]) => `${(bytes / 2 ** 20).toFixed(1)} MB  ${key}`);
+                    writeFileSync(path.join(out, `${deviceName}-${run}-alloc.txt`), `allocated in the first ${allocUntil} s (sampled, garbage included): ${(total / 2 ** 20).toFixed(1)} MB\n${top.join("\n")}\n`);
+                } catch (error) {
+                    writeFileSync(path.join(out, `${deviceName}-${run}-alloc.txt`), `failed: ${error}\n`);
+                }
+            }, allocUntil * 1000);
+        }
         if (flag("profile")) {
             await cdp.send("Profiler.enable");
             await cdp.send("Profiler.setSamplingInterval", {interval: 500});
@@ -703,7 +728,9 @@ for (const deviceName of devices) {
             const top = [...self.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40).map(([key, ms]) => `${Math.round(ms)} ms  ${key}`);
             writeFileSync(path.join(out, `${deviceName}-${run}-self.txt`), top.join("\n") + "\n");
         }
-        if (measured.error) throw new Error(measured.error);
+        if (measured?.error) throw new Error(measured.error);
+        // (The measure page still running at its deadline, a loaded machine: say so, not a TypeError on its missing result.)
+        if (!measured?.result) throw new Error(`the measure page gave no result within ${seconds + 120} s (done: ${Boolean(measured?.done)})`);
         const tasks = await page.evaluate(() => window.__arkLongTasks ?? []);
         const frames = await page.evaluate(() => window.__arkLongFrames ?? []);
         const metrics = Object.fromEntries((await cdp.send("Performance.getMetrics").catch(() => ({metrics: []}))).metrics?.map((m) => [m.name, m.value]) ?? []);

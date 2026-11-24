@@ -570,6 +570,8 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             for (const [geo, name] of list) {
                 if (!geo.triangles) continue;
                 const geometry = geo.toGeometry(name === "decal" || name === "foliage" || name === "net");
+                // (SIG4: the solid's ground-cover patches, ground to the seat pass: `TownBatch`, `seat/trigrid.ts`.)
+                if (geo.sheets?.length) geometry.userData.seatGround = Uint32Array.from(geo.sheets);
                 if (name === "glass") geometry.setAttribute("aLit", new BufferAttribute(new Float32Array(geo.pos.length / 3), 1));
                 parts.add(name, key, geometry);
             }
@@ -587,8 +589,10 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         for (const [name, material, list] of [["decal", materials.decal], ["solid", materials.solid], ["glass", materials.glass], ["net", netSides.back, nets], ["net:front", netSides.front, nets], ["foliage", materials.foliage]] as Array<[string, Material, TownBatchPart[] | undefined]>) {
             const from = list ?? parts.take(name);
             if (!from.length) continue;
-            // (p3 zoofix: the solids' and the foliage's page copies let go once on the GPU, as the town's foliage: nothing reads them.)
-            const batch = new TownBatch(from, material, `zoo:${name}`, {castShadow: name === "solid" || name === "foliage", receiveShadow: true, release: name === "solid" || name === "foliage"});
+            // (p3 zoofix: the solids' and the foliage's page copies let go once on the GPU, as the town's foliage. SIG4: but the
+            // solids' positions kept (2.7 MB at launch): the seat pass reads the habitats' rockwork, sheds, perches, banks and
+            // ground cover by their drawn triangles; without them animals stood and slept inside them.)
+            const batch = new TownBatch(from, material, `zoo:${name}`, {castShadow: name === "solid" || name === "foliage", receiveShadow: true, release: name === "solid" || name === "foliage", keepPositions: name === "solid"});
             // (The front faces' batch draws the back faces' geometry: one copy, as the two meshes of a split shared it.)
             if (name === "net:front") batch.shareGeometry(zooBatches[zooBatches.length - 1]);
             batch.setDrawn(drawn);

@@ -752,6 +752,20 @@ export class SeatPass {
         const sink = input.kind === "lie" ? 0.015 : moving && pose ? Math.min(Math.max(0.02, 0.25 * height), 0.3) : Math.max(0.015, 0.08 * height);
         // (Held: the first of it to touch. On its feet: a quarter of them may be a little in, on uneven ground.)
         let gap = held ? chosenGap : Math.min(gaps[Math.floor(0.25 * (gaps.length - 1))], gaps[0] + sink);
+        // (SIG4: and the ground under every one of its lowest, not its ten support points alone: a body resting by a step in
+        // the ground, a raised patch of ground cover's rim, has a few of them under the step's top a hand's width from the
+        // nearest support point. Its lowest under the ground there is its seat, as the audit measures it. The ground alone,
+        // no casts: up to 160 of them, as the audit reads.)
+        if (!held && !cling && order.length > support.length) {
+            const step = Math.max(1, Math.ceil(order.length / 160));
+            let low = Infinity;
+            for (let k = 0; k < order.length; k += step) {
+                const i = order[k];
+                const y = world[i * 3 + 1];
+                low = Math.min(low, y - input.ground(world[i * 3], world[i * 3 + 2], y));
+            }
+            if (low + sink < gap) gap = low + sink;
+        }
         // Every point of its body against the closed things round it (a rock, a wall, a log), not its lowest alone: its
         // belly over a rock's dome, its flank in a boulder. Each must be over the top it is above (or under: then it is
         // in the thing); the least of those clearances is its seat when it is less than its feet's.

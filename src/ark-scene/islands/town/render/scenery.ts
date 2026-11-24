@@ -66,6 +66,8 @@ function chunkFor(out: SceneryOut, x: number, z: number): SceneryChunk {
         c = {decal: new Geo(), solid: new Geo(), glass: new Geo(), net: new Geo(), foliage: new Geo()};
         // p3 (zoofix): the zoo's (the one with a ground cover) boulders drawn as instances (`rock-instances.ts`).
         if (out.cover) c.solid.rocks = [];
+        // SIG4: and its ground-cover patches marked as ground for the seat pass (`Geo.sheets`).
+        if (out.cover) c.solid.sheets = [];
         out.chunks.set(key, c);
     }
     return c;
