@@ -164,7 +164,7 @@ for (const name of scenes) {
             await context.close();
             continue;
         }
-        console.log(name, "episode", JSON.stringify({id: episode.id.slice(-3), t0: episode.t0, t1: episode.t1, keys: episode.keys.map((k) => `${k.b} ${(k.t1 - k.t0).toFixed(1)}s${k.caught === null ? "" : k.caught ? " caught" : " missed"}`)}));
+        console.log(name, "episode", JSON.stringify({id: episode.id.slice(-3), t0: episode.t0, t1: episode.t1, keys: episode.keys.map((k) => `${k.b} ${(k.t1 - k.t0).toFixed(1)}s${k.caught === null ? "" : k.caught ? " caught" : " missed"}${k.to ? ` y${k.to.y.toFixed(2)}` : ""}`)}));
         let moments = [];
         for (const k of episode.keys) {
             if (k.b === "turn") continue;

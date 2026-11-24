@@ -55,6 +55,8 @@ const MAX_STREAKS = 320;
 const MAX_ITEMS = 48;
 const MAX_FISH = 160;
 const MAX_MARKS = 96;
+/** SIG3: how long a wallow's mud stays wet at full size from the wallow's start (s), about its longest bury. */
+const MUD_SECONDS = 60;
 const MAX_TWIGS = 600;
 const MAX_FLOCK = MURMURATION_AMBIENT;
 const MAX_PARTICLES = 900;
@@ -94,7 +96,12 @@ export class RecipeScene {
     readonly root = new Group();
     private readonly items: Record<ItemKind, InstancedMesh>;
     private readonly fish: InstancedMesh;
-    private readonly marks: {hole: InstancedMesh; mound: InstancedMesh; hollow: InstancedMesh};
+    private readonly marks: {hole: InstancedMesh; mound: InstancedMesh; hollow: InstancedMesh; mud: InstancedMesh};
+    /**
+     * SIG3: the drawn ground at a point (its height and normal), set by the scene: a flat mark lies on it, tilted to its
+     * slope (a wallow's mud on a bank stood level at its middle, above the ground downhill, like a plate).
+     */
+    ground: ((x: number, z: number) => {y: number; nx: number; ny: number; nz: number}) | null = null;
     private readonly twigs: InstancedMesh;
     private readonly flock: InstancedMesh;
     private readonly insects: InstancedMesh;
@@ -149,7 +156,7 @@ export class RecipeScene {
         this.fish = make(sphere, "#b8c6cf", MAX_FISH, 0.35);
         const disc = new CylinderGeometry(0.5, 0.5, 0.02, 14, 1);
         const dome = new SphereGeometry(0.5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2);
-        this.marks = {hole: make(disc, "#2a2118", MAX_MARKS, 1), mound: make(dome, "#6a5236", MAX_MARKS, 1), hollow: make(disc, "#8a7556", MAX_MARKS, 1)};
+        this.marks = {hole: make(disc, "#2a2118", MAX_MARKS, 1), mound: make(dome, "#6a5236", MAX_MARKS, 1), hollow: make(disc, "#8a7556", MAX_MARKS, 1), mud: make(disc, "#2b2016", MAX_MARKS, 0.18)};
         this.twigs = make(rod, "#6e5235", MAX_TWIGS, 0.95);
         this.flock = make(chevronGeometry(), "#1f2024", MAX_FLOCK, 0.8);
         (this.flock.material as MeshStandardMaterial).side = 2;
@@ -327,7 +334,20 @@ export class RecipeScene {
             const k = Math.min(left * 1.5, 1);
             const size = m.size * (0.6 + 0.4 * k);
             if (m.kind === "mound" || m.kind === "pit") this.put(this.marks.mound, m.x, m.y - 0.01, m.z, 0, 0, 0, size, size * 0.35 * k, size);
-            else this.put(this.marks[m.kind === "hole" ? "hole" : "hollow"], m.x, m.y + 0.004, m.z, 0, 0, 0, size, 1, size);
+            else {
+                // (On the drawn ground and along its slope; a wallow's wet mud spreads over its first seconds, stays while
+                // the animal is in it, and dries away over five minutes after.)
+                const g = this.ground?.(m.x, m.z) ?? null;
+                const age = epoch - m.from;
+                if (m.kind === "mud" && age > MUD_SECONDS + 300) continue;
+                const mud = m.kind === "mud" ? Math.min(age / 4, 1) * Math.min(Math.max(1 - (age - MUD_SECONDS) / 300, 0), 1) : 1;
+                const s = m.kind === "mud" ? m.size * mud : size;
+                if (s <= 0.01) continue;
+                const lift = m.kind === "mud" ? 0.003 : 0.004;
+                const up = g ? {x: g.nx, y: Math.max(g.ny, 0.2), z: g.nz} : {x: 0, y: 1, z: 0};
+                const y = g ? g.y : m.y;
+                this.put(this.marks[m.kind === "hole" ? "hole" : m.kind === "mud" ? "mud" : "hollow"], m.x + up.x * lift, y + up.y * lift, m.z + up.z * lift, 0, Math.atan2(up.z, up.y), -Math.atan2(up.x, up.y), s, m.kind === "mud" ? 0.25 : 1, s);
+            }
         }
         // Nests growing (until the props lane's own are wired): twigs laid round a bowl, base first, in build order.
         for (const n of nests) {

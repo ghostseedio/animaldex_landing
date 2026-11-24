@@ -49,6 +49,12 @@
     "lizard"
    ],
    "weight": 5
+  },
+  "probe_feed~lizard": {
+   "plans": [
+    "lizard"
+   ],
+   "weight": 5
   }
  },
  "replaces": [
@@ -127,6 +133,10 @@
   {
    "slug": "tropical-house-gecko",
    "recipe": "pounce"
+  },
+  {
+   "slug": "indonesian-blue-tongued-skink",
+   "recipe": "probe_feed"
   }
  ],
  "additions": [
@@ -172,7 +182,8 @@
    "recipe": "wallow~turtle",
    "behaviour": "rests in shade and wallows in heat",
    "field": "sleep",
-   "quote": "Day-active but rests during heat, using shade, wallows, and slow rhythms"
+   "quote": "Day-active but rests during heat, using shade, wallows, and slow rhythms",
+   "line": "{aAnimal} is wallowing in the mud at the water's edge"
   },
   {
    "slug": "asian-forest-tortoise",
@@ -180,7 +191,8 @@
    "recipe": "wallow~turtle",
    "behaviour": "pushes into damp leaf litter or mud for hours on warm days",
    "field": "story",
-   "quote": "On warm days it pushes itself into damp leaf litter or soft mud and stays there for hours"
+   "quote": "On warm days it pushes itself into damp leaf litter or soft mud and stays there for hours",
+   "line": "{aAnimal} is pushing itself down into the soft mud"
   },
   {
    "slug": "galapagos-tortoise",
@@ -188,7 +200,8 @@
    "recipe": "wallow~turtle",
    "behaviour": "sleeps half-submerged in mud wallows",
    "field": "sleep",
-   "quote": "At night it sleeps in shallow scrapes, under bushes, or half-submerged in mud wallows and pools."
+   "quote": "At night it sleeps in shallow scrapes, under bushes, or half-submerged in mud wallows and pools.",
+   "line": "{aAnimal} is settling into a mud wallow"
   },
   {
    "slug": "hawksbill-sea-turtle",
@@ -201,7 +214,7 @@
   {
    "slug": "indonesian-blue-tongued-skink",
    "name": "Indonesian Blue-tongued Skink",
-   "recipe": "probe_feed",
+   "recipe": "probe_feed~lizard",
    "behaviour": "forages through leaf litter; shelters in midday heat",
    "field": "sleep",
    "quote": "It basks in the morning to warm up, then forages through leaf litter, and shelters at night and in the hottest hours under logs, in burrows or in deep litter."

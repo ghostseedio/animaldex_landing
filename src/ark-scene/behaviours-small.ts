@@ -35,6 +35,8 @@ export const SMALL_SCENES: Record<string, SmallScene> = {
     // Hawkmoths and flies hanging at a flower; a frog, a toad, a mantis sitting and waiting.
     "sm-moth": {zone: "rainforest", hours: 11, kind: "recipe", recipe: "flower_hover", polar: 1.25, lengths: 4, cast: one("coffee-hawk-moth", "Coffee hawk-moth", 2, "any", 9)},
     "sm-frog": {zone: "river_lake", hours: 11, kind: "recipe", recipe: "edge_ambush", polar: 0.85, lengths: 4, cast: one("american-bullfrog", "American Bullfrog", 4, "any")},
+    // SIG3 tranche 4: a large pair's wrestle beside the frogs', for the meet's spacing (a body length between the two).
+    "sm-kuduwrestle": {zone: "grassland", hours: 11, kind: "recipe", recipe: "wrestle", polar: 1.0, lengths: 4, cast: one("greater-kudu", "Greater Kudu", 8, "any")},
     "sm-frogwrestle": {zone: "river_lake", hours: 11, kind: "recipe", recipe: "wrestle", polar: 0.85, lengths: 5, cast: one("american-bullfrog", "American Bullfrog", 8, "any")},
     "sm-toad": {zone: "farm_garden", hours: 11, kind: "recipe", recipe: "sit_snap", polar: 0.85, lengths: 4, cast: one("american-toad", "American Toad", 4, "any")},
     "sm-mantis": {zone: "farm_garden", hours: 11, kind: "recipe", recipe: "sit_snap", polar: 0.85, lengths: 4, cast: one("chinese-mantis", "Chinese Mantis", 4, "any")},
