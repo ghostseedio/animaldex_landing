@@ -2132,7 +2132,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (Its roost the first time its schedule asks: the den search out of the mount, `withLazyRoost`; the runtime's
             // sliced mount may have found it already, `mapRoostOf`'s memo.)
             // (Part C: a town animal's range is its garden, paddock or enclosure; it finds its roost among the town's places.)
-            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), sleep: arkSleepOf(animal), condition: animal.condition ?? null, ...(inTown ? {range: island!.rangeOf(animal.id), kept: true} : {})}, () => (inTown ? null : mapRoostOf(place, animal.zone))),
+            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), sleep: arkSleepOf(animal), condition: animal.condition ?? null, ...(inTown ? {range: island!.rangeOf(animal.id), kept: true, keep: island!.keep?.(animal.id) ?? null} : {})}, () => (inTown ? null : mapRoostOf(place, animal.zone))),
             profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
             trip: null,
             lead: null,

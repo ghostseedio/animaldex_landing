@@ -75,7 +75,7 @@ for (const a of town.animals) {
     const profile = behaviourProfile(a.model_slug);
     const shape = bodyShape(a.model_slug, length);
     // (As the scene schedules a kept town animal: `index.ts` makeSched, `islands/scene.ts` rangeOf.)
-    const sched: ScheduleAnimal = {id: a.id, zone: a.zone, home: {x: p.x + origin.x, y: p.ground, z: p.z + origin.z}, length, sea: false, range: Math.max(info.range, 0.6) * 1.5, kept: true};
+    const sched: ScheduleAnimal = {id: a.id, zone: a.zone, home: {x: p.x + origin.x, y: p.ground, z: p.z + origin.z}, length, sea: false, range: Math.max(info.range, 0.6) * 1.5, kept: true, keep: !old && info.pen ? penKeep(info.pen, info.penMargin ?? 0, origin.x, origin.z) : null};
     items.push({id: a.id, slug: a.model_slug, pen: info.place, box: info.pen, margin: info.penMargin ?? 0, sched, profile, body: {id: a.id, radius: shape.radius, half: shape.half, height: shape.height, group: p.leader ?? a.id}, last: null});
 }
 const baseOf = (it: Item, epoch: number): ResolvePose & {moving: boolean} => {

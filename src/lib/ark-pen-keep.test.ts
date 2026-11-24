@@ -25,6 +25,10 @@ import {RURAL_TROUGHS, ruralPen} from "@/ark-scene/islands/town/rural";
 import {bodyShape} from "@/ark-scene/collide/bodies";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {bodyClear, inKeep, keepGive, overlapOf, pushOut, separateCluster, type ResolveBody, type ResolvePose} from "@/ark-scene/collide/resolve";
+import {colliderDistance} from "@/ark-scene/collide/colliders";
+import {townWorldSampler} from "@/ark-scene/islands/town/sampler";
+import {behaviourProfile} from "@/ark-scene/behaviour-profile";
+import {scheduleWorld, SLOT_SECONDS, tripAt, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 
 const origin = townWorldOrigin();
 const town = arkIslandSnapshot(decodeArkSnapshot(withArkIslandsFixture(base))!, "town");
@@ -118,4 +122,34 @@ test("two horses on one spot by the rails are eased apart along the inset, not p
     keepInPen(pen, margin, bb, origin.x, origin.z, set);
     assert.ok(!inKeep(keep, oa.x, oa.z) || !inKeep(keep, ob.x, ob.z), "one of them pushed out past the inset (the bug)");
     assert.ok(overlapOf(a, {...pa, x: ba.x, z: ba.z}, b, {...pb, x: bb.x, z: bb.z}).depth > after + 0.1, "and pulled back into the other by the bound");
+});
+
+test("a penned horse's goals are inside its keep box and clear of the trough by its reach, never behind it by the rails", () => {
+    // (The live paddock-1 horses' goals by the trough went to the one strip that fitted them, between the trough and the
+    // west rails, outside the keep box: three horses on one point, wedged, inside each other for 25 s at a time.)
+    const world = scheduleWorld(townWorldSampler(placed.open, origin, set));
+    const profile = behaviourProfile("domestic-horse");
+    const insetX = keep.x - keep.hx;
+    const trough = set.list.find((c) => c.id === "town:rural:trough:1")!;
+    assert.ok(trough, "the trough's collider");
+    const hours = (epoch: number) => (((epoch / 3600) % 24) + 24) % 24;
+    const goals = (withKeep: boolean) => {
+        const animal: ScheduleAnimal = {id: `pen-keep-horse-${withKeep}`, zone: "grassland", home: {x: insetX, y: ground(insetX, tz - 1.8), z: tz - 1.8}, length: LENGTH, sea: false, range: 10.2, kept: true, keep: withKeep ? keep : null};
+        const out: Array<{x: number; z: number; doing: string}> = [];
+        for (let slot = 0; slot < 240; slot++) {
+            const trip = tripAt(world, profile, animal, 1796032800 + slot * SLOT_SECONDS + 1, hours);
+            if (trip.doing !== "sleep") out.push({x: trip.to.x, z: trip.to.z, doing: trip.doing});
+        }
+        return out;
+    };
+    const reach = shape.half + shape.radius;
+    const behind = (g: {x: number; z: number}) => g.x < trough.cx && Math.abs(g.z - tz) < trough.reach + 0.2;
+    const after = goals(true);
+    assert.ok(after.length > 150, `${after.length} goals`);
+    for (const g of after) {
+        assert.ok(inKeep(keep, g.x, g.z), `goal (${g.x.toFixed(2)}, ${g.z.toFixed(2)}) outside its keep box (${g.doing})`);
+        assert.ok(colliderDistance(trough, g.x, g.z) >= reach - 0.05 || !behind(g), `goal (${g.x.toFixed(2)}, ${g.z.toFixed(2)}) behind the trough`);
+    }
+    const before = goals(false);
+    assert.ok(before.some((g) => !inKeep(keep, g.x, g.z)), "without its keep box some goals were outside it (the bug)");
 });

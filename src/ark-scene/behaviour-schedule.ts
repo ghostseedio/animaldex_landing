@@ -31,6 +31,7 @@ import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength,
 import {bodyShape} from "@/ark-scene/collide/bodies";
 import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
 import {colliderDistance, type Collider} from "@/ark-scene/collide/colliders";
+import {inKeep, intoKeep, type KeepBox} from "@/ark-scene/collide/resolve";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {allAttachPoints, type AttachPoint as SceneryPoint} from "@/ark-scene/sampler";
 import {waterLevelAt} from "@/ark-scene/water-level";
@@ -212,6 +213,13 @@ export type ScheduleAnimal = {
      * its kind's wild rhythm, so its kind's System Dynamics does not shape it (`sd-rhythm.ts`, lane ark-sd-align).
      */
     kept?: boolean;
+    /**
+     * Lane PENKEEP: a penned one's keep box (its pen, its margin in from the rails: `collide/resolve.ts` KeepBox), the one
+     * the collisions and the scene's bound hold it to. Its goals are inside it and clear of what stands in the pen by its
+     * reach (a paddock's horses' goals by a trough went to the only strip that fitted them, between the trough and the
+     * rails, outside it, three horses on one point; the collisions could push them neither way). Absent: no pen.
+     */
+    keep?: KeepBox | null;
     /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
     roost?: Spot | null;
     /** Its own sleep, when it is active at any hour (`sleep-hours.ts` arkSleepOf): it sleeps in bouts of its own. */
@@ -795,7 +803,8 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
     const r = still ? bodyRadiusOf(animal, profile.slug) : bodyReachOf(animal, profile.slug);
     const slope = maxSlopeOf(animal);
     // (Clear of everything solid, and not on a cliff's face.)
-    if (nav.fits(spot.x, spot.z, r, slope)) return spot;
+    const keep = animal.keep ?? null;
+    if (nav.fits(spot.x, spot.z, r, slope) && (!keep || inKeep(keep, spot.x, spot.z))) return spot;
     // (Rings 0.35 m apart, out to 4.2 m, at most 16 points each: the first that fits, in ring order, is the spot; each
     // animal starts its rings at its own bearing and its own offset out, so a group nudged off one trunk or one fence
     // does not line up in a row along it.)
@@ -810,6 +819,8 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
             const x = spot.x + Math.cos(a) * d;
             const z = spot.z + Math.sin(a) * d;
             if (!nav.fits(x, z, r, slope)) continue;
+            // (Penned: inside its keep box, never in the strip behind a trough by the rails.)
+            if (keep && !inKeep(keep, x, z)) continue;
             // (The way it came in, from the spot: never past a fence to its far side.)
             if (!nav.runClear({x: spot.x, z: spot.z}, {x, z}, 0.01)) continue;
             return {...spot, x, y: topAt(world, x, z), z};
@@ -840,12 +851,29 @@ function memberSide(centre: {x: number; z: number}, animal: ScheduleAnimal, rank
 
 /** A point to go to within a range of a centre: walkable land (or water for a swimmer). */
 function rangeSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, centre: {x: number; z: number}, radius: number, random: () => number): Spot {
-    const r = radius * Math.sqrt(random());
-    const a = random() * Math.PI * 2;
-    const x = centre.x + Math.cos(a) * r;
-    const z = centre.z + Math.sin(a) * r;
+    let r = radius * Math.sqrt(random());
+    let a = random() * Math.PI * 2;
+    let x = centre.x + Math.cos(a) * r;
+    let z = centre.z + Math.sin(a) * r;
     if (aquatic(profile)) return waterSpot(world, profile, animal, x, z, random);
+    // Lane PENKEEP: a penned one's goal is drawn inside its keep box (again, up to 8 draws, for one past its rails; then
+    // the box's nearest point). Put on the box's nearest point at once, every draw past the rails landed on its inset
+    // line, and those by a trough on the one strip of it clear of the trough: horses on one point all day.
+    const keep = animal.keep ?? null;
+    if (keep) {
+        for (let k = 0; k < 8 && !inKeep(keep, x, z); k++) {
+            r = radius * Math.sqrt(random());
+            a = random() * Math.PI * 2;
+            x = centre.x + Math.cos(a) * r;
+            z = centre.z + Math.sin(a) * r;
+        }
+        ({x, z} = intoKeep(keep, x, z));
+    }
     const land = world.nav.nearest(x, z, "walk", 0.5, 12, maxSlopeOf(animal)) ?? centre;
+    if (keep && !inKeep(keep, land.x, land.z)) {
+        const kept = intoKeep(keep, land.x, land.z);
+        return groundSpot(world, kept.x, kept.z);
+    }
     return groundSpot(world, land.x, land.z);
 }
 
@@ -1948,7 +1976,8 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
             const nx = x + (Math.sin(yaw) * (beat.dx ?? 0) + Math.cos(yaw) * (beat.dz ?? 0)) * l * k;
             const nz = z + (Math.cos(yaw) * (beat.dx ?? 0) - Math.sin(yaw) * (beat.dz ?? 0)) * l * k;
             // Only onto ground it can walk, and never out of its range (a stalker stops at the edge).
-            const within = Math.hypot(nx - animal.home.x, nz - animal.home.z) <= Math.max(homeRadius(profile, animal) * 1.6, 2);
+            // (Lane PENKEEP: and a penned one's never out of its keep box: a grazer's steps took it past the inset by the rails.)
+            const within = Math.hypot(nx - animal.home.x, nz - animal.home.z) <= Math.max(homeRadius(profile, animal) * 1.6, 2) && (!animal.keep || inKeep(animal.keep, nx, nz));
             // (And the step itself clear of everything solid for its body, and where it ends: collisions.)
             const r = bodyRadiusOf(animal, profile.slug);
             if (world.nav.fits(nx, nz, bodyReachOf(animal, profile.slug), maxSlopeOf(animal)) && within && world.nav.runClear({x, z}, {x: nx, z: nz}, r)) {
