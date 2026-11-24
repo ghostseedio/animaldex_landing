@@ -656,3 +656,52 @@ test("the duller sex is drawn a little greyer (additive dim), the brighter not",
     }
     assert.equal(sexDim("x", "acorn-barnacle"), 0);
 });
+
+test("SIG9: a swimmer that walks goes ashore for a land act (a muscovy feeding on the grass); one that only swims never", () => {
+    forgetRecipes();
+    // (Homes on open water a few metres off a low bank: walkable shore, not a cliff's foot.)
+    const wet = (px: number, pz: number) => world.sampler.heightAt(px, pz) < waterSurfaceOf(world.sampler, px, pz) - 0.4;
+    const homes: Array<{x: number; z: number}> = [];
+    for (let i = 0; i < 25600 && homes.length < 12; i++) {
+        const x = -400 + (i % 160) * 5;
+        const z = -400 + Math.floor(i / 160) * 5;
+        if (!wet(x, z)) continue;
+        const bank = [0, 1, 2, 3, 4, 5, 6, 7].some((k) => {
+            const bx = x + Math.cos((k * Math.PI) / 4) * 6;
+            const bz = z + Math.sin((k * Math.PI) / 4) * 6;
+            const up = world.sampler.heightAt(bx, bz) - waterSurfaceOf(world.sampler, x, z);
+            return up > 0.1 && up < 0.8;
+        });
+        if (bank && homes.every((h) => Math.hypot(h.x - x, h.z - z) > 40)) homes.push({x, z});
+    }
+    assert.ok(homes.length >= 3, `homes off a low bank ${homes.length}`);
+    const day = Math.floor(Date.UTC(2026, 6, 14, 6) / 1000);
+    const dayOf = (id: string, slug: string, length: number, home: {x: number; z: number}) => {
+        const a = animal(id, slug, home, length);
+        a.animal.home.y = waterSurfaceOf(world.sampler, home.x, home.z);
+        const trips = [];
+        for (let t = day; t < day + 12 * 3600; t += SLOT_SECONDS) trips.push(tripAt(world, a.profile, a.animal, t, hoursAt, "diurnal"));
+        return trips;
+    };
+    let ashore = 0;
+    homes.forEach((home, n) => {
+        for (const trip of dayOf(`muscovy-${n}`, "muscovy-duck", 0.75, home).filter((t) => t.recipe === "ground_feed")) {
+            const episode = tripEpisode(world, trip);
+            const afloat = world.sampler.heightAt(trip.to.x, trip.to.z) < waterSurfaceOf(world.sampler, trip.to.x, trip.to.z);
+            // (Never walking and grazing on the water: a way ashore not taken plays no land act.)
+            if (afloat) {
+                assert.equal(episode, null, "no land act afloat");
+                continue;
+            }
+            assert.notEqual(trip.mode, "water", "its mode is its goal's");
+            if (!episode) continue;
+            ashore++;
+            assert.ok(episode.keys.some((k) => k.block.id === "walk"), "it walks about the grass");
+            assert.ok(!episode.keys.some((k) => k.block.id === "swim"), "never swims on the grass");
+        }
+    });
+    assert.ok(ashore >= 2, `muscovy land acts ${ashore}`);
+    // (A grebe does not walk: never a land goal; the bufflehead's strut on land is withdrawn.)
+    for (const trip of dayOf("grebe-1", "great-crested-grebe", 0.5, homes[0])) assert.ok(trip.recipe !== "strut_display", "a grebe never struts ashore");
+    assert.ok(!ROWS["bufflehead"].split("|")[0].includes("strut_display"), "the bufflehead's strut is withdrawn");
+});

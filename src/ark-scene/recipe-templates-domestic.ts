@@ -223,8 +223,10 @@ export const DOMESTIC_TEMPLATES: Template[] = [
         replaces: ["groom", "rest", "swim"],
         doing: "groom",
         hours: "day",
+        // (SIG9: it bathes where its trip brought it, out on open water already. A first swim of its own to open water
+        // within 3 m found none about a quarter of the time (by a bank, in a narrow river), and the act was cut to a 0.8 s
+        // swim and home; one that swam far had no time left for the bath: harness episodes of 0.8 and 7 to 11 s.)
         steps: [
-            {b: "swim", to: "water", r: 3},
             {b: "bathe", s: [3, 5]},
             {b: "shake_off", s: [0.8, 1.2]},
             {b: "bathe", s: [2, 4]},

@@ -46,9 +46,13 @@ const heldWhy = new Map<string, string>();
 // (Lane SIG7: coat variants aboard as species of their own, with no row: each takes its parent's, less `without`.)
 type Coats = {of: string; without: string[]; slugs: string[]};
 const coats: Coats[] = [];
+// (Lane SIG9: `withdraw`, a generated row a lane takes out of the table again, with why: one that reads wrong once it can
+// run, a bufflehead's strut on land when its courtship is on the water.)
+const withdrawn: Array<{slug: string; recipe: string; reason: string}> = [];
 for (const f of files) {
-    const j = JSON.parse(fs.readFileSync(path.join(root, "data/ark", f), "utf8")) as {additions: Addition[]; templates?: Record<string, {plans: string[]; weight: number}>; replaces?: Array<{slug: string; recipe: string}>; held?: Array<{slug: string; recipe: string; reason: string}> | Record<string, string>; coats?: Coats};
+    const j = JSON.parse(fs.readFileSync(path.join(root, "data/ark", f), "utf8")) as {additions: Addition[]; templates?: Record<string, {plans: string[]; weight: number}>; replaces?: Array<{slug: string; recipe: string}>; held?: Array<{slug: string; recipe: string; reason: string}> | Record<string, string>; coats?: Coats; withdraw?: Array<{slug: string; recipe: string; reason: string}>};
     additions.push(...j.additions);
+    withdrawn.push(...(j.withdraw ?? []));
     if (j.coats) coats.push(j.coats);
     Object.assign(seeded, j.templates ?? {});
     for (const r of j.replaces ?? []) replaced.add(`${r.slug} ${r.recipe}`);
@@ -208,6 +212,16 @@ for (const a of additions) {
     table.species[a.slug] = fields.join("|");
     say();
     added++;
+}
+for (const w of withdrawn) {
+    const row = table.species[w.slug];
+    if (!row) continue;
+    const fields = row.split("|");
+    const acts = fields[0].split(",").filter((a) => a && a.replace(/\.\d+$/, "") !== w.recipe);
+    if (acts.length === fields[0].split(",").filter(Boolean).length) continue;
+    fields[0] = acts.join(",");
+    table.species[w.slug] = fields.join("|");
+    skipped.push(`${w.slug} ${w.recipe}: withdrawn: ${w.reason}`);
 }
 // (SIG3: a held sleep row is taken out of the sleep layer too: the generator found the huddle in the species' own text, so a
 // hold that says it reads wrong has to switch it off, not only keep a second copy out. Each sleeps a little apart instead.)
