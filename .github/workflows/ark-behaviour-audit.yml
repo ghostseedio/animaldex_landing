@@ -7,7 +7,8 @@
 #   3. the reactive layer's encounter scenario (scripts/ark-intelligence-encounters.mts);
 #   4. scripts/ark-audit-check.mts against the thresholds.
 # Deterministic: nothing here has randomness, so a changed number is a changed scene. A deliberate change updates the
-# thresholds in the same PR, with why. About 6 minutes (the audit about 4).
+# thresholds in the same PR, with why. The audit step takes 12-18 min on a fast runner and 20-25 min on a slow one
+# (ubuntu-latest hands out two speeds of machine, about 1.5x apart: the spawn validator's ~35 s vs ~60 s tells which).
 name: Ark behaviour checks
 
 on:
@@ -41,7 +42,9 @@ jobs:
   behaviour:
     name: Problems 1-7, the reactive encounters and the spawn validator
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # (25 until 2026-11-24: batch 15r made pass A ~30% slower, and every run on a slow runner hit 25 min in pass C.
+    # 40 leaves room for the slow runner plus growth; a hang still ends well inside the 6 h default.)
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
