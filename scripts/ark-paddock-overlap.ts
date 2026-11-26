@@ -114,14 +114,12 @@ if (!process.argv.includes("--no-groups")) {
 }
 // (Lane ZOOSLEEP: a zoo resident's goals keep off its enclosure-mates' beds, as the scene wires them: `index.ts` mates.)
 if (!process.argv.includes("--no-beds")) for (const it of items) if (placed.town.get(it.id)?.area === "zoo") it.sched.mates = () => items.filter((o) => o.pen === it.pen).map((o) => ({animal: o.sched, profile: o.profile}));
-// (`--time`: the schedule's own cost, ms a frame, as the scene's "schedule" section counts it: each resident's trip and pose.)
+// (`--time`: the schedule's own cost, ms a frame: each resident's trip for the frame, worked out or remembered.)
 let scheduleMs = 0;
 let worstFrameMs = 0;
 let warmMs = 0;
 const baseOf = (it: Item, epoch: number): ResolvePose & {moving: boolean} => {
-    const t0 = performance.now();
     const pose = poseOnTrip(world, tripAt(world, it.profile, it.sched, epoch, hours), epoch);
-    scheduleMs += performance.now() - t0;
     return {x: pose.x, y: pose.y, z: pose.z, yaw: pose.yaw, aloft: pose.aloft, asleep: pose.beat === "sleep", still: !pose.aloft && !pose.moving, moving: pose.moving};
 };
 const layer = new CollideLayer<Item>({colliders: () => set, body: (it) => it.body, base: (it, epoch) => baseOf(it, epoch), everyone: () => items, last: (it) => it.last, speed: () => 7, keep: (it) => (!old && it.box ? penKeep(it.box, it.margin, origin.x, origin.z) : null)});
@@ -142,7 +140,11 @@ const frames = Math.round(minutes * 60 * fps);
 const WARM = Math.min(60 * fps, frames - 1);
 for (let f = 0; f < frames; f++) {
     const epoch = from + f / fps;
+    const t0 = performance.now();
     const frameStart = scheduleMs;
+    // (`--time`: each resident's trip asked for first, the schedule's own work, before the collisions ask again.)
+    for (const it of items) tripAt(world, it.profile, it.sched, epoch, hours);
+    scheduleMs += performance.now() - t0;
     const drawn = items.map((it) => {
         const base = baseOf(it, epoch);
         const at = {...layer.apply(it, epoch, base)};
