@@ -278,7 +278,7 @@ import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
 import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
-import {arkEatSoon, arkEatSoonOn, arkEatSoonPercent} from "@/lib/ark-eat-soon";
+import {arkEatSoon, arkEatSoonOn, arkEatSoonPercent, arkStalkCueOn} from "@/lib/ark-eat-soon";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating tap)
@@ -796,6 +796,10 @@ const SELECTED = new Color("#fff4dc");
 const ARRIVAL = new Color("#fff3d6");
 /** V2 replay: the soft ring under an animal the cast marks (the last of its kind). */
 const LAST_OF_KIND = new Color("#ffb347");
+/** The stalking cue's ring (`ark-eat-soon.ts` arkStalkCue): a warm red, faint, breathing; never as strong as a selection's. */
+const STALKING = new Color("#ff8a6a");
+/** How often (s) the stalking cue's hunters are worked out again (their chance moves on 15-Ark-minute steps, ~35 s). */
+const STALK_EVERY = 5;
 
 function easeOutBack(t: number): number {
     const c = 1.4;
@@ -2128,6 +2132,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** Encounter hunting: due predators' forays (off until the hunting read says the Ark hunts by encounter). */
     const hunting = new HuntingLayer();
+    /** The stalking cue: hunters out on their forays now with a high chance of a catch soon (by id: that chance). */
+    let stalkers = new Map<string, number>();
+    let stalkersAt = -Infinity;
+    const stepStalkers = (nowS: number) => {
+        if (nowS - stalkersAt < STALK_EVERY) return;
+        stalkersAt = nowS;
+        // (Development only, for a picture of the ring when no hunter is at the cue's chance: `__arkStalkCueLeast`.)
+        const least = process.env.NODE_ENV !== "production" ? (globalThis as {__arkStalkCueLeast?: number}).__arkStalkCueLeast : undefined;
+        if (hunting.active && arkEatSoonOn() && arkStalkCueOn()) stalkers = hunting.stalkers((id) => entryById.get(id)?.animal ?? null, worldMs() / 1000, least);
+        else if (stalkers.size) stalkers = new Map();
+    };
     /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */
     const behaviourTimes: number[] = [];
     let behaviourFrameMs = 0;
@@ -2813,7 +2828,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             goal: plan?.goal ?? null,
             log: arkStatusLog(scheduleLog, record),
             bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), fed, energy, bornDay: animal.born_ark_day ?? null, lifespanDays: animal.lifespan_days ?? null, lifespanEstimate: animal.lifespan_estimate === true}),
-            // EATSOON (behind `?eatsoon=1`): its chance of a catch in the next Ark day, from the engine's next hunt and its
+            // EATSOON (public; `?eatsoon=0` hides it): its chance of a catch in the next Ark day, from the engine's next hunt and its
             // two numbers on the hunting read, or how it is fed. Worked out here (the selected animal, about once a second).
             ...(arkEatSoonOn() ? {eatSoon: arkEatSoon({animal, window: hunting.active ? hunting.window(animal, epoch) : null, odds: hunting.odds(animal.id)})} : {})
         };
@@ -7899,6 +7914,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // A small one on level ground (the litter, a flower, the pond): a ring its own size.
                 ringList.push({x: where.x, y: where.base + 0.004, z: where.z, radius: Math.max(entry.length * 1.3, 0.025), color: marked === 2 ? SELECTED : marked === 3 ? LAST_OF_KIND : MINE, alpha: 1});
             }
+            // The stalking cue (2026-11-26): a hunter out on its forays now with a high chance of a catch in the next Ark day (its
+            // card's %, from the engine's two numbers): a faint warm ring under it that breathes. Real odds only; none when marked.
+            const stalk = !marked && stalkers.size && !entry.micro ? stalkers.get(animal.id) : undefined;
+            if (stalk !== undefined) {
+                const ringY = where.afloat ? (island?.contains(where.x, where.z) ? where.base : waterTopAt(where.x, where.z)) : Math.max(underFeet?.height ?? groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true, poseBase).height, island?.contains(where.x, where.z) ? 0 : waterTopAt(where.x, where.z));
+                const breathe = reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(now * 2.4);
+                ringList.push({x: where.x, y: ringY, z: where.z, radius: Math.max(entry.length * sizeUp * 0.9, 0.7), color: STALKING, alpha: (0.2 + 0.3 * breathe) * (0.6 + 0.4 * stalk)});
+            }
         }
 
         if (perf.on) perf.carve("seat", seat.frameMs);
@@ -11540,6 +11563,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepIslandNear();
         // 3.3 fix: the kept town animals around the look point out to move (`near-kept.ts`).
         stepNearKept(now);
+        stepStalkers(now);
         // Idle: after a while untouched, the view drifts slowly round.
         if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) {
             if (!controls.autoRotate) driftFrom = now;
@@ -11830,7 +11854,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), restOf: (id: string) => { const e = findEntry(id); return e ? restOf(e) : null; }, townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, stalkers: () => Object.fromEntries(stalkers), talking, lighting, entries: () => allEntries(), restOf: (id: string) => { const e = findEntry(id); return e ? restOf(e) : null; }, townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
