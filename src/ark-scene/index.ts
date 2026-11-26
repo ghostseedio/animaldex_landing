@@ -324,6 +324,7 @@ import {applyYoungCoat, youngCoatOf, youngCoatStrength, youngSteps} from "@/ark-
 import {antlerOf, antlerState, applyAntler, type AntlerState} from "@/ark-scene/antler-cycle";
 // Lane SIG-OTHER: tail postures (a dog's wag, a coati's flag).
 import {socialTarget, stepSocial, tailPostureOf, type TailPostureSpec} from "@/ark-scene/tail-posture";
+import {atHaulOut, haulOutLineOf} from "@/ark-scene/haul-out";
 // Lane SIG-OTHER: look states (colour by the hour, the season or a display; a swell).
 import {applyLookState, lookStateOf, nightSays, stateSays, stateSteps, stateTarget, stepStrength} from "@/ark-scene/look-state";
 import {ARK_DAYLIGHT} from "@/ark-scene/glsl";
@@ -6603,6 +6604,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (tailSpec && (tailSpec.when === "always" || (tailSpec.when === "social" ? (c.entry.tailSocial?.k ?? 0) > 0.6 : (c.entry.gait?.speed ?? 0) > 0.3))) {
                     const t = c.entry.animal;
                     seenActs.push({id: t.id, name: t.name, speciesId: t.kind_species_profile_id || t.species_profile_id || `slug:${t.model_slug}`, zone: t.zone, recipe: "tail_posture", episode: `tail_posture:${t.id}:${Math.floor(epoch / 900)}`, block: "look", fish: false, line: tailSpec.line});
+                }
+                // Lane SEA-SIG: a seal settled ashore at its own roost, its usual haul-out (`haul-out.ts`), close by: its species' own sentence.
+                const haulLine = c.distance < 45 && own?.trip ? haulOutLineOf(c.entry.animal.model_slug) : null;
+                if (haulLine && own?.trip && own.pose) {
+                    const roost = roostOf(worldOf(own.animal), own.profile, own.animal);
+                    const here = {x: c.pose.x, z: c.pose.z, moving: Boolean(own.pose.moving), afloat: Boolean(c.pose.afloat), ground: heightAt(c.pose.x, c.pose.z), water: waterTopAt(c.pose.x, c.pose.z)};
+                    if (atHaulOut(here, roost, c.entry.length, own.trip.doing)) {
+                        const h = c.entry.animal;
+                        seenActs.push({id: h.id, name: h.name, speciesId: h.kind_species_profile_id || h.species_profile_id || `slug:${h.model_slug}`, zone: h.zone, recipe: "haul_out_rest", episode: `haul_out_rest:${h.id}:${Math.round(own.trip.start)}`, block: "rest", fish: false, line: haulLine});
+                    }
                 }
                 // Lane SIG-OTHER: its look state, close by, when its species' own sentence is true of what is drawn (`look-state.ts`).
                 const lookSpecies = c.distance < 40 ? lookStateOf(c.entry.animal.model_slug) : null;
