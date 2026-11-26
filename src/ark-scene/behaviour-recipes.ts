@@ -2371,7 +2371,7 @@ export function drawnRecipe(world: ScheduleWorld, trip: Trip, epoch: number, kit
 function overlaid(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: TripPose, epoch: number, kit: ScheduleKit): RecipePose {
     const murmuring = murmurationPose(world, owner, kit, base, epoch);
     if (murmuring) return murmuring;
-    if (trip.doing === "sleep") return postureOf(owner, base);
+    if (trip.doing === "sleep") return postureOf(owner, base, world);
     // ARK-ANIM (decision 447, the owner's "bats not hanging upside down"): a bat roosting at its roost point (under a
     // limb, a cave's mouth, an eave) by day hangs head down there too, not only once the schedule calls it asleep.
     if (hangsAtRoost(owner, trip, base, epoch)) return postureOf(owner, base);
@@ -2492,18 +2492,27 @@ const STAY_HANG: ReadonlySet<string> = new Set(["rest", "groom", "idle", "watch"
 const postureActs = new Map<string, RecipeAct>();
 
 /** Its sleeping posture (one shared act per posture and attitude: sleeping animals are posed often). */
-function postureOf(owner: TripOwner, base: TripPose): RecipePose {
+function postureOf(owner: TripOwner, base: TripPose, world?: ScheduleWorld): RecipePose {
     const posture = speciesRecipes(owner.slug).posture;
     if (!posture) return base;
     // A bat hangs head down from its feet (nose down a quarter turn about its feet on the limb); a sloth hangs level,
     // upside down (a half roll); an otter floats on its back.
     const flyer = owner.profile.move === "fly" || owner.profile.moves.includes("fly");
-    const roll = (posture === "hang" && !flyer) || (posture === "float" && base.y <= 0.02) ? Math.PI : 0;
+    // (PERCH: a walking hanger asleep where there is nothing to hang from (on the ground, a town lawn) sleeps the right
+    // way up: turned over there, a black giant squirrel lay on its back with its body sunk 15 cm into the ground under
+    // its feet. Up off the ground, under its limb, it hangs as before.)
+    const underLimb = !world || hangsAboveGround(world, base);
+    const roll = (posture === "hang" && !flyer && underLimb) || (posture === "float" && base.y <= 0.02) ? Math.PI : 0;
     const pitch = posture === "hang" && flyer ? Math.PI / 2 : posture === "curl" ? 0.15 : 0;
     const key = `${posture}#${roll}#${pitch}`;
     let act = postureActs.get(key);
     if (!act) postureActs.set(key, (act = Object.freeze({episode: "sleep", recipe: "posture", block: "sleep_pose", state: `sleep_${posture}`, u: 0, pitch, roll, own: false, carry: null, prey: null, catch: null, fx: null, mark: null, label: `sleeps (${posture.replace("_", " ")})`}) as RecipeAct));
     return {...base, act};
+}
+
+/** Up off the ground (more than 0.4 m over the top under it, the schedule's `raised`): somewhere a walking hanger hangs from. */
+export function hangsAboveGround(world: ScheduleWorld, base: {x: number; y: number; z: number}): boolean {
+    return base.y > topOf(world.sampler, base.x, base.z) + 0.4;
 }
 
 /** How long a dug hole, a mound or a hollow stays (world seconds), fading. */

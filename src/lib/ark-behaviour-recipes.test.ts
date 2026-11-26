@@ -705,3 +705,32 @@ test("SIG9: a swimmer that walks goes ashore for a land act (a muscovy feeding o
     for (const trip of dayOf("grebe-1", "great-crested-grebe", 0.5, homes[0])) assert.ok(trip.recipe !== "strut_display", "a grebe never struts ashore");
     assert.ok(!ROWS["bufflehead"].split("|")[0].includes("strut_display"), "the bufflehead's strut is withdrawn");
 });
+
+test("a walking hanger asleep sleeps upside down only up off the ground, under a limb (PERCH: never on its back on the ground)", async () => {
+    const {hangsAboveGround} = await import("@/ark-scene/behaviour-recipes");
+    let hung = 0;
+    let level = 0;
+    for (const [slug, length] of [["black-giant-squirrel", 0.8], ["brown-throated-sloth", 0.6]] as const) {
+        for (let k = 0; k < 24; k++) {
+            const a = (k / 24) * Math.PI * 2;
+            const one = animal(`hanger-${slug}-${k}`, slug, {x: Math.cos(a) * (40 + k * 7), z: Math.sin(a) * (40 + k * 7)}, length);
+            const t0 = Math.floor(Date.UTC(2026, 5, 10 + k, 0) / 1000);
+            for (let h = 0; h < 24; h += 3) {
+                const t = t0 + h * 3600;
+                const trip = tripAt(world, one.profile, one.animal, t, hoursAt, "diurnal");
+                if (trip.doing !== "sleep" || t < trip.arrive) continue;
+                const pose = poseOnTrip(world, trip, t) as RecipePose;
+                if (!pose.act || pose.act.episode !== "sleep") continue;
+                const raised = hangsAboveGround(world, pose);
+                if (pose.act.roll === Math.PI) {
+                    hung++;
+                    assert.ok(raised, `${slug} ${k} ${h}h: turned over at ${pose.y.toFixed(2)}, on the ground`);
+                } else {
+                    level++;
+                    assert.ok(!raised, `${slug} ${k} ${h}h: the right way up off the ground`);
+                }
+            }
+        }
+    }
+    assert.ok(hung + level > 20, `asleep ${hung + level}`);
+});
