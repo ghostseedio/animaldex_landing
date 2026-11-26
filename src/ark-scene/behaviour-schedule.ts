@@ -2269,13 +2269,57 @@ function findApart(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
             const first = slotOf(m.animal, start);
             for (let k = first; k <= slotOf(m.animal, end); k++) {
                 const to = intent(world, m.profile, m.animal, m.activity, k, hoursAt).to;
-                for (const f of [to, finishOf(world, m.profile, m.animal, m.activity, k, hoursAt)]) {
+                for (const f of [to, mateFinish(world, m.profile, m.animal, m.activity, k, hoursAt)]) {
                     if (f && !raised(world, f) && !wet(world, f)) out.push({x: f.x, z: f.z, reach});
                 }
             }
         }
     }
     return out;
+}
+
+/**
+ * Where a mate's slot ends, for the others keeping off it (`herdAvoid`): as `finishOf` has it, but turned the way it
+ * comes in from its goal before as its walk chain has that goal (`looseGoal`), not as kept off its own mates. Lane
+ * ELEPHANTS: its finish asked for its goals in the slots before, each kept off its earlier mates, theirs asked for
+ * theirs, a slot further back for each animal placed before it. The goal it ends at is its own as placed; only the
+ * heading it settles to there may differ, by the nudge its goal before was given.
+ */
+function mateFinish(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Spot {
+    if (!keepsApart(profile, animal)) return finishOf(world, profile, animal, activity, slot, hoursAt);
+    return remember(memoOf(world, hoursAt, animal).mateFinishes, slot, () => {
+        for (let depth = 0; depth <= (flowsOn() ? 48 : 6); depth++) {
+            const k = slot - depth;
+            const i = intent(world, profile, animal, activity, k, hoursAt);
+            if (i.follow && animal.group) return shadowOf(world, animal, k, hoursAt).finish;
+            if (i.to) {
+                let before: Spot | null = null;
+                for (let back = 1; back <= LOOK_BACK; back++) {
+                    const earlier = looseGoal(world, profile, animal, activity, k - back, hoursAt);
+                    if (earlier.follow) break;
+                    if (earlier.to) {
+                        before = earlier.to;
+                        break;
+                    }
+                }
+                return placeStay(world, profile, animal, i.to, arrivalYaw(animal, k, i, before), i.stay, Infinity).finish;
+            }
+        }
+        return homeAt(world, profile, animal);
+    });
+}
+
+/** Its goal in a slot as its walk chain has it (`walkChain`, its goals before kept off no one): what `intent` gives, but loose. */
+function looseGoal(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): {to: Spot | null; follow: boolean} {
+    const placed = loosePlacedIntent(world, profile, animal, activity, slot, hoursAt);
+    if (!placed.to || placed.follow) return {to: placed.to, follow: Boolean(placed.follow)};
+    if (flowsOn() && placed.doing !== "sleep" && placed.doing !== "to_roost") {
+        const start = slotStart(animal, slot);
+        if (flowStillShare(flowSubjectFor(profile, animal, activity, hoursAt), start, start + SLOT_SECONDS) >= FLOW_STILL_SHARE) return {to: null, follow: false};
+    }
+    if (!walksGoals(profile)) return {to: placed.to, follow: false};
+    const start = (Math.floor(slot / WALK_BLOCK) - WALK_LEAD) * WALK_BLOCK;
+    return {to: walkChain(world, profile, animal, activity, start, hoursAt)[slot - start] ?? placed.to, follow: false};
 }
 
 /**
@@ -2475,7 +2519,7 @@ export function slotPlanAt(world: ScheduleWorld, profile: ArkBehaviourProfile, a
  * leader's flock and a predator's spacing all ask for the same leader's slot many times. Pure results, so this
  * changes nothing but the time taken. `forgetSchedules` after an animal's home, group or range changes.
  */
-type Memo = {intents: Map<number, Intent>; raw: Map<number, Intent>; placed: Map<number, Intent>; chains: Map<number, Array<Spot | null>>; trips: Map<number, Trip>; shadows: Map<number, Shadow>; finishes: Map<number, Spot>; loose: Map<number, Intent>; apart: Map<number, Array<{x: number; z: number; reach: number}>>};
+type Memo = {intents: Map<number, Intent>; raw: Map<number, Intent>; placed: Map<number, Intent>; chains: Map<number, Array<Spot | null>>; trips: Map<number, Trip>; shadows: Map<number, Shadow>; finishes: Map<number, Spot>; loose: Map<number, Intent>; apart: Map<number, Array<{x: number; z: number; reach: number}>>; mateFinishes: Map<number, Spot>};
 let memos = new WeakMap<ScheduleWorld, WeakMap<HoursAt, WeakMap<ScheduleAnimal, Memo>>>();
 function memoOf(world: ScheduleWorld, hoursAt: HoursAt, animal: ScheduleAnimal): Memo {
     let byClock = memos.get(world);
@@ -2483,7 +2527,7 @@ function memoOf(world: ScheduleWorld, hoursAt: HoursAt, animal: ScheduleAnimal):
     let byAnimal = byClock.get(hoursAt);
     if (!byAnimal) byClock.set(hoursAt, (byAnimal = new WeakMap()));
     let memo = byAnimal.get(animal);
-    if (!memo) byAnimal.set(animal, (memo = {intents: new Map(), raw: new Map(), placed: new Map(), chains: new Map(), trips: new Map(), shadows: new Map(), finishes: new Map(), loose: new Map(), apart: new Map()}));
+    if (!memo) byAnimal.set(animal, (memo = {intents: new Map(), raw: new Map(), placed: new Map(), chains: new Map(), trips: new Map(), shadows: new Map(), finishes: new Map(), loose: new Map(), apart: new Map(), mateFinishes: new Map()}));
     return memo;
 }
 function remember<T>(map: Map<number, T>, slot: number, make: () => T): T {
