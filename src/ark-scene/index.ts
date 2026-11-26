@@ -89,7 +89,7 @@ import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
 import {fishSchoolsNear} from "@/ark-scene/fish-schools";
 import {setFishChasers} from "@/ark-scene/fish-render";
 import {arkDayNow} from "@/ark-scene/props";
-import {HerdSpecks, textureColour, type SpeckShape} from "@/ark-scene/herd-specks";
+import {HerdSpecks, textureColour, textureTones, type SpeckShape} from "@/ark-scene/herd-specks";
 import {ARK_HERD_LIVE, ARK_HERD_LIVE_LITE, arkRepresentatives, HERD_FIGURE_BUDGET, HERD_SPECK_BELOW_PIXELS, type ArkHerd} from "@/ark-scene/herds";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
 import {ARK_TIME} from "@/ark-scene/glsl";
@@ -294,7 +294,7 @@ import {ForestScene} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): l
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
 import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
 import {entranceShowing, waitForArrival} from "@/ark-scene/arrival-wait";
-import {AMBUSH_RECIPE, ambushHours, ambushNow, inAmbushHours, type AmbushNow} from "@/ark-scene/micro-ambush";
+import {AMBUSH_RECIPE, ambushHours, ambushNow, inAmbushHours, type AmbushNow, type AmbushPoint} from "@/ark-scene/micro-ambush";
 import {flowerSpot, microActAt, playsInPlace, soilSpot} from "@/ark-scene/micro-acts"; // sig2-small: a small animal's recipe played in place
 // 3.3 batch (B): the birds' own moves (mobbing dive)
 import {Mobbing, mobFoeFits, type MobHost} from "@/ark-scene/mobbing";
@@ -1143,6 +1143,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     recipeScene.ground = (x, z) => {
         const n = groundNormalAt(x, z);
         return {y: heightAt(x, z), nx: n.nx, ny: n.ny, nz: n.nz};
+    };
+    // Lane SIG12: a roost's crowd in its species' own colours, read once from its model's skin when the model is in.
+    const roostTones = new Map<string, string[] | null>();
+    recipeScene.roostTones = (slug) => {
+        const known = roostTones.get(slug);
+        if (known !== undefined) return known;
+        const model = library.get(slug);
+        if (!model?.far || model.placeholder) return null;
+        const tones = textureTones(model.far.map);
+        roostTones.set(slug, tones);
+        return tones;
     };
     // The reef lane's ambient schools: a chase or a plunge goes after the nearest one (`setFishSource`).
     setFishSource((pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
@@ -4091,6 +4102,58 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return ambushNow(entry.animal.id, entry.animal.name, entry.trueLength, worldMs() / 1000, (along) => surfacePoint(place.micro!, entry.animal.zone, along));
     };
 
+    /**
+     * Lane SIG12: a scheduled gecko perched on a wall (the town's lamp walls, `islands/town/areas.ts`: on the live map a gecko
+     * perches, so the micro path above never reached it) in its hunting hours: the same bout as a micro one's, on the wall's
+     * plane from its perch along its heading. Sets its act (or clears it); null when it is not hunting now.
+     */
+    const perchAmbushOf = (entry: Entry, perch: {x: number; y: number; z: number; nx: number; ny: number; nz: number}, yaw: number): Pose | null => {
+        const slug = entry.animal.model_slug;
+        let kind = ambushers.get(slug);
+        if (kind === undefined) ambushers.set(slug, (kind = speciesRecipes(slug).has.has(AMBUSH_RECIPE) ? ambushHours(slug) : null));
+        if (!kind) return null;
+        entry.recipeAct = null;
+        // (On a wall only: its back to a steep face, awake on it (its schedule's sleep and rest are not hunts). Out of its hours it sits as before.)
+        if (!scheduleOn || reducedMotion || Math.abs(perch.ny) >= 0.5 || entry.state.asleep || !inAmbushHours(kind, hoursNow())) return null;
+        const nl = Math.hypot(perch.nx, perch.ny, perch.nz) || 1;
+        const n = {x: perch.nx / nl, y: perch.ny / nl, z: perch.nz / nl};
+        // Its heading on the wall: its yaw's direction laid onto the wall's plane, else straight up the wall.
+        let tx = Math.sin(yaw);
+        let ty = 0;
+        let tz = Math.cos(yaw);
+        const d = tx * n.x + tz * n.z;
+        tx -= d * n.x;
+        ty -= d * n.y;
+        tz -= d * n.z;
+        let tl = Math.hypot(tx, ty, tz);
+        if (tl < 0.2) {
+            tx = -n.y * n.x;
+            ty = 1 - n.y * n.y;
+            tz = -n.y * n.z;
+            tl = Math.hypot(tx, ty, tz) || 1;
+        }
+        tx /= tl;
+        ty /= tl;
+        tz /= tl;
+        const on = (along: number): AmbushPoint => ({x: perch.x + tx * along, y: perch.y + ty * along, z: perch.z + tz * along, nx: n.x, ny: n.y, nz: n.z, tx, ty, tz});
+        const hunt = ambushNow(entry.animal.id, entry.animal.name, entry.trueLength, worldMs() / 1000, on);
+        if (!hunt.act) return null;
+        entry.recipeAct = hunt.act;
+        const point = on(hunt.along);
+        if (hunt.turn) {
+            // Turn the heading about the normal: t cos + (n × t) sin.
+            const c = Math.cos(hunt.turn);
+            const sn = Math.sin(hunt.turn);
+            const bx = n.y * tz - n.z * ty;
+            const by = n.z * tx - n.x * tz;
+            const bz = n.x * ty - n.y * tx;
+            point.tx = tx * c + bx * sn;
+            point.ty = ty * c + by * sn;
+            point.tz = tz * c + bz * sn;
+        }
+        return {x: point.x, z: point.z, base: point.y, yaw: Math.atan2(point.tx, point.tz), pitch: 0, roll: 0, afloat: false, surface: point};
+    };
+
     const microPose = (entry: Entry, time: number, ambush: AmbushNow | null = null): Pose => {
         // ARK-WEBS: a web spinner on its web, once its web is hung.
         const web = webPoseOf(entry);
@@ -5264,6 +5327,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // ARK-WEBS: a web spinner on its web, once its web is hung (drawn there; its schedule's shared pose is unchanged).
         const web = webPoseOf(entry);
         if (web) return {x: web.x, z: web.z, base: web.y, yaw: Math.atan2(web.tx, web.tz), pitch: 0, roll: 0, afloat: true, surface: web};
+        // (Lane SIG12: a perched gecko's hunt is worked out again below, `perchAmbushOf`; never left over from the last frame.)
+        if (entry.recipeAct?.recipe === AMBUSH_RECIPE) entry.recipeAct = null;
         const own = entry.sched!;
         const at = own.pose!;
         const ground = own.ground;
@@ -5387,6 +5452,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // over arm, leaping or running from hold to hold of the drawn trees (`canopy-scene.ts`, the shared clock's).
         const canopy = trip && perch && !at.moving && !act && !reducedMotion ? canopyFrame(entry.animal, trip, own.at, entry.length, !entry.state.asleep, perch, heightAt) : null;
         if (canopy) return {x: canopy.x, z: canopy.z, base: canopy.y, yaw: Math.atan2(canopy.tx, canopy.tz), pitch: 0, roll: 0, afloat: false, surface: canopy};
+        // Lane SIG12: a gecko perched on its wall in its hunting hours hunts from there by sit-and-wait, as the micro-placed
+        // ones do (`micro-ambush.ts`): still on its spot, a dash and a snap at an insect now and then, back again.
+        const perchedHunt = perch && trip && !at.moving && !act && at.doing !== "sleep" && at.doing !== "rest" ? perchAmbushOf(entry, perch, at.yaw + glance) : null;
+        if (perchedHunt) return perchedHunt;
         if (perch) return {x: perch.x, z: perch.z, base: perch.y, yaw: at.yaw + glance, pitch: 0, roll: 0, afloat: false, surface: perch};
         // ARK-JUNGLE: a langur of the rocks resting on the ground goes up a rock near it now and then, ledge by ledge, sits
         // on its top a while and comes down (`rock-ledge.ts`, the shared clock's).

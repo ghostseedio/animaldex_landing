@@ -765,7 +765,7 @@ export type RecipeAct = {
 };
 
 /** Ambient flock-mates the scene draws round catalogue animals: a murmuration, a swarm, a crawling cluster, bats streaming out of a roost. */
-export type Flock = {centre: P; seed: number; t0: number; t1: number; kind?: "murmuration" | "swarm" | "cluster" | "bats" | "roost"; /** A roost's: the birds' body length (m), how dark they are drawn, how far they spread round the centre (m: a crown's two, a house eave's less). */ length?: number; tone?: "dark" | "brown"; spread?: number};
+export type Flock = {centre: P; seed: number; t0: number; t1: number; kind?: "murmuration" | "swarm" | "cluster" | "bats" | "roost"; /** A roost's: the birds' body length (m), how dark they are drawn, how far they spread round the centre (m: a crown's two, a house eave's less). */ length?: number; tone?: "dark" | "brown"; spread?: number; /** Lane SIG12: a tree roost's places on its crown's top, where the camera sees them (each roost-mate sits on one): absent, round the roost point as before. */ perches?: P[]; /** Lane SIG12: a roost's species, so the scene draws its roost-mates in that species' own colours (its model's skin) once its model is in. */ slug?: string};
 
 export type RecipePose = TripPose & {act?: RecipeAct | null; /** Ambient flock-mates round it now (its act may be anything). */ flock?: Flock | null};
 
@@ -2658,7 +2658,48 @@ function roostFlock(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, ep
     const leader = owner.animal.group?.leader ?? owner.animal;
     const leaderProfile = owner.animal.group?.profile ?? owner.profile;
     const roost = kit.roostOf(world, leaderProfile, leader);
-    return {centre: {x: roost.x, y: roost.y, z: roost.z}, seed: hashString(`${leader.id}#roost`), t0: window.t0, t1: window.t1, kind: "roost", length: Math.max(owner.animal.length, 0.08), tone: DARK_ROOSTERS.test(owner.slug) ? "dark" : "brown"};
+    const seed = hashString(`${leader.id}#roost`);
+    const centre = {x: roost.x, y: roost.y, z: roost.z};
+    const perches = crownPerches(world, centre, seed);
+    return {centre, seed, t0: window.t0, t1: window.t1, kind: "roost", length: Math.max(owner.animal.length, 0.08), tone: DARK_ROOSTERS.test(owner.slug) ? "dark" : "brown", slug: owner.slug, ...(perches ? {perches} : {})};
+}
+
+/**
+ * Lane SIG12 (the coordinator, 2026-11-27: "put the roost at a perch the camera can see, not inside the canopy"): a tree
+ * roost's places on its crown's top (the woods' drawn crowns, `world-sampler.ts` canopyTop), seeded round the roost
+ * point within ROOST_CROWN metres, each on the crown where it is (a place off the crown's edge, or more than a metre
+ * and a half under its top, is none). Null where no crown is over the roost (the town's, a cliff's): round the roost
+ * point as before. Pure in the world, the point and the seed.
+ */
+const ROOST_CROWN = 2.4;
+const ROOST_PERCHES = 30;
+const crownCache = new Map<string, P[] | null>();
+export function crownPerches(world: ScheduleWorld, centre: P, seed: number): P[] | null {
+    const top = world.sampler.canopyTop;
+    if (!top) return null;
+    const key = `${seed}#${centre.x.toFixed(2)},${centre.z.toFixed(2)}`;
+    const known = crownCache.get(key);
+    if (known !== undefined) return known;
+    if (crownCache.size > 256) crownCache.clear();
+    const here = top(centre.x, centre.z);
+    let out: P[] | null = null;
+    // (Only a roost in a crown: its top over the roost point.)
+    if (Number.isFinite(here) && here > centre.y + 0.2) {
+        const r = rng(hashString(`crown#${seed}`));
+        const list: P[] = [];
+        for (let k = 0; k < ROOST_PERCHES * 3 && list.length < ROOST_PERCHES; k++) {
+            const a = r() * Math.PI * 2;
+            const d = ROOST_CROWN * Math.sqrt(r());
+            const x = centre.x + Math.cos(a) * d;
+            const z = centre.z + Math.sin(a) * d;
+            const y = top(x, z);
+            if (!Number.isFinite(y) || y < here - 1.5) continue;
+            list.push({x, y, z});
+        }
+        out = list.length >= 6 ? list : null;
+    }
+    crownCache.set(key, out);
+    return out;
 }
 
 /**
@@ -2671,22 +2712,30 @@ export function microRoost(slug: string, at: P, epoch: number, hours: number, le
     if (!window) return null;
     const cx = Math.floor(at.x / 40);
     const cz = Math.floor(at.z / 40);
-    return {centre: at, seed: hashString(`${slug}#roost#${cx}#${cz}`), t0: window.t0, t1: window.t1, kind: "roost", length: Math.max(length, 0.08), tone: DARK_ROOSTERS.test(slug) ? "dark" : "brown", spread: 0.9};
+    return {centre: at, seed: hashString(`${slug}#roost#${cx}#${cz}`), t0: window.t0, t1: window.t1, kind: "roost", length: Math.max(length, 0.08), tone: DARK_ROOSTERS.test(slug) ? "dark" : "brown", spread: 0.9, slug};
 }
 
 /**
  * One roost-mate at a time: flying in along its own heading, perched in the crown, or flying out at dawn (null when it
  * is not there: before it has come in, after it has gone). `perched` tells the three apart (a wing beat, or still).
  */
-export function roostPoint(centre: P, seed: number, index: number, epoch: number, t0: number, reach = 2.1): (P & {yaw: number; pitch: number; perched: boolean}) | null {
+export function roostPoint(centre: P, seed: number, index: number, epoch: number, t0: number, reach = 2.1, perches?: readonly P[]): (P & {yaw: number; pitch: number; perched: boolean}) | null {
     const r = rng(hashString(`r${seed}#${index}`));
     const rel = epoch - t0;
     // Its place in the crown: within about two metres of the roost point, a little above and below it.
     const a = r() * Math.PI * 2;
     const spread = 0.3 + reach * Math.sqrt(r());
-    const px = centre.x + Math.cos(a) * spread;
-    const pz = centre.z + Math.sin(a) * spread;
-    const py = centre.y + (r() - 0.45) * 1.7;
+    let px = centre.x + Math.cos(a) * spread;
+    let pz = centre.z + Math.sin(a) * spread;
+    let py = centre.y + (r() - 0.45) * 1.7;
+    // (Lane SIG12: on its crown's top where it has one, a few to a place, side by side.)
+    if (perches?.length) {
+        const at = perches[index % perches.length];
+        const side = (Math.floor(index / perches.length) % 5) - 2;
+        px = at.x + Math.cos(a) * 0.12 * side;
+        pz = at.z + Math.sin(a) * 0.12 * side;
+        py = at.y - 0.05;
+    }
     const wave = Math.floor(Math.pow(r(), 0.85) * ROOST_WAVES);
     const comes = ROOST_ARRIVE[0] + (ROOST_ARRIVE[1] - ROOST_ARRIVE[0]) * ((wave + 0.15 + 0.7 * rng(hashString(`w${seed}#${wave}`))()) / ROOST_WAVES) + (r() - 0.5) * 16;
     const leave = Math.floor(r() * ROOST_LEAVE_WAVES);

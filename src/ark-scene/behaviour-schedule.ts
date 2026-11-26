@@ -49,6 +49,7 @@ import {boutPhase, rhythmChoice} from "@/ark-scene/sd-rhythm";
 import type {ArkCondition, ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {sleepCover} from "@/ark-scene/sleep-sites";
+import roostAfloat from "@/ark-scene/roost-afloat.json";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
 // p3 (shake): shaking off the water at the edge.
 import {shakeTotal, waterShakeOf} from "@/ark-scene/water-shake";
@@ -1197,6 +1198,22 @@ function denDry(world: ScheduleWorld, x: number, z: number): boolean {
     return true;
 }
 
+/** Lane SIG12: the birds that roost afloat on open water (`roost-afloat.json`, each with its own sentence). */
+const ROOSTS_AFLOAT: ReadonlySet<string> = new Set(Object.keys((roostAfloat as {species: Record<string, unknown>}).species));
+/** How far it looks for open water to sleep on (nav rings of 2 m: 120 m), and how deep that water is at least (m). */
+const AFLOAT_RINGS = 60;
+const AFLOAT_DEPTH = 0.6;
+function afloatRoost(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot | null {
+    const water = world.nav.nearest(animal.home.x, animal.home.z, "swim", AFLOAT_DEPTH, AFLOAT_RINGS);
+    if (!water) return null;
+    // (Its own place on that water: a seeded few metres out from the nearest point, on water still.)
+    const random = rng(hashString(`${animal.id}#afloat`));
+    const a = random() * Math.PI * 2;
+    const d = 1 + random() * 5;
+    const own = world.nav.nearest(water.x + Math.cos(a) * d, water.z + Math.sin(a) * d, "swim", AFLOAT_DEPTH, 3) ?? water;
+    return {x: own.x, y: surfaceAt(world, own.x, own.z), z: own.z, nx: 0, ny: 1, nz: 0, point: null};
+}
+
 /** The way a huddle faces on its raised place: the sampler's point's own (across its limb), else across a map limb. */
 function limbFacing(world: ScheduleWorld, spot: Spot): number | undefined {
     const at = spot.point ? RAISED_TAGS.map((tag) => world.sampler.attachPoints(tag, {x: spot.x, z: spot.z, r: 0.3}).find((p) => p.id === spot.point)).find(Boolean) : undefined;
@@ -1212,6 +1229,10 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     // (Lane ZOOSLEEP: a bed handed out with its enclosure's others is its own. Picked one by one from three shade points
     // by the shed, a mixed paddock's residents lay two on a point.)
     if (animal.bed) return {...groundSpot(world, animal.bed.x, animal.bed.z), heading: animal.bed.heading};
+    // (Lane SIG12: a bird whose own text has it roosting afloat on open water, a black-headed gull, sleeps on the nearest
+    // open water's surface, each a few body lengths from its colony's others, before its roof or its patch of grass.)
+    const afloat = ROOSTS_AFLOAT.has(profile.slug) ? afloatRoost(world, profile, animal) : null;
+    if (afloat) return afloat;
     const group = animal.group;
     // (A flock whose text has it sleeping together, huddled or in a row, roosts as a group too: `sleep.ts`.)
     const together = sleepStyle(profile.slug).social !== "apart";

@@ -102,6 +102,8 @@ export class RecipeScene {
      * slope (a wallow's mud on a bank stood level at its middle, above the ground downhill, like a plate).
      */
     ground: ((x: number, z: number) => {y: number; nx: number; ny: number; nz: number}) | null = null;
+    /** Lane SIG12: a species' own colours from its model's skin, most of it first (`herd-specks.ts` textureTones), or null while its model is not in: a roost's crowd is drawn in them. */
+    roostTones: ((slug: string) => string[] | null) | null = null;
     private readonly twigs: InstancedMesh;
     private readonly flock: InstancedMesh;
     private readonly insects: InstancedMesh;
@@ -398,10 +400,14 @@ export class RecipeScene {
                 if (away > 90) continue;
                 const length = Math.min(Math.max(flock.length ?? 0.2, 0.08), 0.7);
                 const tone = flock.tone === "dark" ? ["#26252a", "#34312f", "#1e1f24"] : ["#6a5846", "#7a6a52", "#5a4c3e"];
+                // (Lane SIG12: in its species' own colours once its model is in: a galah's grey back and pink head, an
+                // amazon's green; the body the skin's main colour, the head its next.)
+                const own = flock.slug ? this.roostTones?.(flock.slug) ?? null : null;
                 for (let i = 0; i < ROOST_AMBIENT; i++) {
-                    const p = roostPoint(flock.centre, flock.seed, i, epoch, flock.t0, flock.spread);
+                    const p = roostPoint(flock.centre, flock.seed, i, epoch, flock.t0, flock.spread, flock.perches);
                     if (!p) continue;
-                    const colour = tone[i % tone.length];
+                    const colour = own?.length ? own[0] : tone[i % tone.length];
+                    const headColour = own?.length ? own[Math.min(1, own.length - 1)] : colour;
                     // (Never under a few pixels far off, a little different in size from bird to bird.)
                     const size = Math.max(length * (0.9 + 0.2 * ((i * 7) % 5) / 5), Math.hypot(p.x - camera.x, p.y - camera.y, p.z - camera.z) * 0.004);
                     if (p.perched) {
@@ -409,7 +415,7 @@ export class RecipeScene {
                         const sin = Math.sin(p.yaw);
                         const cos = Math.cos(p.yaw);
                         this.put(this.roostBodies, p.x, p.y + size * 0.3, p.z, p.yaw, 0.35, 0, size * 0.42, size * 0.4, size * 0.85, colour);
-                        this.put(this.roostHeads, p.x + sin * size * 0.3, p.y + size * 0.52, p.z + cos * size * 0.3, p.yaw, 0, 0, size * 0.24, size * 0.24, size * 0.28, colour);
+                        this.put(this.roostHeads, p.x + sin * size * 0.3, p.y + size * 0.52, p.z + cos * size * 0.3, p.yaw, 0, 0, size * 0.24, size * 0.24, size * 0.28, headColour);
                     } else {
                         const flap = Math.sin(now * 22 + i * 1.7);
                         this.put(this.roostFlying, p.x, p.y, p.z, p.yaw, p.pitch, flap * 0.3, size * 0.9, size * (0.7 + 0.6 * flap), size * 0.9, colour);
