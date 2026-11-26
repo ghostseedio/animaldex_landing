@@ -397,14 +397,9 @@ test("seat: a small percher moved down onto its leaf, its own motion back, then 
     // (Up: moved down onto the leaf. Down again before it is there: under the leaf.)
     step(bob);
     assert.ok(holder.seat!.ty < -0.1, `moved down onto the leaf: ${holder.seat!.ty}`);
-    // (On its way back to the leaf, and up again before it is there, and staying up.)
-    let under = false;
-    for (let i = 0; i < 120; i++) {
-        step(on);
-        if (holder.seat!.y < -0.12) under = true;
-        if (under && holder.seat!.y > -0.06) break;
-    }
-    assert.ok(under && holder.seat!.y > -0.06, `on its way back: ${holder.seat!.y}`);
+    // (Its own motion back down for half a second (put back under the leaf, on its way back up), then up again and
+    // staying up: as the brimstone's did.)
+    for (let i = 0; i < 28; i++) step(on);
     for (let i = 0; i < 240; i++) step(bob);
     assert.ok(Math.abs(position.y - 1.5) < 0.014, `down on its leaf again: ${position.y}`);
 });

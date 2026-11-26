@@ -846,14 +846,15 @@ export class SeatPass {
         let left = false;
         // (Not one whose body lies on a closed thing by another part of it than its feet: a frog on a rock's shoulder.)
         const nothing = held && !cling && gap > Math.max(0.1, height) && closedMin > Math.max(0.1, height);
-        // (SMALL-PERCHER: moved onto a surface beside it and still on its way there: judged once it is there, not by the air
-        // it crosses. Judged on the way, a brimstone sliding onto a leaf 12 cm off found nothing under it half way, was
-        // put back where its own motion had it, 21 cm over the crown, and was never moved again.)
+        // (SMALL-PERCHER: moved onto a surface beside it, and its own motion has carried it on since: it is not on its way
+        // to that surface any more, nor on a sliver there; it is somewhere else. Moved beside again from where it is. Its
+        // move spent instead, the brimstone was put back where its own motion had it as that bobbed up 21 cm over its
+        // tree's crown, and left there for good.)
+        const movedOn = s.sides > 0 && Math.hypot(ownX - s.bx, ownY - s.by, ownZ - s.bz) > Math.max(DEAD, 0.25 * length);
+        if (nothing && movedOn) s.sides = 0;
+        // (Still on its way there, its own motion where it was: judged once it is there, not by the air it crosses. Judged
+        // on the way, a brimstone sliding onto a leaf 12 cm off found nothing under it half way and was put back.)
         const arriving = s.sides > 0 && (s.x !== s.tx || s.y !== s.ty || s.z !== s.tz);
-        // (SMALL-PERCHER: there, and its own motion has carried it on since it was moved: it is not a sliver it was moved
-        // onto, it is somewhere else now. Moved beside again from where it is. Its move spent instead, the brimstone was
-        // put back where its own motion had it as that bobbed up 21 cm over its tree's crown, and left there for good.)
-        if (nothing && !arriving && s.sides > 0 && Math.hypot(ownX - s.bx, ownY - s.by, ownZ - s.bz) > Math.max(DEAD, 0.25 * length)) s.sides = 0;
         if (nothing && arriving) waiting = true;
         else if (nothing && this.besidesLeft <= 0 && !this.forced && !input.focus) waiting = true;
         else if (nothing) {
