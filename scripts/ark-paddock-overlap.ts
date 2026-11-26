@@ -80,7 +80,8 @@ const beds = process.argv.includes("--no-beds") ? new Map() : townZooBeds(placed
 for (const a of town.animals) {
     const info = placed.town.get(a.id);
     const p = placed.places.get(a.id);
-    if (!info || !p || !pens.has(info.place)) continue;
+    // (`--pens zoo`: every zoo enclosure.)
+    if (!info || !p || !(pens.has(info.place) || (pens.has("zoo") && info.area === "zoo"))) continue;
     const length = displayLength(a);
     const profile = behaviourProfile(a.model_slug);
     const shape = bodyShape(a.model_slug, length);
@@ -113,8 +114,14 @@ if (!process.argv.includes("--no-groups")) {
 }
 // (Lane ZOOSLEEP: a zoo resident's goals keep off its enclosure-mates' beds, as the scene wires them: `index.ts` mates.)
 if (!process.argv.includes("--no-beds")) for (const it of items) if (placed.town.get(it.id)?.area === "zoo") it.sched.mates = () => items.filter((o) => o.pen === it.pen).map((o) => ({animal: o.sched, profile: o.profile}));
+// (`--time`: the schedule's own cost, ms a frame, as the scene's "schedule" section counts it: each resident's trip and pose.)
+let scheduleMs = 0;
+let worstFrameMs = 0;
+let warmMs = 0;
 const baseOf = (it: Item, epoch: number): ResolvePose & {moving: boolean} => {
+    const t0 = performance.now();
     const pose = poseOnTrip(world, tripAt(world, it.profile, it.sched, epoch, hours), epoch);
+    scheduleMs += performance.now() - t0;
     return {x: pose.x, y: pose.y, z: pose.z, yaw: pose.yaw, aloft: pose.aloft, asleep: pose.beat === "sleep", still: !pose.aloft && !pose.moving, moving: pose.moving};
 };
 const layer = new CollideLayer<Item>({colliders: () => set, body: (it) => it.body, base: (it, epoch) => baseOf(it, epoch), everyone: () => items, last: (it) => it.last, speed: () => 7, keep: (it) => (!old && it.box ? penKeep(it.box, it.margin, origin.x, origin.z) : null)});
@@ -131,8 +138,11 @@ let boundJumpAt = "";
 const boundBy = new Map<Item, number>();
 const push = new Map<Item, {x: number; z: number}>();
 const frames = Math.round(minutes * 60 * fps);
+// (The first minute's frames, the cold start's, left out of the steady cost.)
+const WARM = Math.min(60 * fps, frames - 1);
 for (let f = 0; f < frames; f++) {
     const epoch = from + f / fps;
+    const frameStart = scheduleMs;
     const drawn = items.map((it) => {
         const base = baseOf(it, epoch);
         const at = {...layer.apply(it, epoch, base)};
@@ -163,6 +173,8 @@ for (let f = 0; f < frames; f++) {
         push.set(it, now);
         return {it, pose: {...base, x: at.x, z: at.z}};
     });
+    worstFrameMs = Math.max(worstFrameMs, scheduleMs - frameStart);
+    if (f === WARM) warmMs = scheduleMs;
     for (let i = 0; i < drawn.length; i++) {
         for (let j = i + 1; j < drawn.length; j++) {
             const a = drawn[i];
@@ -191,4 +203,5 @@ for (const [key, s] of rows.slice(0, 10)) console.log(`  ${key}: longest ${s.lon
 console.log(`frames drawn across a fence from its day's pose: ${across}${acrossAt.length ? ` (${acrossAt.join("; ")})` : ""}`);
 console.log(`biggest push step in a frame: ${step.toFixed(3)} m (${stepAt})`);
 console.log(`frames the pen bound moved the collisions' answer: ${boundFrames}; its biggest change in a frame: ${boundJump.toFixed(3)} m (${boundJumpAt})`);
+if (process.argv.includes("--time")) console.log(`schedule: ${(scheduleMs / frames).toFixed(3)} ms a frame (${((scheduleMs - warmMs) / (frames - 1 - WARM)).toFixed(3)} after the first minute), all told ${(scheduleMs / 1000).toFixed(2)} s, worst frame ${worstFrameMs.toFixed(1)} ms`);
 if (process.argv.includes("--gate") && overSecond) process.exit(1);

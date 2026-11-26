@@ -1542,7 +1542,11 @@ function workIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     // as a walk and its school no longer following. 2026-11-11.)
     const here = walkChain(world, profile, animal, activity, start, hoursAt)[slot - start];
     // (A prey animal watching a predator it cannot walk off from by a plain way watches it from where it is: still facing it.)
-    return here === null ? placed : {...placed, to: here, mode: "ground", face: placed.doing === "watch" ? placed.face : undefined};
+    if (here === null) return placed;
+    // (Lane ELEPHANTS: where it stays, as its chain has it (`loosePlacedIntent`: its goals before kept off no one), off the
+    // others as its goals are.)
+    const stay = keepsApart(profile, animal) ? clearOfSolid(world, profile, animal, here, false, herdAvoid(world, profile, animal, slot, hoursAt)) : here;
+    return {...placed, to: stay, mode: "ground", face: placed.doing === "watch" ? placed.face : undefined};
 }
 
 /**
@@ -1576,7 +1580,7 @@ function walkChain(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
         let goal: Spot | null = null;
         let at: Spot | null = null;
         for (let back = 1; back <= LOOK_BACK && !goal; back++) {
-            const earlier = placedIntent(world, profile, animal, activity, start - back, hoursAt);
+            const earlier = loosePlacedIntent(world, profile, animal, activity, start - back, hoursAt);
             if (earlier.follow) break;
             // (Only a goal on its own stretch of ground: one it can ever walk to, and one its body can stand at.)
             if (earlier.to && onItsGround(world, profile, animal, earlier) && standsAt(world, profile, animal, earlier)) {
@@ -1586,7 +1590,7 @@ function walkChain(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
         }
         const out: Array<Spot | null> = [];
         for (let k = start; k < start + WALK_BLOCK * (WALK_LEAD + 1); k++) {
-            const placed = placedIntent(world, profile, animal, activity, k, hoursAt);
+            const placed = loosePlacedIntent(world, profile, animal, activity, k, hoursAt);
             if (placed.follow) {
                 goal = null;
                 at = null;
@@ -1617,7 +1621,28 @@ const LOOK_BACK = 6;
 
 /** Its intent before the walk check: planned, and kept in the water if it lives there. */
 function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
-    return remember(memoOf(world, hoursAt, animal).placed, slot, () => {
+    return remember(memoOf(world, hoursAt, animal).placed, slot, () => placeIntent(world, profile, animal, activity, slot, hoursAt, true));
+}
+
+/**
+ * Its intent placed as `placedIntent` places it, but keeping off no one (`herdAvoid`): what its walk chain judges its
+ * goals by (`walkChain`), whether each is walked to from where the one before left it. Lane ELEPHANTS: judged by the
+ * goals kept off the others, each slot of the chain asked for its earlier mates' places in that slot, and theirs their
+ * chains', so an enclosure's last-placed animal's chain reached back through every mate's eighteen slots before it:
+ * the safari close-up's schedule at two to three times its cost. The goal it then goes to keeps off them as before.
+ */
+function loosePlacedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
+    if (!keepsApart(profile, animal)) return placedIntent(world, profile, animal, activity, slot, hoursAt);
+    return remember(memoOf(world, hoursAt, animal).loose, slot, () => placeIntent(world, profile, animal, activity, slot, hoursAt, false));
+}
+
+/** Whether its goals keep off others (`herdAvoid`): a herd's member or one kept with others, on the ground. */
+function keepsApart(profile: ArkBehaviourProfile, animal: ScheduleAnimal): boolean {
+    return Boolean(animal.group || animal.mates) && !flies(profile) && !aquatic(profile);
+}
+
+function placeIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt, apart: boolean): Intent {
+    {
         const planned = keepInWater(world, profile, animal, plannedIntent(world, profile, animal, activity, slot, hoursAt));
         // (Collisions: a ground goal its body fits at; a perch up on a rock or a tree its body fits on.)
         if (!planned.to || planned.follow || aquatic(profile)) return planned;
@@ -1628,9 +1653,9 @@ function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
             const foot = world.nav.nearest(planned.to.x, planned.to.z, "walk", 0.5, 3, maxSlopeOf(animal), bodyReachOf(animal, profile.slug));
             if (foot) return {...planned, to: groundSpot(world, foot.x, foot.z), mode: planned.mode === "air" ? "air" : "ground"};
         }
-        const to = clearOfSolid(world, profile, animal, planned.to, false, herdAvoid(world, profile, animal, slot, hoursAt));
+        const to = clearOfSolid(world, profile, animal, planned.to, false, apart ? herdAvoid(world, profile, animal, slot, hoursAt) : []);
         return to === planned.to ? planned : {...planned, to};
-    });
+    }
 }
 
 /**
@@ -2217,6 +2242,11 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
  * and they were drawn inside each other for up to two minutes while the collisions held them between the trees.
  */
 function herdAvoid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): Array<{x: number; z: number; reach: number}> {
+    // (Remembered per slot: its goal, its stay and its place by its leader all ask for it.)
+    return remember(memoOf(world, hoursAt, animal).apart, slot, () => findApart(world, profile, animal, slot, hoursAt));
+}
+
+function findApart(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): Array<{x: number; z: number; reach: number}> {
     const group = animal.group;
     if (flies(profile) || aquatic(profile)) return [];
     const start = slotStart(animal, slot);
@@ -2445,7 +2475,7 @@ export function slotPlanAt(world: ScheduleWorld, profile: ArkBehaviourProfile, a
  * leader's flock and a predator's spacing all ask for the same leader's slot many times. Pure results, so this
  * changes nothing but the time taken. `forgetSchedules` after an animal's home, group or range changes.
  */
-type Memo = {intents: Map<number, Intent>; raw: Map<number, Intent>; placed: Map<number, Intent>; chains: Map<number, Array<Spot | null>>; trips: Map<number, Trip>; shadows: Map<number, Shadow>; finishes: Map<number, Spot>};
+type Memo = {intents: Map<number, Intent>; raw: Map<number, Intent>; placed: Map<number, Intent>; chains: Map<number, Array<Spot | null>>; trips: Map<number, Trip>; shadows: Map<number, Shadow>; finishes: Map<number, Spot>; loose: Map<number, Intent>; apart: Map<number, Array<{x: number; z: number; reach: number}>>};
 let memos = new WeakMap<ScheduleWorld, WeakMap<HoursAt, WeakMap<ScheduleAnimal, Memo>>>();
 function memoOf(world: ScheduleWorld, hoursAt: HoursAt, animal: ScheduleAnimal): Memo {
     let byClock = memos.get(world);
@@ -2453,7 +2483,7 @@ function memoOf(world: ScheduleWorld, hoursAt: HoursAt, animal: ScheduleAnimal):
     let byAnimal = byClock.get(hoursAt);
     if (!byAnimal) byClock.set(hoursAt, (byAnimal = new WeakMap()));
     let memo = byAnimal.get(animal);
-    if (!memo) byAnimal.set(animal, (memo = {intents: new Map(), raw: new Map(), placed: new Map(), chains: new Map(), trips: new Map(), shadows: new Map(), finishes: new Map()}));
+    if (!memo) byAnimal.set(animal, (memo = {intents: new Map(), raw: new Map(), placed: new Map(), chains: new Map(), trips: new Map(), shadows: new Map(), finishes: new Map(), loose: new Map(), apart: new Map()}));
     return memo;
 }
 function remember<T>(map: Map<number, T>, slot: number, make: () => T): T {
