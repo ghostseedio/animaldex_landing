@@ -93,11 +93,13 @@ export default function AnalyticsDashboard() {
     window.history.replaceState(null, "", `/admin/metrics${query ? `?${query}` : ""}`);
   }, [tab, preset, range.from, range.to, grainChoice, platform]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (fresh = false) => {
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({ from: range.from, to: range.to, grain, platform });
+      // The server reuses a range's rows for a minute; Refresh asks for new ones.
+      if (fresh) params.set("fresh", "1");
       const response = await fetch(`/api/admin/analytics?${params}`, { cache: "no-store" });
       const body = await response.json().catch(() => null);
       if (!response.ok || !body?.ok) throw new Error(errorFromBody(body, `Analytics failed to load (${response.status})`));
@@ -124,7 +126,7 @@ export default function AnalyticsDashboard() {
             <Link href="/admin/metrics/marketing" className={buttonVariants({ size: "sm" })}>
               Spend, social & plan →
             </Link>
-            <RefreshButton loading={loading} onClick={() => void load()} />
+            <RefreshButton loading={loading} onClick={() => void load(true)} />
           </>
         }
       />
