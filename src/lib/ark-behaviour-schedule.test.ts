@@ -898,3 +898,26 @@ test("asleep where it lies, slot after slot, it keeps its heading (no turn at ea
     assert.deepEqual(turned.slice(0, 8), [], `${turned.length} of ${pairs} turned`);
     assert.deepEqual(snapped.slice(0, 8), [], `${snapped.length} of ${edges} snapped at a slot start`);
 });
+
+test("a nester that neither flies nor climbs nests on the ground, never on a branch up a tree (PERCH: the hedgehog 17 m up a lime)", async () => {
+    const {groundNest} = await import("@/ark-scene/behaviour-schedule");
+    const hog = behaviourProfile("european-hedgehog");
+    assert.equal(hog.roost, "nest");
+    assert.deepEqual(groundNest(hog, ["branch", "shade"]), ["shade"]);
+    // A flyer's nest and a climber's stay up a tree.
+    for (const slug of ["eurasian-wren", "eurasian-red-squirrel"]) {
+        const p = behaviourProfile(slug);
+        if (p.roost === "nest") assert.deepEqual(groundNest(p, ["branch", "shade"]), ["branch", "shade"], slug);
+    }
+    // Hedgehogs homed in the woods (branches all round) sleep at no branch.
+    const branches = world.sampler.attachPoints("branch");
+    let n = 0;
+    for (let k = 0; k < 40; k++) {
+        const b = branches[Math.floor((k * branches.length) / 40)];
+        const animal: ScheduleAnimal = {id: `hog-${k}`, zone: "woodland", home: {x: b.x + 1, y: Math.max(world.sampler.heightAt(b.x + 1, b.z), 0), z: b.z}, length: 0.25, sea: false};
+        const roost = roostOf(world, hog, animal);
+        assert.ok(!roost.point || !roost.point.startsWith("branch:"), `hog ${k}: ${roost.point}`);
+        n++;
+    }
+    assert.equal(n, 40);
+});
