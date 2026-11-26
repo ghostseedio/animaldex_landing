@@ -2246,33 +2246,17 @@ function herdAvoid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     return remember(memoOf(world, hoursAt, animal).apart, slot, () => findApart(world, profile, animal, slot, hoursAt));
 }
 
-function findApart(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt, leaderTrips?: Trip[]): Array<{x: number; z: number; reach: number}> {
+function findApart(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): Array<{x: number; z: number; reach: number}> {
     const group = animal.group;
     if (flies(profile) || aquatic(profile)) return [];
     const start = slotStart(animal, slot);
     const end = start + SLOT_SECONDS - 0.001;
     const out: Array<{x: number; z: number; reach: number}> = [];
-    if (group && !flies(group.profile) && !aquatic(group.profile) && leaderTrips) {
-        // (Its place by its leader, `placeShadow`: where its leader is on the trips it is placed by, as the slot starts and ends.)
+    if (group && !flies(group.profile) && !aquatic(group.profile)) {
         const reach = bodyReachOf(group.leader, group.profile.slug);
         for (const t of [start, end]) {
-            const trip = leaderTrips.find((x) => t >= x.start && t < x.end) ?? leaderTrips[leaderTrips.length - 1];
+            const trip = tripAt(world, group.profile, group.leader, t, hoursAt, group.activity);
             for (const at of [basePoseOnTrip(world, trip, t), trip.to, trip.finish]) if (!("aloft" in at && at.aloft) && !raised(world, at as Spot) && !wet(world, at as Spot)) out.push({x: at.x, z: at.z, reach});
-        }
-    } else if (group && !flies(group.profile) && !aquatic(group.profile)) {
-        // (Its own goal: where its leader starts, goes and ends in each of its slots this one overlaps, from its goals, not
-        // its trips, whose routes a member's goal asked for in slots nothing else had yet, a path search each.)
-        const reach = bodyReachOf(group.leader, group.profile.slug);
-        const first = slotOf(group.leader, start);
-        for (let k = first; k <= slotOf(group.leader, end); k++) {
-            const goal = intent(world, group.profile, group.leader, group.activity, k, hoursAt);
-            if (goal.follow || goal.mode === "air") continue;
-            // (And halfway along: its walk there from where the slot before left it, and its stay's steps from there.)
-            const from = mateFinish(world, group.profile, group.leader, group.activity, k - 1, hoursAt);
-            const last = mateFinish(world, group.profile, group.leader, group.activity, k, hoursAt);
-            const to = goal.to ?? from;
-            const half = (a: Spot, b: Spot): Spot => ({...b, x: (a.x + b.x) / 2, z: (a.z + b.z) / 2});
-            for (const f of [from, half(from, to), to, half(to, last), last]) if (!raised(world, f) && !wet(world, f)) out.push({x: f.x, z: f.z, reach});
         }
     }
     if (animal.mates) {
@@ -2383,8 +2367,7 @@ function placeShadow(world: ScheduleWorld, animal: ScheduleAnimal, slot: number,
     // (Lane ELEPHANTS: on the ground, a place its body fits at by its reach, inside its keep box, off its leader and the
     // herd-mates placed before it (`herdAvoid`); tried wider a step at a time, and failing that the first walkable try.)
     const ground = !at.aloft && !(at.y < surfaceY(world, at.x, at.z)) && !flies(group.profile);
-    // (Not remembered: its place is, `shadowOf`.)
-    const avoid = ground && world.nav.colliders ? findApart(world, group.profile, animal, slot, hoursAt, trips) : [];
+    const avoid = ground && world.nav.colliders ? herdAvoid(world, group.profile, animal, slot, hoursAt) : [];
     const reach = avoid.length ? bodyReachOf(animal, group.profile.slug) : 0;
     const fitsHere = (x: number, z: number) =>
         avoid.every((b) => Math.hypot(x - b.x, z - b.z) >= reach + b.reach) && (!animal.keep || inKeep(animal.keep, x, z)) && world.nav.fits(x, z, reach, maxSlopeOf(animal));
@@ -2554,7 +2537,7 @@ function remember<T>(map: Slots<T>, slot: number, make: () => T): T {
     const hit = map.get(slot);
     if (hit !== undefined) {
         // (Asked for again: stamped, the last to go. A stamp, not the Map's order: a delete and set on every hit, the
-        // trips asked for many times a frame, doubled the town close-up's schedule time.)
+        // trips asked for many times a frame, was most of a zoo's steady schedule time.)
         hit.t = ++asked;
         return hit.v;
     }
