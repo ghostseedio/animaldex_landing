@@ -7,7 +7,7 @@
  * a pointer press on the view, and a check that it stopped.
  *
  *   node scripts/ark-watch-shots.mjs --out <dir> [--seconds 120] [--every 3] [--site https://animaldex.app]
- *       [--width 1280 --height 800] [--touch]
+ *       [--width 1280 --height 800] [--touch] [--hunt-least <chance>] [--subjects <n>]
  *
  * Writes frame-NNN.png, frames.json; the strip (a contact sheet) and the video are made from them by the caller.
  */
@@ -71,18 +71,37 @@ const frames = [];
 try {
     await live("/api/ark/words?lang=en");
     const page = await browser.newPage({viewport, deviceScaleFactor: 1});
+    // (`--hunt-least`: the development hook `__arkWatchHuntLeast`, a lower hunt threshold when no live hunter is at 40%.)
+    if (arg("hunt-least", null) !== null) await page.addInitScript((v) => (globalThis.__arkWatchHuntLeast = v), Number(arg("hunt-least", null)));
     page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 200), String(e.stack ?? "").split("\n").slice(1, 4).join(" | ").slice(0, 400)));
     await page.goto(`${base}/ark/embed.html?watch=1&lang=en`);
     await page.waitForFunction(() => document.querySelector("canvas") && document.getElementById("ark-loader")?.style.display === "none", null, {timeout: 300000}).catch(() => null);
+    // `--subjects N`: the director's camera rules tried on N real animals of the rainforest's ground (no shot on
+    // otherwise when the live world is quiet), one after another, `--seconds / N` each (`__arkDebug.watchShot`).
+    const subjects = Number(arg("subjects", "0"));
+    let picked = [];
+    if (subjects > 0) {
+        picked = await page.evaluate((n) => {
+            const all = window.__arkDebug?.entries?.() ?? [];
+            const ground = all.filter((e) => e.animal.zone === "rainforest" && !e.place.canopy && !e.place.burrow && !e.place.micro && e.length < 1.5);
+            return ground.slice(0, n).map((e) => ({id: e.animal.id, name: e.animal.name}));
+        }, subjects);
+        console.log("subjects", JSON.stringify(picked));
+    }
     const t0 = Date.now();
     for (let i = 0; i * every <= seconds; i++) {
+        if (picked.length) {
+            const k = Math.floor((i * every) / (seconds / picked.length));
+            const prev = i > 0 ? Math.floor(((i - 1) * every) / (seconds / picked.length)) : -1;
+            if (k !== prev && picked[k]) await page.evaluate((id) => window.__arkDebug.watchShot(id), picked[k].id);
+        }
         const wait = t0 + i * every * 1000 - Date.now();
         if (wait > 0) await page.waitForTimeout(wait);
         const state = await page.evaluate(() => {
             const d = window.__arkDebug;
             const w = d?.watch?.() ?? null;
             const name = (id) => d?.entries?.().find((e) => e.animal.id === id)?.animal.name ?? null;
-            return w ? {on: w.on, cost: w.cost, shot: w.shot ? {...w.shot, name: name(w.shot.id)} : null, candidates: w.candidates.map((c) => ({kind: c.kind, weight: Math.round(c.weight * 100) / 100, name: name(c.id)}))} : null;
+            return w ? {on: w.on, cost: w.cost, hidden: w.hidden, shot: w.shot ? {...w.shot, name: name(w.shot.id)} : null, candidates: w.candidates.map((c) => ({kind: c.kind, weight: Math.round(c.weight * 100) / 100, name: name(c.id)}))} : null;
         });
         const file = path.join(out, `frame-${String(i).padStart(3, "0")}.png`);
         await page.screenshot({path: file});

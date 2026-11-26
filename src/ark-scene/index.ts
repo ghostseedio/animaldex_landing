@@ -10717,6 +10717,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const watchCost = {calls: 0, ms: 0, most: 0, sightMs: 0, pulled: 0, givenUp: 0};
     /** True while the director itself selects (a host selection while watching is the viewer's: it stops). */
     let directing = false;
+    let watchParamUsed = false;
     const watchParam = arkWatchParam((globalThis as {location?: {search?: string}}).location?.search);
     /** The schedule's signature moments said lately (`happening`): who, what, when (epoch s). */
     let watchMoments: Array<{id: string; kind: ArkWatchKind; weight: number; at: number}> = [];
@@ -10729,15 +10730,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (nowS - watchHuntersAt < 5) return watchHunters;
         watchHuntersAt = nowS;
         const out: typeof watchHunters = [];
+        // (Development only, for a capture when no live hunter is at the chance: `__arkWatchHuntLeast`. The odds stay the engine's.)
+        const dev = process.env.NODE_ENV !== "production" ? (globalThis as {__arkWatchHuntLeast?: number}).__arkWatchHuntLeast : undefined;
+        const huntLeast = typeof dev === "number" && Number.isFinite(dev) ? dev : WATCH_HUNT_LEAST;
         if (hunting.active) {
             for (const id of hunting.predators()) {
                 const odds = hunting.odds(id);
-                if (!odds || odds.dormant || odds.find === null || odds.catch === null || !(odds.find > 0) || arkCatchChance(odds.find, odds.catch, 96) < WATCH_HUNT_LEAST) continue;
+                if (!odds || odds.dormant || odds.find === null || odds.catch === null || !(odds.find > 0) || arkCatchChance(odds.find, odds.catch, 96) < huntLeast) continue;
                 const entry = entryById.get(id);
                 if (!entry || !hunting.hunting(entry.animal, epoch)) continue;
                 const window = hunting.window(entry.animal, epoch);
                 const chance = window && window.steps > 0 ? arkCatchChance(odds.find, odds.catch, window.steps) : 0;
-                if (chance >= WATCH_HUNT_LEAST) out.push({id, chance, since: hunting.since(entry.animal, epoch) ?? epoch});
+                if (chance >= huntLeast) out.push({id, chance, since: hunting.since(entry.animal, epoch) ?? epoch});
             }
         }
         watchHunters = out;
@@ -10876,8 +10880,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!watchOn) {
             // (By itself after a while untouched only where the host asks, /ark's page: never in the apps' embed, the
             // measurement pages or the audits, whose untouched views must stay as they were.)
-            const idle = watchParam === "on" || (watchParam !== "off" && options.watchIdle === true && nowS - lastTouch > ARK_WATCH_IDLE);
+            // (`?watch=1` starts it once: a touch that stops it is not undone a moment later.)
+            const idle = (watchParam === "on" && !watchParamUsed) || (watchParam !== "off" && options.watchIdle === true && nowS - lastTouch > ARK_WATCH_IDLE);
             if (!idle || !ready || selectedId || followId || selectedHerd || opening || replay || flight || document.hidden) return;
+            watchParamUsed = true;
             startWatch();
         }
         if (replay || opening) return;
@@ -11917,7 +11923,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, watch: () => ({on: watchOn, shot: watchState.shot, cost: {...watchCost}, candidates: watchOn ? watchCandidates(performance.now() / 1000) : []}), talking, lighting, entries: () => allEntries(), townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, watch: () => ({on: watchOn, shot: watchState.shot, cost: {...watchCost}, hidden: {...watchHidden}, candidates: watchOn ? watchCandidates(performance.now() / 1000) : []}),
+        // (A test of the director's camera rules on a real animal where it stands, e.g. in a rainforest's undergrowth:
+        // the shot is pointed at it as if it were the best on. Nothing happens to the animal; the camera moves only.)
+        watchShot: (id: string) => {
+            const nowS = performance.now() / 1000;
+            startWatch();
+            const shot: ArkWatchCandidate = {id, kind: "signature", weight: 0, since: worldMs() / 1000};
+            watchState = {...watchState, shot: {id, other: null, kind: "signature", score: 0, from: nowS}, lostAt: null};
+            watchHidden = {id: null, since: 0, pulled: 0, checkedAt: 0};
+            cutTo(shot);
+            watchAskedAt = nowS;
+        }, talking, lighting, entries: () => allEntries(), townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
