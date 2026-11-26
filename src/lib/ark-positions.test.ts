@@ -35,10 +35,11 @@ function near(a: unknown, b: unknown, msg: string): void {
 }
 
 test("positions: the pinned copy (positions.ts, atlas.json, contract.json) and the contract's own hashes", () => {
-    for (const name of ["positions.ts", "atlas.json", "contract.json", "sleep.json"]) assert.equal(sha(name), pin.sha256[name], `${name} is not the pinned one: copy it from AnimalDex and re-pin`);
+    for (const name of ["positions.ts", "atlas.json", "contract.json", "sleep.json", "hunt-geometry.json"]) assert.equal(sha(name), pin.sha256[name], `${name} is not the pinned one: copy it from AnimalDex and re-pin`);
     assert.equal(contract.positionsSha256, pin.sha256["positions.ts"]);
     assert.equal(contract.atlasSha256, pin.sha256["atlas.json"]);
     assert.equal(contract.sleepSha256, pin.sha256["sleep.json"]);
+    assert.equal(contract.geometrySha256, pin.sha256["hunt-geometry.json"]);
     assert.equal(P.POSITIONS_VERSION, contract.version);
     assert.equal(P.POSITIONS_VERSION, pin.positionsVersion);
 });
@@ -73,6 +74,14 @@ test("positions: every contract case answers as on the server", () => {
     for (const [a, b, asleep, v] of c.reach) assert.equal(P.reachable(P.sheetOf(atlas, a)!, P.sheetOf(atlas, b)!, asleep), v, `${a} ${b} ${asleep}`);
     for (const [x, z, m] of c.medium) assert.equal(P.mediumAt(atlas, "wild", x, z), m);
     for (const [living, zone, sp, social, parents, want] of c.place) assert.deepEqual(P.placeYoung(living, zone, sp, social, parents), want);
+    // Hunt geometry (AnimalDex decision 500): the same classes, leans and forays as the server's.
+    const geo = JSON.parse(read("hunt-geometry.json").toString("utf8"));
+    for (const [slug, cls, reach] of c.geo) {
+        assert.equal(P.huntGeometryOf(geo, slug), cls, `geo ${slug}`);
+        assert.equal(P.strikeLengths(geo, slug), reach, `strike ${slug}`);
+    }
+    for (const [rows, step, want] of c.lean) assert.deepEqual(P.leanAt(rows, step), want);
+    for (const [ref, id, step, cls, lean, want] of c.huntForay) near(P.huntForayAt(atlas, P.homeOf(atlas, ref)!, id, step, null, cls, lean), want, `huntForay ${ref.slug} ${cls} ${step}`);
 });
 
 test("positions: homes are where the scene draws them (every recipe type, overrides included), within 2.6 m", () => {
