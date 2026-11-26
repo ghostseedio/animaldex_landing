@@ -3113,6 +3113,7 @@
       "deathLivedOne": "It lived there for 1 day.",
       "deathLivedMany": "It lived there for {days} days.",
       "deathSee": "See its kind in the Ark",
+      "arrivedLine": "I've arrived in the Ark!",
       "stats": {
         "money": "Money",
         "relationships": "Relationships",

@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Ondje je živjela 1 dan.",
             "deathLivedMany": "Ondje je živjela {days} dana.",
             "deathSee": "Pogledaj njezinu vrstu u Arku",
+            "arrivedLine": "Evo me u Arku!",
             "stats": {
                 "money": "Novac",
                 "relationships": "Odnosi",

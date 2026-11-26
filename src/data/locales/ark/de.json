@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Es lebte dort 1 Tag.",
             "deathLivedMany": "Es lebte dort {days} Tage.",
             "deathSee": "Seine Art in der Ark ansehen",
+            "arrivedLine": "Ich bin in der Ark angekommen!",
             "stats": {
                 "money": "Geld",
                 "relationships": "Beziehungen",

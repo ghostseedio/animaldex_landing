@@ -8,6 +8,8 @@
  * catalog module re-exports everything here so server code keeps one import path.
  */
 
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
+
 export type SpeciesDirectoryLetter = "all" | string;
 export type SpeciesRarityStatusKey = "very-rare" | "rare" | "uncommon" | "relatively-common";
 export type SpeciesDirectorySort =
@@ -63,8 +65,9 @@ export function isSpeciesDirectorySortOrder(value: string): value is SpeciesDire
     return value === "asc" || value === "desc";
 }
 
+/** A battle tier filter (`?tier=S`) only while battle tiers show (`SHOWS_BATTLE_TIER_AND_POWER`); otherwise only "all". */
 export function isSpeciesDirectoryTierFilter(value: string): value is SpeciesDirectoryTierFilter {
-    return ["all", "S", "A", "B", "C", "D", "E"].includes(value);
+    return value === "all" || (SHOWS_BATTLE_TIER_AND_POWER && ["S", "A", "B", "C", "D", "E"].includes(value));
 }
 
 export function getSpeciesRarityStatusKey(score: number): SpeciesRarityStatusKey {

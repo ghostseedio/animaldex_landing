@@ -1259,6 +1259,7 @@
             "deathLivedOne": "มันอยู่ที่นั่น 1 วัน",
             "deathLivedMany": "มันอยู่ที่นั่น {days} วัน",
             "deathSee": "ดูพวกเดียวกันใน Ark",
+            "arrivedLine": "ฉันมาถึง Ark แล้วนะ!",
             "stats": {
                 "money": "เงิน",
                 "relationships": "ความสัมพันธ์",

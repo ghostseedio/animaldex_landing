@@ -12,6 +12,7 @@ import test from "node:test";
 import React, {createElement} from "react";
 import {renderToStaticMarkup} from "react-dom/server";
 import {ArkCaptureBadges} from "@/app/[locale]/(composited)/ark/ark-capture-badges";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "./battle-visibility";
 import {decodeArkCaptureTier, decodeArkLife} from "./ark-life";
 import type {ArkWords} from "./ark-words";
 
@@ -21,7 +22,16 @@ const en = JSON.parse(readFileSync(path.join(process.cwd(), "src/data/locales/en
 const source = (...parts: string[]) => readFileSync(path.join(process.cwd(), "src", ...parts), "utf8");
 const render = (raw: Record<string, unknown>) => renderToStaticMarkup(createElement(ArkCaptureBadges, {life: decodeArkLife(raw), words: en}));
 
-test("a founder that came aboard with a capture shows the server's tier chip and its hearts", () => {
+test("while battles are off (the one switch) the card shows no tier chip, only its hearts", () => {
+    assert.equal(SHOWS_BATTLE_TIER_AND_POWER, false);
+    const html = render({id: "a1", origin: {kind: "arrived", source: "capture"}, capture_tier: "A", capture_hearts: 2});
+    assert.doesNotMatch(html, /ark-card-tier|data-tier=|Tier A/);
+    assert.match(html, /data-testid="ark-card-hearts" data-hearts="2"/);
+    assert.equal(render({id: "a0", origin: {kind: "arrived", source: "capture"}, capture_tier: "S"}), "", "a tier alone draws nothing");
+    assert.match(source("app", "[locale]", "(composited)", "ark", "ark-capture-badges.tsx"), /SHOWS_BATTLE_TIER_AND_POWER \? life\?\.capture_tier/);
+});
+
+test("with battle tiers shown, a founder that came aboard with a capture shows the server's tier chip and its hearts", {skip: !SHOWS_BATTLE_TIER_AND_POWER}, () => {
     const html = render({id: "a1", origin: {kind: "arrived", source: "capture"}, capture_tier: "A", capture_hearts: 2});
     assert.match(html, /data-testid="ark-card-tier"/);
     assert.match(html, /data-tier="A"/);

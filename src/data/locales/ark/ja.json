@@ -1259,6 +1259,7 @@
             "deathLivedOne": "そこで1日暮らしました。",
             "deathLivedMany": "そこで{days}日暮らしました。",
             "deathSee": "Arkで同じ種類を見る",
+            "arrivedLine": "Arkに着いたよ！",
             "stats": {
                 "money": "お金",
                 "relationships": "人間関係",

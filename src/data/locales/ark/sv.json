@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Den levde där i 1 dag.",
             "deathLivedMany": "Den levde där i {days} dagar.",
             "deathSee": "Se dess art på Ark",
+            "arrivedLine": "Jag har kommit ombord på Ark!",
             "stats": {
                 "money": "Pengar",
                 "relationships": "Relationer",

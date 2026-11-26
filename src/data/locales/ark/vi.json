@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Nó đã sống ở đó 1 ngày.",
             "deathLivedMany": "Nó đã sống ở đó {days} ngày.",
             "deathSee": "Xem đồng loại của nó trên Ark",
+            "arrivedLine": "Mình đã lên tàu Ark rồi!",
             "stats": {
                 "money": "Tiền bạc",
                 "relationships": "Các mối quan hệ",

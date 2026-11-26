@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Nabuhay ito roon nang 1 araw.",
             "deathLivedMany": "Nabuhay ito roon nang {days} araw.",
             "deathSee": "Tingnan ang kauri nito sa Ark",
+            "arrivedLine": "Nakarating na ako sa Ark!",
             "stats": {
                 "money": "Pera",
                 "relationships": "Mga Relasyon",

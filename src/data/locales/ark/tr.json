@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Orada 1 gün yaşadı.",
             "deathLivedMany": "Orada {days} gün yaşadı.",
             "deathSee": "Türünü Ark'ta gör",
+            "arrivedLine": "Ark'a geldim!",
             "stats": {
                 "money": "Para",
                 "relationships": "İlişkiler",

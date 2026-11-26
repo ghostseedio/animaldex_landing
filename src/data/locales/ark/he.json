@@ -1259,6 +1259,7 @@
             "deathLivedOne": "הוא חי שם יום אחד.",
             "deathLivedMany": "הוא חי שם {days} ימים.",
             "deathSee": "ראה את בני מינו ב-Ark",
+            "arrivedLine": "הגעתי ל-Ark!",
             "stats": {
                 "money": "כסף",
                 "relationships": "קשרים",

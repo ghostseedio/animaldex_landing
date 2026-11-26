@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Hi va viure 1 dia.",
             "deathLivedMany": "Hi va viure {days} dies.",
             "deathSee": "Mira la seva espècie a l'Ark",
+            "arrivedLine": "Ja he arribat a l'Ark!",
             "stats": {
                 "money": "Diners",
                 "relationships": "Relacions",

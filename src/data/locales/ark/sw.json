@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Iliishi huko kwa siku 1.",
             "deathLivedMany": "Iliishi huko kwa siku {days}.",
             "deathSee": "Mwone jamii yake ndani ya Ark",
+            "arrivedLine": "Nimefika kwenye Ark!",
             "stats": {
                 "money": "Fedha",
                 "relationships": "Mahusiano",

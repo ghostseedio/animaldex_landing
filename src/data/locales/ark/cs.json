@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Žilo tam 1 den.",
             "deathLivedMany": "Žilo tam {days} dní.",
             "deathSee": "Zobrazit jeho druh v Ark",
+            "arrivedLine": "Už jsem na palubě Ark!",
             "stats": {
                 "money": "Peníze",
                 "relationships": "Vztahy",

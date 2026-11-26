@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Se eli siellä 1 päivän.",
             "deathLivedMany": "Se eli siellä {days} päivää.",
             "deathSee": "Katso sen lajia Arkissa",
+            "arrivedLine": "Olen saapunut Arkiin!",
             "stats": {
                 "money": "Raha",
                 "relationships": "Ihmissuhteet",

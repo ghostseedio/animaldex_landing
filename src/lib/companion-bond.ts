@@ -389,6 +389,12 @@ export const ARK_COPY = {
     deathLivedOne: "It lived there for 1 day.",
     deathLivedMany: "It lived there for {days} days.",
     deathSee: "See its kind in the Ark",
+    /**
+     * "See it in the Ark": what an animal says in its chat when it boards after waiting (`animal_messages` kind
+     * `arrival`, migration 20261127190000). The server writes these English words; the chat and the Companions row show
+     * them in the reader's language, as the apps do (iOS `ArkSeeItCopy.arrivalLine`).
+     */
+    arrivedLine: "I've arrived in the Ark!",
     stats: {
         money: "Money",
         relationships: "Relationships",

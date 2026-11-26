@@ -1260,6 +1260,7 @@
             "deathLivedOne": "அது அங்கு 1 நாள் வாழ்ந்தது.",
             "deathLivedMany": "அது அங்கு {days} நாட்கள் வாழ்ந்தது.",
             "deathSee": "Ark-இல் அதன் இனத்தைப் பார்",
+            "arrivedLine": "நான் Ark-இல் வந்துவிட்டேன்!",
             "stats": {
                 "money": "பணம்",
                 "relationships": "உறவுகள்",

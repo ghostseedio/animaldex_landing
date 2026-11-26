@@ -1259,6 +1259,7 @@
             "deathLivedOne": "वह वहाँ 1 दिन रहा।",
             "deathLivedMany": "वह वहाँ {days} दिन रहा।",
             "deathSee": "Ark में इसकी प्रजाति देखें",
+            "arrivedLine": "मैं Ark पर पहुँच गया!",
             "stats": {
                 "money": "पैसा",
                 "relationships": "रिश्ते",

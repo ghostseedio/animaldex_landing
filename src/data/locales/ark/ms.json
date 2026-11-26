@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Ia hidup di sana selama 1 hari.",
             "deathLivedMany": "Ia hidup di sana selama {days} hari.",
             "deathSee": "Lihat spesiesnya di Ark",
+            "arrivedLine": "Saya sudah sampai di Ark!",
             "stats": {
                 "money": "Wang",
                 "relationships": "Hubungan",

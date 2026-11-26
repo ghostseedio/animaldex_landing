@@ -15,6 +15,7 @@ import {
     SPECIES_DIRECTORY_PAGE_SIZE,
     SPECIES_DIRECTORY_PAGE_SIZES,
     isSpeciesDirectoryPageSize,
+    isSpeciesDirectoryTierFilter,
     getDefaultSpeciesDirectorySortOrder,
     type SpeciesDirectorySort,
     type SpeciesDirectorySortOrder,
@@ -104,7 +105,8 @@ function parseDirectorySearch(search: string) {
     const order = (orderParam === "asc" || orderParam === "desc"
         ? orderParam
         : getDefaultSpeciesDirectorySortOrder(sort)) as SpeciesDirectorySortOrder;
-    const tier = (params.get("tier")?.trim().toUpperCase() || "all") as SpeciesDirectoryTierFilter;
+    const rawTier = params.get("tier")?.trim().toUpperCase() || "all";
+    const tier: SpeciesDirectoryTierFilter = isSpeciesDirectoryTierFilter(rawTier) ? rawTier : "all";
     const parsedPage = Number.parseInt(params.get("page") ?? "1", 10);
     const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
     const parsedPerPage = Number.parseInt(params.get("perPage") ?? "", 10);

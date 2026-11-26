@@ -1259,6 +1259,7 @@
             "deathLivedOne": "1 napig élt ott.",
             "deathLivedMany": "{days} napig élt ott.",
             "deathSee": "Nézd meg a faját az Arkon",
+            "arrivedLine": "Megérkeztem az Arkba!",
             "stats": {
                 "money": "Pénz",
                 "relationships": "Kapcsolatok",

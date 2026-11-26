@@ -1259,6 +1259,7 @@
             "deathLivedOne": "Έζησε εκεί 1 ημέρα.",
             "deathLivedMany": "Έζησε εκεί {days} ημέρες.",
             "deathSee": "Δες το είδος του στην Ark",
+            "arrivedLine": "Έφτασα στην Ark!",
             "stats": {
                 "money": "Χρήματα",
                 "relationships": "Σχέσεις",

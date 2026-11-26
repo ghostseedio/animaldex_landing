@@ -1260,6 +1260,7 @@
             "deathLivedOne": "ਇਹ ਉੱਥੇ 1 ਦਿਨ ਰਿਹਾ।",
             "deathLivedMany": "ਇਹ ਉੱਥੇ {days} ਦਿਨ ਰਿਹਾ।",
             "deathSee": "Ark ਵਿੱਚ ਇਸਦੀ ਪ੍ਰਜਾਤੀ ਵੇਖੋ",
+            "arrivedLine": "ਮੈਂ Ark 'ਤੇ ਪਹੁੰਚ ਗਿਆ!",
             "stats": {
                 "money": "ਪੈਸਾ",
                 "relationships": "ਰਿਸ਼ਤੇ",

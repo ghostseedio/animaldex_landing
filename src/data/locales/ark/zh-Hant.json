@@ -1259,6 +1259,7 @@
             "deathLivedOne": "牠在那裡生活了 1 天。",
             "deathLivedMany": "牠在那裡生活了 {days} 天。",
             "deathSee": "在 Ark 中查看牠的同類",
+            "arrivedLine": "我已經到 Ark 啦！",
             "stats": {
                 "money": "金錢",
                 "relationships": "人際關係",
