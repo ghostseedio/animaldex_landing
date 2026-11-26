@@ -7782,7 +7782,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const underFeet = broadSurface ? null : groundUnderAt(where.x + seatX, where.z + seatZ, ARK_ENVIRONMENT.seaLevel.value, level === "near", poseBase);
             // (A sleeper lying on the ground touches it with its body, its legs folded into it: its shadow stays.)
             const contact = underFeet ? groundContact(seatOn !== null ? underFeet.height : lyingOn !== null ? Math.max(lyingOn, underFeet.height) : where.base + seatY + lift, underFeet.height, underFeet.water, modelHeight) : null;
-            if (broadSurface || contact) {
+            // (Lane SIG10: a buried sleeper casts none: its body is in the litter or sand, faded out as it sinks, back as it
+            // gets up; its seat is left alone like a denned one's, so a shadow put by the seat's offset floated beside it.)
+            const unburied = 1 - Math.min(buriedNow / BURIED_SINK, 1);
+            if ((broadSurface || contact) && unburied > 0.01) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
                 // ARK-CONTACT (decision 447, "animal shadows don't match their body or size"): its own box as it lies now,
                 // turned by its pitch and roll (a lion on its side, a giraffe's long narrow body), at every level; no
@@ -7793,7 +7796,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (broadSurface && surface) {
                     // On a wall, a leaf, a flower or a stone: under its body (not its splayed legs), on that surface where it
                     // touches it, long the way it crawls.
-                    shadowList.push({x: where.x + seatX, y: where.base + seatY, z: where.z + seatZ, width: width * 0.8, length: length * 0.9, yaw: where.yaw, strength: grow, nx: surface.nx, ny: surface.ny, nz: surface.nz, tx: surface.tx, ty: surface.ty, tz: surface.tz});
+                    shadowList.push({x: where.x + seatX, y: where.base + seatY, z: where.z + seatZ, width: width * 0.8, length: length * 0.9, yaw: where.yaw, strength: grow * unburied, nx: surface.nx, ny: surface.ny, nz: surface.nz, tx: surface.tx, ty: surface.ty, tz: surface.tz});
                 } else if (contact) {
                     // On the ground under it: on its slope (near ones, with the pass on), under the body's middle (a
                     // model's origin is not always there: a seal's is at its chest), turned with it.
@@ -7808,7 +7811,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                         width: Math.max(width, 0.004),
                         length: Math.max(length, 0.004),
                         yaw: where.yaw,
-                        strength: grow * contact.strength,
+                        strength: grow * contact.strength * unburied,
                         ...(normal ? {nx: normal.x, ny: normal.y, nz: normal.z} : {})
                     });
                 }
