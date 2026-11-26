@@ -1749,7 +1749,8 @@ function actOf(episode: Episode, key: Key, index: number, at: ReturnType<typeof 
         u: at.u,
         pitch: at.pitch,
         roll: at.roll,
-        own: true,
+        // (Lane SEA-SIG: a banded act's height is its water band's, `index.ts`; its own pose otherwise.)
+        own: !TEMPLATES[episode.recipe]?.banded,
         carry: loose ? null : key.carry,
         prey: key.prey,
         catch: key.catch,
