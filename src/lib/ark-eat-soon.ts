@@ -178,6 +178,21 @@ export function arkEatSoonText(soon: ArkEatSoon, words: Partial<ArkEatSoonWords>
  * default; `?eatsoon=0` on the page or the embed, or `globalThis.__arkEatSoon = false`, turns it off (a comparison
  * picture, a fault to rule out).
  */
+/**
+ * The stalking ring in the scene (`arkStalkCue`): off by default until a hunter at the cue's chance has been seen
+ * with it on screen (2026-11-27: no live hunter reached it, so it has not been looked at). On only with
+ * `__arkStalkCue = true` or `?stalkcue=1`. The card's and the bars' chance do not depend on it.
+ */
+export function arkStalkCueOn(): boolean {
+    const g = globalThis as {__arkStalkCue?: boolean; location?: {search?: string}};
+    if (g.__arkStalkCue === true) return true;
+    try {
+        return new URLSearchParams(g.location?.search ?? "").get("stalkcue") === "1";
+    } catch {
+        return false;
+    }
+}
+
 export function arkEatSoonOn(): boolean {
     const g = globalThis as {__arkEatSoon?: boolean; location?: {search?: string}};
     if (g.__arkEatSoon === false) return false;

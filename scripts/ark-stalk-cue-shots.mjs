@@ -84,6 +84,8 @@ const log = [];
 try {
     await live("/api/ark/words?lang=en");
     const page = await browser.newPage({viewport: {width: 1280, height: 800}, deviceScaleFactor: 1});
+    // (The ring is off by default, `arkStalkCueOn`: on for this picture.)
+    await page.addInitScript(() => (globalThis.__arkStalkCue = true));
     const least = arg("least", null);
     if (least !== null) await page.addInitScript((v) => (globalThis.__arkStalkCueLeast = v), Number(least));
     page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 200)));

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {readdirSync, readFileSync} from "node:fs";
 import {join} from "node:path";
 import test from "node:test";
-import {ARK_EAT_SOON_ENGLISH, ARK_STALK_CUE, arkCatchChance, arkEatSoon, arkEatSoonOn, arkStalkCouldCue, arkStalkCue, arkEatSoonPercent, arkEatSoonText, type ArkEatSoonInput} from "@/lib/ark-eat-soon";
+import {ARK_EAT_SOON_ENGLISH, ARK_STALK_CUE, arkCatchChance, arkEatSoon, arkEatSoonOn, arkStalkCouldCue, arkStalkCue, arkStalkCueOn, arkEatSoonPercent, arkEatSoonText, type ArkEatSoonInput} from "@/lib/ark-eat-soon";
 import {decodeArkHunting} from "@/lib/ark-hunting";
 import {arkStatusSignature, arkStatusText, arkStatusWords, type ArkAnimalStatus} from "@/lib/ark-animal-status";
 import {HuntingLayer} from "@/ark-scene/hunting";
@@ -170,4 +170,12 @@ test("words in every Ark locale: all eight keys, each with the English placehold
     }
     const en = JSON.parse(readFileSync(join(dir, "en.json"), "utf8")).ark.card;
     for (const [key, english] of Object.entries(ARK_EAT_SOON_ENGLISH)) assert.equal(en[key], english, `en.json ${key} matches the fallback`);
+});
+
+test("the stalking ring is off unless asked for", () => {
+    const g = globalThis as {__arkStalkCue?: boolean};
+    assert.equal(arkStalkCueOn(), false);
+    g.__arkStalkCue = true;
+    assert.equal(arkStalkCueOn(), true);
+    delete g.__arkStalkCue;
 });

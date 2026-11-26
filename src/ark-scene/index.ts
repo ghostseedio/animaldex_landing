@@ -278,7 +278,7 @@ import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
 import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
-import {arkEatSoon, arkEatSoonOn, arkEatSoonPercent} from "@/lib/ark-eat-soon";
+import {arkEatSoon, arkEatSoonOn, arkEatSoonPercent, arkStalkCueOn} from "@/lib/ark-eat-soon";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating tap)
@@ -2127,7 +2127,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stalkersAt = nowS;
         // (Development only, for a picture of the ring when no hunter is at the cue's chance: `__arkStalkCueLeast`.)
         const least = process.env.NODE_ENV !== "production" ? (globalThis as {__arkStalkCueLeast?: number}).__arkStalkCueLeast : undefined;
-        if (hunting.active && arkEatSoonOn()) stalkers = hunting.stalkers((id) => entryById.get(id)?.animal ?? null, worldMs() / 1000, least);
+        if (hunting.active && arkEatSoonOn() && arkStalkCueOn()) stalkers = hunting.stalkers((id) => entryById.get(id)?.animal ?? null, worldMs() / 1000, least);
         else if (stalkers.size) stalkers = new Map();
     };
     /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */
