@@ -2125,7 +2125,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const stepStalkers = (nowS: number) => {
         if (nowS - stalkersAt < STALK_EVERY) return;
         stalkersAt = nowS;
-        if (hunting.active && arkEatSoonOn()) stalkers = hunting.stalkers((id) => entryById.get(id)?.animal ?? null, worldMs() / 1000);
+        // (Development only, for a picture of the ring when no hunter is at the cue's chance: `__arkStalkCueLeast`.)
+        const least = process.env.NODE_ENV !== "production" ? (globalThis as {__arkStalkCueLeast?: number}).__arkStalkCueLeast : undefined;
+        if (hunting.active && arkEatSoonOn()) stalkers = hunting.stalkers((id) => entryById.get(id)?.animal ?? null, worldMs() / 1000, least);
         else if (stalkers.size) stalkers = new Map();
     };
     /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */

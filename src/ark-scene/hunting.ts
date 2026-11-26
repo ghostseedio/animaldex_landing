@@ -20,7 +20,7 @@ import {arkSleepOf} from "@/ark-scene/sleep-hours";
 import type {ArkHunting} from "@/lib/ark-hunting";
 import pin from "@/ark-scene/positions/PIN.json";
 import {searchLeg, searchStyleOf} from "@/ark-scene/hunt-search";
-import {arkStalkCouldCue, arkStalkCue, type ArkHuntOdds, type ArkHuntWindow} from "@/lib/ark-eat-soon";
+import {ARK_STALK_CUE, arkStalkCouldCue, arkStalkCue, type ArkHuntOdds, type ArkHuntWindow} from "@/lib/ark-eat-soon";
 
 export type HuntPose = TripPose & {doing: ArkDoing};
 
@@ -177,16 +177,16 @@ export class HuntingLayer {
      * next Ark day is high, by id, with that chance. Only the read's hunters with the engine's two numbers are looked
      * at, and only those whose numbers could reach the cue get a window (cached per step): the scene asks every few seconds.
      */
-    stalkers(animalOf: (id: string) => ArkAnimal | null, epochSeconds: number): Map<string, number> {
+    stalkers(animalOf: (id: string) => ArkAnimal | null, epochSeconds: number, least = ARK_STALK_CUE): Map<string, number> {
         const out = new Map<string, number>();
         const st = this.state;
         if (!st) return out;
         for (const [id, odds] of Array.from(st.odds)) {
-            if (!arkStalkCouldCue(odds)) continue;
+            if (!arkStalkCouldCue(odds, least)) continue;
             const animal = animalOf(id);
             if (!animal) continue;
             const now = this.hunting(animal, epochSeconds);
-            const chance = now ? arkStalkCue(odds, this.window(animal, epochSeconds), now) : null;
+            const chance = now ? arkStalkCue(odds, this.window(animal, epochSeconds), now, least) : null;
             if (chance !== null) out.set(id, chance);
         }
         return out;
