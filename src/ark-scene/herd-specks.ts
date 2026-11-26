@@ -141,6 +141,52 @@ class SpeckMesh {
 }
 
 /** A species' colour from its skin: the mean of a tiny copy (the placeholder's clay when there is none). */
+/**
+ * Lane SIG12: a species' own colours from its skin, most of it first (a galah's grey back, then its pink; an amazon's
+ * green, then its yellow and blue): the skin read at 16 by 16, its pixels binned by colour, the biggest bins' means
+ * (up to `count`, each far enough from the ones before it to tell apart). Null while the skin is not in. sRGB hex.
+ */
+export function textureTones(map: Texture | null, count = 3): string[] | null {
+    const image = map?.image as CanvasImageSource | undefined;
+    if (!image || typeof document === "undefined") return null;
+    try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 16;
+        canvas.height = 16;
+        const context = canvas.getContext("2d", {willReadFrequently: true});
+        if (!context) return null;
+        context.drawImage(image, 0, 0, 16, 16);
+        const data = context.getImageData(0, 0, 16, 16).data;
+        // (Four levels a channel: 64 bins.)
+        const bins = new Map<number, {n: number; r: number; g: number; b: number}>();
+        for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] < 128) continue;
+            const key = (data[i] >> 6) * 16 + (data[i + 1] >> 6) * 4 + (data[i + 2] >> 6);
+            const bin = bins.get(key) ?? bins.set(key, {n: 0, r: 0, g: 0, b: 0}).get(key)!;
+            bin.n++;
+            bin.r += data[i];
+            bin.g += data[i + 1];
+            bin.b += data[i + 2];
+        }
+        const sorted = Array.from(bins.values()).sort((a, b) => b.n - a.n);
+        const total = sorted.reduce((sum, bin) => sum + bin.n, 0);
+        if (!total) return null;
+        const out: Array<[number, number, number]> = [];
+        for (const bin of sorted) {
+            if (out.length >= count) break;
+            // (A speck of the skin, an eye or a beak, is no colour of the bird.)
+            if (out.length && bin.n < total * 0.06) break;
+            const c: [number, number, number] = [bin.r / bin.n, bin.g / bin.n, bin.b / bin.n];
+            if (out.some((o) => Math.hypot(o[0] - c[0], o[1] - c[1], o[2] - c[2]) < 40)) continue;
+            out.push(c);
+        }
+        const hex = (v: number) => Math.round(Math.min(Math.max(v, 0), 255)).toString(16).padStart(2, "0");
+        return out.map((c) => `#${hex(c[0])}${hex(c[1])}${hex(c[2])}`);
+    } catch {
+        return null;
+    }
+}
+
 export function textureColour(map: Texture | null, fallback = "#a8977a"): Color {
     const colour = new Color(fallback);
     const image = map?.image as CanvasImageSource | undefined;

@@ -1,0 +1,36 @@
+{
+ "about": "Lane SIG12 (2026-11-27, owner priority 1, most-seen first): three gaps an existing recipe could not show without scene code, no new clips. (1) Communal roosts in the species' own colours: the African grey parrot (8 aboard), the eared dove (6), the blue-fronted amazon (5) and the galah (5) roost communally (`roost_gather`, their own sleep text below); the roost-mates are drawn in the colours of the species' own model skin (`herd-specks.ts` textureTones; before, every roost crowd was dark or brown), and a roost in a crown sits on the crown's top where the camera sees it (`behaviour-recipes.ts` crownPerches), not inside the leaves. (2) The house gecko (36 aboard) perched on its lamp wall hunts by sit-and-wait in its hours (`index.ts` perchAmbushOf: the micro path's bout, `micro-ambush.ts`, on the wall's plane); its `pounce~lizard` row is released from data/ark/signature-holds.json. The leopard gecko's row stays held: its text is a ground hunter at burrow mouths, never perched on a wall (see `notes`). (3) The black-headed gull (4 aboard, the town's) roosts afloat on open water at night: its night roost is the nearest open water's surface within 120 m (`src/ark-scene/roost-afloat.json`, its own sleep sentence; `behaviour-schedule.ts` afloatRoost), where it is drawn at its float line on the water; it slept on the grass by a house wall before.",
+ "version": 1,
+ "additions": [
+  {
+   "slug": "african-grey-parrot",
+   "name": "African Grey Parrot",
+   "recipe": "roost_gather",
+   "field": "sleep",
+   "quote": "African Grey Parrot is diurnal, roosting communally and feeding by day."
+  },
+  {
+   "slug": "blue-fronted-amazon",
+   "name": "Blue-fronted Amazon",
+   "recipe": "roost_gather",
+   "field": "sleep",
+   "quote": "Birds gather at communal roosts in tall trees at dusk and fly out in noisy pairs and small groups soon after dawn."
+  },
+  {
+   "slug": "common-house-gecko",
+   "name": "Common House Gecko",
+   "recipe": "pounce~lizard",
+   "field": "evidence",
+   "quote": "Common House Geckos frequently hunt insects attracted to artificial lights on walls and ceilings of human dwellings at night.",
+   "line": "{aAnimal} is hunting insects drawn to a lit wall at night"
+  }
+ ],
+ "notes": [
+  {
+   "slug": "leopard-gecko",
+   "recipe": "pounce~lizard",
+   "reason": "held (data/ark/signature-holds.json): its own text is a ground hunter that waits at burrow mouths, never a wall clinger, so the perched gecko's hunt (on a wall's face) is not its; aboard, its 4 town house geckos sit in rooms and tanks off the schedule and were asleep at 22:00, the wild ones are on the ground"
+  },
+  "galah and eared dove dropped after the strips: their roost (temperate island, 36,10.6,-15.5) has no drawn crown under the sampler's canopy top, so the roost-mates read as birds on the sand, not in a tree; the galah's skin tones also came out grey with dark heads, not pink and grey. Revisit with a drawn-crown perch."
+ ]
+}
