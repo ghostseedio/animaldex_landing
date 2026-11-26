@@ -100,15 +100,15 @@ export default function ArkLifeSoFar({part, animalId, self, human = false, local
     const expanded = open === animalId;
     const shown = expanded ? all : all.slice(0, 4);
     return (
-        <section data-testid="ark-card-life-so-far" aria-label={words.title} className="mt-2">
+        <section data-testid="ark-card-life-so-far" aria-label={words.title} className="mt-2 max-w-[36rem]">
             <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink-400">{words.title}</p>
             {loading ? (
                 <p className="mt-1 h-[4.5rem] text-[12px] italic text-ink-400">{words.loading}</p>
             ) : (
-                <ol className="relative mt-1 border-s border-white/10 ps-3">
+                <ol className="mt-1">
                     {shown.map((moment) => (
-                        <li key={moment.id} data-kind={moment.kind} className="relative flex min-w-0 items-baseline gap-2 py-[3px] text-[12.5px] leading-snug">
-                            <span aria-hidden="true" className={`absolute -start-[calc(0.75rem+3.5px)] top-[0.6rem] h-[7px] w-[7px] rounded-full ring-2 ring-[#0d1a17] ${TONE[arkMomentTone(moment)]}`} />
+                        <li key={moment.id} data-kind={moment.kind} className="flex min-w-0 items-center gap-2 py-[2px] text-[12.5px] leading-snug">
+                            <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${TONE[arkMomentTone(moment)]}`} />
                             <span className="min-w-0 flex-1">
                                 <span className="font-semibold text-ink-100">{say(moment)}</span>
                                 {withBy(moment) ? <span className="text-ink-300"> · {by}</span> : null}
@@ -119,7 +119,7 @@ export default function ArkLifeSoFar({part, animalId, self, human = false, local
                 </ol>
             )}
             {all.length > 4 ? (
-                <button type="button" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : animalId)} data-testid="ark-card-life-so-far-more" className="mt-1 ps-3 text-[12px] font-bold text-primary-300 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
+                <button type="button" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : animalId)} data-testid="ark-card-life-so-far-more" className="mt-1 text-[12px] font-bold text-primary-300 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
                     {expanded ? words.less : words.more.replace("{n}", (all.length - 4).toLocaleString(locale))}
                 </button>
             ) : null}
