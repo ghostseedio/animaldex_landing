@@ -26,6 +26,7 @@ import {arkSleepOf} from "@/ark-scene/sleep-hours";
 import type {ArkHunting} from "@/lib/ark-hunting";
 import pin from "@/ark-scene/positions/PIN.json";
 import {searchLeg, searchStyleOf} from "@/ark-scene/hunt-search";
+import type {ArkHuntOdds, ArkHuntWindow} from "@/lib/ark-eat-soon";
 
 export type HuntPose = TripPose & {doing: ArkDoing};
 
@@ -49,9 +50,15 @@ export function loadPositionsAtlas(url = POSITIONS_ATLAS_URL): Promise<Atlas> {
     return atlasLoad;
 }
 
-type State = {startedAtMs: number; from: Map<string, number>; atlas: Atlas; geometry: boolean; leans: Map<string, Array<Array<number | null>>>};
+type State = {startedAtMs: number; from: Map<string, number>; odds: Map<string, ArkHuntOdds>; atlas: Atlas; geometry: boolean; leans: Map<string, Array<Array<number | null>>>};
 
 const GEOMETRY = geometryTable as unknown as HuntGeometryTable;
+
+/**
+ * How far ahead (Ark days) "hunts again in about X" looks for its first awake step on or after its next hunt: 16 Ark days
+ * is about 14.7 real hours, past the longest night (the island's sun follows the real clock; an Ark day is 55 minutes).
+ */
+const WINDOW_AHEAD_DAYS = 16;
 type Leg = {k: number; a: {x: number; z: number}; b: {x: number; z: number}; on0: boolean; on1: boolean};
 
 const ease = (u: number) => u * u * (3 - 2 * u);
@@ -60,6 +67,8 @@ export class HuntingLayer {
     private state: State | null = null;
     private homes = new Map<string, Home | null>();
     private legs = new Map<string, Leg>();
+    /** EATSOON: the last due window worked out, per animal, by the step it was worked out at (the selected few only). */
+    private windows = new Map<string, {k: number; window: ArkHuntWindow}>();
 
     /** On while the server hunts by encounter and the atlas is in. */
     get active(): boolean {
@@ -72,16 +81,19 @@ export class HuntingLayer {
         if (!hunting || hunting.hunting !== "encounter" || !atlas || start === null || !Number.isFinite(start)) {
             this.state = null;
             this.legs.clear();
+            this.windows.clear();
             return;
         }
         if (this.state && this.state.atlas !== atlas) this.homes.clear();
-        this.state = {startedAtMs: start, from: hunting.predators, atlas, geometry: hunting.geometry === true, leans: hunting.leans ?? new Map()};
+        this.state = {startedAtMs: start, from: hunting.predators, odds: hunting.odds ?? new Map(), atlas, geometry: hunting.geometry === true, leans: hunting.leans ?? new Map()};
+        this.windows.clear();
         this.legs.clear();
     }
 
     /** Animals whose home is worked out again (a new snapshot moved its slot). */
     forget(id: string): void {
         this.homes.delete(id);
+        this.windows.delete(id);
         this.legs.delete(id);
     }
 
@@ -136,6 +148,44 @@ export class HuntingLayer {
         // Back to its first step on (a day at most).
         for (let n = 0; n < STEPS_PER_ARK_DAY && this.on(animal, home, from, k - 1); n++) k--;
         return (st.startedAtMs + (k / STEPS_PER_ARK_DAY) * ARK_DAY_MS) / 1000;
+    }
+
+    /**
+     * EATSOON: a hunter's due window (`ark-eat-soon.ts`): its awake steps in the next Ark day on or after its next hunt
+     * (the server's), and the first such step within a few Ark days. Null when the read names no next hunt for it (not a
+     * hunter, the pool, a town animal). At most 16 x 96 `awakeAt` reads (a few hundred microseconds), once per step (15 Ark minutes, about 35 real
+     * seconds) per animal asked: the card's selected animal only.
+     */
+    window(animal: ArkAnimal, epochSeconds: number): ArkHuntWindow | null {
+        const st = this.state;
+        const from = st?.from.get(animal.id);
+        if (!st || from === undefined) return null;
+        const home = this.home(animal);
+        if (!home) return null;
+        const k = stepIndex((epochSeconds * 1000 - st.startedAtMs) / ARK_DAY_MS);
+        const known = this.windows.get(animal.id);
+        if (known && known.k === k) return known.window;
+        let steps = 0;
+        let first: number | null = null;
+        for (let j = k + 1; j <= k + WINDOW_AHEAD_DAYS * STEPS_PER_ARK_DAY; j++) {
+            if (j > k + STEPS_PER_ARK_DAY && first !== null) break;
+            if (j / STEPS_PER_ARK_DAY < from) {
+                j = Math.max(j, Math.ceil(from * STEPS_PER_ARK_DAY) - 1);
+                continue;
+            }
+            if (!this.on(animal, home, from, j)) continue;
+            if (first === null) first = (st.startedAtMs + (j / STEPS_PER_ARK_DAY) * ARK_DAY_MS) / 1000;
+            if (j <= k + STEPS_PER_ARK_DAY) steps++;
+        }
+        const window = {steps, firstAt: first};
+        this.windows.set(animal.id, {k, window});
+        if (this.windows.size > 16) this.windows.delete(this.windows.keys().next().value as string);
+        return window;
+    }
+
+    /** EATSOON: the engine's find share and catch chance for a hunter, when the read sends them. */
+    odds(id: string): ArkHuntOdds | null {
+        return this.state?.odds.get(id) ?? null;
     }
 
     /** The predators the read names (their ids). */

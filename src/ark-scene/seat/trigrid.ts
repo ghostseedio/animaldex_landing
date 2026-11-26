@@ -63,6 +63,20 @@ export function boxOf(geometry: BufferGeometry): Box | null {
     return box;
 }
 
+/**
+ * SIG4: a geometry's triangles that are open sheets drawn in a solid (`userData.seatGround`, [from, to) pairs: the
+ * zoo's ground-cover patches and grass tufts, `islands/town/render/kit.ts` Geo.sheets), as a mask by triangle, or null.
+ * They are left out of the grid: the ground under a patch is the walk surfaces' (the scene's ground function), and read
+ * as a solid a sheet with no sides or bottom had every body under its top, or through a blade, "inside" it.
+ */
+export function groundMask(geometry: BufferGeometry, triangles: number): Uint8Array | null {
+    const ranges = geometry.userData?.seatGround as ArrayLike<number> | undefined;
+    if (!ranges || !ranges.length) return null;
+    const mask = new Uint8Array(Math.max(triangles, 0));
+    for (let i = 0; i + 1 < ranges.length; i += 2) mask.fill(1, Math.max(ranges[i], 0), Math.min(ranges[i + 1], mask.length));
+    return mask;
+}
+
 export class TriGrid {
     readonly tris: number;
     private readonly position: BufferAttribute | InterleavedBufferAttribute;
@@ -81,6 +95,8 @@ export class TriGrid {
     private stage = 0;
     private cursor = 0;
     private readonly a = new Float64Array(9);
+    /** Ground drawn in a solid, by absolute triangle (`groundMask`): never in the grid. */
+    private readonly ground: Uint8Array | null;
 
     constructor(geometry: BufferGeometry) {
         this.position = geometry.getAttribute("position") as BufferAttribute | InterleavedBufferAttribute;
@@ -104,6 +120,7 @@ export class TriGrid {
         this.cellX = spanX / this.nx;
         this.cellZ = spanZ / this.nz;
         this.starts = new Uint32Array(this.nx * this.nz + 1);
+        this.ground = groundMask(geometry, this.first + this.tris);
         if (!this.tris || !boxOf(geometry)) this.stage = 2;
     }
 
@@ -157,6 +174,7 @@ export class TriGrid {
             most -= end - this.cursor;
             if (this.stage === 0) {
                 for (let t = this.cursor; t < end; t++) {
+                    if (this.ground && this.ground[this.first + t]) continue;
                     const [c0, c1, r0, r1] = this.cellsOf(this.read(t));
                     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) this.starts[r * this.nx + c + 1]++;
                 }
@@ -164,6 +182,7 @@ export class TriGrid {
                 const ids = this.ids!;
                 const fill = this.fill!;
                 for (let t = this.cursor; t < end; t++) {
+                    if (this.ground && this.ground[this.first + t]) continue;
                     const [c0, c1, r0, r1] = this.cellsOf(this.read(t));
                     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) ids[fill[r * this.nx + c]++] = t;
                 }

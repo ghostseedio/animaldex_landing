@@ -108,7 +108,8 @@ export type CameraResult = {
     /** Problem 5: awake animals the layer ran for, how many turned their heads (weight > 0.15) at least once, and the share of their frames turned. */
     heads: {animals: number; turned: number; turnedPct: number | null; framesTurnedPct: number | null};
     /** Problem 6: prey with one of its hunters (awake, on the ground) within 25 m of it while the layer ran for it. */
-    hunts: {encounters: number; reacted: number; fled: number; reactPct: number | null; fleePct: number | null; medianSecondsToReact: number | null};
+    /** React and flee are each stop's own share, averaged over the stops with a hunter near (`camera-hunts.ts`): one big flock cannot decide them; the pooled shares beside, for the record. */
+    hunts: {encounters: number; reacted: number; fled: number; reactPct: number | null; fleePct: number | null; pooledReactPct?: number | null; pooledFleePct?: number | null; stopsWithHunts?: number; medianSecondsToReact: number | null; stops?: Array<{hunter: string; prey: string; encounters: number; reacted: number; fled: number}>};
     /** Problem 7: frames in which a group (3+ of a species, all awake) all took the same action. */
     variety: {groupFrames: number; allSame: number; allSamePct: number | null};
     /** Share of awake agent-frames per action. */

@@ -4742,7 +4742,15 @@
       "cycleCount": "{n} dari {total}",
       "caredOwner": "Dirawat oleh pemiliknya",
       "caredFarmer": "Dirawat oleh peternak",
-      "caredKeeper": "Dirawat oleh seorang penjaga"
+      "caredKeeper": "Dirawat oleh seorang penjaga",
+      "eatSoon": "Peluang menangkap mangsa dalam satu hari Ark ke depan",
+      "eatSoonChance": "Peluang {percent} menangkap mangsa dalam satu hari Ark ke depan",
+      "eatSoonHunting": "Sedang berburu",
+      "eatSoonLater": "Berburu lagi sekitar {time} lagi",
+      "eatSoonDormant": "Dorman: tidak makan",
+      "eatSoonKept": "Diberi makan oleh perawatnya",
+      "eatSoonDaily": "Makan setiap hari",
+      "eatSoonShort": "Makanan langka di sini"
     },
     "grew": {
       "line": "Makin kuat: {stat} +{n} · {cause}",

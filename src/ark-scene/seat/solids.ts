@@ -66,6 +66,9 @@ type Solid = {
     boxes: Float32Array;
     box: Float64Array;
     shown: boolean;
+    /** Drawn now (it and every parent visible, and still in the scene), as read at `drawnFrame`. */
+    drawn: boolean;
+    drawnFrame: number;
     /** Nothing to stand on (no triangles, or positions that are not numbers). */
     dead: boolean;
     /** Many instances: their numbers by 16 m cell (an instance over many cells is in `wide`), and each one's last query. */
@@ -141,7 +144,7 @@ export class DrawnSolids {
                 if (cls > 0) {
                     const known = before.get(mesh);
                     const material = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as Material | undefined;
-                    const solid: Solid = known && known.geometry === mesh.geometry ? known : {mesh, instanced: (mesh as InstancedMesh).isInstancedMesh ? (mesh as InstancedMesh) : null, cls, kind: label, geometry: mesh.geometry, double: false, version: -1, count: -1, stamp: NaN, boxes: new Float32Array(0), box: new Float64Array(6), shown: visible, dead: false, cells: null, wide: [], asked: new Uint32Array(0), changes: 0};
+                    const solid: Solid = known && known.geometry === mesh.geometry ? known : {mesh, instanced: (mesh as InstancedMesh).isInstancedMesh ? (mesh as InstancedMesh) : null, cls, kind: label, geometry: mesh.geometry, double: false, version: -1, count: -1, stamp: NaN, boxes: new Float32Array(0), box: new Float64Array(6), shown: visible, drawn: visible, drawnFrame: this.frame, dead: false, cells: null, wide: [], asked: new Uint32Array(0), changes: 0};
                     solid.shown = visible;
                     if (solid.changes > 0 && this.frame % 4 === 0) solid.changes--;
                     // (Thin: a leaf, a card, a sheet, met from either side. A rock is a lump whatever its material's sides
@@ -298,7 +301,7 @@ export class DrawnSolids {
     collect(x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, mask: number, out: Near[]): boolean {
         let whole = true;
         for (const solid of this.solids) {
-            if (!(solid.cls & mask) || !solid.shown || !solid.mesh.visible || solid.dead) continue;
+            if (!(solid.cls & mask) || solid.dead || !this.drawnNow(solid)) continue;
             this.refresh(solid);
             const box = solid.box;
             if (x1 < box[0] || x0 > box[3] || y1 < box[1] || y0 > box[4] || z1 < box[2] || z0 > box[5]) continue;
@@ -323,6 +326,30 @@ export class DrawnSolids {
             } else for (let i = 0; i < solid.count; i++) if (!this.take(solid, i, x0, y0, z0, x1, y1, z1, out)) whole = false;
         }
         return whole;
+    }
+
+    /**
+     * Whether a solid is drawn now: it and every parent visible, and still in the scene. Read again each frame, not as
+     * the meshes were last read: a level's mesh is shown the frame the camera brings its instances to it (the asset
+     * rocks' and trees' `update`, after the seats' frame has begun), and its instances leave the level they were on at
+     * once. Read as gathered, a rock or a tree come nearer was in no level for the seats for up to 30 frames (half a
+     * second; seconds at a few frames a second): a pipit on its rock's face with nothing under it, a locust "inside" the
+     * rock its seat could not see (WILD-PERCH).
+     */
+    private drawnNow(solid: Solid): boolean {
+        if (solid.drawnFrame === this.frame) return solid.drawn;
+        let on = true;
+        let object: Object3D | null = solid.mesh;
+        for (; object && object !== this.scene; object = object.parent) if (!object.visible) on = false;
+        if (object !== this.scene || !this.scene.visible) on = false;
+        // (Shown since it was last read: the seats round it are made again, as for instances that moved.)
+        if (on && !solid.drawn) {
+            if (++solid.changes <= 3) this.version++;
+            else this.restless = true;
+        }
+        solid.drawn = on;
+        solid.drawnFrame = this.frame;
+        return on;
     }
 
     /** One instance into the list if its box meets the box asked (false: its triangles are still being read). */

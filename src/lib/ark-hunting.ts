@@ -19,9 +19,16 @@ export type ArkHunting = {
     /** Every living predator's next hunt (the Ark day from which it hunts; 0 = now), by animal id. */
     predators: Map<string, number>;
     /**
+     * EATSOON (AnimalDex migration 20261231200000, `voyage_hunting_v1`'s tuple `[id, from, find, catch, dormant?]`): the share
+     * of its recent due, awake steps in which the encounter test found prey it could take, its catch chance per attempt,
+     * and whether it is dormant now. Only for the predators whose tuple carries them; an older read sends none.
+     */
+    odds?: Map<string, {find: number | null; catch: number | null; dormant: boolean}>;
+    /**
      * Hunt geometry (AnimalDex decision 500, `voyage_config.hunt_geometry`): on, each hunter's foray follows its way of
      * hunting (`positions.ts` huntForayAt); `leans` are where the engine chose each one works ([x, z, fromStep, R] entries,
-     * a day before it uses them). Absent or false: today's forays.
+     * a day before it uses them; the read's own `leans` key, {predator id: entries}, since EATSOON took the tuple's [2]..[4]).
+     * Absent or false: today's forays.
      */
     geometry?: boolean;
     leans?: Map<string, Array<Array<number | null>>>;
@@ -45,13 +52,28 @@ export function decodeArkHunting(raw: unknown): ArkHunting | null {
     const startedAtMs = typeof row.started_at === "string" ? Date.parse(row.started_at) : finite(row.startedAtMs);
     const predators = new Map<string, number>();
     const leans = new Map<string, Array<Array<number | null>>>();
+    const odds = new Map<string, {find: number | null; catch: number | null; dormant: boolean}>();
     if (Array.isArray(row.predators)) {
         for (const item of row.predators) {
             if (!Array.isArray(item) || typeof item[0] !== "string" || !ID.test(item[0])) continue;
             const from = finite(item[1]);
-            if (from !== null && from >= 0) predators.set(item[0], from);
-            const lean = decodeLeans(item[2]);
-            if (lean) leans.set(item[0], lean);
+            if (from === null || from < 0) continue;
+            predators.set(item[0], from);
+            // ([id, from, find, catch] when it has both, a fifth 1 while dormant: [id, from, null, null, 1] with none yet.)
+            const find = finite(item[2]);
+            const chance = finite(item[3]);
+            const both = find !== null && chance !== null && find >= 0 && find <= 1 && chance >= 0 && chance <= 1;
+            const dormant = item[4] === 1 || item[4] === true;
+            if (both || dormant) odds.set(item[0], {find: both ? find : null, catch: both ? chance : null, dormant});
+        }
+    }
+    // Hunt geometry (AnimalDex 20261231210000): {predator id: [[x|null, z|null, fromStep, R], ...]}, only for living predators.
+    const leanRow = row.leans && typeof row.leans === "object" && !Array.isArray(row.leans) ? row.leans as Record<string, unknown> : null;
+    if (leanRow) {
+        for (const id of Object.keys(leanRow)) {
+            if (!ID.test(id) || !predators.has(id)) continue;
+            const lean = decodeLeans(leanRow[id]);
+            if (lean) leans.set(id, lean);
         }
     }
     const meals: ArkHuntingMeal[] = [];
@@ -70,6 +92,7 @@ export function decodeArkHunting(raw: unknown): ArkHunting | null {
         arkDay: finite(row.ark_day),
         tickedTo: finite(row.ticked_to),
         predators,
+        odds,
         meals,
         ...(row.hunt_geometry === true ? {geometry: true, leans} : {})
     };

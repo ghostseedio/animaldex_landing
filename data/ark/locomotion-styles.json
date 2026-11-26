@@ -6,7 +6,7 @@
    "b": 139,
    "sd": 58,
    "g": 148,
-   "c": 225,
+   "c": 230,
    "cd": 9,
    "w": 57,
    "gd": 30,
@@ -39,9 +39,9 @@
    "mb": 4
   },
   "legless": {
-   "re": 23,
+   "re": 24,
    "gl": 9,
-   "la": 54,
+   "la": 55,
    "pe": 3,
    "sw": 2
   }
@@ -169,6 +169,12 @@
    "swim": {
     "code": "an",
     "why": "Clariidae: anguilliform: the whole body waves, head to tail"
+   }
+  },
+  "albino-ball-python": {
+   "legless": {
+    "code": "re",
+    "why": "Pythonidae: heavy-bodied; rectilinear (straight, belly ripples) when slow, lateral undulation when faster (rule, not stored text)"
    }
   },
   "alderfly": {
@@ -788,6 +794,10 @@
    }
   },
   "bantam-chicken": {
+   "flight": {
+    "code": "c1.5",
+    "why": "Phasianidae: continuous flapping (high wing loading); beat factor 1.5"
+   },
    "ground": {
     "code": "wb",
     "why": "Phasianidae: walks, head-bobbing as it walks"
@@ -3223,6 +3233,12 @@
     "why": "Lepidoptera (Papilionidae): fluttering flight, f = 1.5 L^-0.5 Hz"
    }
   },
+  "eastern-tiger-swallowtail-caterpillar": {
+   "legless": {
+    "code": "la",
+    "why": "Papilionidae: lateral undulation"
+   }
+  },
   "eastern-yellowjacket": {
    "flight": {
     "code": "w110",
@@ -5598,6 +5614,10 @@
    }
   },
   "leghorn-chicken": {
+   "flight": {
+    "code": "c1.5",
+    "why": "Phasianidae: continuous flapping (high wing loading); beat factor 1.5"
+   },
    "ground": {
     "code": "wb",
     "why": "Phasianidae: walks, head-bobbing as it walks"
@@ -7088,6 +7108,10 @@
    }
   },
   "pied-cockatiel": {
+   "flight": {
+    "code": "c1.1",
+    "why": "Psittacidae: continuous flapping (high wing loading); beat factor 1.1"
+   },
    "ground": {
     "code": "w",
     "why": "Psittacidae: walks"
@@ -7888,6 +7912,10 @@
    }
   },
   "rhode-island-red": {
+   "flight": {
+    "code": "c1.5",
+    "why": "Phasianidae: continuous flapping (high wing loading); beat factor 1.5"
+   },
    "ground": {
     "code": "wb",
     "why": "Phasianidae: walks, head-bobbing as it walks"
@@ -8494,6 +8522,10 @@
    }
   },
   "silkie-chicken": {
+   "flight": {
+    "code": "c1.5",
+    "why": "Phasianidae: continuous flapping (high wing loading); beat factor 1.5"
+   },
    "ground": {
     "code": "wb",
     "why": "Phasianidae: walks, head-bobbing as it walks"

@@ -120,11 +120,15 @@ test("forays: a due predator is at the module's waypoint at every step, walks be
 test("hunt geometry: the read's switch and leans, decoded and checked", () => {
     const fox = "00000000-0000-4000-8000-000000000100";
     const owl = fox.replace("100", "101");
-    const raw = {hunting: "encounter", hunt_geometry: true, started_at: "2026-11-08T21:45:21.431391+00:00", predators: [[fox, 81.25, [[3.5, -2, 7900, 9], [null, null, 7996, 9], ["x", 1, 8000, 9], [1, 2, 8000.5, 9]]], [owl, 82]], meals: []};
+    const ghost = fox.replace("100", "102"); // a lean for no living predator is dropped
+    const raw = {hunting: "encounter", hunt_geometry: true, started_at: "2026-11-08T21:45:21.431391+00:00", predators: [[fox, 81.25, 0.25, 0.4], [owl, 82]], leans: {[fox]: [[3.5, -2, 7900, 9], [null, null, 7996, 9], ["x", 1, 8000, 9], [1, 2, 8000.5, 9]], [ghost]: [[1, 1, 1, 1]]}, meals: []};
     const h = decodeArkHunting(raw)!;
     assert.equal(h.geometry, true);
     assert.deepEqual(h.leans!.get(fox), [[3.5, -2, 7900, 9], [null, null, 7996, 9]]);
     assert.equal(h.leans!.has(owl), false);
+    assert.equal(h.leans!.has(ghost), false);
+    // The leans are their own key: EATSOON's [find, catch] in the tuple still decode.
+    assert.deepEqual(h.odds!.get(fox), {find: 0.25, catch: 0.4, dormant: false});
     // Off (or an older read): no geometry, nothing about leans.
     const off = decodeArkHunting({...raw, hunt_geometry: false})!;
     assert.equal(off.geometry, undefined);

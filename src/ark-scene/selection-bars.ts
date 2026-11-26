@@ -85,10 +85,29 @@ export function arkBarHeartsMarkup(filled: number): string {
 }
 
 /**
- * Where the bars go so that they overlap none of `boxes` (the chips and buttons over the view): beside the one they
- * would cover, on the side that moves them least, when they fit there inside the view; else below it. Pure.
+ * Where the bars go so that they overlap none of `boxes` (the chips and buttons over the view), all of them at once:
+ * the nearest place inside the view that is clear, moving sideways (beside a box) or down (under one), a step down
+ * costing twice a step sideways (down is away from the animal). One box at a time was not enough: slid beside the
+ * "aboard" chip, the bars landed under the sound and lines buttons checked before it (EATSOON review, 2026-11-24).
+ * Nowhere clear (a crowded small view): one box at a time, as before. Pure.
  */
 export function clearOfBoxes(at: {left: number; top: number}, size: {w: number; h: number}, boxes: readonly Box[], view: {width: number; height: number}, edge = EDGE): {left: number; top: number} {
+    const hits = (left: number, top: number) => boxes.some((box) => left < box.right && left + size.w > box.left && top < box.bottom && top + size.h > box.top);
+    if (!hits(at.left, at.top)) return at;
+    const xs = [at.left, ...boxes.flatMap((box) => [box.right, box.left - size.w])].filter((x) => x >= edge && x + size.w <= view.width - edge);
+    const ys = [at.top, ...boxes.map((box) => box.bottom)].filter((y) => y >= at.top && y + size.h <= view.height - edge);
+    let best: {left: number; top: number} | null = null;
+    let cost = Infinity;
+    for (const top of ys) {
+        for (const left of xs) {
+            const c = Math.abs(left - at.left) + 2 * (top - at.top);
+            if (c < cost && !hits(left, top)) {
+                best = {left, top};
+                cost = c;
+            }
+        }
+    }
+    if (best) return best;
     let {left, top} = at;
     for (const box of boxes) {
         if (!(left < box.right && left + size.w > box.left && top < box.bottom && top + size.h > box.top)) continue;
@@ -102,6 +121,8 @@ export function clearOfBoxes(at: {left: number; top: number}, size: {w: number; 
 export class ArkSelectionBars {
     readonly el: HTMLDivElement;
     private readonly rows = new Map<ArkStatusBarKey, {row: HTMLDivElement; fill: HTMLSpanElement}>();
+    /** EATSOON: the small % at the end of the fed row (its chance of a catch in the next Ark day), when on. */
+    private readonly soon: HTMLSpanElement;
     private readonly name: HTMLDivElement;
     private readonly nameText: HTMLSpanElement;
     private readonly talk: HTMLAnchorElement;
@@ -250,6 +271,11 @@ export class ArkSelectionBars {
             el.appendChild(row);
             this.rows.set(key, {row, fill});
         }
+        const soon = document.createElement("span");
+        soon.dataset.arkBarsSoon = "";
+        Object.assign(soon.style, {display: "none", flex: "0 0 auto", minWidth: "22px", font: `700 ${ICON_PX - 1}px/1 ${FONT}`, fontVariantNumeric: "tabular-nums", color: "rgba(255, 252, 244, 0.92)", textAlign: "end"});
+        this.rows.get("fed")!.row.appendChild(soon);
+        this.soon = soon;
         const hearts = document.createElement("div");
         hearts.dataset.arkHearts = "";
         Object.assign(hearts.style, {display: "none", alignItems: "center", gap: "2px", paddingTop: "1px", color: "#ff8f8f"});
@@ -321,8 +347,10 @@ export class ArkSelectionBars {
      * The selected animal's bars and its species' name (never a nickname), or null (nothing selected, or nothing to
      * show); `extras`, who brought it and its Talk link (section 1 and 3 of the capture media contract).
      */
-    set(bars: ArkStatusBars | null, name: string | null = null, extras: ArkSelectionExtras | null = null, ids: {animalId: string; slug: string} | null = null, rhythm: SdRhythmState | null = null, hearts: number | null = null) {
+    set(bars: ArkStatusBars | null, name: string | null = null, extras: ArkSelectionExtras | null = null, ids: {animalId: string; slug: string} | null = null, rhythm: SdRhythmState | null = null, hearts: number | null = null, soon: string | null = null) {
         this.any = false;
+        if (this.soon.textContent !== (soon ?? "")) this.soon.textContent = soon ?? "";
+        this.soon.style.display = soon ? "inline-block" : "none";
         this.setHearts(hearts);
         const label = name?.trim() || "";
         if (this.nameText.textContent !== label) this.nameText.textContent = label;

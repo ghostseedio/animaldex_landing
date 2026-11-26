@@ -777,15 +777,18 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             hours: "day",
             season: "mating",
             sex: "males",
+            // (Lane SIG5: the rear held as long as kit40's goat rear clip plays, 1.5 s, then the butt at the meeting.)
             steps: [
                 {b: "walk", to: "meet_far", face: "other"},
                 {b: "display", s: [1.5, 3], face: "other"},
-                {b: "rear", s: [0.8, 1.2], face: "other"},
+                {b: "rear", s: [1.4, 1.7], face: "other"},
                 {b: "clash", to: "meet", face: "other"},
+                {b: "butt", s: [1.1, 1.3], face: "other"},
                 {b: "shake_off", s: [0.6, 1]},
                 {b: "walk", to: "meet_far", face: "other"},
-                {b: "rear", s: [0.8, 1.2], face: "other"},
+                {b: "rear", s: [1.4, 1.7], face: "other"},
                 {b: "clash", to: "meet", face: "other"},
+                {b: "butt", s: [1.1, 1.3], face: "other"},
                 {b: "shake_off", s: [0.6, 1]},
                 {b: "flee", to: "away", role: "b"}
             ]

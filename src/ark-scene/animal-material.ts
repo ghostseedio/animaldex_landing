@@ -43,6 +43,7 @@ import {SKY} from "@/ark-scene/palettes";
 import {ARK_RIM} from "@/ark-scene/glsl";
 import {lookCacheKey, lookDefines, lookUniforms, registerLookMaterial, type SpeciesLook} from "@/ark-scene/animal-look";
 import {LOOK_ALBEDO, LOOK_FINISH, LOOK_FRAGMENT_DECLARATIONS, LOOK_LIGHT, LOOK_NORMAL, LOOK_ROUGHNESS, LOOK_VERTEX, LOOK_VERTEX_DECLARATIONS, SHELL_VERTEX} from "@/ark-scene/animal-look-shader";
+import {coatShader, type PetCoatUniforms} from "@/ark-scene/pet-coat";
 import {varyShader} from "@/ark-scene/ark-variation";
 import {L2_BODY_NONE, type L2BodyUniforms} from "@/ark-scene/locomotion/swim";
 // 3.3 batch (A): defence moves (a ball, a shell, a swollen body, a shed tail, a wing flash).
@@ -488,6 +489,8 @@ export type AnimalMaterialOptions = {
      * own water plane, slid onto it, tinted and faded. Its uniforms are shared with the mesh's depth pass.
      */
     reflect?: ReflectUniforms | null;
+    /** Lane COATS: a coat kind's coat uniforms (`pet-coat.ts` petCoatUniforms); absent: no coats (every other kind). */
+    petCoat?: PetCoatUniforms | null;
 };
 
 const POWER_LOOKS = new WeakMap<object, {value: Vector4}>();
@@ -550,11 +553,12 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
     }
     material.userData.arkPower = power;
     material.defines = {...(options.animated ? {ARK_MOTION: ""} : {}), ...(options.rig ? {ARK_RIG: ""} : {}), ...(options.rig && options.pose ? {ARK_RIG_LIVE: ""} : {}), ...lookDefines(material)};
+    if (options.petCoat) material.defines.ARK_PET_COAT = "";
     if (options.reflect) {
         material.defines.ARK_REFLECT = "";
         Object.assign(uniforms, options.reflect);
     }
-    const key = `${options.animated ? "ark-animal-near" : "ark-animal-far"}${options.rig ? (options.pose ? "-rig-live" : "-rig") : ""}${options.reflect ? "-reflect" : ""}`;
+    const key = `${options.animated ? "ark-animal-near" : "ark-animal-far"}${options.rig ? (options.pose ? "-rig-live" : "-rig") : ""}${options.reflect ? "-reflect" : ""}${options.petCoat ? "-coat" : ""}`;
     material.customProgramCacheKey = () => key + lookCacheKey(material);
     if (options.look) registerLookMaterial(material);
     material.onBeforeCompile = (shader) => {
@@ -613,6 +617,8 @@ ${LOOK_LIGHT}`)
 ${options.reflect ? REFLECT_FRAGMENT : ""}`);
         // Each animal its own tint and mottling (`ark-variation.ts`, liveliness).
         varyShader(shader, options.maxY - options.minY, power);
+        // Lane COATS: a pet's own coat (its kind's materials only), set before the variation (which a coat skips).
+        coatShader(shader, options.petCoat ?? null, options.minY, options.maxY);
     };
     return material;
 }

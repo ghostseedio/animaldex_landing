@@ -10,6 +10,7 @@ import {ARK_ZONES, type ArkAnimal, type ArkNestRow, type ArkSnapshot, type ArkZo
 import {arkActivity} from "@/lib/ark-daylight";
 import {arkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import {arkArea, arkArrivalSource, arkThrive} from "@/ark-scene/thrive";
+import {arkCoatOf} from "@/ark-scene/pet-coat-colour";
 
 const ZONES = new Set<string>(ARK_ZONES);
 
@@ -101,6 +102,9 @@ function animal(raw: unknown): ArkAnimal | null {
     const slot = whole(row.slot);
     const rank = whole(row.slot_rank);
     if (slot !== null && rank !== null) Object.assign(life, {slot, slot_rank: rank});
+    // Lane COATS: a pet's own coat colours, only when the server sent them, checked here (three small fields).
+    const coat = arkCoatOf(row.coat);
+    if (coat) life.coat = coat;
     if (placeholder) life.placeholder = true;
     // The last of its kind aboard (sent only when true): no mate, it will age out; the card says so.
     if (row.last_of_kind === true) life.last_of_kind = true;

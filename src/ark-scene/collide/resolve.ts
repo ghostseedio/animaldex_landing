@@ -54,6 +54,61 @@ export type ResolvePose = {
     still?: boolean;
 };
 
+/**
+ * Where a penned animal's middle may stand (lane PENKEEP, 2026-11-24): its pen's turned box, its margin in from the rails
+ * (`islands/town/placement.ts` penMarginOf, zooMargin), world frame. The collisions keep every pose and every push inside
+ * it and the scene's bound (`keepInPen`) holds to the same box and the same body, so the bound finds the collisions'
+ * answer already kept and leaves it (a paddock's horses pushed apart past the inset were pulled back onto one line by the
+ * bound, inside each other for a minute; the bound's 1.65 m circle round a horse flipped it 5 m across a trough).
+ */
+export type KeepBox = {x: number; z: number; cos: number; sin: number; hx: number; hz: number; margin: number};
+
+/**
+ * How far past its keep box a body wedged between it and something solid in the pen may stand (m): a horse turning
+ * between a paddock's trough and the inset by its rails (0.87 m between them; a horse across them needs 1.21 m each
+ * side) is moved out of the trough toward the rails by the overlap, instead of jumping round the trough's end (0.77 m
+ * in a frame). As far as its body's own reach leaves of the margin, 5 cm short, and at least KEEP_GIVE: the rails are
+ * solid to its body as well (`islands/town/colliders.ts`), so it never stands in them; only the margin's spare (a head
+ * put down, `penMarginOf`) is given up, and only while it is wedged.
+ */
+export const KEEP_GIVE = 0.25;
+
+/** The give (m) for this body in this keep box (`KEEP_GIVE`): the same for the collisions and the scene's bound. */
+export function keepGive(k: KeepBox, body: {half: number; radius: number}): number {
+    return Math.min(Math.max(KEEP_GIVE, k.margin - body.half - body.radius - 0.05), k.margin);
+}
+
+/** A pen's keep box: `pen` (its middle, size and turn, in the frame `ox`, `oz` is the world's origin in), `margin` in from its rails. */
+export function keepBoxOf(pen: {x: number; z: number; w: number; d: number; rot: number}, margin: number, ox = 0, oz = 0): KeepBox {
+    return {x: ox + pen.x, z: oz + pen.z, cos: Math.cos(pen.rot), sin: Math.sin(pen.rot), hx: Math.max(pen.w / 2 - margin, 0), hz: Math.max(pen.d / 2 - margin, 0), margin: Math.max(margin, 0)};
+}
+
+/** The nearest point of a keep box (grown by `grow`) to (x, z) (itself when inside). */
+export function intoKeep(k: KeepBox, x: number, z: number, grow = 0): {x: number; z: number} {
+    const dx = x - k.x;
+    const dz = z - k.z;
+    const lx = dx * k.cos + dz * k.sin;
+    const lz = -dx * k.sin + dz * k.cos;
+    const hx = k.hx + grow;
+    const hz = k.hz + grow;
+    if (Math.abs(lx) <= hx && Math.abs(lz) <= hz) return {x, z};
+    const qx = Math.min(Math.max(lx, -hx), hx);
+    const qz = Math.min(Math.max(lz, -hz), hz);
+    return {x: k.x + qx * k.cos - qz * k.sin, z: k.z + qx * k.sin + qz * k.cos};
+}
+
+/** Whether (x, z) is inside a keep box (grown by `grow`; a millimetre's give). */
+export function inKeep(k: KeepBox, x: number, z: number, grow = 0): boolean {
+    const dx = x - k.x;
+    const dz = z - k.z;
+    return Math.abs(dx * k.cos + dz * k.sin) <= k.hx + grow + 1e-3 && Math.abs(-dx * k.sin + dz * k.cos) <= k.hz + grow + 1e-3;
+}
+
+/** Whether its body, as it faces at (x, z), stands in nothing solid (what `pushOut` would leave where it is). */
+export function bodyClear(set: ColliderSet, body: ResolveBody, pose: ResolvePose, x: number, z: number): boolean {
+    return !deepest(set, body, x, z, pose.y, pose.yaw, pose.attached, pose.fixed);
+}
+
 /** How much more a still body holds its place against one on its way (decision 204). */
 export const STILL_WEIGHT = 4;
 
@@ -119,10 +174,14 @@ function deepest(set: ColliderSet, body: ResolveBody, x: number, z: number, y: n
  * rings (the same for every caller), out to 3 m or its own length and a metre, whichever is more (a true-size whale's
  * tail by a rock in the shallows). Nowhere within that: as the steps left it.
  */
-export function pushOut(set: ColliderSet, body: ResolveBody, pose: ResolvePose): {x: number; z: number; moved: number} {
+export function pushOut(set: ColliderSet, body: ResolveBody, pose: ResolvePose, keep?: KeepBox | null): {x: number; z: number; moved: number} {
     let x = pose.x;
     let z = pose.z;
     if (pose.fixed) return {x, z, moved: 0};
+    // (Penned: inside its keep box first, and every step and the ring search's answer inside it too.)
+    if (keep) ({x, z} = intoKeep(keep, x, z));
+    const sx = x;
+    const sz = z;
     // (Aloft too: only what its height reaches into, a trunk below the crown on a low flight, a barn's wall.)
     let stuck = false;
     for (let step = 0; step < 6; step++) {
@@ -134,6 +193,18 @@ export function pushOut(set: ColliderSet, body: ResolveBody, pose: ResolvePose):
         stuck = true;
         x += hit.nx * (hit.depth + 0.003);
         z += hit.nz * (hit.depth + 0.003);
+        if (keep) ({x, z} = intoKeep(keep, x, z));
+    }
+    // (Wedged between its keep box and something solid: out of it by the overlap, up to KEEP_GIVE past the box.)
+    const give = keep ? keepGive(keep, body) : 0;
+    if (stuck && keep && give > 0) {
+        let wx = x;
+        let wz = z;
+        for (let step = 0; step < 6; step++) {
+            const hit = deepest(set, body, wx, wz, pose.y, pose.yaw, pose.attached, pose.fixed);
+            if (!hit) return {x: wx, z: wz, moved: Math.hypot(wx - pose.x, wz - pose.z)};
+            ({x: wx, z: wz} = intoKeep(keep, wx + hit.nx * (hit.depth + 0.003), wz + hit.nz * (hit.depth + 0.003), give));
+        }
     }
     if (stuck && deepest(set, body, x, z, pose.y, pose.yaw, pose.attached, pose.fixed)) {
         const step = Math.max(body.radius * 0.5, 0.05);
@@ -143,9 +214,10 @@ export function pushOut(set: ColliderSet, body: ResolveBody, pose: ResolvePose):
             const n = Math.max(8, Math.ceil((Math.PI * 2 * d) / step));
             for (let k = 0; k < n; k++) {
                 const a = (k / n) * Math.PI * 2;
-                const px = pose.x + Math.sin(a) * d;
-                const pz = pose.z + Math.cos(a) * d;
-                if (!deepest(set, body, px, pz, pose.y, pose.yaw, pose.attached, pose.fixed)) return {x: px, z: pz, moved: d};
+                const px = sx + Math.sin(a) * d;
+                const pz = sz + Math.cos(a) * d;
+                if (keep && !inKeep(keep, px, pz)) continue;
+                if (!deepest(set, body, px, pz, pose.y, pose.yaw, pose.attached, pose.fixed)) return {x: px, z: pz, moved: Math.hypot(px - pose.x, pz - pose.z)};
             }
         }
     }
@@ -162,7 +234,7 @@ function blockerNormal(set: ColliderSet, body: ResolveBody, x: number, z: number
  * From a (clear) to b, as far as its body gets before it would touch something solid it meets; stopped by something, the
  * rest of the move slides along it (its part along the thing's face), as far as that goes in turn.
  */
-export function clipMove(set: ColliderSet, body: ResolveBody, from: {x: number; z: number}, to: {x: number; z: number}, pose: ResolvePose, slide = true): {x: number; z: number} {
+export function clipMove(set: ColliderSet, body: ResolveBody, from: {x: number; z: number}, to: {x: number; z: number}, pose: ResolvePose, slide = true, keep?: KeepBox | null): {x: number; z: number} {
     const length = Math.hypot(to.x - from.x, to.z - from.z);
     if (length < 1e-4) return {x: to.x, z: to.z};
     // (Sampled at a quarter of its radius: an easing is a fraction of a body; the last clear sample is kept.)
@@ -171,8 +243,10 @@ export function clipMove(set: ColliderSet, body: ResolveBody, from: {x: number; 
     let z = from.z;
     for (let s = 1; s <= steps; s++) {
         const t = s / steps;
-        const px = from.x + (to.x - from.x) * t;
-        const pz = from.z + (to.z - from.z) * t;
+        let px = from.x + (to.x - from.x) * t;
+        let pz = from.z + (to.z - from.z) * t;
+        // (Penned: the way taken inside its keep box, along the inset where the move would leave it.)
+        if (keep) ({x: px, z: pz} = intoKeep(keep, px, pz));
         const normal = blockerNormal(set, body, px, pz, pose);
         if (normal) {
             if (!slide) break;
@@ -181,12 +255,21 @@ export function clipMove(set: ColliderSet, body: ResolveBody, from: {x: number; 
             const rz = to.z - z;
             const into = rx * normal.nx + rz * normal.nz;
             if (into >= 0) break;
-            return clipMove(set, body, {x, z}, {x: x + rx - normal.nx * into, z: z + rz - normal.nz * into}, pose, false);
+            return clipMove(set, body, {x, z}, {x: x + rx - normal.nx * into, z: z + rz - normal.nz * into}, pose, false, keep);
         }
         x = px;
         z = pz;
     }
     return {x, z};
+}
+
+/**
+ * `clipMove` for a penned body (lane PENKEEP): every step of the move, and of its slide along what stops it, inside its
+ * keep box (a slide along a trough's face ran out past the inset by the rails; put back, it was in the trough, so the
+ * push was dropped for a few frames and then made all at once, 0.77 m in a frame).
+ */
+export function clipKept(set: ColliderSet, body: ResolveBody, from: {x: number; z: number}, to: {x: number; z: number}, pose: ResolvePose, keep: KeepBox | null | undefined): {x: number; z: number} {
+    return clipMove(set, body, from, to, pose, true, keep);
 }
 
 /** The closest points of two segments (2D) and their distance. */
@@ -315,7 +398,11 @@ export const SEPARATION_ROUNDS = 8;
  * in the moment: every viewer eases the same pushes the same way. A slow push turns no body: a resting animal is nudged
  * as it faces; a walker's way bends by its push's slow drift, a few degrees off its heading at most.
  */
-export const SEPARATION_EASE = 4;
+// (0.5, lane TOWNOVERLAP 2026-11-24: at 4, one that walked into another just after a moment had no push until the next
+// and was eased out over the one after: a horse stood inside a grazing donkey for 3.2 s, the town's paddocks' horses in
+// each other. Eased over half a second the push still never steps more than a few centimetres a frame:
+// `ark-collide-between-moments.test.ts`.)
+export const SEPARATION_EASE = 0.5;
 
 /** The moments either side of `epoch` the push is worked out at, and how far between them (0-1, smoothstepped). */
 export function separationMoments(epoch: number): {q0: number; q1: number; s: number} {
@@ -338,7 +425,7 @@ export function inContact(a: ResolveBody, pa: ResolvePose, b: ResolveBody, pb: R
  * move clipped to (and slid along) anything solid. Members in id order; the same answer for every viewer that has the
  * same cluster. Returns each member's place, in the members' order.
  */
-export function separateCluster(set: ColliderSet | null, members: ReadonlyArray<{body: ResolveBody; pose: ResolvePose}>, slopeAt?: (x: number, z: number) => number): Array<{x: number; z: number}> {
+export function separateCluster(set: ColliderSet | null, members: ReadonlyArray<{body: ResolveBody; pose: ResolvePose; keep?: KeepBox | null}>, slopeAt?: (x: number, z: number) => number): Array<{x: number; z: number}> {
     const order = members.map((_, i) => i).sort((i, j) => (members[i].body.id < members[j].body.id ? -1 : members[i].body.id > members[j].body.id ? 1 : 0));
     let at = members.map((m) => ({x: m.pose.x, z: m.pose.z}));
     if (members.length < 2) return at;
@@ -351,7 +438,10 @@ export function separateCluster(set: ColliderSet | null, members: ReadonlyArray<
             const sep = separation(now[i].body, now[i].pose, now.filter((_, j) => j !== i));
             if (!sep.dx && !sep.dz) continue;
             moved = true;
-            const to = set ? clipMove(set, now[i].body, at[i], {x: at[i].x + sep.dx, z: at[i].z + sep.dz}, now[i].pose) : {x: at[i].x + sep.dx, z: at[i].z + sep.dz};
+            // (A penned one's push stays in its keep box: along the inset by the rails, never out past it for the bound to undo.)
+            const keep = members[i].keep;
+            const want = {x: at[i].x + sep.dx, z: at[i].z + sep.dz};
+            const to = set ? clipKept(set, now[i].body, at[i], want, now[i].pose, keep) : keep ? intoKeep(keep, want.x, want.z) : want;
             // Never pushed onto a cliff's face: a push that would put a walker on ground steeper than it can stand on
             // (and steeper than where it is) is not made; the two stay touching instead (2026-11-16: two animals
             // sharing a resting spot on a ridge were eased apart onto ground rising 2.3 in 1; round 351's cliffs).

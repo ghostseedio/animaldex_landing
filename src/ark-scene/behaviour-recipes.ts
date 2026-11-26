@@ -248,6 +248,8 @@ export type ScheduleKit = {
     flies: (profile: ArkBehaviourProfile) => boolean;
     aquatic: (profile: ArkBehaviourProfile) => boolean;
     floats: (profile: ArkBehaviourProfile) => boolean;
+    /** Walks on land and swims (a duck, a goose, a penguin): it crosses at the water's edges (`behaviour-schedule.ts` amphibious). */
+    amphibious: (profile: ArkBehaviourProfile) => boolean;
 };
 
 function rng(seed: number): () => number {
@@ -341,7 +343,10 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         if (!to) continue;
         const flyer = input.kit.flies(input.profile);
         const raisedTo = to.y > topOf(input.world.sampler, to.x, to.z) + 0.4;
-        const mode: TripMode = input.kit.aquatic(input.profile) ? "water" : flyer && (raisedTo || template.goal === "perch_water" || template.goal === "nest" || template.goal === "flower") ? "air" : "ground";
+        // (SIG9: a swimmer's mode is its goal's: "water" only for a goal in the water. Its trip is the same either way (an
+        // amphibious one climbs out at an edge, `tripFor`), but a flock follows a leader whose mode is "water" on the water,
+        // and followed one ashore to its nest or its feeding ground as if it swam there.)
+        const mode: TripMode = input.kit.aquatic(input.profile) ? (inWater(input.world, to) || !input.kit.amphibious(input.profile) ? "water" : "ground") : flyer && (raisedTo || template.goal === "perch_water" || template.goal === "nest" || template.goal === "flower") ? "air" : "ground";
         return {doing: template.doing, to, mode, recipe: id};
     }
     return null;
@@ -357,8 +362,13 @@ export function sitterIntent(input: {world: ScheduleWorld; profile: ArkBehaviour
     if (!site || !((site.eggs ?? 0) > 0 || (site.chicks ?? 0) > 0)) return null;
     const to: Spot = {x: site.x, y: site.y, z: site.z, nx: 0, ny: 1, nz: 0, point: null};
     const raisedTo = to.y > topOf(input.world.sampler, to.x, to.z) + 0.4;
-    const mode: TripMode = input.kit.flies(input.profile) && raisedTo ? "air" : input.kit.aquatic(input.profile) ? "water" : "ground";
+    const mode: TripMode = input.kit.flies(input.profile) && raisedTo ? "air" : input.kit.aquatic(input.profile) && (inWater(input.world, to) || !input.kit.amphibious(input.profile)) ? "water" : "ground";
     return {doing: input.awake ? "rest" : "sleep", to, mode, recipe: "incubate_sit"};
+}
+
+/** Whether a goal is in the water (its ground under the water's surface there), as the schedule's `wet`. */
+function inWater(world: ScheduleWorld, to: {x: number; z: number}): boolean {
+    return world.sampler.heightAt(to.x, to.z) < waterSurfaceOf(world.sampler, to.x, to.z);
 }
 
 /** Open water near a point (deeper than `depth`), searched in seeded rings out to `reach`. */
@@ -494,8 +504,11 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
         }
         case "ground":
         case "bare": {
-            if (kit.aquatic(profile)) return null;
-            const spot = kit.rangeSpot(world, profile, animal, centre, radius * 0.8, random);
+            // SIG9: a swimmer that walks too (a muscovy, a goose) goes ashore for it, on foot: its spot on land, as its bed is
+            // (`roostOf`); its trip climbs out at an edge (`tripFor`). One that only swims (a grebe, a loon, a fish) never.
+            if (kit.aquatic(profile) && !kit.amphibious(profile)) return null;
+            const onLand = kit.aquatic(profile) ? {...profile, move: "walk" as const, seabed: false} : profile;
+            const spot = kit.rangeSpot(world, onLand, animal, centre, radius * 0.8, random);
             return world.sampler.heightAt(spot.x, spot.z) > waterSurfaceOf(world.sampler, spot.x, spot.z) + 0.02 ? spot : null;
         }
         case "bark": {
@@ -851,7 +864,8 @@ function goBlock(profile: ArkBehaviourProfile, kit: ScheduleKit, world: Schedule
     if (wet && !raisedTo && !raisedFrom && swims) return BLOCKS.swim;
     // (A bird walks or wades a few steps, as behaviour's own: further than that, or up or down, it flies.)
     if (kit.flies(profile) && (flat > Math.max(3, length * 6) || raisedTo || raisedFrom)) return BLOCKS.fly;
-    if (kit.aquatic(profile) || wet) return swims ? BLOCKS.swim : BLOCKS.wade;
+    // (SIG9: one that walks too, ashore, walks: a goose's few steps across its grass were swum.)
+    if ((kit.aquatic(profile) && !(kit.amphibious(profile) && !inWater(world, to))) || wet) return swims ? BLOCKS.swim : BLOCKS.wade;
     if (raisedTo || raisedFrom) return BLOCKS.climb;
     return BLOCKS.walk;
 }
@@ -1885,7 +1899,10 @@ function stayEpisode(world: ScheduleWorld, trip: Trip, owner: TripOwner, kit: Sc
     const recipe = (trip as Trip & {recipe?: string | null}).recipe ?? null;
     const anchor = {x: trip.to.x, y: trip.to.y, z: trip.to.z};
     const hours = owner.hoursAt(trip.arrive);
-    if (recipe && TEMPLATES[recipe]) {
+    // (SIG9: a land act whose way ashore was not taken, the walk chain keeping a swimmer where it was, on the water, is not
+    // played there: no walking and grazing afloat. Its schedule's own pose stands.)
+    const landActAfloat = recipe !== null && (TEMPLATES[recipe]?.goal === "ground" || TEMPLATES[recipe]?.goal === "bare") && inWater(world, anchor);
+    if (recipe && TEMPLATES[recipe] && !landActAfloat) {
         // It comes back a while before its slot ends: its homecoming and its schedule's setting off are two turns kept
         // apart, and the last seconds are for turning on the spot to the way it sets off. (A recipe's stay has no steps of
         // its own: its schedule pose holds still there, so it can keep its own heading.)
@@ -2095,7 +2112,7 @@ function pairMeeting(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, l
     return episode;
 }
 
-function pairEpisode(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): Episode | null {
+export function pairEpisode(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): Episode | null {
     const list = links.get(owner.animal);
     if (!list) return null;
     const species = speciesRecipes(owner.slug);

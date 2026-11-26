@@ -1,5 +1,5 @@
 import "server-only";
-import { fetchRows, isMissingTableError } from "@/app/api/admin/growth/_lib/rows";
+import { fetchRows, isMissingColumnError, isMissingTableError } from "@/app/api/admin/growth/_lib/rows";
 import { addDays, dayStartMs } from "@/lib/product-analytics";
 import {
   ARK_BASELINE_FROM,
@@ -42,6 +42,19 @@ async function optional<T>(table: string, query: string, notes: string[], note: 
       return null;
     }
     throw error;
+  }
+}
+
+/** The website's Ark events, with visitor id, device and the operator mark once landing migration 20261126120000 is applied. */
+async function loadWebEvents(start: string, end: string, notes: string[]): Promise<ArkWebEventRow[] | null> {
+  const range = `created_at=gte.${start}&created_at=lt.${end}&order=created_at.asc`;
+  const missing = "Ark opens, time and taps are recorded once landing migration 20261110130000 (web_ark_events) is applied. The apps send theirs to Firebase only.";
+  try {
+    return await optional<ArkWebEventRow>("web_ark_events", `select=event,source,seconds,created_at,visitor_id,device,internal&${range}`, notes, missing);
+  } catch (error) {
+    if (!isMissingColumnError(error, "visitor_id") && !isMissingColumnError(error, "device") && !isMissingColumnError(error, "internal")) throw error;
+    notes.push("Visitors, devices and leaving out your own browsers start once landing migration 20261126120000 is applied.");
+    return optional<ArkWebEventRow>("web_ark_events", `select=event,source,seconds,created_at&${range}`, notes, missing);
   }
 }
 
@@ -89,12 +102,7 @@ export async function loadArkMeasure(range: { from: string; to: string; includeT
       notes,
       "\"Arrival seen\" is recorded once AnimalDex migration 20261111150000 (ark_seen_events) is applied.",
     ),
-    optional<ArkWebEventRow>(
-      "web_ark_events",
-      `select=event,source,seconds,created_at&created_at=gte.${start}&created_at=lt.${end}&order=created_at.asc`,
-      notes,
-      "Ark opens, time and taps are recorded once landing migration 20261110130000 (web_ark_events) is applied. The apps send theirs to Firebase only.",
-    ),
+    loadWebEvents(start, end, notes),
   ]);
   if (events) notes.push("Opens, time and taps are the website's only (web_ark_events); the apps report theirs to Firebase. They carry no account, so dev testers cannot be left out of them.");
 

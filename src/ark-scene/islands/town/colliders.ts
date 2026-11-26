@@ -17,6 +17,7 @@ import {ColliderSet, PICKET_GAP, RAIL_CLEAR} from "@/ark-scene/collide/colliders
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townObstacles} from "@/ark-scene/islands/town/obstacles";
+import {townBuildingParts} from "@/ark-scene/islands/town/building-parts";
 import {zooLayout, zooSpotsOf} from "@/ark-scene/islands/town/areas";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 import {HABITAT_ITEMS, paddockItems} from "@/ark-scene/islands/town/render/zoo-habitat";
@@ -48,6 +49,13 @@ export function townColliderList(open: readonly string[], origin: {x: number; z:
         const rotation = -b.at.rot;
         out.push({shape: "box", kind: "building", id: `town:${b.id}`, cx: b.at.x + ox, cz: b.at.z + oz, cos: Math.cos(rotation), sin: Math.sin(rotation), hx0: -b.at.w / 2, hx1: b.at.w / 2, hz0: -b.at.d / 2, hz1: b.at.d / 2, y0: floor - 0.3, y1: top + 0.15 + b.top, reach: Math.hypot(b.at.w / 2, b.at.d / 2), gap: 0});
     }
+    // SIG8: what a building draws past its footprint on the ground (a bay, a porch's cheeks, buttresses, a podium, posts:
+    // `building-parts.ts`), solid as the building is (a brown tabby's bed was inside a bay).
+    townBuildingParts(plan).forEach((p, i) => {
+        const id = `town:${p.building}:part:${i}`;
+        if (p.shape === "circle") out.push({shape: "circle", kind: "building", id, cx: p.x + ox, cz: p.z + oz, r: p.r, reach: p.r, y0: p.base, y1: p.top, gap: 0});
+        else out.push({shape: "box", kind: "building", id, cx: p.x + ox, cz: p.z + oz, cos: Math.cos(-p.rot), sin: Math.sin(-p.rot), hx0: -p.hw, hx1: p.hw, hz0: -p.hd, hz1: p.hd, y0: p.base, y1: p.top, reach: Math.hypot(p.hw, p.hd), gap: 0});
+    });
     for (const o of townObstacles(plan, open)) {
         if (o.kind === "tree") {
             const g = townHeight(o.x, o.z);

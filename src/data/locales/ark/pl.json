@@ -491,7 +491,15 @@
             "cycleCount": "{n} z {total}",
             "caredOwner": "Opiekuje się nim właściciel",
             "caredFarmer": "Opiekuje się nim rolnik",
-            "caredKeeper": "Opiekuje się nim opiekun"
+            "caredKeeper": "Opiekuje się nim opiekun",
+            "eatSoon": "Szansa na zdobycz w ciągu następnego dnia Arki",
+            "eatSoonChance": "{percent} szansy na zdobycz w ciągu następnego dnia Arki",
+            "eatSoonHunting": "Właśnie poluje",
+            "eatSoonLater": "Znów zapoluje za około {time}",
+            "eatSoonDormant": "W spoczynku: nie je",
+            "eatSoonKept": "Karmią go opiekunowie",
+            "eatSoonDaily": "Je codziennie",
+            "eatSoonShort": "Tu brakuje pożywienia"
         },
         "grew": {
             "line": "Silniejszy: {stat} +{n} · {cause}",

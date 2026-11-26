@@ -184,6 +184,8 @@ export function ArkMeasureView({ data }: { data: ArkMeasureResponse }) {
         </Card>
       </div>
 
+      <ArkAudienceCard data={data} />
+
       <Card>
         <CardHeader
           title="Ark opens and time in the Ark"
@@ -236,6 +238,32 @@ export function ArkMeasureView({ data }: { data: ArkMeasureResponse }) {
   );
 }
 
+/** Who opens the Ark on the website: browsers (each with its own random id), not accounts. */
+function ArkAudienceCard({ data }: { data: ArkMeasureResponse }) {
+  const { audience } = data.summary;
+  if (!data.eventsRecorded || !audience) return null;
+  const seenDevices = audience.byDevice.phone + audience.byDevice.tablet + audience.byDevice.desktop;
+  return (
+    <Card>
+      <CardHeader
+        title="Who opens the Ark"
+        description="Website only. Each browser keeps a random id of its own (no account, no IP), so these are browsers, not people: one person on a phone and a laptop counts twice. Browsers that have opened /admin are yours and are left out of every number on this tab."
+        action={<Badge tone={audience.internalExcluded ? "neutral" : "warn"}>{num(audience.internalExcluded)} of your events left out</Badge>}
+      />
+      <CardContent>
+        <TileGrid>
+          <Tile label="Visitors" value={num(audience.visitors)} hint="browsers with an open in the range" info="Counted from the day visitor ids started (landing migration 20261126120000). Opens before that have no id and are counted under 'Opens without an id'." />
+          <Tile label="Returning" value={num(audience.returning)} hint={audience.visitors ? `${pct(share(audience.returning, audience.visitors))} came back on another day` : "—"} info="Visitors who opened the Ark on two or more different days in the range (Jakarta days)." />
+          <Tile label="Phone" value={num(audience.byDevice.phone)} hint={seenDevices ? `${pct(share(audience.byDevice.phone, seenDevices))} of visitors` : "—"} info="From the browser's user agent at its first open. Tablets are counted apart." />
+          <Tile label="Desktop" value={num(audience.byDevice.desktop)} hint={seenDevices ? `${pct(share(audience.byDevice.desktop, seenDevices))} of visitors` : "—"} />
+          <Tile label="Tablet" value={num(audience.byDevice.tablet)} hint={audience.byDevice.unknown ? `${num(audience.byDevice.unknown)} unknown` : "of visitors"} />
+          <Tile label="Opens without an id" value={num(audience.opensWithoutVisitor)} hint="before ids, or storage blocked" info="Opens still count in the charts below; they just cannot be told apart as people." />
+        </TileGrid>
+      </CardContent>
+    </Card>
+  );
+}
+
 function WeeklyTable({ weeks, data }: { weeks: ArkWeek[]; data: ArkMeasureResponse }) {
   const head = (label: string, info?: string) => (
     <TH numeric>
@@ -255,6 +283,7 @@ function WeeklyTable({ weeks, data }: { weeks: ArkWeek[]; data: ArkMeasureRespon
           {head("Worked", "Outcome 'worked'. Partly and didn't work are in the tooltip of Completed.")}
           {head("Arrived")}
           {head("Seen", "Arrivals seen by their owner on an Ark surface, counted in the week they were first seen.")}
+          {head("Visitors", "Browsers that opened the Ark this week (each keeps its own random id). Your own browsers are left out.")}
           {head("Opens")}
           {head("Avg time")}
           {head("Taps · follows · replays")}
@@ -277,6 +306,7 @@ function WeeklyTable({ weeks, data }: { weeks: ArkWeek[]; data: ArkMeasureRespon
             <TD numeric>{num(week.worked)}</TD>
             <TD numeric>{num(week.arrivals)}</TD>
             <TD numeric>{data.seenRecorded ? num(week.arrivalsSeen) : "—"}</TD>
+            <TD numeric>{data.eventsRecorded ? num(week.visitors) : "—"}</TD>
             <TD numeric title={data.eventsRecorded ? ARK_SOURCES.map((source) => `${SOURCE_LABELS[source]} ${week.opens[source]}`).join(" · ") : undefined}>
               {data.eventsRecorded ? num(week.opensTotal) : "—"}
             </TD>

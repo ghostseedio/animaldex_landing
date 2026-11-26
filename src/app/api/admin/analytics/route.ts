@@ -37,6 +37,45 @@ function parseRange(params: URLSearchParams, today: string) {
   return { from, to, grain, platform };
 }
 
+/** How long one range's loaded rows are reused. Grain and platform only change the report built from them. */
+const SOURCE_TTL_MS = 60_000;
+type Sources = [
+  Awaited<ReturnType<typeof loadAnalytics>>,
+  Awaited<ReturnType<typeof loadContent>>,
+  Awaited<ReturnType<typeof loadSearchPages>>,
+  Awaited<ReturnType<typeof loadSearchPages>>,
+  Awaited<ReturnType<typeof loadWebFunnel>>,
+];
+const sourceCache = new Map<string, { at: number; value: Promise<Sources> }>();
+
+function loadSources(range: { from: string; to: string }, previous: { from: string; to: string }, since: string, today: string, fresh: boolean) {
+  const key = `${today}|${since}|${range.from}|${range.to}`;
+  const hit = sourceCache.get(key);
+  // An in-flight load is shared too, so a double click or a grain switch mid-load doesn't start a second one.
+  if (!fresh && hit && Date.now() - hit.at < SOURCE_TTL_MS) return hit.value;
+  const value = Promise.all([
+    loadAnalytics(since, today),
+    loadContent(range.from),
+    loadSearchPages(range.from, range.to, 1000),
+    loadSearchPages(previous.from, previous.to, 1000),
+    loadWebFunnel(range.from, range.to),
+  ]) as Promise<Sources>;
+  sourceCache.forEach((entry, cachedKey) => {
+    if (Date.now() - entry.at >= SOURCE_TTL_MS) sourceCache.delete(cachedKey);
+  });
+  sourceCache.set(key, { at: Date.now(), value });
+  value.then(
+    ([, , search, searchPrevious]) => {
+      // A Search Console timeout is worth retrying on the next load, not keeping for a minute.
+      if ([search.note, searchPrevious.note].some((note) => note?.includes("took too long")) && sourceCache.get(key)?.value === value) sourceCache.delete(key);
+    },
+    () => {
+      if (sourceCache.get(key)?.value === value) sourceCache.delete(key);
+    },
+  );
+  return value;
+}
+
 export async function GET(request: NextRequest) {
   const actor = await resolveAdminActor(cookies());
   if (!actor.authorized) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
@@ -47,13 +86,8 @@ export async function GET(request: NextRequest) {
     const previous = previousRange(range.from, range.to);
     // Release markers compare the week before; the earliest of those decides how far back to read.
     const since = addDays(previous.from, -7);
-    const [data, content, search, searchPrevious, funnel] = await Promise.all([
-      loadAnalytics(since, today),
-      loadContent(range.from),
-      loadSearchPages(range.from, range.to, 1000),
-      loadSearchPages(previous.from, previous.to, 1000),
-      loadWebFunnel(range.from, range.to),
-    ]);
+    const fresh = request.nextUrl.searchParams.get("fresh") === "1";
+    const [data, content, search, searchPrevious, funnel] = await loadSources(range, previous, since, today, fresh);
     const report = buildAnalyticsReport(data, range);
     const contentReport = buildContentReport({
       from: range.from,
@@ -108,6 +142,7 @@ export async function POST(request: NextRequest) {
     cache: "no-store",
   });
   if (!response.ok) return NextResponse.json({ ok: false, error: `Saving the marker failed (${response.status}): ${await response.text()}` }, { status: 500 });
+  sourceCache.clear();
   return NextResponse.json({ ok: true, annotation: (await response.json())[0] ?? null });
 }
 
@@ -123,6 +158,7 @@ export async function DELETE(request: NextRequest) {
     cache: "no-store",
   });
   if (!response.ok) return NextResponse.json({ ok: false, error: `Removing the marker failed (${response.status})` }, { status: 500 });
+  sourceCache.clear();
   return NextResponse.json({ ok: true });
 }
 

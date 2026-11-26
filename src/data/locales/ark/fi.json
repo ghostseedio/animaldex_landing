@@ -491,7 +491,15 @@
             "cycleCount": "{n}/{total}",
             "caredOwner": "Sitä hoitaa sen omistaja",
             "caredFarmer": "Sitä hoitaa maanviljelijä",
-            "caredKeeper": "Sitä hoitaa eläintenhoitaja"
+            "caredKeeper": "Sitä hoitaa eläintenhoitaja",
+            "eatSoon": "Saaliin todennäköisyys seuraavan Arkin päivän aikana",
+            "eatSoonChance": "{percent} todennäköisyys saaliille seuraavan Arkin päivän aikana",
+            "eatSoonHunting": "Metsästää nyt",
+            "eatSoonLater": "Metsästää taas noin {time} päästä",
+            "eatSoonDormant": "Horroksessa: ei syö",
+            "eatSoonKept": "Hoitajat ruokkivat",
+            "eatSoonDaily": "Syö joka päivä",
+            "eatSoonShort": "Täällä on niukasti ruokaa"
         },
         "grew": {
             "line": "Vahvistui: {stat} +{n} · {cause}",

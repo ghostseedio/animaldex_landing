@@ -167,7 +167,7 @@ for (const s of scenes) {
     const now = Date.now();
     const k0 = stepIndex((now - START) / ARK_DAY_MS) + 2;
     const leans = [[best > 0 ? Math.round(lean.x * 100) / 100 : null, best > 0 ? Math.round(lean.z * 100) / 100 : null, k0 - 200, Math.round(R * 100) / 100]];
-    state.hunting = {hunting: "encounter", hunt_geometry: true, started_at: new Date(START).toISOString(), ark_day: (now - START) / ARK_DAY_MS, ticked_to: (now - START) / ARK_DAY_MS, predators: [[id(0, 0), 0, leans]], meals: []};
+    state.hunting = {hunting: "encounter", hunt_geometry: true, started_at: new Date(START).toISOString(), ark_day: (now - START) / ARK_DAY_MS, ticked_to: (now - START) / ARK_DAY_MS, predators: [[id(0, 0), 0]], leans: {[id(0, 0)]: leans}, meals: []};
 
     const context = await browser.newContext({viewport: {width: 390, height: 844}, deviceScaleFactor: 2, isMobile: true, hasTouch: true});
     const page = await context.newPage();

@@ -124,7 +124,30 @@ export function arkMeasureProps(event: ArkMeasureEvent, raw: Record<string, unkn
     return props as ArkMeasureProps;
 }
 
-export type ArkMeasureReport = {event: ArkMeasureEvent; props: ArkMeasureProps; signedIn: boolean};
+export const ARK_DEVICES = ["phone", "tablet", "desktop"] as const;
+export type ArkDevice = (typeof ARK_DEVICES)[number];
+
+/** The kind of screen a user agent names. A guess from the header, good enough to split phone from desktop. */
+export function arkDeviceOf(userAgent: string | null | undefined): ArkDevice | null {
+    const agent = userAgent?.toLowerCase() ?? "";
+    if (!agent) return null;
+    if (/iphone|ipod|android.*mobile|windows phone|mobile safari/.test(agent)) return "phone";
+    if (/ipad|android|tablet|kindle|silk/.test(agent)) return "tablet";
+    return "desktop";
+}
+
+/**
+ * `visitorId`: a random id the browser keeps for itself (localStorage), so
+ * opens can be counted as people. It names a browser, never an account.
+ */
+export type ArkMeasureReport = {event: ArkMeasureEvent; props: ArkMeasureProps; signedIn: boolean; visitorId?: string | null};
+
+/** What the server adds to a report from the request itself, never from the body. */
+export type ArkMeasureContext = {
+    device: ArkDevice | null;
+    /** The operator's own browser (it has opened /admin): kept, but left out of the dashboard. */
+    internal: boolean;
+};
 
 /** One event as the browser sent it to /api/ark-events, or null when anything about it is off. */
 export function normalizeArkMeasureReport(raw: unknown): ArkMeasureReport | null {
@@ -133,13 +156,15 @@ export function normalizeArkMeasureReport(raw: unknown): ArkMeasureReport | null
     const given = body.props && typeof body.props === "object" && !Array.isArray(body.props) ? body.props as Record<string, unknown> : {};
     const props = arkMeasureProps(body.event, given);
     if (!props) return null;
-    return {event: body.event, props, signedIn: body.signed_in === true};
+    const visitorId = typeof body.visitor === "string" && UUID.test(body.visitor) ? body.visitor.toLowerCase() : null;
+    return {event: body.event, props, signedIn: body.signed_in === true, visitorId};
 }
 
-/** The row /api/ark-events writes. */
-export function arkMeasureRow(report: ArkMeasureReport) {
+/** The row /api/ark-events writes. Without a context it is the row from before visitor ids (landing migration 20261126120000). */
+export function arkMeasureRow(report: ArkMeasureReport, context?: ArkMeasureContext) {
     const {props} = report;
     return {
+        ...(context ? {visitor_id: report.visitorId ?? null, device: context.device, internal: context.internal} : {}),
         event: report.event,
         source: props.source ?? null,
         seconds: props.seconds ?? null,
@@ -175,7 +200,30 @@ export const ARK_BASELINE_FROM = "2026-10-26";
 export type ArkTrialRow = {user_id: string; set_at: string; done_at: string | null; status: string | null; outcome: string | null};
 export type ArkArrivalRow = {animal_id: string; owner_user_id: string | null; arrived_at: string};
 export type ArkSeenRow = {user_id: string; animal_id: string; seen_at: string; surface: string | null};
-export type ArkWebEventRow = {event: string; source: string | null; seconds: number | null; created_at: string};
+export type ArkWebEventRow = {
+    event: string;
+    source: string | null;
+    seconds: number | null;
+    created_at: string;
+    /** Absent before landing migration 20261126120000; null on rows written before it. */
+    visitor_id?: string | null;
+    device?: string | null;
+    internal?: boolean | null;
+};
+
+/** Who opened the Ark in the range: browsers, not accounts. Only rows with a visitor id count as people. */
+export type ArkAudience = {
+    /** Browsers with at least one open in the range. */
+    visitors: number;
+    /** Of those, the ones that opened it on two or more different days. */
+    returning: number;
+    /** Visitors by the screen of their first open. */
+    byDevice: Record<ArkDevice | "unknown", number>;
+    /** Opens with no visitor id (sent before ids existed, or with storage blocked): opens, not people. */
+    opensWithoutVisitor: number;
+    /** Events from the operator's own browsers, left out of every number on the tab. */
+    internalExcluded: number;
+};
 
 export type ArkMeasureInput = {
     from: string;
@@ -208,6 +256,8 @@ export type ArkWeek = {
     follows: number;
     replays: number;
     shares: number;
+    /** Browsers with an open this week (rows with a visitor id only). */
+    visitors: number;
     offered: number;
     completed: number;
     worked: number;
@@ -239,6 +289,7 @@ export type ArkMeasureSummary = {
     arrivalsWithOwner: number;
     arrivalsSeenByOwner: number;
     testersExcluded: boolean;
+    audience: ArkAudience;
 };
 
 function percent(part: number, whole: number): number | null {
@@ -272,6 +323,7 @@ function emptyWeek(bucket: Bucket): ArkWeek {
         taps: 0,
         follows: 0,
         replays: 0,
+        visitors: 0,
         shares: 0,
         offered: 0,
         completed: 0,
@@ -303,13 +355,34 @@ export function summarizeArkMeasure(input: ArkMeasureInput): ArkMeasureSummary {
     };
 
     const seconds = new Map<string, number[]>();
+    const weekVisitors = new Map<string, Set<string>>();
+    const visitorDays = new Map<string, Set<string>>();
+    const visitorDevice = new Map<string, string | null>();
+    let opensWithoutVisitor = 0;
+    let internalExcluded = 0;
     for (const row of input.events ?? []) {
         const week = weekOf(row.created_at);
         if (!week) continue;
+        // The operator's own browsing is real use, but not the use being measured.
+        if (row.internal) {
+            internalExcluded += 1;
+            continue;
+        }
         switch (row.event) {
             case "ark_open":
                 if (isArkSource(row.source)) week.opens[row.source] += 1;
                 week.opensTotal += 1;
+                if (row.visitor_id) {
+                    const set = weekVisitors.get(week.key) ?? new Set<string>();
+                    set.add(row.visitor_id);
+                    weekVisitors.set(week.key, set);
+                    const days = visitorDays.get(row.visitor_id) ?? new Set<string>();
+                    days.add(dayKeyOf(Date.parse(row.created_at)));
+                    visitorDays.set(row.visitor_id, days);
+                    if (!visitorDevice.has(row.visitor_id)) visitorDevice.set(row.visitor_id, row.device ?? null);
+                } else {
+                    opensWithoutVisitor += 1;
+                }
                 break;
             case "ark_session_seconds":
                 if (typeof row.seconds === "number" && row.seconds >= 0) seconds.set(week.key, [...(seconds.get(week.key) ?? []), Math.min(row.seconds, ARK_SESSION_MAX_SECONDS)]);
@@ -329,6 +402,7 @@ export function summarizeArkMeasure(input: ArkMeasureInput): ArkMeasureSummary {
         }
     }
     for (const week of weeks) {
+        week.visitors = weekVisitors.get(week.key)?.size ?? 0;
         const list = seconds.get(week.key) ?? [];
         week.sessions = list.length;
         week.avgSeconds = list.length ? Math.round(list.reduce((sum, value) => sum + value, 0) / list.length) : null;
@@ -397,6 +471,20 @@ export function summarizeArkMeasure(input: ArkMeasureInput): ArkMeasureSummary {
         sinceLaunch,
         arrivalsWithOwner: ranged.length,
         arrivalsSeenByOwner: ranged.filter((row) => seenByOwner.has(row.animal_id)).length,
-        testersExcluded: !includeTesters
+        testersExcluded: !includeTesters,
+        audience: {
+            visitors: visitorDays.size,
+            returning: Array.from(visitorDays.values()).filter((days) => days.size >= 2).length,
+            byDevice: Array.from(visitorDevice.values()).reduce<ArkAudience["byDevice"]>(
+                (counts, device) => {
+                    const key = (ARK_DEVICES as readonly string[]).includes(device ?? "") ? device as ArkDevice : "unknown";
+                    counts[key] += 1;
+                    return counts;
+                },
+                {phone: 0, tablet: 0, desktop: 0, unknown: 0}
+            ),
+            opensWithoutVisitor,
+            internalExcluded
+        }
     };
 }

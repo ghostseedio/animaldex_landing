@@ -24,6 +24,7 @@
 import {arkHumanAgo} from "@/lib/ark-human-time";
 import type {ArkCondition} from "@/ark-scene/types";
 import {fillArkWords} from "@/lib/ark-words";
+import {ARK_EAT_SOON_ENGLISH, arkEatSoonText, type ArkEatSoon, type ArkEatSoonWords} from "@/lib/ark-eat-soon";
 
 // MARK: Activities
 
@@ -131,7 +132,13 @@ const RECIPE_ACTIVITY: Record<string, ArkActivityKey> = {
     sniff_trail: "wandering",
     ground_feed: "food",
     "dig_burrow~scrape": "digging",
-    "bask_sun~loaf": "basking"
+    "bask_sun~loaf": "basking",
+    "dig_burrow~hole": "digging",
+    knead_settle: "resting",
+    scratch_feed: "food",
+    "play_run~bow": "playing",
+    "stretch_yawn~cat": "resting",
+    "tail_wave~still": "resting"
 };
 
 /** What a recipe episode is, as the card says it (null: one that says no more than its doing). */
@@ -276,6 +283,8 @@ export type ArkAnimalStatus = {
     /** Newest first. */
     log: ArkStatusLogEntry[];
     bars: ArkStatusBars;
+    /** EATSOON (behind its display switch, `ark-eat-soon.ts`): its chance of a catch soon, or how it is fed. Absent: off. */
+    eatSoon?: ArkEatSoon | null;
 };
 
 /** At most this many log lines (the card scrolls past the first few). */
@@ -640,7 +649,7 @@ export type ArkCardWords = {
     caredOwner?: string;
     caredFarmer?: string;
     caredKeeper?: string;
-};
+} & Partial<ArkEatSoonWords>;
 
 /** English, as `en.json` has it: the embed's fallback until (or unless) its words read. */
 export const ARK_ACTIVITY_ENGLISH: ArkActivityWords = {
@@ -738,7 +747,8 @@ export const ARK_CARD_ENGLISH: ArkCardWords = {
     dayHint: "What it did, from the Ark’s shared schedule: the same for everyone. Dots are the Ark’s record.",
     cyclePrev: "Previous of its kind",
     cycleNext: "Next of its kind",
-    cycleCount: "{n} of {total}"
+    cycleCount: "{n} of {total}",
+    ...ARK_EAT_SOON_ENGLISH
 };
 
 /** The words a status needs: the activities, the card's, and the life story's and the story's few it borrows. */
@@ -777,6 +787,8 @@ export type ArkStatusText = {
     next: string | null;
     log: Array<{id: string; source: "record" | "schedule"; stamp: string; text: string}>;
     bars: Array<{key: ArkStatusBarKey; label: string; value: number; tone: ArkBarTone; text: string}>;
+    /** EATSOON: its line ("12% chance of a catch in the next Ark day", "Eats every day") and the short % for the bars. */
+    soon?: {label: string; text: string; percent: string | null} | null;
 };
 
 /** A status as the reader reads it (the card on /ark; the embed sends it with `ark:status` for the apps' cards). */
@@ -828,7 +840,8 @@ export function arkStatusText(status: ArkAnimalStatus, words: ArkStatusWords, lo
     if (health) bars.push({key: "health", label: words.card.health, value: health.value, tone: health.tone, text: health.state === "old" ? words.life.old : health.state === "hungry" ? words.life.hungry : words.card.healthGood});
     if (energy) bars.push({key: "energy", label: card("energy"), value: energy.value, tone: energy.tone, text: fillArkWords(card(energy.state === "asleep" ? "asleepSince" : "awakeSince"), {time: arkIslandTime(energy.since ?? 0, locale)})});
     if (age) bars.push({key: "age", label: words.card.age, value: age.value, tone: age.tone, text: fillArkWords(age.estimate ? card("lifeLeftAbout") : words.card.lifeLeft, {percent: `${Math.round(age.value * 100).toLocaleString(locale)}%`})});
-    return {now, next, log: log.filter((line) => line.text), bars};
+    const soon = status.eatSoon ? {label: words.card.eatSoon || ARK_EAT_SOON_ENGLISH.eatSoon, ...arkEatSoonText(status.eatSoon, words.card, locale, (clockNow ?? Date.now()) / 1000)} : null;
+    return {now, next, log: log.filter((line) => line.text), bars, ...(soon ? {soon} : {})};
 }
 
 /** The fields that make two statuses read the same (the scene tells the page and the apps only when this changes). */
@@ -840,7 +853,8 @@ export function arkStatusSignature(status: ArkAnimalStatus | null): string {
         // (The day's bars to a hundredth: they move a little every second, the card and the bars need not.)
         return bar ? `${key === "energy" || key === "fed" ? bar.value.toFixed(2) : bar.value}${bar.state === "eating" ? "+" : ""}${bar.since !== undefined ? `@${Math.round(bar.since / 60)}` : ""}` : "-";
     }).join(",");
-    return `${status.id}|${status.activity}|${status.line ?? ""}|${goal}|${bars}|${status.log.map((entry) => `${entry.id}${entry.text ? `=${entry.text}` : ""}`).join(",")}`;
+    const soon = status.eatSoon ? `${status.eatSoon.kind}${status.eatSoon.kind === "chance" ? `:${status.eatSoon.value.toFixed(2)}` : status.eatSoon.kind === "later" ? `:${Math.round(status.eatSoon.at / 60)}` : status.eatSoon.kind === "kept" ? `:${status.eatSoon.carer}` : ""}` : "";
+    return `${status.id}|${status.activity}|${status.line ?? ""}|${goal}|${bars}|${soon}|${status.log.map((entry) => `${entry.id}${entry.text ? `=${entry.text}` : ""}`).join(",")}`;
 }
 
 /** The words a status borrows from elsewhere in `ark`, in English: the embed's fallback. */

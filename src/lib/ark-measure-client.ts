@@ -15,6 +15,22 @@ export const ARK_EVENTS_ENDPOINT = "/api/ark-events";
 const ARRIVAL_SEEN_ENDPOINT = "/api/ark/seen";
 /** The animals of this reader's that the server has already recorded as seen. */
 const SEEN_KEY = "animaldex:ark:arrivals-seen";
+/** A random id this browser keeps for itself, so the dashboard counts people and not only opens. */
+const VISITOR_KEY = "animaldex:ark:visitor";
+
+/** This browser's visitor id, made on first use; null when storage is blocked (the event still goes, without one). */
+function visitorId(): string | null {
+    try {
+        const kept = window.localStorage.getItem(VISITOR_KEY);
+        if (kept && /^[0-9a-f-]{36}$/i.test(kept)) return kept;
+        if (typeof crypto?.randomUUID !== "function") return null;
+        const made = crypto.randomUUID();
+        window.localStorage.setItem(VISITOR_KEY, made);
+        return made;
+    } catch {
+        return null;
+    }
+}
 
 function inBrowser() {
     return typeof window !== "undefined" && typeof document !== "undefined";
@@ -39,7 +55,8 @@ export function trackArk(event: ArkMeasureEvent, props: ArkMeasureProps = {}) {
         trackEvent(event, clean);
         // Automated browsers (tests, previews) never reach the dashboard.
         if (navigator.webdriver) return;
-        send(JSON.stringify({event, props: clean}));
+        const visitor = visitorId();
+        send(JSON.stringify(visitor ? {event, props: clean, visitor} : {event, props: clean}));
     } catch {
         // Telemetry never breaks the Ark.
     }

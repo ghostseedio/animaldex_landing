@@ -491,7 +491,15 @@
             "cycleCount": "{n} sur {total}",
             "caredOwner": "Soigné par son propriétaire",
             "caredFarmer": "Soigné par le fermier",
-            "caredKeeper": "Soigné par un soigneur"
+            "caredKeeper": "Soigné par un soigneur",
+            "eatSoon": "Chance d’attraper une proie au prochain jour de l’Arche",
+            "eatSoonChance": "{percent} de chances d’attraper une proie au prochain jour de l’Arche",
+            "eatSoonHunting": "Chasse en ce moment",
+            "eatSoonLater": "Chassera de nouveau dans environ {time}",
+            "eatSoonDormant": "En dormance : ne mange pas",
+            "eatSoonKept": "Nourri par ses soigneurs",
+            "eatSoonDaily": "Mange tous les jours",
+            "eatSoonShort": "La nourriture manque ici"
         },
         "grew": {
             "line": "Plus fort : {stat} +{n} · {cause}",

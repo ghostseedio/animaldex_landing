@@ -112,23 +112,53 @@ export function townDoorWays(plan: TownPlan = townPlan()): DoorWay[] {
     return out;
 }
 
+/** A box's four corners (`corners`' order and sums: geom.ts `local`), x then z, into `out` (load-alloc: no objects). */
+function cornersInto(q: Box, out: Float64Array): void {
+    const hw = q.w / 2;
+    const hd = q.d / 2;
+    const c = Math.cos(q.rot);
+    const s = Math.sin(q.rot);
+    out[0] = q.x + -hw * c - -hd * s;
+    out[1] = q.z + -hw * s + -hd * c;
+    out[2] = q.x + hw * c - -hd * s;
+    out[3] = q.z + hw * s + -hd * c;
+    out[4] = q.x + hw * c - hd * s;
+    out[5] = q.z + hw * s + hd * c;
+    out[6] = q.x + -hw * c - hd * s;
+    out[7] = q.z + -hw * s + hd * c;
+}
+const cornersA = new Float64Array(8);
+const cornersB = new Float64Array(8);
+/** The least and most of four corners along (ax, az), into `spanOut`. */
+const spanOut = new Float64Array(2);
+function spanOf(q: Float64Array, ax: number, az: number): void {
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let k = 0; k < 8; k += 2) {
+        const v = q[k] * ax + q[k + 1] * az;
+        lo = Math.min(lo, v);
+        hi = Math.max(hi, v);
+    }
+    spanOut[0] = lo;
+    spanOut[1] = hi;
+}
+
 /** Two turned boxes overlap (separating axes), each grown by `margin` m. */
 export function boxesOverlap(a: Box, b: Box, margin = 0): boolean {
-    for (const axis of [a.rot, a.rot + Math.PI / 2, b.rot, b.rot + Math.PI / 2]) {
+    // (Load-alloc: each box's corners once, not twice an axis, and no array of axes, spans or corners: the placement of
+    // the town's things asks this some millions of times.)
+    cornersInto(a, cornersA);
+    cornersInto(b, cornersB);
+    for (let k = 0; k < 4; k++) {
+        const axis = k === 0 ? a.rot : k === 1 ? a.rot + Math.PI / 2 : k === 2 ? b.rot : b.rot + Math.PI / 2;
         const ax = Math.cos(axis);
         const az = Math.sin(axis);
-        const span = (q: Box) => {
-            let lo = Infinity;
-            let hi = -Infinity;
-            for (const c of corners(q)) {
-                const v = c.x * ax + c.z * az;
-                lo = Math.min(lo, v);
-                hi = Math.max(hi, v);
-            }
-            return [lo, hi];
-        };
-        const [a0, a1] = span(a);
-        const [b0, b1] = span(b);
+        spanOf(cornersA, ax, az);
+        const a0 = spanOut[0];
+        const a1 = spanOut[1];
+        spanOf(cornersB, ax, az);
+        const b0 = spanOut[0];
+        const b1 = spanOut[1];
         if (a1 + margin < b0 || b1 + margin < a0) return false;
     }
     return true;

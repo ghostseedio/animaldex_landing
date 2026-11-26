@@ -491,7 +491,15 @@
             "cycleCount": "{total}마리 중 {n}",
             "caredOwner": "주인이 돌보고 있어요",
             "caredFarmer": "농부가 돌보고 있어요",
-            "caredKeeper": "사육사가 돌보고 있어요"
+            "caredKeeper": "사육사가 돌보고 있어요",
+            "eatSoon": "다음 방주의 하루 동안 사냥에 성공할 확률",
+            "eatSoonChance": "다음 방주의 하루 동안 사냥에 성공할 확률 {percent}",
+            "eatSoonHunting": "지금 사냥 중",
+            "eatSoonLater": "약 {time} 후 다시 사냥",
+            "eatSoonDormant": "휴면 중: 먹지 않음",
+            "eatSoonKept": "돌보는 사람이 먹이를 줌",
+            "eatSoonDaily": "매일 먹음",
+            "eatSoonShort": "이곳은 먹이가 부족함"
         },
         "grew": {
             "line": "더 강해짐: {stat} +{n} · {cause}",

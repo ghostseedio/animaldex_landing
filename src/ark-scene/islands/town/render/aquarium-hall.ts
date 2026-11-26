@@ -222,12 +222,15 @@ function sandTop(geo: Geo, t: HallTank) {
 export type HallRock = {x: number; y: number; z: number; sx: number; sy: number; sz: number; turn: number; colour: RGB};
 const rockSinks = new WeakMap<Geo, HallRock[]>();
 
-/** A rock in the tank's frame (lx, lz), its base at `y`: an instance (`hallRocks`) where the geometry has a sink, else merged. */
-function rockAt(geo: Geo, fr: Frame, lx: number, y: number, lz: number, sx: number, sy: number, sz: number, colour: RGB, seed: number) {
+/**
+ * A rock in the tank's frame (lx, lz), its base at `y`: an instance (`hallRocks`) where the geometry has a sink, else merged.
+ * Its turn from its seed, unless given (`turn`: its width's way, radians in the town's x-z plane).
+ */
+function rockAt(geo: Geo, fr: Frame, lx: number, y: number, lz: number, sx: number, sy: number, sz: number, colour: RGB, seed: number, turn = (seed % 628) / 100) {
     const p = at(fr, lx, 0, lz);
     const sink = rockSinks.get(geo);
-    if (sink) sink.push({x: p[0], y: y - 0.05, z: p[2], sx, sy, sz, turn: (seed % 628) / 100, colour});
-    else geo.rock(p[0], y - 0.05, p[2], sx, sy, sz, (seed % 628) / 100, colour, seed);
+    if (sink) sink.push({x: p[0], y: y - 0.05, z: p[2], sx, sy, sz, turn, colour});
+    else geo.rock(p[0], y - 0.05, p[2], sx, sy, sz, turn, colour, seed);
 }
 
 /**
@@ -321,14 +324,20 @@ function plant(geo: Geo, fr: Frame, lx: number, y: number, lz: number, tall: num
     }
 }
 
+/** SIG4: how far past a cave's radius its hollow is kept clear of the sand's rocks (a share of the radius). */
+const HOLLOW = 0.6;
+
 /** A cave: the hollow between two cheeks under a roof slab, a back rock behind, a dark inside. `mx`,`mz`: its mouth's way. */
 function caveAt(geo: Geo, fr: Frame, lx: number, lz: number, y: number, r: number, mx: number, mz: number, behind: number, colours: RGB[], seed: number) {
     // (Across the mouth: the cheeks' way.)
     const ax = -mz;
     const az = mx;
     const c = (k: number) => colours[(seed + k) % colours.length];
-    // The back: a big rock behind the hollow, taller than it, short of the glass behind (`behind`: the room there).
-    rockAt(geo, fr, lx - mx * behind * 0.55, y, lz - mz * behind * 0.55, r * 1.7, r * 2.3, behind * 0.42, c(0), seed);
+    // The back: a big rock behind the hollow, taller than it, short of the glass behind (`behind`: the room there). Its
+    // width across the mouth (SIG4: turned at random, its width reached into the hollow where the hider rests).
+    const o = at(fr, 0, 0, 0);
+    const across = at(fr, ax, 0, az);
+    rockAt(geo, fr, lx - mx * behind * 0.55, y, lz - mz * behind * 0.55, r * 1.7, r * 2.3, behind * 0.42, c(0), seed, Math.atan2(across[2] - o[2], across[0] - o[0]));
     // The cheeks, either side of the mouth.
     for (const side of [-1, 1]) rockAt(geo, fr, lx + ax * side * r * 1.35 + mx * r * 0.2, y, lz + az * side * r * 1.35 + mz * r * 0.2, r * 0.75, r * 1.65, r * 1.0, c(side + 2), seed + side * 7);
     // The roof: a slab over the hollow, from cheek to cheek.
@@ -351,6 +360,24 @@ function rockwork(t: HallTank, geo: Geo) {
     const r = rng(hashText(`${tank.id}|rockwork`));
     const hw = t.glass.w / 2;
     const hd = t.glass.d / 2;
+    // SIG4 (the seat audit: a pleco resting in its cave inside a reef boulder and a pebble): a cave's hollow is kept clear.
+    // A rock on the sand (the reef's boulders, the arch's pillars, the scatter) whose footprint reaches into a cave's
+    // hollow is left out; the cave's own rocks (`caveAt`) make its walls. (No draw from `r` is skipped: the rest as before.)
+    const hollows = (tank.caves ?? []).map((cave) => ({x: cave.x, z: cave.z, pad: cave.r * HOLLOW}));
+    const floorRock = (lx: number, lz: number, sx: number, sy: number, sz: number, colour: RGB, seed: number) => {
+        if (hollows.length) {
+            const p = at(fr, lx, 0, lz);
+            const turn = (seed % 628) / 100;
+            const c = Math.cos(turn);
+            const s = Math.sin(turn);
+            for (const hollow of hollows) {
+                const dx = hollow.x - p[0];
+                const dz = hollow.z - p[2];
+                if (((dx * c + dz * s) / (sx + hollow.pad)) ** 2 + ((-dx * s + dz * c) / (sz + hollow.pad)) ** 2 < 1) return;
+            }
+        }
+        rockAt(geo, fr, lx, t.sand, lz, sx, sy, sz, colour, seed);
+    };
     for (const band of t.bands) {
         const alongX = band.side === "back" || band.side === "front";
         const along = alongX ? t.glass.w : t.glass.d;
@@ -363,10 +390,10 @@ function rockwork(t: HallTank, geo: Geo) {
             const u = -along / 2 + ((k + 0.5) * along) / count + (r() - 0.5) * size * 0.4;
             const back = edge(u, size * 0.55);
             const tall = Math.min(water * (0.25 + r() * 0.35), size * (1.6 + r() * 1.6));
-            rockAt(geo, fr, back.x, t.sand, back.z, size * (0.7 + r() * 0.3), tall, size * 0.5, colours[k % colours.length], hashText(`${tank.id}b${k}`));
+            floorRock(back.x, back.z, size * (0.7 + r() * 0.3), tall, size * 0.5, colours[k % colours.length], hashText(`${tank.id}b${k}`));
             if (r() < 0.6) {
                 const front = edge(u + (r() - 0.5) * size, band.depth * 0.75);
-                rockAt(geo, fr, front.x, t.sand, front.z, size * 0.5, size * (0.5 + r() * 0.5), size * 0.4, colours[(k + 1) % colours.length], hashText(`${tank.id}f${k}`));
+                floorRock(front.x, front.z, size * 0.5, size * (0.5 + r() * 0.5), size * 0.4, colours[(k + 1) % colours.length], hashText(`${tank.id}f${k}`));
             }
             // Corals on the reef (salt) or plants (fresh) on and among the rocks.
             if (salt) {
@@ -389,8 +416,8 @@ function rockwork(t: HallTank, geo: Geo) {
             const a = edge(u - s * 1.8, band.depth * 0.6);
             const b = edge(u + s * 1.8, band.depth * 0.6);
             const pillar = Math.min(water * 0.45, s * 4);
-            rockAt(geo, fr, a.x, t.sand, a.z, s * 0.6, pillar, s * 0.6, colours[1], hashText(`${tank.id}arch-a`));
-            rockAt(geo, fr, b.x, t.sand, b.z, s * 0.6, pillar, s * 0.6, colours[2], hashText(`${tank.id}arch-b`));
+            floorRock(a.x, a.z, s * 0.6, pillar, s * 0.6, colours[1], hashText(`${tank.id}arch-a`));
+            floorRock(b.x, b.z, s * 0.6, pillar, s * 0.6, colours[2], hashText(`${tank.id}arch-b`));
             const mid = edge(u, band.depth * 0.6);
             rockAt(geo, fr, mid.x, t.sand + pillar * 0.85, mid.z, s * 2.6, s * 0.7, s * 0.7, colours[0], hashText(`${tank.id}arch-l`));
         }
@@ -414,7 +441,7 @@ function rockwork(t: HallTank, geo: Geo) {
         const lx = (r() - 0.5) * (t.glass.w - 0.4);
         const lz = (r() - 0.5) * (t.glass.d - 0.4);
         const size = Math.min(0.06 + r() * 0.14, water * 0.05);
-        rockAt(geo, fr, lx, t.sand, lz, size * 1.4, size * 0.9, size * 1.1, colours[k % colours.length], hashText(`${tank.id}p${k}`));
+        floorRock(lx, lz, size * 1.4, size * 0.9, size * 1.1, colours[k % colours.length], hashText(`${tank.id}p${k}`));
     }
 }
 

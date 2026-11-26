@@ -451,6 +451,13 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         {snapshot ? <Suspense fallback={<div className="h-[2.6rem]" />}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense> : null}
                         {/* Release to the Wild (P1-8, behind the server's switch) and carers (decision 418), then who is around it: what it eats, what could hunt it, its mates, as icons (lane ark-relation-lines; no fallback is React 18's null). */}
                         <Suspense><ArkTimeLeft release={Link} animal={animal} words={words} locale={locale} day={arkDay} scene={scene} snapshot={snapshot} /></Suspense>
+                        {/* EATSOON (behind `?eatsoon=1`): its chance of a catch in the next Ark day, or how it is fed; a kept animal's carers are said above. */}
+                        {text?.soon && status?.eatSoon?.kind !== "kept" ? (
+                            <p data-testid="ark-card-eat-soon" data-kind={status?.eatSoon?.kind} className="flex min-w-0 items-center gap-1.5 text-[12px] leading-snug text-ink-200">
+                                {text.soon.percent ? <span className="shrink-0 font-bold tabular-nums text-ink-100">{text.soon.percent}</span> : null}
+                                <span className="min-w-0 truncate" title={text.soon.label}>{text.soon.percent ? text.soon.label : text.soon.text}</span>
+                            </p>
+                        ) : null}
                         {placeholder ? null : <Suspense fallback={null}><ArkCardCare animalId={animal.id} words={words.care} locale={locale} /></Suspense>}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} heartsInHeader /> : null}
                         {placeholder ? <p className="text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}

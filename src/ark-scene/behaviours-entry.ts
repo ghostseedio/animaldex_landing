@@ -13,7 +13,7 @@ import {disturbedNow} from "@/ark-scene/defence-moves";
 import {actWindow} from "@/ark-scene/behaviour-group";
 // (Reptile signatures, lane SIG2-REPTILES: the recipe scenes below.)
 import recipeTable from "@/ark-scene/recipes.json";
-import {scheduleWorld, SLOT_SECONDS, tripAt, tripEpisode, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
+import {pairEpisodeAt, pairMeetingsAt, scheduleWorld, SLOT_SECONDS, tripAt, tripEpisode, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {ambushBouts} from "@/ark-scene/micro-ambush";
@@ -201,6 +201,8 @@ async function main() {
         if (params.get("inject")) scene.inject = params.get("inject")!;
         if (params.get("zone")) scene.zone = params.get("zone")!;
         if (params.get("hours")) scene.hours = Number(params.get("hours"));
+        // (Lane SIG6: on the town island, `&town=1`.)
+        if (params.get("town") === "1") scene.town = true;
         if (params.get("slug")) scene.cast = [{slug: params.get("slug")!, name: params.get("slug")!, n: Number(params.get("n") ?? 3)}];
     }
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
@@ -791,6 +793,17 @@ async function main() {
             const entries = debug.entries() as unknown as Array<{animal: {id: string; model_slug: string; activity: ArkBehaviourProfile["activity"] | null}; sched?: {animal: ScheduleAnimal; profile: ArkBehaviourProfile} | null}>;
             const wanted = scene.recipe;
             const found: Array<Record<string, unknown>> = [];
+            // (Lane SIG5: a pair recipe's meeting (two real animals of the cast), from the schedule's own pair meetings.)
+            if (TEMPLATES[wanted]?.kind === "pair") {
+                for (const e of entries) {
+                    if (!e.sched || found.length) continue;
+                    const sched = e.sched;
+                    const meet = pairMeetingsAt(world, sched.profile, sched.animal, t0, t0 + 90 * SLOT_SECONDS, () => scene.hours, e.animal.activity).find((m) => m.recipe === wanted && m.role === "a");
+                    const ep = meet ? pairEpisodeAt(world, sched.profile, sched.animal, meet.t0 + 0.01, () => scene.hours, e.animal.activity) : null;
+                    if (ep) found.push({id: e.animal.id, other: meet!.other, t0: ep.t0, t1: ep.t1, anchor: ep.anchor, keys: ep.keys.map((key) => ({b: key.block.id, t0: key.t0, t1: key.t1, from: key.from, to: key.to, caught: null}))});
+                }
+                return found;
+            }
             for (const e of entries) {
                 if (!e.sched) continue;
                 for (let k = 0; k < 90 && found.length < 6; k++) {

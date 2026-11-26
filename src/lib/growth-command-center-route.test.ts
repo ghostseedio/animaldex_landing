@@ -51,7 +51,10 @@ describe("growth command center route contract", () => {
 
   it("pages automatic user and capture reads past PostgREST's 1000-row cap", () => {
     assert.match(routeSource, /limit=1000&offset=\$\{offset\}/);
-    assert.match(routeSource, /if \(page\.length < 1000\) break/);
+    // The first page carries the row total and the rest are fetched a few at a
+    // time (src/lib/admin-fetch-rows.test.ts checks the rows come back whole).
+    assert.match(routeSource, /Prefer: "count=exact"/);
+    assert.match(routeSource, /if \(first\.rows\.length < PAGE_SIZE\) return rows/);
     assert.match(routeSource, /fetchRows<DatedRow>\(\s*"profiles"/);
     assert.match(routeSource, /fetchRows<DatedRow>\(\s*"captures"/);
   });

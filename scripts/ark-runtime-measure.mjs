@@ -45,7 +45,7 @@
  *   --interact                a reader touching the world throughout (a pointer move every 200 ms: the full frame rate,
  *                             the idle drift still turning the view) instead of an untouched page (30 fps after 5 s)
  *   --page embed|hero         `/ark/embed.html` (the apps' panel, the archipelago mount with its workers; the bundle is
- *                             built first) or the home page's hero (the embed in an iframe the hero's size, its
+ *                             built first, unless `--no-build`: the one already in public/ark/) or the home page's hero (the embed in an iframe the hero's size, its
  *                             refresh=600&idle=900) instead of the measurement page; with `--population-file` as the snapshot
  *   --perf                    `?perf=1`: the scene's own frame profiler (runtime/perf.ts), its sections in the report
  *   --network slow4g          Lighthouse's slow 4G (1.6 Mbit/s, 150 ms); text is served gzipped as the site's CDN does
@@ -159,9 +159,10 @@ await build({
     define: {"process.env.NODE_ENV": JSON.stringify(buildEnv)},
     logLevel: "warning"
 });
-// The prebuild worker (`--prebuild`), and the scale populations (`--population 1x`, from scripts/ark-scale-fixture.mts).
-for (const [entry, out] of [["prebuild-worker.ts", "ark-prebuild-worker.js"], ["prebuild-places-worker.ts", "ark-prebuild-places-worker.js"]]) {
-    await build({entryPoints: [path.join(root, "src/ark-scene/runtime", entry)], outfile: path.join(site, out), bundle: true, format: "iife", platform: "browser", target: ["es2020"], minify: true, tsconfig: path.join(root, "tsconfig.json"), define: {"process.env.NODE_ENV": JSON.stringify(buildEnv)}, logLevel: "warning"});
+// The prebuild workers (`--prebuild`), the town's worker (`--islands`: the page builds the town in it, as the app does),
+// and the scale populations (`--population 1x`, from scripts/ark-scale-fixture.mts).
+for (const [entry, out] of [["runtime/prebuild-worker.ts", "ark-prebuild-worker.js"], ["runtime/prebuild-places-worker.ts", "ark-prebuild-places-worker.js"], ["islands/town/prebuild-worker.ts", "ark-town-worker.js"]]) {
+    await build({entryPoints: [path.join(root, "src/ark-scene", entry)], outfile: path.join(site, out), bundle: true, format: "iife", platform: "browser", target: ["es2020"], minify: true, tsconfig: path.join(root, "tsconfig.json"), define: {"process.env.NODE_ENV": JSON.stringify(buildEnv)}, logLevel: "warning"});
 }
 for (const scale of ["1x", "3x"]) {
     const from = path.join(root, ".ark-golden", "site", `population-${scale}.json`);
@@ -178,7 +179,8 @@ writeFileSync(path.join(site, "measure.html"), `<!doctype html>
 // `--page embed|hero`: the apps' bundle and workers into public/ark/ (gitignored), as the site's build makes them.
 if (pageKind !== "measure") {
     const {execFileSync} = await import("node:child_process");
-    execFileSync(process.execPath, [path.join(root, "scripts/build-ark-bundle.mjs"), ...(buildEnv === "production" ? [] : ["--dev"]), ...(flag("profile") || flag("names") ? ["--names"] : [])], {stdio: "inherit"});
+    // (`--no-build`: the bundle already in public/ark/, as built: an A/B swaps two builds between interleaved runs.)
+    if (!flag("no-build")) execFileSync(process.execPath, [path.join(root, "scripts/build-ark-bundle.mjs"), ...(buildEnv === "production" ? [] : ["--dev"]), ...(flag("profile") || flag("names") ? ["--names"] : [])], {stdio: "inherit"});
     // The home page's hero (home-ark-hero.tsx): the embed in a frame the hero's size (the viewport less the 4rem header).
     writeFileSync(path.join(site, "hero.html"), `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -449,6 +451,31 @@ for (const deviceName of devices) {
         cdp.on("Network.dataReceived", (event) => chunks.push({at: Date.now(), bytes: event.encodedDataLength ?? 0, url: urls.get(event.requestId) ?? ""}));
         cdp.on("Network.loadingFinished", (event) => received.push({at: Date.now(), bytes: event.encodedDataLength ?? 0, url: urls.get(event.requestId) ?? "", start: started.get(event.requestId) ?? null}));
         if (network) await cdp.send("Network.emulateNetworkConditions", network);
+        // `--alloc 26`: a sampling allocation profile from navigation to that second, garbage included (what a load's
+        // transient peak is made of), top allocators written to `<device>-<run>-alloc.txt`.
+        const allocUntil = Number(arg("alloc", "0"));
+        if (allocUntil > 0) {
+            await cdp.send("HeapProfiler.enable");
+            await cdp.send("HeapProfiler.startSampling", {samplingInterval: 65536, includeObjectsCollectedByMajorGC: true, includeObjectsCollectedByMinorGC: true});
+            setTimeout(async () => {
+                try {
+                    const {profile} = await cdp.send("HeapProfiler.stopSampling");
+                    const self = new Map();
+                    const visit = (node, stack) => {
+                        const key = `${node.callFrame.functionName || "(anonymous)"} ${node.callFrame.url.split("/").pop()}:${node.callFrame.lineNumber + 1}`;
+                        const chain = [key, ...stack].slice(0, 4).join(" < ");
+                        if (node.selfSize) self.set(chain, (self.get(chain) ?? 0) + node.selfSize);
+                        for (const child of node.children ?? []) visit(child, [key, ...stack]);
+                    };
+                    visit(profile.head, []);
+                    const total = [...self.values()].reduce((a, b) => a + b, 0);
+                    const top = [...self.entries()].sort((a, b) => b[1] - a[1]).slice(0, 60).map(([key, bytes]) => `${(bytes / 2 ** 20).toFixed(1)} MB  ${key}`);
+                    writeFileSync(path.join(out, `${deviceName}-${run}-alloc.txt`), `allocated in the first ${allocUntil} s (sampled, garbage included): ${(total / 2 ** 20).toFixed(1)} MB\n${top.join("\n")}\n`);
+                } catch (error) {
+                    writeFileSync(path.join(out, `${deviceName}-${run}-alloc.txt`), `failed: ${error}\n`);
+                }
+            }, allocUntil * 1000);
+        }
         if (flag("profile")) {
             await cdp.send("Profiler.enable");
             await cdp.send("Profiler.setSamplingInterval", {interval: 500});
@@ -703,7 +730,9 @@ for (const deviceName of devices) {
             const top = [...self.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40).map(([key, ms]) => `${Math.round(ms)} ms  ${key}`);
             writeFileSync(path.join(out, `${deviceName}-${run}-self.txt`), top.join("\n") + "\n");
         }
-        if (measured.error) throw new Error(measured.error);
+        if (measured?.error) throw new Error(measured.error);
+        // (The measure page still running at its deadline, a loaded machine: say so, not a TypeError on its missing result.)
+        if (!measured?.result) throw new Error(`the measure page gave no result within ${seconds + 120} s (done: ${Boolean(measured?.done)})`);
         const tasks = await page.evaluate(() => window.__arkLongTasks ?? []);
         const frames = await page.evaluate(() => window.__arkLongFrames ?? []);
         const metrics = Object.fromEntries((await cdp.send("Performance.getMetrics").catch(() => ({metrics: []}))).metrics?.map((m) => [m.name, m.value]) ?? []);
@@ -759,6 +788,8 @@ for (const deviceName of devices) {
             triangles: r.stats?.triangles ?? null,
             runtime: r.runtime,
             prepared: r.prepared,
+            // (Islands mode: where the town was worked out, `worker` as in the app.)
+            townBuild: r.townBuild ?? null,
             animals: r.animals,
             tasks,
             longFrames: frames.filter((frame) => frame.blocking > 0 || frame.ms > 100).slice(0, 40),

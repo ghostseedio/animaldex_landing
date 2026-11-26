@@ -43,7 +43,9 @@ async function accessToken(account: ServiceAccount) {
         method: "POST",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: new URLSearchParams({grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: `${unsigned}.${signature}`}),
-        cache: "no-store"
+        cache: "no-store",
+        // A hung token exchange held up every Search Console caller with it.
+        signal: AbortSignal.timeout(10_000)
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body?.error_description ?? `Google token exchange returned ${response.status}`);
@@ -179,6 +181,9 @@ export type SearchPages = {pages: SearchPage[]; totals: {clicks: number; impress
 const pageCache = new Map<string, {at: number; value: SearchPages}>();
 
 /** Google search clicks and impressions per landing page for a date range, best first. */
+/** How long /admin/metrics waits for Search Console's page table. */
+export const SEARCH_PAGES_TIMEOUT_MS = 4_000;
+
 export async function loadSearchPages(startDate: string, endDate: string, limit = 25): Promise<SearchPages> {
     let account: ServiceAccount | null;
     try {
@@ -196,7 +201,9 @@ export async function loadSearchPages(startDate: string, endDate: string, limit 
             method: "POST",
             headers: {Authorization: `Bearer ${await accessToken(account)}`, "Content-Type": "application/json"},
             body: JSON.stringify({startDate, endDate, dimensions: ["page"], dataState: "all", rowLimit: 1000}),
-            cache: "no-store"
+            cache: "no-store",
+            // /admin/metrics waits on this; a slow Google answer becomes a note, not a slow page.
+            signal: AbortSignal.timeout(SEARCH_PAGES_TIMEOUT_MS)
         });
         const body = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(body?.error?.message ?? `Search Console returned ${response.status}`);
@@ -219,6 +226,8 @@ export async function loadSearchPages(startDate: string, endDate: string, limit 
         pageCache.set(key, {at: Date.now(), value});
         return value;
     } catch (error) {
-        return {pages: [], totals: {clicks: 0, impressions: 0}, note: `Search Console: ${error instanceof Error ? error.message : "unavailable"}`};
+        const timedOut = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+        const reason = timedOut ? "Google took too long to answer; reload in a minute" : error instanceof Error ? error.message : "unavailable";
+        return {pages: [], totals: {clicks: 0, impressions: 0}, note: `Search Console: ${reason}`};
     }
 }

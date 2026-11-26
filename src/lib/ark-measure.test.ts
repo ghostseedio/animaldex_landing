@@ -2,6 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {
     ARK_MEASURE_EVENTS,
+    arkDeviceOf,
     arkMeasureProps,
     arkMeasureRow,
     arkPageSource,
@@ -45,11 +46,39 @@ test("reports: the body the beacon sends, and the row it becomes", () => {
     assert.equal(normalizeArkMeasureReport({event: "ark_dance"}), null);
     assert.equal(normalizeArkMeasureReport({event: "ark_open", props: {source: "nope"}}), null);
     const report = normalizeArkMeasureReport({event: "ark_open", props: {source: "capture_band"}, signed_in: true});
-    assert.deepEqual(report, {event: "ark_open", props: {source: "capture_band"}, signedIn: true});
+    assert.deepEqual(report, {event: "ark_open", props: {source: "capture_band"}, signedIn: true, visitorId: null});
+    // Without the server's context: the row from before visitor ids, so a write still works before the migration.
     assert.deepEqual(arkMeasureRow(report!), {
         event: "ark_open", source: "capture_band", seconds: null, species_profile_id: null, is_mine: null,
         events_count: null, skipped: null, outcome: null, target: null, signed_in: true
     });
+});
+
+test("reports: the visitor id is a browser's random uuid or nothing; device and the operator mark come from the server", () => {
+    const visitor = "3F2B8C1A-9D4E-4F6A-8B7C-1D2E3F4A5B6C";
+    const report = normalizeArkMeasureReport({event: "ark_open", props: {source: "ark_page"}, visitor});
+    assert.equal(report!.visitorId, visitor.toLowerCase());
+    assert.equal(normalizeArkMeasureReport({event: "ark_open", props: {source: "ark_page"}, visitor: "lenny@example.com"})!.visitorId, null);
+    assert.equal(normalizeArkMeasureReport({event: "ark_open", props: {source: "ark_page"}, visitor: 42})!.visitorId, null);
+    // A body cannot claim to be the operator or name its own device.
+    const claimed = normalizeArkMeasureReport({event: "ark_open", props: {source: "ark_page"}, internal: false, device: "desktop"}) as Record<string, unknown>;
+    assert.equal("internal" in claimed, false);
+    assert.equal("device" in claimed, false);
+    const row = arkMeasureRow(report!, {device: "phone", internal: true});
+    assert.equal(row.visitor_id, visitor.toLowerCase());
+    assert.equal(row.device, "phone");
+    assert.equal(row.internal, true);
+});
+
+test("devices: phone, tablet or desktop from the user agent", () => {
+    assert.equal(arkDeviceOf("Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1"), "phone");
+    assert.equal(arkDeviceOf("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36"), "phone");
+    assert.equal(arkDeviceOf("Mozilla/5.0 (iPad; CPU OS 18_1 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1"), "tablet");
+    assert.equal(arkDeviceOf("Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 Chrome/131.0 Safari/537.36"), "tablet");
+    assert.equal(arkDeviceOf("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36"), "desktop");
+    assert.equal(arkDeviceOf("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15"), "desktop");
+    assert.equal(arkDeviceOf(""), null);
+    assert.equal(arkDeviceOf(null), null);
 });
 
 test("sources and outcomes", () => {
@@ -170,4 +199,51 @@ test("opens and time: by source, and the mean of the sessions that ended in the 
     assert.equal(week.taps, 1);
     assert.equal(week.replays, 1);
     assert.equal(summarizeArkMeasure(input({events: null})).weeks[2].avgSeconds, null);
+});
+
+test("audience: visitors and returning ones per browser id, the operator left out of everything", () => {
+    const a = id(101), b = id(102), me = id(103);
+    const open = (visitor: string | null, at: string, device: string | null, internal = false) =>
+        ({event: "ark_open", source: "ark_page", seconds: null, created_at: at, visitor_id: visitor, device, internal});
+    const summary = summarizeArkMeasure(input({
+        from: "2026-11-10",
+        to: "2026-11-20",
+        events: [
+            // a: two opens on two days (phone) → returning.
+            open(a, "2026-11-10T03:00:00Z", "phone"),
+            open(a, "2026-11-12T03:00:00Z", "phone"),
+            // b: two opens the same day (desktop) → one visitor, not returning.
+            open(b, "2026-11-11T03:00:00Z", "desktop"),
+            open(b, "2026-11-11T05:00:00Z", "desktop"),
+            // An open from before ids: an open, not a person.
+            open(null, "2026-11-11T06:00:00Z", null),
+            // The operator: none of it counts, opens or time.
+            open(me, "2026-11-11T07:00:00Z", "desktop", true),
+            {event: "ark_session_seconds", source: "ark_page", seconds: 600, created_at: "2026-11-11T07:10:00Z", visitor_id: me, device: "desktop", internal: true},
+            {event: "ark_session_seconds", source: "ark_page", seconds: 30, created_at: "2026-11-11T03:10:00Z", visitor_id: b, device: "desktop", internal: false}
+        ]
+    }));
+    assert.deepEqual(summary.audience, {
+        visitors: 2,
+        returning: 1,
+        byDevice: {phone: 1, tablet: 0, desktop: 1, unknown: 0},
+        opensWithoutVisitor: 1,
+        internalExcluded: 2
+    });
+    const week = summary.weeks.find((row) => row.key === "2026-11-09")!;
+    assert.equal(week.opensTotal, 5);
+    assert.equal(week.visitors, 2);
+    assert.equal(week.sessions, 1);
+    assert.equal(week.avgSeconds, 30);
+});
+
+test("audience: rows from before the migration (no visitor fields) still count as opens", () => {
+    const summary = summarizeArkMeasure(input({
+        from: "2026-11-10",
+        to: "2026-11-12",
+        events: [{event: "ark_open", source: "chat_panel", seconds: null, created_at: "2026-11-10T03:00:00Z"}]
+    }));
+    assert.equal(summary.audience.visitors, 0);
+    assert.equal(summary.audience.opensWithoutVisitor, 1);
+    assert.equal(summary.weeks.reduce((sum, row) => sum + row.opensTotal, 0), 1);
 });

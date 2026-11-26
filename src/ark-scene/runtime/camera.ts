@@ -263,8 +263,12 @@ export function sightExit(box: Box, p: Point, target: Point, margin: number): Po
     return {x: p.x + (target.x - p.x) * k, y: p.y + (target.y - p.y) * k, z: p.z + (target.z - p.z) * k};
 }
 
-/** The nearest the eye is brought to its target by `sightExit` (m): nearer than this, the box pushes by its nearest face. */
-const SIGHT_NEAREST = 2.5;
+/**
+ * The nearest the eye is brought to its target by `sightExit` (m): nearer than this, the box pushes by its nearest face.
+ * (It was 2.5: a cat on the lawn 1.6 m in front of a bay window, the eye orbiting into the bay was pushed back out by
+ * its side and held there, the bay's flank filling the view; it now comes through to the bay's near side.)
+ */
+const SIGHT_NEAREST = 1.5;
 
 /** A view of something: how far from it, the angle from straight above, the bearing (three's Spherical about the target). */
 export type CloseView = {distance: number; polar: number; azimuth: number};
@@ -347,7 +351,16 @@ export function collideCamera(obstacles: CameraObstacles, camera: Vector3, targe
             if (obstacle.kind === "box" && obstacle.sight) {
                 // A building of the town: toward what the eye looks at, gliding (about a quarter of a second), so the
                 // view comes through the wall to its near side instead of cutting there.
-                const out = sightExit(obstacle, camera, target, margin);
+                let out = sightExit(obstacle, camera, target, margin);
+                // On through any other building box the line meets on its way out (a porch or a bay in front of the
+                // wall): out of them all, not into the next, where the two pushed the eye to and fro and it rested in the wall.
+                for (let hop = 0; out && hop < 4; hop++) {
+                    const from: Point = out;
+                    const next = obstacles.near(from.x, from.z).find((other) => other !== obstacle && other.kind === "box" && other.sight && !inside(other, target, 0.05) && inside(other, from, margin));
+                    if (!next || next.kind !== "box") break;
+                    out = sightExit(next, from, target, margin) ?? out;
+                    if (out === from) break;
+                }
                 if (out && Math.hypot(out.x - target.x, out.y - target.y, out.z - target.z) >= SIGHT_NEAREST) {
                     const glide = ease(options.dt, 0.08);
                     camera.x += (out.x - camera.x) * glide;
@@ -362,8 +375,140 @@ export function collideCamera(obstacles: CameraObstacles, camera: Vector3, targe
             camera.z += hit.nz * hit.depth * k;
         }
     }
+    if (!options.closeUp) {
+        unstick(obstacles, camera, target, margin, options.ground ?? heightAt);
+        liftForSight(obstacles, camera, target, options.dt, margin, options.ground ?? heightAt);
+    }
     return Math.hypot(camera.x - start.x, camera.y - start.y, camera.z - start.z);
 }
+
+/** The town's building boxes (`sight`) a point is inside, grown by `grow`; not those the target is inside. */
+function buildingsHolding(obstacles: CameraObstacles, p: Point, target: Point, grow: number): Box[] {
+    const held: Box[] = [];
+    for (const o of obstacles.near(p.x, p.z)) if (o.kind === "box" && o.sight && inside(o, p, grow) && !inside(o, target, 0.05)) held.push(o);
+    return held;
+}
+
+/**
+ * Still inside a building's box after both passes and in another's margin too (a porch in front of the wall: each box
+ * pushed the eye out of itself into the other's margin, to and fro, and it came to rest in the wall): straight out to
+ * the nearest point, past a side or over the top `margin` off or just under it (a balcony's slab, a shop's canopy:
+ * boxes keep no margin below), over the ground, that is inside none of them.
+ */
+function unstick(obstacles: CameraObstacles, camera: Vector3, target: Point, margin: number, groundAt: (x: number, z: number) => number) {
+    const held = buildingsHolding(obstacles, camera, target, 0);
+    // (Inside one alone, it is on its way out: the glide toward the target, `sightExit`, is the design.)
+    if (!held.length || buildingsHolding(obstacles, camera, target, margin + 0.02).length < 2) return;
+    let best: Point | null = null;
+    let bestD = Infinity;
+    const off = margin + 0.01;
+    for (const box of held) {
+        const cos = Math.cos(box.rotation);
+        const sin = Math.sin(box.rotation);
+        const dx = camera.x - box.x;
+        const dz = camera.z - box.z;
+        const lx = dx * cos - dz * sin;
+        const lz = dx * sin + dz * cos;
+        // (Back from the box's frame: the inverse turn.)
+        const back = (x: number, z: number, y: number): Point => ({x: box.x + x * cos + z * sin, y, z: box.z - x * sin + z * cos});
+        for (const p of [back(box.hx + off, lz, camera.y), back(-box.hx - off, lz, camera.y), back(lx, box.hz + off, camera.y), back(lx, -box.hz - off, camera.y), back(lx, lz, box.y1 + off), back(lx, lz, box.y0 - 0.01)]) {
+            const d = Math.hypot(p.x - camera.x, p.y - camera.y, p.z - camera.z);
+            if (d < bestD && p.y > Math.max(groundAt(p.x, p.z), 0) + 0.03 && !buildingsHolding(obstacles, p, target, 0).length) {
+                best = p;
+                bestD = d;
+            }
+        }
+    }
+    if (best) camera.set(best.x, best.y, best.z);
+}
+
+/** How near the eye a building must be to be lifted over for the view (m): one it was pushed against, not a street away. */
+const SIGHT_LIFT_WITHIN = 2;
+/** The highest the lift takes the eye (the controls' own least polar angle, rad from straight up). */
+const SIGHT_LIFT_TOP = 0.12;
+
+/** Where the line from `p` to `q` passes through `box` as drawn (no margin), away from its ends: its share in and out, or null. */
+function crosses(box: Box, p: Point, q: Point): [number, number] | null {
+    const cos = Math.cos(box.rotation);
+    const sin = Math.sin(box.rotation);
+    const local = (r: Point) => {
+        const dx = r.x - box.x;
+        const dz = r.z - box.z;
+        return {x: dx * cos - dz * sin, y: r.y, z: dx * sin + dz * cos};
+    };
+    const a = local(p);
+    const b = local(q);
+    let t0 = 0.02;
+    let t1 = 0.98;
+    for (const [from, to, low, high] of [[a.x, b.x, -box.hx, box.hx], [a.y, b.y, box.y0, box.y1], [a.z, b.z, -box.hz, box.hz]] as const) {
+        const d = to - from;
+        if (Math.abs(d) < 1e-9) {
+            if (from <= low || from >= high) return null;
+            continue;
+        }
+        let u0 = (low - from) / d;
+        let u1 = (high - from) / d;
+        if (u0 > u1) [u0, u1] = [u1, u0];
+        t0 = Math.max(t0, u0);
+        t1 = Math.min(t1, u1);
+        if (t0 >= t1) return null;
+    }
+    return [t0, t1];
+}
+
+/**
+ * The eye pushed against a building with that building between it and what it looks at (an animal by a bay window,
+ * the eye held by the bay's side: the view all wall): up round the target, at the same distance, to the lowest angle
+ * from which the line is clear, gliding (about a tenth of a second), the way a person steps back and looks over.
+ * Only a building within `SIGHT_LIFT_WITHIN` of the eye: a house a street away between the view and an animal stays.
+ */
+function liftForSight(obstacles: CameraObstacles, camera: Vector3, target: Point, dt: number, margin: number, groundAt: (x: number, z: number) => number) {
+    const near: Box[] = [];
+    for (const at of [camera, target]) for (const o of obstacles.near(at.x, at.z)) if (o.kind === "box" && o.sight && !near.includes(o) && !inside(o, target, 0.05)) near.push(o);
+    if (!near.length) return;
+    const blocked = (eye: Point) => {
+        for (const box of near) if (inside(box, eye, SIGHT_LIFT_WITHIN) && crosses(box, eye, target)) return true;
+        return false;
+    };
+    const glide = (p: Point) => {
+        const k = ease(dt, 0.1);
+        camera.set(camera.x + (p.x - camera.x) * k, camera.y + (p.y - camera.y) * k, camera.z + (p.z - camera.z) * k);
+    };
+    // (Inside one, it is on its way out toward the target: `sightExit`'s glide.)
+    if (near.some((box) => inside(box, camera, 0)) || !blocked(camera)) return;
+    const dx = camera.x - target.x;
+    const dy = camera.y - target.y;
+    const dz = camera.z - target.z;
+    const r = Math.hypot(dx, dy, dz);
+    if (r < 1e-3) return;
+    const theta = Math.atan2(dx, dz);
+    const phi = Math.acos(Math.min(Math.max(dy / r, -1), 1));
+    for (let up = phi - 0.05; up >= SIGHT_LIFT_TOP - 1e-9; up -= 0.05) {
+        const p = {x: target.x + r * Math.sin(up) * Math.sin(theta), y: target.y + r * Math.cos(up), z: target.z + r * Math.sin(up) * Math.cos(theta)};
+        if (p.y < Math.max(groundAt(p.x, p.z), 0) + 0.03 || blocked(p)) continue;
+        let clear = true;
+        // (Clear of each building by a little: the collision's margin may then ease it the rest of the way out.)
+        for (const box of near) if (inside(box, p, 0.1)) clear = false;
+        if (!clear) continue;
+        glide(p);
+        return;
+    }
+    // No angle over it from here (an alley between two houses, the animal just behind one): along the line to the
+    // building's far side, `margin` past it, as the eye comes through a wall it is inside (`sightExit`), when that is
+    // still SIGHT_CLOSEST off the target and in nothing.
+    let out = 0;
+    for (const box of near) {
+        const span = inside(box, camera, SIGHT_LIFT_WITHIN) ? crosses(box, camera, target) : null;
+        if (span) out = Math.max(out, span[1]);
+    }
+    const k = Math.min(out + margin / r, 1);
+    const p = {x: camera.x + (target.x - camera.x) * k, y: camera.y + (target.y - camera.y) * k, z: camera.z + (target.z - camera.z) * k};
+    if (r * (1 - k) < SIGHT_CLOSEST || near.some((box) => inside(box, p, margin * 0.5)) || blocked(p)) return;
+    glide(p);
+}
+
+/** The nearest the eye comes to its target past a building that hides it (m). */
+const SIGHT_CLOSEST = 0.6;
 
 /** The share of a gap closed in `dt` seconds by an exponential approach with time constant `tau` (1 when dt is 0: snap). */
 export function ease(dt: number, tau: number): number {

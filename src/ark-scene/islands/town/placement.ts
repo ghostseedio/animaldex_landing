@@ -35,9 +35,12 @@ import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
 import {corners, inBox, sub, toLocal, type Box} from "@/ark-scene/islands/town/geom";
+import {bodyClear as standsClear, inKeep, keepBoxOf, keepGive, pushOut, type KeepBox, type ResolveBody} from "@/ark-scene/collide/resolve";
+import type {ColliderSet} from "@/ark-scene/collide/colliders";
 import {aquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townWetlandOf} from "@/ark-scene/islands/town/wetland";
+import {raisedPool, raisedPoolDistance, RAISED_POOL_WATER} from "@/ark-scene/islands/town/raised-pool";
 import {gardenRoomOf, homeIndoors, roomCell, towerApartments, type IndoorPlace, type OutdoorPet} from "@/ark-scene/islands/town/home-rooms";
 
 /** The town's facts about a placed animal: its area, the spot's kind, the home, farm or enclosure, and its bounds. */
@@ -463,6 +466,10 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         // gfx (PLACE): inside its pen, its body clear of the rails (then clear of any building again, the pen's inside).
         if (info.pen) at = inPen(info.pen, info.penMargin ?? 0, at.x, at.z, length);
         else if (info.enclosureMargin !== undefined && info.enclosure) at = keepInside(maskBox(info.enclosure.mask), at.x, at.z, info.enclosureMargin);
+        // p3 (solid): a walker's body out of its enclosure's raised pool and its rim (its swimmers are on the water).
+        if (!held && base.where !== "pool" && info.enclosure) at = offRaisedPool(info.enclosure, at, drawnLength(animal, length), bound);
+        // (And a swimmer's step off its pool spot kept on the pool's water, never on the ground beside it at the water's height.)
+        else if (!held && base.where === "pool" && info.enclosure && raisedPool(info.enclosure)) at = inside(info.enclosure.pool, at.x, at.z, base.x, base.z);
         // (In the town every water is above the sea: a pool, the canal, a pond. The scene's water pose works from the sea's
         // level, so a swimmer here floats at its spot's surface, on its own ground: `water` stays false.)
         // (A raised pool's water is 0.45 m over the highest ground at its rim: a swimmer floats there, not under the rim.)
@@ -473,7 +480,7 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
             const kept = domeKeep(at.x, at.z, 0, 0, Math.min(length * 0.5, 2));
             at = base.where === "pool" ? intoLagoon(kept.x, kept.z) : {x: kept.x, z: kept.z};
         }
-        const pool = base.where === "pool" && info.enclosure?.pool ? (inDomeHost ? safariWaterLevel(DOME_LAGOON) : Math.max(...info.enclosure.pool.map((q) => townHeight(q.x, q.z))) + 0.45) : null;
+        const pool = base.where === "pool" && info.enclosure?.pool ? (inDomeHost ? safariWaterLevel(DOME_LAGOON) : Math.max(...info.enclosure.pool.map((q) => townHeight(q.x, q.z))) + RAISED_POOL_WATER) : null;
         const placement: Placement = {x: at.x, z: at.z, ground: pool ?? base.y, yaw: held ? held.yaw : yaw, water: false, sea: false};
         fresh.push({animal, memoKey, placement, info, rank, length});
         void WATER_WHERE;
@@ -681,6 +688,9 @@ function spreadZoo(animals: readonly ArkAnimal[], places: Map<string, Placement>
                 const kept = domeKeep(best.x, best.z, 0, 0, Math.min(f.length * 0.5, 2));
                 best = {x: kept.x, z: kept.z, room: best.room};
             }
+            // (p3 (solid): never spread into its enclosure's raised pool.)
+            const off = offRaisedPool(host, best, drawnLength(f.animal, f.length), frame ? null : host.mask);
+            best = {x: off.x, z: off.z, room: best.room};
             if (best.x !== f.placement.x || best.z !== f.placement.z) {
                 f.placement.x = best.x;
                 f.placement.z = best.z;
@@ -690,6 +700,45 @@ function spreadZoo(animals: readonly ArkAnimal[], places: Map<string, Placement>
         }
         group.push({x: f.placement.x, z: f.placement.z, length: f.length});
     }
+}
+
+/** Its body's length as drawn (m: its model's display size), at least its stats' (`placement`'s `length`). */
+function drawnLength(animal: ArkAnimal, length: number): number {
+    return Math.max(arkBody(animal, modelBase(animal.model_slug)?.plan ?? null).display, length);
+}
+
+/**
+ * p3 (solid): a walker's place out of its enclosure's raised pool (`raised-pool.ts`): its body clear of the rim's outside,
+ * the nearest such point inside its bound (`clearWithin`'s rings); unmoved where it is clear, or where there is no pool.
+ */
+function offRaisedPool(enclosure: Pick<ZooEnclosure, "id" | "pool" | "slot">, at: {x: number; z: number}, drawn: number, bound: Poly | null): {x: number; z: number} {
+    const pool = raisedPool(enclosure);
+    const radius = bodyClear(drawn);
+    if (!pool || raisedPoolDistance(pool, at.x, at.z) >= radius) return at;
+    // (Out through the nearest of its four sides, a hair past the body's clearance, else the next nearest inside the bound:
+    // a big pool (the penguins') is wider than `clearWithin`'s 3 m of rings.)
+    const c = Math.cos(pool.rot);
+    const n = Math.sin(pool.rot);
+    const dx = at.x - pool.x;
+    const dz = at.z - pool.z;
+    const lx = dx * c + dz * n;
+    const lz = -dx * n + dz * c;
+    const out = radius + 0.02;
+    const sides: Array<[number, number, number]> = [
+        [pool.hw + out, lz, pool.hw - lx],
+        [-pool.hw - out, lz, pool.hw + lx],
+        [lx, pool.hd + out, pool.hd - lz],
+        [lx, -pool.hd - out, pool.hd + lz]
+    ];
+    sides.sort((a, b) => a[2] - b[2]);
+    for (const [ux, uz] of sides) {
+        const x = pool.x + ux * c - uz * n;
+        const z = pool.z + ux * n + uz * c;
+        if (!bound || inPoly(bound, x, z)) return {x, z};
+    }
+    const p = {x: at.x, z: at.z};
+    clearWithin(p, radius, {blocked: (x, z, r) => raisedPoolDistance(pool, x, z) < r}, (x, z) => !bound || inPoly(bound, x, z));
+    return p;
 }
 
 let domeFloorMemo: number | null = null;
@@ -834,7 +883,7 @@ export function zooMargin(mask: Poly, length: number): number {
  * the pen (a garden room, a trough, a bush by the rails) goes on to the nearest point in the pen a body of `margin`'s
  * width stands clear at (rings a quarter metre apart, the same for every viewer); none within 3 m: where the rails put it.
  */
-export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}, ox = 0, oz = 0, solid?: {blocked: (x: number, z: number, radius: number) => boolean} | null): void {
+export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}, ox = 0, oz = 0, solid?: {blocked: (x: number, z: number, radius: number) => boolean} | null, body?: PenBody | null): void {
     const c = Math.cos(pen.rot);
     const s = Math.sin(pen.rot);
     const dx = pose.x - ox - pen.x;
@@ -843,17 +892,49 @@ export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}
     const lz = -dx * s + dz * c;
     const hx = Math.max(pen.w / 2 - margin, 0);
     const hz = Math.max(pen.d / 2 - margin, 0);
-    if (Math.abs(lx) <= hx && Math.abs(lz) <= hz) return;
+    // (A micrometre's give: the collisions' answer on the inset itself, `collide/resolve.ts` intoKeep, is kept as it is.)
+    if (Math.abs(lx) <= hx + 1e-6 && Math.abs(lz) <= hz + 1e-6) return;
+    // Lane PENKEEP: and theirs for a body wedged by the rails against something in the pen: within the keep's give, clear.
+    if (body && solid && "near" in solid && "distance" in solid) {
+        const keep = penKeep(pen, margin, ox, oz);
+        if (inKeep(keep, pose.x, pose.z, keepGive(keep, body)) && standsClear(solid as ColliderSet, body, {x: pose.x, y: body.y ?? -Infinity, z: pose.z, yaw: body.yaw, aloft: false}, pose.x, pose.z)) return;
+    }
     const qx = Math.min(Math.max(lx, -hx), hx);
     const qz = Math.min(Math.max(lz, -hz), hz);
     pose.x = ox + pen.x + qx * c - qz * s;
     pose.z = oz + pen.z + qx * s + qz * c;
     if (!solid) return;
+    // Lane PENKEEP (2026-11-24): with its body, off what stands in the pen as the collisions put it off (`pushOut`, its
+    // capsule as it faces, inside the same keep box), not by a circle of the margin's width (1.65 m round a horse: no
+    // point by a paddock's trough was clear of it, and the nearest that was swapped sides, 5 m across the trough in a frame).
+    if (body && "near" in solid && "distance" in solid) {
+        const out = pushOut(solid as ColliderSet, body, {x: pose.x, y: body.y ?? -Infinity, z: pose.z, yaw: body.yaw, aloft: false}, penKeep(pen, margin, ox, oz));
+        pose.x = out.x;
+        pose.z = out.z;
+        return;
+    }
     clearWithin(pose, Math.min(Math.max(margin - 0.15, 0.05), 1.8), solid, (x, z) => {
         const ex = x - ox - pen.x;
         const ez = z - oz - pen.z;
         return Math.abs(ex * c + ez * s) <= hx + 1e-6 && Math.abs(-ex * s + ez * c) <= hz + 1e-6;
     });
+}
+
+/** A body for a pen's bound (`keepInPen`): the collisions' body (`collide/bodies.ts`), the way it faces and its feet's height. */
+export type PenBody = ResolveBody & {yaw: number; y?: number};
+
+const PEN_KEEPS = new WeakMap<Box, Map<string, KeepBox>>();
+/**
+ * Lane PENKEEP: a pen's keep box (`collide/resolve.ts` KeepBox: the pen, `margin` in from its rails, world frame with the
+ * island at `ox`, `oz`), one object per pen and margin, for the collisions (`CollideHooks.keep`) and the bound alike.
+ */
+export function penKeep(pen: Box, margin: number, ox = 0, oz = 0): KeepBox {
+    let byMargin = PEN_KEEPS.get(pen);
+    if (!byMargin) PEN_KEEPS.set(pen, (byMargin = new Map()));
+    const key = `${margin},${ox},${oz}`;
+    let k = byMargin.get(key);
+    if (!k) byMargin.set(key, (k = keepBoxOf(pen, margin, ox, oz)));
+    return k;
 }
 
 /**

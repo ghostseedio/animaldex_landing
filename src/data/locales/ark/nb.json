@@ -491,7 +491,15 @@
             "cycleCount": "{n} av {total}",
             "caredOwner": "Stelt av eieren sin",
             "caredFarmer": "Stelt av bonden",
-            "caredKeeper": "Stelt av en dyrepasser"
+            "caredKeeper": "Stelt av en dyrepasser",
+            "eatSoon": "Sjanse for et bytte i løpet av neste Ark-dag",
+            "eatSoonChance": "{percent} sjanse for et bytte i løpet av neste Ark-dag",
+            "eatSoonHunting": "Jakter nå",
+            "eatSoonLater": "Jakter igjen om omtrent {time}",
+            "eatSoonDormant": "I dvale: spiser ikke",
+            "eatSoonKept": "Fôres av dem som steller det",
+            "eatSoonDaily": "Spiser hver dag",
+            "eatSoonShort": "Det er lite mat her"
         },
         "grew": {
             "line": "Ble sterkere: {stat} +{n} · {cause}",

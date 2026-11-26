@@ -11,6 +11,7 @@ import {townBuildData} from "@/ark-scene/islands/town/render/index";
 import {placeTownAnimals} from "@/ark-scene/islands/town/placement";
 import {townSamplerData} from "@/ark-scene/islands/town/sampler";
 import {townColliderList} from "@/ark-scene/islands/town/colliders";
+import {townBuildingCamera} from "@/ark-scene/islands/town/render/building-parts";
 import {packTownBuild, type TownPrebuild, type TownPrebuildRequest} from "@/ark-scene/islands/town/prebuild";
 
 const scope = self as unknown as {onmessage: ((event: MessageEvent<TownPrebuildRequest | {type: "send"}>) => void) | null; postMessage: (data: unknown, transfer?: Transferable[]) => void};
@@ -34,7 +35,7 @@ scope.onmessage = (event) => {
     asked = !request.hold;
     try {
         const started = performance.now();
-        // Each step's time (ms): the plan, areas, ground grid, scenery, buildings, zoo, places, behaviour raster, colliders.
+        // Each step's time (ms): the plan, areas, ground grid, scenery, buildings, zoo, places, behaviour raster, colliders, camera parts.
         const steps: Record<string, number> = {};
         let mark = started;
         const took = (name: string) => {
@@ -55,6 +56,9 @@ scope.onmessage = (event) => {
         took("raster");
         const colliders = townColliderList(placed.open, origin);
         took("colliders");
+        // The parts of the buildings that stick out of their footprints (bays, porches, steps), for the camera.
+        const cameraParts = townBuildingCamera();
+        took("cameraParts");
         const transfer = packTownBuild(built);
         transfer.push(sampler.solid.buffer as ArrayBuffer);
         took("pack");
@@ -65,6 +69,7 @@ scope.onmessage = (event) => {
             placed: {places: Array.from(placed.places.entries()), town: Array.from(placed.town.entries()), open: placed.open},
             sampler,
             colliders,
+            cameraParts,
             ms: Math.round(performance.now() - started),
             steps
         };

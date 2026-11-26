@@ -181,6 +181,8 @@ export function ledge(geo: Geo, plot: Plot, lx: number, lz: number, size: number
  */
 export function patch(geo: Geo, plot: Plot, lx: number, lz: number, radius: number, colour: RGB, seed: number, lift = 0.012, walk = false) {
     const r = rng(seed);
+    // (SIG4: a patch drawn in a solid is ground, `Geo.sheets`: its triangles from here to the end.)
+    const from = geo.triangles;
     const n = 16;
     const phase = [r() * 6.28, r() * 6.28, r() * 6.28];
     // The outline's radius at an angle: 1 ± 0.3 at most, smooth (2, 3 and 5 lobes).
@@ -249,12 +251,15 @@ export function patch(geo: Geo, plot: Plot, lx: number, lz: number, radius: numb
         const g = 0.86 + 0.14 * r();
         geo.tri(corner(0), corner(2), corner(1), [colour[0] * g, colour[1] * g, colour[2] * g]);
     }
+    if (geo.sheets && geo.triangles > from) geo.sheets.push(from, geo.triangles);
 }
 
 /** A clump of grass: thin blades fanned out from a point. */
 export function tuft(geo: Geo, plot: Plot, lx: number, lz: number, height: number, colour: RGB, seed: number, blades = 7) {
     const r = rng(seed);
     const base = plot.p(lx, lz, 0);
+    // (SIG4: blades are open sheets, not a solid a body could be inside: `Geo.sheets`, as a patch's.)
+    const from = geo.triangles;
     for (let i = 0; i < blades; i++) {
         const a = r() * Math.PI * 2;
         const lean = 0.15 + r() * 0.35;
@@ -266,6 +271,7 @@ export function tuft(geo: Geo, plot: Plot, lx: number, lz: number, height: numbe
         const k = 0.85 + r() * 0.3;
         both(geo, [base[0] - cx, base[1], base[2] - cz], [base[0] + cx, base[1], base[2] + cz], tip, [colour[0] * k, colour[1] * k, colour[2] * k]);
     }
+    if (geo.sheets && geo.triangles > from) geo.sheets.push(from, geo.triangles);
 }
 
 /** A broad-leaved plant (a fern, a ginger, a young banana): long leaves arching out of a crown. */

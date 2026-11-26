@@ -24,6 +24,7 @@ import {TOWN_CHUNK_COUNT, TOWN_GRID} from "@/ark-scene/islands/town/chunks";
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
 import type {ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
+import type {KeepBox, ResolveBody} from "@/ark-scene/collide/resolve";
 import type {TownPrepared} from "@/ark-scene/islands/town/prebuild";
 import type {TownIsland} from "@/ark-scene/islands/town/render/index";
 import type {WaterSpec} from "@/ark-scene/sea-depth";
@@ -117,7 +118,19 @@ export type ArkIslandScene = {
      * scheduled pose under the drawn ground where no water is (a drink at the canal's walled edge, a swim by its wall)
      * stands on the ground there instead, never in it.
      */
-    bound: (id: string, pose: {x: number; z: number; base?: number; afloat?: boolean; water?: unknown; surface?: unknown}) => void;
+    bound: (id: string, pose: {x: number; z: number; base?: number; afloat?: boolean; water?: unknown; surface?: unknown; yaw?: number}, body?: ResolveBody | null) => void;
+    /**
+     * Lane PENKEEP: a penned animal's keep box (its pen or its enclosure's box, its margin in from the rails, world frame),
+     * the very box its bound holds it to, for the collisions (`CollideHooks.keep`); null when it has none.
+     */
+    keep?: (id: string) => KeepBox | null;
+    /**
+     * Lane ZOOSLEEP: a zoo resident's own bed in its enclosure (world frame, and the way it lies), handed out with all
+     * its enclosure's others (`islands/town/zoo-beds.ts`); null when it has none and picks its own.
+     */
+    bed?: (id: string) => {x: number; z: number; heading: number} | null;
+    /** Lane ZOOSLEEP: the others kept outdoors in a zoo resident's enclosure (ids), whose beds its goals keep off. */
+    mates?: (id: string) => readonly string[];
     /** Its behaviour world in the world frame (`islands/town/sampler.ts`): places, ground, walk grid, obstacles. */
     sampler: () => ArkWorldSampler;
     /** Its colliders in the world frame (`islands/town/colliders.ts`, through L5's `collide/` per island). */
@@ -231,7 +244,7 @@ export function nextTask(): Promise<void> {
  */
 export async function loadTownScene(options: {tier: "high" | "medium" | "low"; animals: readonly ArkAnimal[]; offsetHours?: number; origin?: {x: number; z: number}; prepared?: TownPrepared | null; sliceMs?: number; between?: "idle" | "task"}): Promise<ArkIslandScene> {
     const pause = options.between === "task" ? nextTask : idle;
-    const [{townIslandSteps}, {townClockAt}, {placeTownAnimals, keepInPen, keepInDome, clearWithin, maskBox}, {enclosuresIn, launchEnclosures, zooLayout}, {inPoly, centroid}, {townWorldSampler}, {buildZooLife}, {residentFeeding, zooRhythm, feedingHome}, {SLOT_SECONDS, slotOffset}, {townHeight}] = await Promise.all([
+    const [{townIslandSteps}, {townClockAt}, {placeTownAnimals, keepInPen, keepInDome, clearWithin, maskBox, penKeep}, {enclosuresIn, launchEnclosures, zooLayout}, {inPoly, centroid}, {townWorldSampler}, {buildZooLife}, {residentFeeding, zooRhythm, feedingHome}, {SLOT_SECONDS, slotOffset}, {townHeight}] = await Promise.all([
         import("@/ark-scene/islands/town/render/index"),
         import("@/ark-scene/islands/town/people"),
         import("@/ark-scene/islands/town/placement"),
@@ -244,6 +257,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         import("@/ark-scene/islands/town/ground")
     ]);
     const {townColliderSet} = await import("@/ark-scene/islands/town/colliders");
+    const {townZooBeds} = await import("@/ark-scene/islands/town/zoo-beds");
+    const {buildSolidProxies} = await import("@/ark-scene/islands/town/render/solid-proxies");
     const {primeTownDrawnGrid, setTownWalkSurfaces, townDrawnGround, townDrawnHeight, townStillWater, townWalkSurfaces, townWaterLevel, townWaterSurface} = await import("@/ark-scene/islands/town/drawn-ground");
     const {setIslandWater} = await import("@/ark-scene/water-level");
     const {homeSites, tankPose, tankBody} = await import("@/ark-scene/islands/town/tanks");
@@ -254,6 +269,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const {modelBase} = await import("@/ark-scene/grounding/base");
     const {sampleTownGround} = await import("@/ark-scene/islands/town/ground");
     const {CANAL_LEVEL, townPlan} = await import("@/ark-scene/islands/town/plan");
+    const {buildingCameraBoxes} = await import("@/ark-scene/islands/town/render/building-parts");
     const [{zooSleepFrame, zooSwingFrame}, {hallClimbs}] = await Promise.all([import("@/ark-scene/islands/town/zoo-swing"), import("@/ark-scene/islands/town/render/zoo-houses")]); // ARK-JUNGLE
     const origin = options.origin ?? townWorldOrigin();
     let eaveDraw: ((x: number, y: number, z: number) => {x: number; y: number; z: number} | null) | null = null;
@@ -429,8 +445,26 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     };
     let sampler: {key: string; sampler: ArkWorldSampler} | null = null;
     let collidersMemo: {key: string; set: ColliderSet} | null = null;
+    let matesMemo: {places: Map<string, TownPlace>; by: Map<string, string[]>} | null = null;
+    let bedsMemo: {places: Map<string, TownPlace>; set: ColliderSet; beds: Map<string, {x: number; z: number; heading: number}>} | null = null;
+    // SIG4: the town's solid scenery as invisible prisms for the seat pass (its drawn meshes let their arrays go), made
+    // from the colliders whenever they are made again (`render/solid-proxies.ts`).
+    let solidProxies: ReturnType<typeof buildSolidProxies> | null = null;
+    const collidersNow = (): ColliderSet => {
+        if (!collidersMemo || collidersMemo.key !== openKey) {
+            collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin, openKey === preparedKey ? prepared?.colliders ?? undefined : undefined)};
+            if (solidProxies) town.root.remove(solidProxies.group);
+            solidProxies?.dispose();
+            solidProxies = buildSolidProxies(collidersMemo.set.list, origin);
+            town.root.add(solidProxies.group);
+            solidProxies.group.updateMatrixWorld(true);
+        }
+        return collidersMemo.set;
+    };
     /** p3 (solid): a zoo resident's body radius, for its bound (`clearWithin`). */
     const boundRadius = new Map<string, number>();
+    /** Lane PENKEEP: the collisions' body as the pose faces, its feet at the pose's base (none without a body or a heading). */
+    const penBody = (pose: {base?: number; yaw?: number}, body: ResolveBody | null | undefined) => (body && pose.yaw !== undefined ? {...body, yaw: pose.yaw, y: pose.base} : null);
     const STILL_WHERE = new Set(["window", "indoor", "pool"]);
     const half = def.half;
     return {
@@ -443,11 +477,9 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         drawnMask,
         contains: (x, z) => Math.abs(x - origin.x) <= half && Math.abs(z - origin.z) <= half,
         // (The town's boxes turn the other way round from the camera's: `geom.ts` toLocal against `camera.ts` penetration.)
-        cameraObstacles: () =>
-            townPlan().buildings.filter((building) => building.top > 1.2).map((building) => {
-                const ground = town.heightAt(building.at.x, building.at.z);
-                return {kind: "box" as const, x: origin.x + building.at.x, z: origin.z + building.at.z, y0: ground - 1, y1: ground + building.top, hx: building.at.w / 2, hz: building.at.d / 2, rotation: -building.at.rot, sight: true};
-            }),
+        // Each building's footprint, and the parts of it that stick out (a bay, a porch, a step, the eaves: drawn by
+        // `buildings.ts` and boxed from that drawing, `render/building-parts.ts`), so the eye stays out of a bay too.
+        cameraObstacles: () => buildingCameraBoxes(origin, (x, z) => town.heightAt(x, z), prepared?.cameraParts ?? undefined),
         heightAt: (x, z) => town.heightAt(x - origin.x, z - origin.z),
         drawnHeight: (x, z, near) => townDrawnHeight(x - origin.x, z - origin.z, undefined, near),
         drawnEave: (x, y, z) => {
@@ -588,7 +620,36 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             peopleRooms = next;
             showPetHomes(lastPlaces);
         },
-        bound: (id, pose) => {
+        mates: (id) => {
+            const e = towned.get(id)?.enclosure;
+            const info = towned.get(id);
+            if (!e || info?.area !== "zoo" || info.enclosureMargin === undefined) return [];
+            if (!matesMemo || matesMemo.places !== towned) matesMemo = {places: towned, by: new Map()};
+            let list = matesMemo.by.get(e.id);
+            if (!list) {
+                list = [];
+                for (const [other, o] of Array.from(towned)) if (o.area === "zoo" && o.enclosure?.id === e.id && o.enclosureMargin !== undefined && !o.still) list.push(other);
+                matesMemo.by.set(e.id, list);
+            }
+            return list;
+        },
+        bed: (id) => {
+            // (Every bed at once, for the placement and the colliders they were handed out with.)
+            const set = collidersNow();
+            if (!bedsMemo || bedsMemo.places !== towned || bedsMemo.set !== set) {
+                const list: Array<{id: string; model_slug: string; length: number}> = [];
+                townAnimals.forEach((animal, aid) => list.push({id: aid, model_slug: animal.model_slug, length: displayLength(animal)}));
+                bedsMemo = {places: towned, set, beds: townZooBeds(towned, list, set, origin.x, origin.z)};
+            }
+            return bedsMemo.beds.get(id) ?? null;
+        },
+        keep: (id) => {
+            const info = towned.get(id);
+            if (info?.pen) return penKeep(info.pen, info.penMargin ?? 0, origin.x, origin.z);
+            const mask = info?.enclosure?.mask;
+            return mask && info!.enclosureMargin !== undefined ? penKeep(maskBox(mask), info!.enclosureMargin, origin.x, origin.z) : null;
+        },
+        bound: (id, pose, body) => {
             if (pose.base !== undefined && !pose.water && !pose.surface) {
                 const lx = pose.x - origin.x;
                 const lz = pose.z - origin.z;
@@ -604,7 +665,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const pen = towned.get(id)?.pen;
             if (pen) {
                 // p3 (solid): and off what stands in the pen (a garden room, a trough, a bush), the town's colliders.
-                keepInPen(pen, towned.get(id)!.penMargin ?? 0, pose, origin.x, origin.z, collidersMemo?.set);
+                // (Lane PENKEEP: with the collisions' body, so the bound keeps clear as they do and finds their answer kept.)
+                keepInPen(pen, towned.get(id)!.penMargin ?? 0, pose, origin.x, origin.z, collidersMemo?.set, penBody(pose, body));
                 // p5 (rural): a countryside hen to her hen house at dusk, shut in until the morning (`rural.ts` coopPose).
                 const coop = coopPose(towned.get(id)!.place, id, hoursNow, pose.x - origin.x, pose.z - origin.z);
                 if (coop) {
@@ -619,7 +681,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             // p4 (zoolive): an outdoor resident's whole body inside its enclosure's fence (a tapir stood through the mesh).
             const margin = towned.get(id)!.enclosureMargin;
             if (margin !== undefined) {
-                keepInPen(maskBox(mask), margin, pose, origin.x, origin.z, collidersMemo?.set);
+                keepInPen(maskBox(mask), margin, pose, origin.x, origin.z, collidersMemo?.set, penBody(pose, body));
                 // p5 (zoospace): the free-flight dome's birds stay inside its volume, on the wing too (under the shell).
                 if (towned.get(id)!.enclosure!.slot.annex === "dome") {
                     const animal = townAnimals.get(id);
@@ -653,14 +715,13 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         },
         sampler: () => {
             if (!sampler || sampler.key !== openKey) {
-                if (!collidersMemo || collidersMemo.key !== openKey) collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin, openKey === preparedKey ? prepared?.colliders ?? undefined : undefined)};
-                sampler = {key: openKey, sampler: townWorldSampler(openKey ? openKey.split(",") : [], origin, collidersMemo.set, openKey === preparedKey ? prepared?.sampler ?? undefined : undefined)};
+                const set = collidersNow();
+                sampler = {key: openKey, sampler: townWorldSampler(openKey ? openKey.split(",") : [], origin, set, openKey === preparedKey ? prepared?.sampler ?? undefined : undefined)};
             }
             return sampler.sampler;
         },
         colliders: () => {
-            if (!collidersMemo || collidersMemo.key !== openKey) collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin, openKey === preparedKey ? prepared?.colliders ?? undefined : undefined)};
-            return collidersMemo.set;
+            return collidersNow();
         },
         tankPose: (id, length, height, clock) => {
             const info = towned.get(id);

@@ -8,7 +8,7 @@
  * the market's stalls, the street lamps, the church clock's hands.
  */
 
-import {BackSide, BufferAttribute, BufferGeometry, Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, type Material, type WebGLRenderer} from "three";
+import {BackSide, BufferAttribute, BufferGeometry, Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, Uint16BufferAttribute, Uint32BufferAttribute, type Material, type WebGLRenderer} from "three";
 import {hashText, local, rng} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, TOWN_SURFACES, townSurfaceWeights, type TownSurface} from "@/ark-scene/islands/town/ground";
 import {CANAL_LEVEL, TOWN_HALF, TOWN_SEGMENTS, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
@@ -199,25 +199,39 @@ function groundTile(grid: GroundGrid, key: number): BufferGeometry | null {
     }
     // Deep sea only: no tile (the water's own depth colour covers it).
     if (highest < -11) return null;
-    const index: number[] = [];
-    for (let r = 0; r < per; r++) {
-        for (let c = 0; c < per; c++) {
-            const a = r * n + c;
-            const b = a + 1;
-            const d = a + n;
-            const e = d + 1;
-            index.push(a, d, b, b, d, e);
-        }
-    }
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(positions, 3));
     geometry.setAttribute("normal", new BufferAttribute(normals, 3));
     geometry.setAttribute("color", new BufferAttribute(colours, 3));
     geometry.setAttribute("aTownSurf", new BufferAttribute(surf, 4, true));
     geometry.setAttribute("aTownSurf2", new BufferAttribute(surf2, 4, true));
-    geometry.setIndex(index);
+    // (Every tile's triangles are the same: their index made once, each tile its own copy. Load-alloc: it was a
+    // growing array of numbers a tile, then three's typed copy of it.)
+    const index = tileIndex(per);
+    geometry.setIndex(index instanceof Uint32Array ? new Uint32BufferAttribute(index, 1) : new Uint16BufferAttribute(index, 1));
     geometry.computeBoundingSphere();
     return geometry;
+}
+
+const tileIndices = new Map<number, Uint16Array | Uint32Array>();
+/** A ground tile's index (`per` × `per` quads), as three's `setIndex` typed it from an array: 16 bits unless one is 65,535 or more. */
+function tileIndex(per: number): Uint16Array | Uint32Array {
+    let index = tileIndices.get(per);
+    if (index) return index;
+    const n = per + 1;
+    const out: number[] = [];
+    for (let r = 0; r < per; r++) {
+        for (let c = 0; c < per; c++) {
+            const a = r * n + c;
+            const b = a + 1;
+            const d = a + n;
+            const e = d + 1;
+            out.push(a, d, b, b, d, e);
+        }
+    }
+    index = out.some((v) => v >= 65535) ? new Uint32Array(out) : new Uint16Array(out);
+    tileIndices.set(per, index);
+    return index;
 }
 
 // MARK: - Materials
@@ -570,6 +584,8 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             for (const [geo, name] of list) {
                 if (!geo.triangles) continue;
                 const geometry = geo.toGeometry(name === "decal" || name === "foliage" || name === "net");
+                // (SIG4: the solid's ground-cover patches, ground to the seat pass: `TownBatch`, `seat/trigrid.ts`.)
+                if (geo.sheets?.length) geometry.userData.seatGround = Uint32Array.from(geo.sheets);
                 if (name === "glass") geometry.setAttribute("aLit", new BufferAttribute(new Float32Array(geo.pos.length / 3), 1));
                 parts.add(name, key, geometry);
             }
@@ -587,8 +603,10 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         for (const [name, material, list] of [["decal", materials.decal], ["solid", materials.solid], ["glass", materials.glass], ["net", netSides.back, nets], ["net:front", netSides.front, nets], ["foliage", materials.foliage]] as Array<[string, Material, TownBatchPart[] | undefined]>) {
             const from = list ?? parts.take(name);
             if (!from.length) continue;
-            // (p3 zoofix: the solids' and the foliage's page copies let go once on the GPU, as the town's foliage: nothing reads them.)
-            const batch = new TownBatch(from, material, `zoo:${name}`, {castShadow: name === "solid" || name === "foliage", receiveShadow: true, release: name === "solid" || name === "foliage"});
+            // (p3 zoofix: the solids' and the foliage's page copies let go once on the GPU, as the town's foliage. SIG4: but the
+            // solids' positions kept (2.7 MB at launch): the seat pass reads the habitats' rockwork, sheds, perches, banks and
+            // ground cover by their drawn triangles; without them animals stood and slept inside them.)
+            const batch = new TownBatch(from, material, `zoo:${name}`, {castShadow: name === "solid" || name === "foliage", receiveShadow: true, release: name === "solid" || name === "foliage", keepPositions: name === "solid"});
             // (The front faces' batch draws the back faces' geometry: one copy, as the two meshes of a split shared it.)
             if (name === "net:front") batch.shareGeometry(zooBatches[zooBatches.length - 1]);
             batch.setDrawn(drawn);

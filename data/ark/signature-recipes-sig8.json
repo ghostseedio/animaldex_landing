@@ -1,0 +1,10 @@
+{
+ "about": "Lane SIG8 (2026-11-24, decision 424, most-seen first; tranche 5): the next most-seen species aboard after tranche 4, on clips their live v3 rigs already have (no new clips). The domestic duck (16 alive aboard), the muscovy duck (21) and the domestic goose (13) take SIG7's mallard bath out on open water (`bathe~duck`: the shake_off clip, then the groom clip afloat): each rig has shake_off and groom, and every duck and goose bathes so. The domestic goat (24) takes the call bout (its rig's call clip): it had no call at all. The muscovy's and the goose's walk ashore to feed (`ground_feed`) stays held in SIG7's file: it needs a schedule change, reported first.",
+ "version": 1,
+ "additions": [
+  {"slug": "domestic-duck", "name": "Domestic Duck", "recipe": "bathe~duck"},
+  {"slug": "muscovy-duck", "name": "Muscovy Duck", "recipe": "bathe~duck"},
+  {"slug": "domestic-goose", "name": "Domestic Goose", "recipe": "bathe~duck"},
+  {"slug": "domestic-goat", "name": "Domestic Goat", "recipe": "call_bout"}
+ ]
+}

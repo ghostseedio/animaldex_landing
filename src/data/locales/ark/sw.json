@@ -491,7 +491,15 @@
             "cycleCount": "{n} kati ya {total}",
             "caredOwner": "Hutunzwa na mmiliki wake",
             "caredFarmer": "Hutunzwa na mkulima",
-            "caredKeeper": "Hutunzwa na mlinzi wa wanyama"
+            "caredKeeper": "Hutunzwa na mlinzi wa wanyama",
+            "eatSoon": "Uwezekano wa kukamata windo katika siku ijayo ya Safina",
+            "eatSoonChance": "Uwezekano wa {percent} wa kukamata windo katika siku ijayo ya Safina",
+            "eatSoonHunting": "Anawinda sasa",
+            "eatSoonLater": "Atawinda tena baada ya takriban {time}",
+            "eatSoonDormant": "Amepumzika: hali",
+            "eatSoonKept": "Hulishwa na walezi wake",
+            "eatSoonDaily": "Hula kila siku",
+            "eatSoonShort": "Chakula ni haba hapa"
         },
         "grew": {
             "line": "Amekuwa na nguvu zaidi: {stat} +{n} · {cause}",

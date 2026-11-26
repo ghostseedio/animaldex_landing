@@ -491,7 +491,15 @@
             "cycleCount": "{n} van {total}",
             "caredOwner": "Verzorgd door zijn eigenaar",
             "caredFarmer": "Verzorgd door de boer",
-            "caredKeeper": "Verzorgd door een dierverzorger"
+            "caredKeeper": "Verzorgd door een dierverzorger",
+            "eatSoon": "Kans op een prooi in de volgende Ark-dag",
+            "eatSoonChance": "{percent} kans op een prooi in de volgende Ark-dag",
+            "eatSoonHunting": "Jaagt nu",
+            "eatSoonLater": "Jaagt weer over ongeveer {time}",
+            "eatSoonDormant": "In rust: eet niet",
+            "eatSoonKept": "Wordt gevoerd door zijn verzorgers",
+            "eatSoonDaily": "Eet elke dag",
+            "eatSoonShort": "Hier is weinig voedsel"
         },
         "grew": {
             "line": "Sterker geworden: {stat} +{n} · {cause}",

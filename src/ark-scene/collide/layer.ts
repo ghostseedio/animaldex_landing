@@ -11,7 +11,7 @@
  */
 
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
-import {clipMove, inContact, pushOut, separateCluster, separationMoments, SEPARATION_EASE, type ResolveBody, type ResolvePose} from "@/ark-scene/collide/resolve";
+import {clipKept, inContact, pushOut, separateCluster, separationMoments, SEPARATION_EASE, type KeepBox, type ResolveBody, type ResolvePose} from "@/ark-scene/collide/resolve";
 
 export type CollideHooks<E> = {
     colliders(): ColliderSet | null;
@@ -26,6 +26,11 @@ export type CollideHooks<E> = {
     speed(e: E): number;
     /** The ground's rise over run at a point (over a metre each way), for the pushes' cliff guard; absent: no guard. */
     slope?(x: number, z: number): number;
+    /**
+     * A penned animal's keep box (its pen, its margin in from the rails: `resolve.ts` KeepBox), the same the scene's bound
+     * holds it to; null or absent: none. Its pose, its push apart and its eased push all stay inside it.
+     */
+    keep?(e: E): KeepBox | null;
 };
 
 const CELL = 4;
@@ -59,7 +64,7 @@ export class CollideLayer<E> {
      * with the very same pose; a wedged one's ring search (thousands of probes) ran again each time. Kept per animal
      * (weakly: an animal gone from the Ark takes its entry with it).
      */
-    private outMemo = new WeakMap<object, {set: ColliderSet; body: ResolveBody; x: number; z: number; y: number; yaw: number; fixed: boolean | undefined; attached: ResolvePose["attached"]; out: {x: number; z: number; moved: number}}>();
+    private outMemo = new WeakMap<object, {set: ColliderSet; body: ResolveBody; keep: KeepBox | null; x: number; z: number; y: number; yaw: number; fixed: boolean | undefined; attached: ResolvePose["attached"]; out: {x: number; z: number; moved: number}}>();
     /** Work (ms), poses moved out of something solid and poses eased apart, since `resetStats`. */
     spentMs = 0;
     eased = 0;
@@ -85,6 +90,16 @@ export class CollideLayer<E> {
         this.eased = 0;
         this.pushed = 0;
         this.clusters = 0;
+    }
+
+    /** Its keep box (the hook's own object, kept by the scene while the pen stands: the way-out memo compares it). */
+    private keepOf(e: E): KeepBox | null {
+        return this.hooks.keep ? this.hooks.keep(e) ?? null : null;
+    }
+
+    /** Its body as the collisions hold it (lane PENKEEP: the scene's bound keeps clear with the very same). */
+    body(e: E): ResolveBody {
+        return this.bodyOf(e);
     }
 
     private bodyOf(e: E): ResolveBody {
@@ -158,10 +173,11 @@ export class CollideLayer<E> {
     /** `pushOut`, or its last answer when nothing it reads has changed (exactly the same answer: see `outMemo`). */
     private pushOutOnce(e: E, set: ColliderSet, pose: ResolvePose): {x: number; z: number; moved: number} {
         const body = this.bodyOf(e);
+        const keep = this.keepOf(e);
         const memo = this.outMemo.get(e as object);
-        if (memo && memo.set === set && memo.body === body && memo.x === pose.x && memo.z === pose.z && memo.y === pose.y && memo.yaw === pose.yaw && memo.fixed === pose.fixed && sameAttached(memo.attached, pose.attached)) return memo.out;
-        const out = pushOut(set, body, pose);
-        this.outMemo.set(e as object, {set, body, x: pose.x, z: pose.z, y: pose.y, yaw: pose.yaw, fixed: pose.fixed, attached: pose.attached ? pose.attached.map((q) => ({...q})) : pose.attached, out});
+        if (memo && memo.set === set && memo.body === body && memo.keep === keep && memo.x === pose.x && memo.z === pose.z && memo.y === pose.y && memo.yaw === pose.yaw && memo.fixed === pose.fixed && sameAttached(memo.attached, pose.attached)) return memo.out;
+        const out = pushOut(set, body, pose, keep);
+        this.outMemo.set(e as object, {set, body, keep, x: pose.x, z: pose.z, y: pose.y, yaw: pose.yaw, fixed: pose.fixed, attached: pose.attached ? pose.attached.map((q) => ({...q})) : pose.attached, out});
         return out;
     }
 
@@ -220,7 +236,7 @@ export class CollideLayer<E> {
         }
         this.clusters++;
         const poses = members.map((m) => this.placed(m, q)!);
-        const at = separateCluster(set, members.map((m, k) => ({body: this.bodyOf(m), pose: poses[k]})), this.hooks.slope ? (x, z) => this.hooks.slope!(x, z) : undefined);
+        const at = separateCluster(set, members.map((m, k) => ({body: this.bodyOf(m), pose: poses[k], keep: this.keepOf(m)})), this.hooks.slope ? (x, z) => this.hooks.slope!(x, z) : undefined);
         members.forEach((m, k) => pushes!.set(m, {dx: at[k].x - poses[k].x, dz: at[k].z - poses[k].z}));
         return pushes.get(e)!;
     }
@@ -246,7 +262,7 @@ export class CollideLayer<E> {
         const dz = a.dz + (b.dz - a.dz) * s;
         let out = {x: self.x, z: self.z};
         if (Math.abs(dx) > 1e-6 || Math.abs(dz) > 1e-6) {
-            out = clipMove(set, this.bodyOf(e), self, {x: self.x + dx, z: self.z + dz}, self);
+            out = clipKept(set, this.bodyOf(e), self, {x: self.x + dx, z: self.z + dz}, self, this.keepOf(e));
             if (out.x !== self.x || out.z !== self.z) this.eased++;
         }
         this.resolvedNow.set(e, out);

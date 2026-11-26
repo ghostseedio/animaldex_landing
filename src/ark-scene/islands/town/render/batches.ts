@@ -133,8 +133,10 @@ export class TownBatch {
     /**
      * `parts`: each chunk's geometry for this layer (the same attributes in each; the ground's indexed). Their arrays are
      * copied in and may be let go after. `release`: the batch's own arrays let go once on the GPU (nothing reads them).
+     * `keepPositions` (with `release`): its positions kept on the page, the rest let go: the seat pass (`seat/solids.ts`)
+     * reads what is drawn by its triangles (SIG4: the zoo's solids).
      */
-    constructor(parts: readonly TownBatchPart[], material: Material, name: string, options: {castShadow: boolean; receiveShadow: boolean; release?: boolean}) {
+    constructor(parts: readonly TownBatchPart[], material: Material, name: string, options: {castShadow: boolean; receiveShadow: boolean; release?: boolean; keepPositions?: boolean}) {
         let vertices = 0;
         let indices = 0;
         let triangles = 0;
@@ -161,7 +163,11 @@ export class TownBatch {
         // (Its chunks by instance, for probes and tests.)
         this.mesh.userData.chunks = this.chunks;
         let start = 0;
+        // SIG4: each part's triangles that are ground drawn in a solid (`kit.ts` Geo.sheets), as the batch's triangles.
+        const ground: number[] = [];
         for (const part of parts) {
+            const sheets = part.geometry.userData.seatGround as ArrayLike<number> | undefined;
+            if (sheets && !part.geometry.getIndex()) for (let i = 0; i + 1 < sheets.length; i += 2) ground.push(start / 3 + sheets[i], start / 3 + sheets[i + 1]);
             // (Each chunk's bounds come with it, so nothing reads the batch's arrays back to cull.)
             if (!part.geometry.boundingSphere) part.geometry.computeBoundingSphere();
             if (!part.geometry.boundingBox) part.geometry.computeBoundingBox();
@@ -172,6 +178,7 @@ export class TownBatch {
             this.vertexStart.push(start);
             start += part.geometry.getAttribute("position").count;
         }
+        if (ground.length) this.mesh.geometry.userData.seatGround = Uint32Array.from(ground);
         this.shown = parts.length;
         // (The first upload is the whole array anyway: no per-chunk ranges left over for the first later update.)
         const geometry = this.mesh.geometry;
@@ -181,8 +188,8 @@ export class TownBatch {
         this.mesh.computeBoundingSphere();
         this.mesh.computeBoundingBox();
         if (options.release) {
-            for (const attributeName of Object.keys(geometry.attributes)) (geometry.attributes[attributeName] as BufferAttribute).onUpload(releaseArray);
-            geometry.index?.onUpload(releaseArray);
+            for (const attributeName of Object.keys(geometry.attributes)) if (!(options.keepPositions && attributeName === "position")) (geometry.attributes[attributeName] as BufferAttribute).onUpload(releaseArray);
+            if (!options.keepPositions) geometry.index?.onUpload(releaseArray);
         }
     }
 

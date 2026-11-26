@@ -4709,7 +4709,15 @@
       "cycleCount": "{n} of {total}",
       "caredOwner": "Cared for by its owner",
       "caredFarmer": "Cared for by the farmer",
-      "caredKeeper": "Cared for by a keeper"
+      "caredKeeper": "Cared for by a keeper",
+      "eatSoon": "Chance of a catch in the next Ark day",
+      "eatSoonChance": "{percent} chance of a catch in the next Ark day",
+      "eatSoonHunting": "Hunting now",
+      "eatSoonLater": "Hunts again in about {time}",
+      "eatSoonDormant": "Dormant: not eating",
+      "eatSoonKept": "Fed by its carers",
+      "eatSoonDaily": "Eats every day",
+      "eatSoonShort": "Food is short here"
     },
     "grew": {
       "line": "Grew stronger: +{n} {stat} from {cause}",

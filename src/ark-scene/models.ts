@@ -279,6 +279,11 @@ export class ModelLibrary {
         return Boolean(this.manifest);
     }
 
+    /** The model set's version of a species (its files' name), or null: lane COATS' coat maps are made for one version. */
+    versionOf(slug: string): string | null {
+        return this.manifest?.models[slug] ?? null;
+    }
+
     /** Whether the model set lists this species (false: the placeholder stands in). */
     listed(slug: string): boolean {
         return Boolean(this.manifest && (this.manifest.models[slug] || this.manifest.fallback?.[slug]));

@@ -491,7 +491,15 @@
             "cycleCount": "{n} od {total}",
             "caredOwner": "O njemu se brine vlasnik",
             "caredFarmer": "O njemu se brine farmer",
-            "caredKeeper": "O njemu se brine čuvar"
+            "caredKeeper": "O njemu se brine čuvar",
+            "eatSoon": "Šansa za ulov idućeg dana Arke",
+            "eatSoonChance": "{percent} šanse za ulov idućeg dana Arke",
+            "eatSoonHunting": "Upravo lovi",
+            "eatSoonLater": "Ponovno lovi za otprilike {time}",
+            "eatSoonDormant": "U mirovanju: ne jede",
+            "eatSoonKept": "Hrane ga njegovatelji",
+            "eatSoonDaily": "Jede svaki dan",
+            "eatSoonShort": "Ovdje nedostaje hrane"
         },
         "grew": {
             "line": "Jači: {stat} +{n} · {cause}",

@@ -491,7 +491,15 @@
             "cycleCount": "{n} / {total}",
             "caredOwner": "Được chủ chăm sóc",
             "caredFarmer": "Được người nông dân chăm sóc",
-            "caredKeeper": "Được một người giữ thú chăm sóc"
+            "caredKeeper": "Được một người giữ thú chăm sóc",
+            "eatSoon": "Khả năng bắt được mồi trong ngày Con Tàu tới",
+            "eatSoonChance": "Khả năng {percent} bắt được mồi trong ngày Con Tàu tới",
+            "eatSoonHunting": "Đang săn mồi",
+            "eatSoonLater": "Sẽ săn lại sau khoảng {time}",
+            "eatSoonDormant": "Ngủ đông: không ăn",
+            "eatSoonKept": "Được người chăm sóc cho ăn",
+            "eatSoonDaily": "Ăn mỗi ngày",
+            "eatSoonShort": "Ở đây khan hiếm thức ăn"
         },
         "grew": {
             "line": "Mạnh hơn: {stat} +{n} · {cause}",

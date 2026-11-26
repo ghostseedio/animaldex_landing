@@ -252,7 +252,8 @@ const TOWN_DIGESTS = {
     // (p5 (zoospace): the dome's birds out of the aviaries; the vulture aviary and the stork flight wider.)
     // (ark-world, decision 447: kopjes as piles of fourteen granite blocks, soft three-ring earth patches, the dome's waterfall curtain, smooth bushes; refreshed.)
     // (ark-world round 2: the earth patches in the paving, the dome's still waterfall strands out of the solids, leaf-tagged bushes; refreshed.)
-    zoo: "660fc5ec8c00e82b",
+    // (SIG4: the solids' ground-cover patches and grass tufts recorded as open sheets for the seat pass, `Geo.sheets`; nothing drawn changed.)
+    zoo: "83d3bcf9ea27d00e",
     // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
     // (p4 (safari): the herbivores, big cats, hyenas and crocodilians moved to the safari by the rule, `town/safari.ts`.)
     // (Pass 5 rural lane: pass 4 merged into the safari; these recomputed on that merge. Then p5 (rural): the countryside
@@ -265,7 +266,9 @@ const TOWN_DIGESTS = {
     // (p6 (zoo merge): both lobes' animals: the fields' livestock and poultry and the dome's birds, the zoo residents' new homes.)
     // (Container breeding, 2026-11-20: a kept animal's middle keeps `penMarginOf` from its pen's rails (0.625 x its length + 0.3 m, was
     // 0.5 x + 0.15) and out of the walls by 0.55 x its length: the coordinator's "no body through a rail or into the barn".)
-    places: "f86b9f3109b930a1"
+    // (p3 (solid), the seat audit's squirrel: a walker out of its enclosure's raised pool by its drawn body, a swimmer's step
+    // kept on its pool, `raised-pool.ts`.)
+    places: "3239ba73ba7a22e7"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {

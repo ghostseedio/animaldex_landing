@@ -127,14 +127,34 @@ export function config() {
   return { url, key };
 }
 
+const PAGE_SIZE = 1000;
+const MAX_ROWS = 100000;
+/** Pages fetched at once after the first; keeps one request from flooding PostgREST. */
+const PAGE_CONCURRENCY = 4;
+
+/** The row total from a `Content-Range: 0-999/5083` header, or null when it is `*` or missing. */
+export function totalFromContentRange(header: string | null): number | null {
+  const total = header?.split("/")[1]?.trim();
+  if (!total || total === "*") return null;
+  const value = Number(total);
+  return Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Every row of a query, 1000 at a time. The first page also asks for the row
+ * total, so the rest are fetched a few at a time instead of one after another
+ * (a 5,000-row table took six sequential round trips, about 3 s).
+ */
 export async function fetchRows<T>(table: string, query: string): Promise<T[]> {
   const { url, key } = config();
-  const rows: T[] = [];
-  for (let offset = 0; offset < 100000; offset += 1000) {
+  const page = async (offset: number, withCount: boolean) => {
     const response = await fetch(
       `${url}/rest/v1/${table}?${query}&limit=1000&offset=${offset}`,
       {
-        headers: getSupabaseHeaders(key, { Accept: "application/json" }),
+        headers: getSupabaseHeaders(key, {
+          Accept: "application/json",
+          ...(withCount ? { Prefer: "count=exact" } : {}),
+        }),
         cache: "no-store",
       },
     );
@@ -142,10 +162,39 @@ export async function fetchRows<T>(table: string, query: string): Promise<T[]> {
       throw new Error(
         `${table} query failed (${response.status}): ${await response.text()}`,
       );
-    const page = (await response.json()) as T[];
-    rows.push(...page);
-    if (page.length < 1000) break;
+    return {
+      rows: (await response.json()) as T[],
+      total: withCount ? totalFromContentRange(response.headers.get("content-range")) : null,
+    };
+  };
+
+  const first = await page(0, true);
+  const rows: T[] = [...first.rows];
+  if (first.rows.length < PAGE_SIZE) return rows;
+
+  if (first.total == null) {
+    // No total came back: walk the pages in order, as before.
+    for (let offset = PAGE_SIZE; offset < MAX_ROWS; offset += PAGE_SIZE) {
+      const next = await page(offset, false);
+      rows.push(...next.rows);
+      if (next.rows.length < PAGE_SIZE) break;
+    }
+    return rows;
   }
+
+  const offsets: number[] = [];
+  for (let offset = PAGE_SIZE; offset < Math.min(first.total, MAX_ROWS); offset += PAGE_SIZE) offsets.push(offset);
+  const pages: T[][] = new Array(offsets.length);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(PAGE_CONCURRENCY, offsets.length) }, async () => {
+      while (cursor < offsets.length) {
+        const index = cursor++;
+        pages[index] = (await page(offsets[index], false)).rows;
+      }
+    }),
+  );
+  for (const chunk of pages) rows.push(...chunk);
   return rows;
 }
 

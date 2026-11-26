@@ -270,6 +270,144 @@
    "nestingSrc": null
   },
   {
+   "slug": "abyssinian-cat",
+   "name": "Abyssinian Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "abyssinian-ground-hornbill",
    "name": "Abyssinian Ground Hornbill",
    "plan": "flying_bird",
@@ -3571,6 +3709,125 @@
    "hovers": false,
    "nestingMonths": [],
    "nestingSrc": null
+  },
+  {
+   "slug": "albino-ball-python",
+   "name": "Albino Ball Python",
+   "plan": "legless",
+   "zone": "grassland",
+   "excluded": null,
+   "behaviours": {
+    "ambush": [
+     {
+      "field": "diet",
+      "phrase": "It ambushes from burrows or cover, striking at prey that comes within close range, then kills it by constriction and swallows it whole",
+      "match": "ambushes"
+     },
+     {
+      "field": "traits",
+      "phrase": "Close-range ambush: it waits until prey enters usable distance",
+      "match": "ambush"
+     },
+     {
+      "field": "basis",
+      "phrase": "Ball Pythons are ambush predators",
+      "match": "ambush"
+     }
+    ],
+    "incubate": [
+     {
+      "field": "offspring",
+      "phrase": "Females lay eggs and coil around the clutch during incubation",
+      "match": "incubation"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "The Ball Python uses heat-sensing pits, smooth scales, and strong coils to stay still until the right moment arrives",
+      "match": "stay still"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "female",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Females are often heavier or larger than males, which supports egg production and brooding",
+      "match": "females are often heavier or larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [
+     3,
+     4,
+     5,
+     9,
+     10,
+     11
+    ],
+    "src": {
+     "field": "months",
+     "phrase": "Late spring to early fall",
+     "match": "months"
+    },
+    "kind": "seen"
+   },
+   "nesting": {
+    "months": [
+     3,
+     4,
+     5,
+     9,
+     10,
+     11
+    ],
+    "src": {
+     "field": "months",
+     "phrase": "Late spring to early fall",
+     "match": "months"
+    },
+    "kind": "seen"
+   },
+   "nest": null,
+   "recipes": [],
+   "defaults": [],
+   "crossing": {
+    "entry": "slip",
+    "exit": "walk",
+    "after": "bask",
+    "src": {
+     "rule": "plan legless (slips in; basks after)"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Pythonidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [
+    3,
+    4,
+    5,
+    9,
+    10,
+    11
+   ],
+   "nestingSrc": {
+    "field": "months",
+    "phrase": "Late spring to early fall"
+   }
   },
   {
    "slug": "aldabra-giant-tortoise",
@@ -6875,6 +7132,144 @@
    }
   },
   {
+   "slug": "american-curl-cat",
+   "name": "American Curl",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "american-dipper",
    "name": "American Dipper",
    "plan": "flying_bird",
@@ -8362,6 +8757,144 @@
     "field": "months",
     "phrase": "Spring and summer"
    }
+  },
+  {
+   "slug": "american-shorthair-cat",
+   "name": "American Shorthair Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
   },
   {
    "slug": "american-toad",
@@ -11277,6 +11810,169 @@
    "nestingSrc": {
     "field": "months",
     "phrase": "Year-round; nesting August to December"
+   }
+  },
+  {
+   "slug": "appaloosa",
+   "name": "Appaloosa",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "groom": [
+     {
+      "field": "evidence",
+      "phrase": "They engage in mutual grooming, shared vigilance, and coordinated movement",
+      "match": "grooming"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Mutual grooming strengthens social bonds and maintains hygiene",
+      "match": "grooming"
+     }
+    ],
+    "allogroom": [
+     {
+      "field": "evidence",
+      "phrase": "They engage in mutual grooming, shared vigilance, and coordinated movement",
+      "match": "mutual grooming"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Mutual grooming strengthens social bonds and maintains hygiene",
+      "match": "mutual grooming"
+     }
+    ],
+    "herd": [
+     {
+      "field": "basis",
+      "phrase": "Domestic horses evolved alongside humans as cooperative athletes — breeds, color morphs, and feral herds remain one species",
+      "match": "herds"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Horses live in social herds with established hierarchies and strong bonds",
+      "match": "herds"
+     },
+     {
+      "field": "evidence",
+      "phrase": "The lead mare often guides the herd's escape route",
+      "match": "herd"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": null,
+    "sizeRatio": 1,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [],
+    "defaulted": true
+   },
+   "mating": {
+    "months": [
+     3,
+     4,
+     5,
+     9,
+     10,
+     11
+    ],
+    "src": {
+     "field": "months",
+     "phrase": "Year-round, with peak activity in spring and fall.",
+     "match": "months"
+    },
+    "kind": "seen"
+   },
+   "nesting": {
+    "months": [
+     3,
+     4,
+     5,
+     9,
+     10,
+     11
+    ],
+    "src": {
+     "field": "months",
+     "phrase": "Year-round, with peak activity in spring and fall.",
+     "match": "months"
+    },
+    "kind": "seen"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "dust_bathe",
+     "weight": 4,
+     "src": {
+      "rule": "family Equidae (dust-bathes)"
+     }
+    },
+    {
+     "id": "roll",
+     "weight": 3,
+     "src": {
+      "rule": "family Equidae (rolls)"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "evidence",
+      "phrase": "They engage in mutual grooming, shared vigilance, and coordinated movement"
+     }
+    },
+    {
+     "id": "allogroom",
+     "weight": 5,
+     "src": {
+      "field": "evidence",
+      "phrase": "They engage in mutual grooming, shared vigilance, and coordinated movement"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "stand",
+    "src": {
+     "rule": "family Equidae (sleeps standing)"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [
+    3,
+    4,
+    5,
+    9,
+    10,
+    11
+   ],
+   "nestingSrc": {
+    "field": "months",
+    "phrase": "Year-round, with peak activity in spring and fall."
    }
   },
   {
@@ -20872,6 +21568,159 @@
    "nestingSrc": null
   },
   {
+   "slug": "bantam-chicken",
+   "name": "Bantam Chicken",
+   "plan": "walking_bird",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "flock": [
+     {
+      "field": "sleep",
+      "phrase": "As the light fades the flock goes to roost on perches or branches off the ground and sleeps through the night",
+      "match": "flock"
+     },
+     {
+      "field": "sd",
+      "phrase": "and the continuous production of commercial flocks comes as much from artificial lighting as from selection",
+      "match": "flocks"
+     },
+     {
+      "field": "sociality",
+      "phrase": "the flock goes to roost",
+      "match": "flock"
+     }
+    ],
+    "display": [
+     {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display",
+      "match": "display"
+     },
+     {
+      "field": "traits",
+      "phrase": "Head bobs forward with each step",
+      "match": "head bobs"
+     },
+     {
+      "field": "facts",
+      "phrase": "A rooster that finds food often calls hens over while picking the item up and dropping it, a display known as tidbitting",
+      "match": "display"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Researchers have described more than 20 distinct chicken calls, including separate alarms for danger from the air and danger on the ground",
+      "match": "calls"
+     },
+     {
+      "field": "facts",
+      "phrase": "A rooster that finds food often calls hens over while picking the item up and dropping it, a display known as tidbitting",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": null,
+    "sizeRatio": 1,
+    "male": [
+     "wattle"
+    ],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display",
+      "match": "combs"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "dust_bathe",
+     "weight": 4,
+     "src": {
+      "rule": "family Phasianidae (dust-bathes)"
+     }
+    },
+    {
+     "id": "strut_display",
+     "weight": 5,
+     "src": {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Researchers have described more than 20 distinct chicken calls, including separate alarms for danger from the air and danger on the ground"
+     }
+    },
+    {
+     "id": "court_display",
+     "weight": 4,
+     "src": {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display"
+     }
+    },
+    {
+     "id": "preen_stretch",
+     "weight": 2,
+     "src": {
+      "default": "plan walking_bird: preens and stretches"
+     }
+    },
+    {
+     "id": "bathe",
+     "weight": 2,
+     "src": {
+      "default": "plan walking_bird: bathes at the water's edge"
+     }
+    }
+   ],
+   "defaults": [
+    "preen_stretch",
+    "bathe"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "preen",
+    "src": {
+     "default": "plan walking_bird: wades in, preens after"
+    }
+   },
+   "posture": {
+    "value": "tuck",
+    "src": {
+     "default": "plan walking_bird: head tucked"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "banteng",
    "name": "Banteng",
    "plan": "quadruped",
@@ -26531,6 +27380,144 @@
     }
    },
    "posture": null,
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
+   "slug": "birman-cat",
+   "name": "Birman Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
    "hovers": false,
    "nestingMonths": [],
    "nestingSrc": null
@@ -45762,6 +46749,144 @@
     }
    },
    "posture": null,
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
+   "slug": "burmese-cat",
+   "name": "Burmese Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
    "hovers": false,
    "nestingMonths": [],
    "nestingSrc": null
@@ -71069,6 +72194,144 @@
    }
   },
   {
+   "slug": "cornish-rex-cat",
+   "name": "Cornish Rex Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "corsac-fox",
    "name": "Corsac Fox",
    "plan": "quadruped",
@@ -79787,6 +81050,144 @@
    "nestingSrc": null
   },
   {
+   "slug": "devon-rex-cat",
+   "name": "Devon Rex Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "dexter-cattle",
    "name": "Dexter Cattle",
    "plan": "quadruped",
@@ -81263,6 +82664,834 @@
    "nestingSrc": null
   },
   {
+   "slug": "domestic-cat-bicolor",
+   "name": "Domestic Bicolor Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
+   "slug": "domestic-cat-black",
+   "name": "Black Domestic Shorthair",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
+   "slug": "domestic-cat-brown-tabby",
+   "name": "Tabby Domestic Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
+   "slug": "domestic-cat-calico",
+   "name": "Calico Domestic Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
+   "slug": "domestic-cat-dilute-calico",
+   "name": "Dilute Calico",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
+   "slug": "domestic-cat-tortoiseshell",
+   "name": "Tortoiseshell Domestic Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "domestic-chicken",
    "name": "Domestic Chicken",
    "plan": "walking_bird",
@@ -82278,6 +84507,144 @@
     "field": "months",
     "phrase": "Year-round, with peak activity in spring and fall."
    }
+  },
+  {
+   "slug": "domestic-longhair-cat",
+   "name": "Domestic Longhair",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
   },
   {
    "slug": "domestic-pig",
@@ -88910,6 +91277,64 @@
     "field": "months",
     "phrase": "Spring and summer"
    }
+  },
+  {
+   "slug": "eastern-tiger-swallowtail-caterpillar",
+   "name": "Eastern Tiger Swallowtail Caterpillar",
+   "plan": "legless",
+   "zone": "woodland",
+   "excluded": null,
+   "behaviours": {
+    "dig": [
+     {
+      "field": "evidence",
+      "phrase": "Earthworms burrow through soil, creating a network of tunnels",
+      "match": "burrow through"
+     }
+    ]
+   },
+   "sex": {
+    "system": "hermaphrodite",
+    "maleShare": 0,
+    "bigger": null,
+    "sizeRatio": 1,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Earthworms are hermaphrodites, so sex difference is not the lesson; mutual exchange and soil work are",
+      "match": "hermaphrodites"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [],
+   "defaults": [],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "none",
+    "src": {
+     "default": "no crossing style"
+    }
+   },
+   "posture": null,
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
   },
   {
    "slug": "eastern-yellowjacket",
@@ -99696,6 +102121,144 @@
    }
   },
   {
+   "slug": "exotic-shorthair-cat",
+   "name": "Exotic Shorthair Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "eyelash-viper",
    "name": "Eyelash Viper",
    "plan": "legless",
@@ -108108,6 +110671,132 @@
    "nestingSrc": {
     "field": "season",
     "phrase": "In spring and summer the male clears a patch of rock and tends a bed of red algae as a nest"
+   }
+  },
+  {
+   "slug": "garut-sheep",
+   "name": "Garut Sheep",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "call": [
+     {
+      "field": "traits",
+      "phrase": "Bleating calls between ewes and lambs",
+      "match": "calls"
+     },
+     {
+      "field": "evidence",
+      "phrase": "it will often give an alarm call (a sharp bleat or snort)",
+      "match": "call"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [
+     "horns"
+    ],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Rams are often larger and may carry heavier horns; ewes carry lambs and sustain the flock",
+      "match": "rams are often larger and may carry heavier"
+     },
+     {
+      "field": "sexdiff",
+      "phrase": "Rams are often larger and may carry heavier horns",
+      "match": "horns"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [
+     3,
+     4,
+     5
+    ],
+    "src": {
+     "field": "months",
+     "phrase": "Year-round; lambs in the fields in spring",
+     "match": "months"
+    },
+    "kind": "seen"
+   },
+   "nesting": {
+    "months": [
+     3,
+     4,
+     5
+    ],
+    "src": {
+     "field": "months",
+     "phrase": "Year-round; lambs in the fields in spring",
+     "match": "months"
+    },
+    "kind": "seen"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "traits",
+      "phrase": "Bleating calls between ewes and lambs"
+     }
+    },
+    {
+     "id": "horn_clash",
+     "weight": 5,
+     "src": {
+      "rule": "family Bovidae: Domestic Sheep butts heads"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: grooms"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "groom_self",
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": null,
+   "hovers": false,
+   "nestingMonths": [
+    3,
+    4,
+    5
+   ],
+   "nestingSrc": {
+    "field": "months",
+    "phrase": "Year-round; lambs in the fields in spring"
    }
   },
   {
@@ -153150,6 +155839,159 @@
    "nestingSrc": null
   },
   {
+   "slug": "leghorn-chicken",
+   "name": "Leghorn Chicken",
+   "plan": "walking_bird",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "flock": [
+     {
+      "field": "sleep",
+      "phrase": "As the light fades the flock goes to roost on perches or branches off the ground and sleeps through the night",
+      "match": "flock"
+     },
+     {
+      "field": "sd",
+      "phrase": "and the continuous production of commercial flocks comes as much from artificial lighting as from selection",
+      "match": "flocks"
+     },
+     {
+      "field": "sociality",
+      "phrase": "the flock goes to roost",
+      "match": "flock"
+     }
+    ],
+    "display": [
+     {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display",
+      "match": "display"
+     },
+     {
+      "field": "traits",
+      "phrase": "Head bobs forward with each step",
+      "match": "head bobs"
+     },
+     {
+      "field": "facts",
+      "phrase": "A rooster that finds food often calls hens over while picking the item up and dropping it, a display known as tidbitting",
+      "match": "display"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Researchers have described more than 20 distinct chicken calls, including separate alarms for danger from the air and danger on the ground",
+      "match": "calls"
+     },
+     {
+      "field": "facts",
+      "phrase": "A rooster that finds food often calls hens over while picking the item up and dropping it, a display known as tidbitting",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": null,
+    "sizeRatio": 1,
+    "male": [
+     "wattle"
+    ],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display",
+      "match": "combs"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "dust_bathe",
+     "weight": 4,
+     "src": {
+      "rule": "family Phasianidae (dust-bathes)"
+     }
+    },
+    {
+     "id": "strut_display",
+     "weight": 5,
+     "src": {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Researchers have described more than 20 distinct chicken calls, including separate alarms for danger from the air and danger on the ground"
+     }
+    },
+    {
+     "id": "court_display",
+     "weight": 4,
+     "src": {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display"
+     }
+    },
+    {
+     "id": "preen_stretch",
+     "weight": 2,
+     "src": {
+      "default": "plan walking_bird: preens and stretches"
+     }
+    },
+    {
+     "id": "bathe",
+     "weight": 2,
+     "src": {
+      "default": "plan walking_bird: bathes at the water's edge"
+     }
+    }
+   ],
+   "defaults": [
+    "preen_stretch",
+    "bathe"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "preen",
+    "src": {
+     "default": "plan walking_bird: wades in, preens after"
+    }
+   },
+   "posture": {
+    "value": "tuck",
+    "src": {
+     "default": "plan walking_bird: head tucked"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "leicester-longwool-sheep",
    "name": "Leicester Longwool Sheep",
    "plan": "quadruped",
@@ -160400,6 +163242,119 @@
    }
   },
   {
+   "slug": "lutino-green-iguana",
+   "name": "Lutino Green Iguana",
+   "plan": "lizard",
+   "zone": "rainforest",
+   "excluded": null,
+   "behaviours": {
+    "bask": [
+     {
+      "field": "sleep",
+      "phrase": "Green Iguanas are diurnal, basking in sun before feeding or moving",
+      "match": "basking"
+     },
+     {
+      "field": "traits",
+      "phrase": "Sun basking: body heat is gathered before feeding and movement",
+      "match": "basking"
+     },
+     {
+      "field": "spotlight",
+      "phrase": "Basking posture, green body, dewlap, claws, tail, and shade-water movement show energy returning through the warmth it was built to need",
+      "match": "basking"
+     }
+    ],
+    "display": [
+     {
+      "field": "traits",
+      "phrase": "Dewlap display: the throat fan helps signal, thermoregulate, and communicate",
+      "match": "display"
+     }
+    ],
+    "flee_water": [
+     {
+      "field": "sd",
+      "phrase": "and it can drop straight into the water from height when threatened",
+      "match": "drop straight into the water"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [
+     "dewlap"
+    ],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger with bigger dewlaps, larger jowls, and more pronounced spines, while females invest in eggs",
+      "match": "males are often larger with bigger dewlaps, larger"
+     },
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger with bigger dewlaps, larger jowls, and more pronounced spines",
+      "match": "dewlaps"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "bask_sun",
+     "weight": 6,
+     "src": {
+      "field": "sleep",
+      "phrase": "Green Iguanas are diurnal, basking in sun before feeding or moving"
+     }
+    },
+    {
+     "id": "pushup",
+     "weight": 5,
+     "src": {
+      "rule": "family Iguanidae (push-up and head-bob displays)"
+     }
+    },
+    {
+     "id": "lizard_contest",
+     "weight": 3,
+     "src": {
+      "rule": "family Iguanidae (rival males display and wrestle)"
+     }
+    }
+   ],
+   "defaults": [],
+   "crossing": {
+    "entry": "slip",
+    "exit": "walk",
+    "after": "none",
+    "src": {
+     "field": "sd",
+     "phrase": "and it can drop straight into the water from height when threatened"
+    }
+   },
+   "posture": null,
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "luzon-garden-spider",
    "name": "Luzon Garden Spider",
    "plan": "arachnid",
@@ -164962,6 +167917,144 @@
     }
    },
    "posture": null,
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
+   "slug": "manx-cat",
+   "name": "Manx Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
    "hovers": false,
    "nestingMonths": [],
    "nestingSrc": null
@@ -170828,6 +173921,138 @@
     "field": "months",
     "phrase": "March to October"
    }
+  },
+  {
+   "slug": "mini-lop",
+   "name": "Mini Lop",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "nest_build": [
+     {
+      "field": "offspring",
+      "phrase": "A doe carries her litter for about 31 days and gives birth to four to twelve blind, hairless kits in a nest lined with fur pulled from her own chest",
+      "match": "nest lined"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "sd",
+      "phrase": "The response is graded: freeze, then a thump of a hind foot that carries through the ground to others, then a bolt",
+      "match": "freeze"
+     },
+     {
+      "field": "predators",
+      "phrase": "A rabbit freezes first, then bolts in a zigzag for cover, and thumps a hind foot on the ground to warn others",
+      "match": "freezes"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "A contented rabbit leaps and twists in mid-air, a movement keepers call a binky",
+      "match": "call"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": null,
+    "sizeRatio": 1,
+    "male": [],
+    "female": [
+     "dewlap"
+    ],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Does are often slightly larger than bucks and many develop a dewlap, a fold of skin under the chin",
+      "match": "dewlap"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": {
+    "materials": [
+     "hair"
+    ],
+    "kind": "other",
+    "src": [
+     {
+      "field": "offspring",
+      "phrase": "A doe carries her litter for about 31 days and gives birth to four to twelve blind, hairless kits in a nest lined with fur pulled from her own chest",
+      "match": "nest lined"
+     }
+    ]
+   },
+   "recipes": [
+    {
+     "id": "dig_burrow",
+     "weight": 4,
+     "src": {
+      "rule": "family Leporidae (digs burrows)"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "A contented rabbit leaps and twists in mid-air, a movement keepers call a binky"
+     }
+    },
+    {
+     "id": "nest_build",
+     "weight": 6,
+     "src": {
+      "field": "offspring",
+      "phrase": "A doe carries her litter for about 31 days and gives birth to four to twelve blind, hairless kits in a nest lined with fur pulled from her own chest"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: grooms"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "groom_self",
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": null,
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
   },
   {
    "slug": "mini-lop-rabbit",
@@ -182401,6 +185626,144 @@
    }
   },
   {
+   "slug": "norwegian-forest-cat",
+   "name": "Norwegian Forest Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "nubian-goat",
    "name": "Nubian Goat",
    "plan": "quadruped",
@@ -187154,6 +190517,144 @@
     "value": "tuck",
     "src": {
      "default": "plan flying_bird: head tucked"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
+   "slug": "oriental-shorthair-cat",
+   "name": "Oriental Shorthair Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
     }
    },
    "hovers": false,
@@ -196629,6 +200130,189 @@
    "nestingSrc": {
     "default": "no nesting months stored: northern spring (April to June) for a bird"
    }
+  },
+  {
+   "slug": "pied-cockatiel",
+   "name": "Pied Cockatiel",
+   "plan": "flying_bird",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "groom": [
+     {
+      "field": "facts",
+      "phrase": "Like other cockatoos it sheds a fine feather dust from special down feathers, which it spreads through the plumage when preening",
+      "match": "preening"
+     }
+    ],
+    "flock": [
+     {
+      "field": "sleep",
+      "phrase": "Flocks roost at night in trees, often near water",
+      "match": "flocks"
+     },
+     {
+      "field": "diet",
+      "phrase": "Flocks feed on the ground and fly to water to drink",
+      "match": "flocks"
+     },
+     {
+      "field": "facts",
+      "phrase": "Inland flocks are nomadic, moving long distances to reach areas where rain has brought on seeding grasses",
+      "match": "flocks"
+     }
+    ],
+    "incubate": [
+     {
+      "field": "offspring",
+      "phrase": "Both parents take turns to incubate for about 18 to 21 days, and the chicks leave the hollow at about 4 to 5 weeks",
+      "match": "incubate"
+     }
+    ],
+    "courtship": [
+     {
+      "field": "spotlight",
+      "phrase": "Males court with a whistled song",
+      "match": "court"
+     },
+     {
+      "field": "evidence",
+      "phrase": "to attract mates and strengthen pair bonds",
+      "match": "pair bonds"
+     },
+     {
+      "field": "evidence",
+      "phrase": "monogamous pair bonds that are characteristic of cockatiels",
+      "match": "pair bonds"
+     }
+    ],
+    "display": [
+     {
+      "field": "evidence",
+      "phrase": "sometimes accompanied by head bobbing and crest displays",
+      "match": "head bobbing"
+     },
+     {
+      "field": "evidence",
+      "phrase": "These vocal displays are essential for successful reproduction",
+      "match": "displays"
+     }
+    ],
+    "call": [
+     {
+      "field": "spotlight",
+      "phrase": "Males court with a whistled song",
+      "match": "whistled"
+     },
+     {
+      "field": "story",
+      "phrase": "Flock members keep up a rolling, two-note whistle in flight, and a bird that becomes separated calls until it is answered",
+      "match": "whistle"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cockatiels frequently emit distinct 'contact calls' or 'flock calls' when separated from their group or partner, or to signal their presence",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": null,
+    "sizeRatio": 1,
+    "male": [
+     "crest",
+     "bright"
+    ],
+    "female": [],
+    "duller": "female",
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Adult males have a bright yellow face and crest",
+      "match": "crest"
+     },
+     {
+      "field": "sexdiff",
+      "phrase": "Adult males have a bright yellow face and crest",
+      "match": "bright"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "preen_stretch",
+     "weight": 4,
+     "src": {
+      "field": "facts",
+      "phrase": "Like other cockatoos it sheds a fine feather dust from special down feathers, which it spreads through the plumage when preening"
+     }
+    },
+    {
+     "id": "strut_display",
+     "weight": 5,
+     "src": {
+      "field": "evidence",
+      "phrase": "sometimes accompanied by head bobbing and crest displays"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "spotlight",
+      "phrase": "Males court with a whistled song"
+     }
+    },
+    {
+     "id": "court_display",
+     "weight": 4,
+     "src": {
+      "field": "spotlight",
+      "phrase": "Males court with a whistled song"
+     }
+    },
+    {
+     "id": "bathe",
+     "weight": 2,
+     "src": {
+      "default": "plan flying_bird: bathes at the water's edge"
+     }
+    }
+   ],
+   "defaults": [
+    "bathe"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "preen",
+    "src": {
+     "default": "plan flying_bird: wades in, preens after"
+    }
+   },
+   "posture": {
+    "value": "tuck",
+    "src": {
+     "default": "plan flying_bird: head tucked"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
   },
   {
    "slug": "pied-crow",
@@ -217494,6 +221178,159 @@
    }
   },
   {
+   "slug": "rhode-island-red",
+   "name": "Rhode Island Red",
+   "plan": "walking_bird",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "flock": [
+     {
+      "field": "sleep",
+      "phrase": "As the light fades the flock goes to roost on perches or branches off the ground and sleeps through the night",
+      "match": "flock"
+     },
+     {
+      "field": "sd",
+      "phrase": "and the continuous production of commercial flocks comes as much from artificial lighting as from selection",
+      "match": "flocks"
+     },
+     {
+      "field": "sociality",
+      "phrase": "the flock goes to roost",
+      "match": "flock"
+     }
+    ],
+    "display": [
+     {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display",
+      "match": "display"
+     },
+     {
+      "field": "traits",
+      "phrase": "Head bobs forward with each step",
+      "match": "head bobs"
+     },
+     {
+      "field": "facts",
+      "phrase": "A rooster that finds food often calls hens over while picking the item up and dropping it, a display known as tidbitting",
+      "match": "display"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Researchers have described more than 20 distinct chicken calls, including separate alarms for danger from the air and danger on the ground",
+      "match": "calls"
+     },
+     {
+      "field": "facts",
+      "phrase": "A rooster that finds food often calls hens over while picking the item up and dropping it, a display known as tidbitting",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": null,
+    "sizeRatio": 1,
+    "male": [
+     "wattle"
+    ],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display",
+      "match": "combs"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "dust_bathe",
+     "weight": 4,
+     "src": {
+      "rule": "family Phasianidae (dust-bathes)"
+     }
+    },
+    {
+     "id": "strut_display",
+     "weight": 5,
+     "src": {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Researchers have described more than 20 distinct chicken calls, including separate alarms for danger from the air and danger on the ground"
+     }
+    },
+    {
+     "id": "court_display",
+     "weight": 4,
+     "src": {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display"
+     }
+    },
+    {
+     "id": "preen_stretch",
+     "weight": 2,
+     "src": {
+      "default": "plan walking_bird: preens and stretches"
+     }
+    },
+    {
+     "id": "bathe",
+     "weight": 2,
+     "src": {
+      "default": "plan walking_bird: bathes at the water's edge"
+     }
+    }
+   ],
+   "defaults": [
+    "preen_stretch",
+    "bathe"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "preen",
+    "src": {
+     "default": "plan walking_bird: wades in, preens after"
+    }
+   },
+   "posture": {
+    "value": "tuck",
+    "src": {
+     "default": "plan walking_bird: head tucked"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "ribbon-eel",
    "name": "Ribbon Eel",
    "plan": "legless",
@@ -223343,6 +227180,144 @@
    "nestingSrc": null
   },
   {
+   "slug": "russian-blue-cat",
+   "name": "Russian Blue Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "russian-desman",
    "name": "Russian Desman",
    "plan": "quadruped",
@@ -227199,6 +231174,144 @@
    }
   },
   {
+   "slug": "savannah-cat",
+   "name": "Savannah Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "savannah-monitor",
    "name": "Savannah Monitor",
    "plan": "lizard",
@@ -229979,6 +234092,144 @@
    }
   },
   {
+   "slug": "selkirk-rex-cat",
+   "name": "Selkirk Rex Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "semaphore-crab",
    "name": "Semaphore Crab",
    "plan": "crustacean",
@@ -230773,6 +235024,169 @@
    "hovers": false,
    "nestingMonths": [],
    "nestingSrc": null
+  },
+  {
+   "slug": "shetland-pony",
+   "name": "Shetland Pony",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "groom": [
+     {
+      "field": "evidence",
+      "phrase": "They engage in mutual grooming, shared vigilance, and coordinated movement",
+      "match": "grooming"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Mutual grooming strengthens social bonds and maintains hygiene",
+      "match": "grooming"
+     }
+    ],
+    "allogroom": [
+     {
+      "field": "evidence",
+      "phrase": "They engage in mutual grooming, shared vigilance, and coordinated movement",
+      "match": "mutual grooming"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Mutual grooming strengthens social bonds and maintains hygiene",
+      "match": "mutual grooming"
+     }
+    ],
+    "herd": [
+     {
+      "field": "basis",
+      "phrase": "Domestic horses evolved alongside humans as cooperative athletes — breeds, color morphs, and feral herds remain one species",
+      "match": "herds"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Horses live in social herds with established hierarchies and strong bonds",
+      "match": "herds"
+     },
+     {
+      "field": "evidence",
+      "phrase": "The lead mare often guides the herd's escape route",
+      "match": "herd"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": null,
+    "sizeRatio": 1,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [],
+    "defaulted": true
+   },
+   "mating": {
+    "months": [
+     3,
+     4,
+     5,
+     9,
+     10,
+     11
+    ],
+    "src": {
+     "field": "months",
+     "phrase": "Year-round, with peak activity in spring and fall.",
+     "match": "months"
+    },
+    "kind": "seen"
+   },
+   "nesting": {
+    "months": [
+     3,
+     4,
+     5,
+     9,
+     10,
+     11
+    ],
+    "src": {
+     "field": "months",
+     "phrase": "Year-round, with peak activity in spring and fall.",
+     "match": "months"
+    },
+    "kind": "seen"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "dust_bathe",
+     "weight": 4,
+     "src": {
+      "rule": "family Equidae (dust-bathes)"
+     }
+    },
+    {
+     "id": "roll",
+     "weight": 3,
+     "src": {
+      "rule": "family Equidae (rolls)"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "evidence",
+      "phrase": "They engage in mutual grooming, shared vigilance, and coordinated movement"
+     }
+    },
+    {
+     "id": "allogroom",
+     "weight": 5,
+     "src": {
+      "field": "evidence",
+      "phrase": "They engage in mutual grooming, shared vigilance, and coordinated movement"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "stand",
+    "src": {
+     "rule": "family Equidae (sleeps standing)"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [
+    3,
+    4,
+    5,
+    9,
+    10,
+    11
+   ],
+   "nestingSrc": {
+    "field": "months",
+    "phrase": "Year-round, with peak activity in spring and fall."
+   }
   },
   {
    "slug": "shetland-sheep",
@@ -232838,6 +237252,144 @@
    "nestingSrc": null
   },
   {
+   "slug": "siberian-cat",
+   "name": "Siberian Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "siberian-crane",
    "name": "Siberian Crane",
    "plan": "flying_bird",
@@ -233840,6 +238392,159 @@
     "field": "season",
     "phrase": "Hinds mate in autumn and bear a single spotted fawn in late spring or early summer"
    }
+  },
+  {
+   "slug": "silkie-chicken",
+   "name": "Silkie Chicken",
+   "plan": "walking_bird",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "flock": [
+     {
+      "field": "sleep",
+      "phrase": "As the light fades the flock goes to roost on perches or branches off the ground and sleeps through the night",
+      "match": "flock"
+     },
+     {
+      "field": "sd",
+      "phrase": "and the continuous production of commercial flocks comes as much from artificial lighting as from selection",
+      "match": "flocks"
+     },
+     {
+      "field": "sociality",
+      "phrase": "the flock goes to roost",
+      "match": "flock"
+     }
+    ],
+    "display": [
+     {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display",
+      "match": "display"
+     },
+     {
+      "field": "traits",
+      "phrase": "Head bobs forward with each step",
+      "match": "head bobs"
+     },
+     {
+      "field": "facts",
+      "phrase": "A rooster that finds food often calls hens over while picking the item up and dropping it, a display known as tidbitting",
+      "match": "display"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Researchers have described more than 20 distinct chicken calls, including separate alarms for danger from the air and danger on the ground",
+      "match": "calls"
+     },
+     {
+      "field": "facts",
+      "phrase": "A rooster that finds food often calls hens over while picking the item up and dropping it, a display known as tidbitting",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": null,
+    "sizeRatio": 1,
+    "male": [
+     "wattle"
+    ],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display",
+      "match": "combs"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "dust_bathe",
+     "weight": 4,
+     "src": {
+      "rule": "family Phasianidae (dust-bathes)"
+     }
+    },
+    {
+     "id": "strut_display",
+     "weight": 5,
+     "src": {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Researchers have described more than 20 distinct chicken calls, including separate alarms for danger from the air and danger on the ground"
+     }
+    },
+    {
+     "id": "court_display",
+     "weight": 4,
+     "src": {
+      "field": "sexdiff",
+      "phrase": "Roosters have larger combs, wattles, spurs, and stronger display"
+     }
+    },
+    {
+     "id": "preen_stretch",
+     "weight": 2,
+     "src": {
+      "default": "plan walking_bird: preens and stretches"
+     }
+    },
+    {
+     "id": "bathe",
+     "weight": 2,
+     "src": {
+      "default": "plan walking_bird: bathes at the water's edge"
+     }
+    }
+   ],
+   "defaults": [
+    "preen_stretch",
+    "bathe"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "preen",
+    "src": {
+     "default": "plan walking_bird: wades in, preens after"
+    }
+   },
+   "posture": {
+    "value": "tuck",
+    "src": {
+     "default": "plan walking_bird: head tucked"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
   },
   {
    "slug": "silky-anteater",
@@ -258818,6 +263523,144 @@
    "nestingSrc": null
   },
   {
+   "slug": "tonkinese-cat",
+   "name": "Tonkinese Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
+  },
+  {
    "slug": "tooth-billed-pigeon",
    "name": "Tooth-billed Pigeon",
    "plan": "walking_bird",
@@ -261727,6 +266570,144 @@
     "field": "months",
     "phrase": "Spring and summer"
    }
+  },
+  {
+   "slug": "turkish-van-cat",
+   "name": "Turkish Van Cat",
+   "plan": "quadruped",
+   "zone": "farm_garden",
+   "excluded": null,
+   "behaviours": {
+    "pounce": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "pounce"
+     },
+     {
+      "field": "evidence",
+      "phrase": "Cats stalk prey with extreme patience, waiting for the precise moment to pounce, often observing for extended periods before acting",
+      "match": "pounce"
+     },
+     {
+      "field": "sd",
+      "phrase": "Hunting then compresses attention and movement into a short, precise pounce or chase",
+      "match": "pounce"
+     }
+    ],
+    "groom": [
+     {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking",
+      "match": "grooming"
+     }
+    ],
+    "freeze": [
+     {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears",
+      "match": "crouched motionless"
+     }
+    ],
+    "call": [
+     {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second",
+      "match": "purring"
+     },
+     {
+      "field": "facts",
+      "phrase": "Adult cats seldom miaow at one another, and the call is directed mostly at people",
+      "match": "call"
+     },
+     {
+      "field": "evidence",
+      "phrase": "often ignoring calls if not inclined to respond",
+      "match": "calls"
+     }
+    ]
+   },
+   "sex": {
+    "system": "separate",
+    "maleShare": 0.5,
+    "bigger": "male",
+    "sizeRatio": 1.12,
+    "male": [],
+    "female": [],
+    "duller": null,
+    "src": [
+     {
+      "field": "sexdiff",
+      "phrase": "Males are often larger, but individual and breed differences vary",
+      "match": "males are often larger"
+     }
+    ],
+    "defaulted": false
+   },
+   "mating": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nesting": {
+    "months": [],
+    "src": null,
+    "kind": "default"
+   },
+   "nest": null,
+   "recipes": [
+    {
+     "id": "pounce",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "Crouched motionless beside a gap in a fence, a cat may wait for many minutes, then pounce in under a second when a mouse appears"
+     }
+    },
+    {
+     "id": "groom_self",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "Domestic cats spend much of their time in controlled routines: resting, grooming, watching, patrolling and stalking"
+     }
+    },
+    {
+     "id": "call_bout",
+     "weight": 3,
+     "src": {
+      "field": "facts",
+      "phrase": "Purring continues on both the in-breath and the out-breath, at roughly 25 to 150 vibrations per second"
+     }
+    },
+    {
+     "id": "stretch_yawn",
+     "weight": 2,
+     "src": {
+      "default": "class Mammalia: stretches and yawns"
+     }
+    }
+   ],
+   "defaults": [
+    "stretch_yawn"
+   ],
+   "crossing": {
+    "entry": "wade",
+    "exit": "walk",
+    "after": "shake",
+    "src": {
+     "default": "class Mammalia: wades in, shakes off after"
+    }
+   },
+   "posture": {
+    "value": "curl",
+    "src": {
+     "rule": "Felidae: sleeps curled"
+    }
+   },
+   "hovers": false,
+   "nestingMonths": [],
+   "nestingSrc": null
   },
   {
    "slug": "turquoise-browed-motmot",

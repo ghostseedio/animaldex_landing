@@ -48,6 +48,17 @@ export function distanceToSegment(px: number, pz: number, ax: number, az: number
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
+/** Load-alloc: `distanceToSegment`'s `t` for the last `segmentDistance` (the same sums, no object a call). */
+let segmentT = 0;
+/** `distanceToSegment`'s distance, its `t` left in `segmentT`: for the fields' hot loops (sampled per ground point). */
+function segmentDistance(px: number, pz: number, ax: number, az: number, bx: number, bz: number): number {
+    const dx = bx - ax;
+    const dz = bz - az;
+    const t = Math.min(Math.max(((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz), 0), 1);
+    segmentT = t;
+    return Math.hypot(px - ax - dx * t, pz - az - dz * t);
+}
+
 // MARK: - The coast
 
 /** How far the land reaches from the middle at a bearing (m), before the coast's small noise and the cove. */
@@ -131,22 +142,27 @@ export const SUMMITS: ReadonlyArray<{x: number; z: number; h: number; r: number;
     {x: 118, z: -98, h: 38, r: 40, name: "east"}
 ];
 
-function spineDistance(x: number, z: number): {d: number; crest: number} {
+/** `spineDistance`'s crest for the last call (load-alloc: no object a call; it is asked for at every ground point). */
+let spineCrest = 0;
+/** The distance to the spine's line, its crest's height there left in `spineCrest`. */
+function spineDistance(x: number, z: number): number {
     let best = Infinity;
     let crest = 0;
     for (let i = 1; i < SPINE.length; i++) {
-        const {d, t} = distanceToSegment(x, z, SPINE[i - 1][0], SPINE[i - 1][1], SPINE[i][0], SPINE[i][1]);
+        const d = segmentDistance(x, z, SPINE[i - 1][0], SPINE[i - 1][1], SPINE[i][0], SPINE[i][1]);
         if (d < best) {
             best = d;
-            crest = lerp(CREST[i - 1], CREST[i], t);
+            crest = lerp(CREST[i - 1], CREST[i], segmentT);
         }
     }
-    return {d: best, crest};
+    spineCrest = crest;
+    return best;
 }
 
 /** The mountains' height above the lowland at a point (m), before the coast eases it down. */
 function massifHeight(x: number, z: number, smooth = false): number {
-    const {d, crest} = spineDistance(x, z);
+    const d = spineDistance(x, z);
+    const crest = spineCrest;
     // Ridged noise: arêtes and gullies, stronger higher up (none for the regional height the biomes read).
     const rough = smooth ? 0.5 : 1 - Math.abs(2 * fbm(x * 0.03 + 3.1, z * 0.03 - 1.7) - 1);
     const width = 76 + 16 * (fbm(x * 0.011 + 8, z * 0.011) - 0.5);
@@ -204,21 +220,53 @@ export const RIVER_LOWER: readonly RiverPoint[] = (() => {
 
 export type RiverHit = {d: number; level: number; width: number; depth: number; along: number; upper: boolean; dx: number; dz: number; /** How fast its surface falls there (m a metre downstream). */ fall: number; /** Its valley's level: its own profile's, before the mouth comes down to the lake (`toTheLake`). */ valley: number};
 
-function nearestOn(list: readonly RiverPoint[], x: number, z: number, upper: boolean, total: {length: number}): RiverHit {
-    let best: RiverHit = {d: Infinity, level: 0, width: 1, depth: 0.5, along: 0, upper, dx: 0, dz: 1, fall: 0, valley: 0};
-    let before = 0;
-    let length = 0;
-    for (let i = 1; i < list.length; i++) length += Math.hypot(list[i].x - list[i - 1].x, list[i].z - list[i - 1].z);
+/**
+ * The nearest point of a reach, as numbers (load-alloc: `riverAt` is asked at every ground point, twice a reach; a hit
+ * object for every segment nearer than the last, and a `{d, t}` for every segment, were most of the load's garbage).
+ * The same sums in the same order as the object version was: its segment, `t`, and the length before it.
+ */
+type Nearest = {d: number; i: number; t: number; before: number; seg: number; length: number};
+const upperNearest: Nearest = {d: Infinity, i: 0, t: 0, before: 0, seg: 0, length: 0};
+const lowerNearest: Nearest = {d: Infinity, i: 0, t: 0, before: 0, seg: 0, length: 0};
+/** Each reach's whole length (the sum of its segments, in order), once. */
+const reachLengths = new WeakMap<readonly RiverPoint[], number>();
+
+function nearestOn(list: readonly RiverPoint[], x: number, z: number, total: {length: number}, out: Nearest): Nearest {
+    let length = reachLengths.get(list);
+    if (length === undefined) {
+        length = 0;
+        for (let i = 1; i < list.length; i++) length += Math.hypot(list[i].x - list[i - 1].x, list[i].z - list[i - 1].z);
+        reachLengths.set(list, length);
+    }
     total.length = length;
+    out.d = Infinity;
+    out.i = 0;
+    out.length = length;
+    let before = 0;
     for (let i = 1; i < list.length; i++) {
         const a = list[i - 1];
         const b = list[i];
         const seg = Math.hypot(b.x - a.x, b.z - a.z);
-        const {d, t} = distanceToSegment(x, z, a.x, a.z, b.x, b.z);
-        if (d < best.d) best = {d, level: lerp(a.level, b.level, t), width: lerp(a.width, b.width, t), depth: lerp(a.depth, b.depth, t), along: (before + t * seg) / length, upper, dx: (b.x - a.x) / seg, dz: (b.z - a.z) / seg, fall: (a.level - b.level) / seg, valley: lerp(a.level, b.level, t)};
+        const d = segmentDistance(x, z, a.x, a.z, b.x, b.z);
+        if (d < out.d) {
+            out.d = d;
+            out.i = i;
+            out.t = segmentT;
+            out.before = before;
+            out.seg = seg;
+        }
         before += seg;
     }
-    return best;
+    return out;
+}
+
+/** The hit at a reach's nearest point (`level` and `fall` given: the upper reach's come down to the lake, `toTheLake`). */
+function hitOf(list: readonly RiverPoint[], n: Nearest, upper: boolean, level: number, fall: number): RiverHit {
+    if (!n.i) return {d: Infinity, level: 0, width: 1, depth: 0.5, along: 0, upper, dx: 0, dz: 1, fall: 0, valley: 0};
+    const a = list[n.i - 1];
+    const b = list[n.i];
+    const t = n.t;
+    return {d: n.d, level, width: lerp(a.width, b.width, t), depth: lerp(a.depth, b.depth, t), along: (n.before + t * n.seg) / n.length, upper, dx: (b.x - a.x) / n.seg, dz: (b.z - a.z) / n.seg, fall, valley: lerp(a.level, b.level, t)};
 }
 
 const upperLength = {length: 0};
@@ -226,9 +274,25 @@ const lowerLength = {length: 0};
 
 /** The nearest point of the river (either reach): distance to its line, its surface there, its width and depth. */
 export function riverAt(x: number, z: number): RiverHit {
-    const upper = nearestOn(RIVER_UPPER, x, z, true, upperLength);
-    const lower = nearestOn(RIVER_LOWER, x, z, false, lowerLength);
-    return upper.d <= lower.d ? toTheLake(upper) : lower;
+    const upper = nearestOn(RIVER_UPPER, x, z, upperLength, upperNearest);
+    const lower = nearestOn(RIVER_LOWER, x, z, lowerLength, lowerNearest);
+    if (upper.d <= lower.d) {
+        // (`toTheLake` of the upper reach's hit, worked out from its numbers: one object, not three.)
+        if (!upper.i) return toTheLake(hitOf(RIVER_UPPER, upper, true, 0, 0));
+        const a = RIVER_UPPER[upper.i - 1];
+        const b = RIVER_UPPER[upper.i];
+        const level = lerp(a.level, b.level, upper.t);
+        const fall = (a.level - b.level) / upper.seg;
+        const mouth = upperRiverMouth();
+        const along = ((upper.before + upper.t * upper.seg) / upper.length) * upperLength.length;
+        if (along >= mouth.along) return hitOf(RIVER_UPPER, upper, true, LAKE.level, 0);
+        const k = Math.max(along / mouth.along, 0);
+        return hitOf(RIVER_UPPER, upper, true, level - mouth.drop * k, fall + mouth.drop / mouth.along);
+    }
+    if (!lower.i) return hitOf(RIVER_LOWER, lower, false, 0, 0);
+    const a = RIVER_LOWER[lower.i - 1];
+    const b = RIVER_LOWER[lower.i];
+    return hitOf(RIVER_LOWER, lower, false, lerp(a.level, b.level, lower.t), (a.level - b.level) / lower.seg);
 }
 
 /**

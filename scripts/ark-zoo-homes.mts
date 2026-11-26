@@ -44,6 +44,20 @@ const {modelBase} = await import("@/ark-scene/grounding/base");
 const BIRDS = new Set(["flying_bird", "walking_bird", "flightless_bird"]);
 const MAMMALS = new Set(["quadruped", "primate", "bat"]);
 const REPTILES = new Set(["lizard", "legless", "turtle", "amphibian"]);
+/**
+ * The map's body classes (`src/ark-scene/map/body.json`): the reptile house takes reptiles and amphibians only. A
+ * "legless" or "lizard" body plan is a shape, not a class (SPECIES-ANIM-B2, 2026-11-24: the swallowtail caterpillar,
+ * the earthworms, millipedes and eels were in with the snakes); a species with no class there keeps the plan's rule.
+ */
+const bodyClass = new Map<string, string>(
+    Object.entries(JSON.parse(readFileSync(path.join(root, "src/ark-scene/map/body.json"), "utf8")) as Record<string, unknown>)
+        .filter((entry): entry is [string, string[]] => Array.isArray(entry[1]))
+        .flatMap(([cls, slugs]) => slugs.map((slug) => [slug, cls] as [string, string]))
+);
+const reptileHouse = (slug: string) => {
+    const cls = bodyClass.get(slug);
+    return cls === undefined || cls === "r" || cls === "a";
+};
 const huntsAmong = (p: Profile, plans: Set<string>) => (prey.get(p.slug) ?? []).some((q) => plans.has(q.plan));
 /** The size band: a factor of 1.25 in body size per band. */
 const band = (size: number) => Math.floor(Math.log(Math.max(size, 1)) / Math.log(1.25));
@@ -63,7 +77,7 @@ for (const p of profiles) {
         if (huntsAmong(p, MAMMALS)) own.small_mammals = `carnivores:${b}`;
         else if (p.plan === "quadruped" && p.diet === "grazer" && p.size >= 28) own.small_mammals = "walkabout";
     }
-    if (REPTILES.has(p.plan)) {
+    if (REPTILES.has(p.plan) && reptileHouse(p.slug)) {
         if (p.plan === "turtle" && (p.diet === "grazer" || p.diet === "browser") && p.size >= 30) own.reptile_house = "tortoises";
         else if (huntsAmong(p, REPTILES)) own.reptile_house = b >= 17 ? "large_reptiles" : p.water ? "turtles" : "snakes";
         else if (p.plan === "legless") own.reptile_house = "snakes";
