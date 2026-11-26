@@ -794,6 +794,10 @@ const SELECTED = new Color("#fff4dc");
 const ARRIVAL = new Color("#fff3d6");
 /** V2 replay: the soft ring under an animal the cast marks (the last of its kind). */
 const LAST_OF_KIND = new Color("#ffb347");
+/** The stalking cue's ring (`ark-eat-soon.ts` arkStalkCue): a warm red, faint, breathing; never as strong as a selection's. */
+const STALKING = new Color("#ff8a6a");
+/** How often (s) the stalking cue's hunters are worked out again (their chance moves on 15-Ark-minute steps, ~35 s). */
+const STALK_EVERY = 5;
 
 function easeOutBack(t: number): number {
     const c = 1.4;
@@ -2115,6 +2119,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** Encounter hunting: due predators' forays (off until the hunting read says the Ark hunts by encounter). */
     const hunting = new HuntingLayer();
+    /** The stalking cue: hunters out on their forays now with a high chance of a catch soon (by id: that chance). */
+    let stalkers = new Map<string, number>();
+    let stalkersAt = -Infinity;
+    const stepStalkers = (nowS: number) => {
+        if (nowS - stalkersAt < STALK_EVERY) return;
+        stalkersAt = nowS;
+        if (hunting.active && arkEatSoonOn()) stalkers = hunting.stalkers((id) => entryById.get(id)?.animal ?? null, worldMs() / 1000);
+        else if (stalkers.size) stalkers = new Map();
+    };
     /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */
     const behaviourTimes: number[] = [];
     let behaviourFrameMs = 0;
@@ -2796,7 +2809,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             goal: plan?.goal ?? null,
             log: arkStatusLog(scheduleLog, record),
             bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), fed, energy, bornDay: animal.born_ark_day ?? null, lifespanDays: animal.lifespan_days ?? null, lifespanEstimate: animal.lifespan_estimate === true}),
-            // EATSOON (behind `?eatsoon=1`): its chance of a catch in the next Ark day, from the engine's next hunt and its
+            // EATSOON (public; `?eatsoon=0` hides it): its chance of a catch in the next Ark day, from the engine's next hunt and its
             // two numbers on the hunting read, or how it is fed. Worked out here (the selected animal, about once a second).
             ...(arkEatSoonOn() ? {eatSoon: arkEatSoon({animal, window: hunting.active ? hunting.window(animal, epoch) : null, odds: hunting.odds(animal.id)})} : {})
         };
@@ -7782,6 +7795,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // A small one on level ground (the litter, a flower, the pond): a ring its own size.
                 ringList.push({x: where.x, y: where.base + 0.004, z: where.z, radius: Math.max(entry.length * 1.3, 0.025), color: marked === 2 ? SELECTED : marked === 3 ? LAST_OF_KIND : MINE, alpha: 1});
             }
+            // The stalking cue (2026-11-26): a hunter out on its forays now with a high chance of a catch in the next Ark day (its
+            // card's %, from the engine's two numbers): a faint warm ring under it that breathes. Real odds only; none when marked.
+            const stalk = !marked && stalkers.size && !entry.micro ? stalkers.get(animal.id) : undefined;
+            if (stalk !== undefined) {
+                const ringY = where.afloat ? (island?.contains(where.x, where.z) ? where.base : waterTopAt(where.x, where.z)) : Math.max(underFeet?.height ?? groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true, poseBase).height, island?.contains(where.x, where.z) ? 0 : waterTopAt(where.x, where.z));
+                const breathe = reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(now * 2.4);
+                ringList.push({x: where.x, y: ringY, z: where.z, radius: Math.max(entry.length * sizeUp * 0.9, 0.7), color: STALKING, alpha: (0.2 + 0.3 * breathe) * (0.6 + 0.4 * stalk)});
+            }
         }
 
         if (perf.on) perf.carve("seat", seat.frameMs);
@@ -11423,6 +11444,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepIslandNear();
         // 3.3 fix: the kept town animals around the look point out to move (`near-kept.ts`).
         stepNearKept(now);
+        stepStalkers(now);
         // Idle: after a while untouched, the view drifts slowly round.
         if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) {
             if (!controls.autoRotate) driftFrom = now;

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {readdirSync, readFileSync} from "node:fs";
 import {join} from "node:path";
 import test from "node:test";
-import {ARK_EAT_SOON_ENGLISH, arkCatchChance, arkEatSoon, arkEatSoonOn, arkEatSoonPercent, arkEatSoonText, type ArkEatSoonInput} from "@/lib/ark-eat-soon";
+import {ARK_EAT_SOON_ENGLISH, ARK_STALK_CUE, arkCatchChance, arkEatSoon, arkEatSoonOn, arkStalkCouldCue, arkStalkCue, arkEatSoonPercent, arkEatSoonText, type ArkEatSoonInput} from "@/lib/ark-eat-soon";
 import {decodeArkHunting} from "@/lib/ark-hunting";
 import {arkStatusSignature, arkStatusText, arkStatusWords, type ArkAnimalStatus} from "@/lib/ark-animal-status";
 import {HuntingLayer} from "@/ark-scene/hunting";
@@ -73,12 +73,35 @@ test("words: the % never reads 0 for a real chance; each kind's line; English fa
     assert.equal(arkStatusSignature(status), arkStatusSignature({...status, eatSoon: null}));
 });
 
-test("the switch: off by default; on with ?eatsoon=1 or the global", () => {
-    const g = globalThis as {__arkEatSoon?: boolean};
-    assert.equal(arkEatSoonOn(), false);
-    g.__arkEatSoon = true;
+test("the stalking cue: only a hunter out now, with the engine's two numbers, at a high chance", () => {
+    // The live read's one hunter with a find share (2026-11-26): a Great Blue Heron, find 0.255, catch 0.635.
+    const heron = {find: 0.255, catch: 0.635, dormant: false};
+    const day = {steps: 40, firstAt: 0};
+    assert.ok(Math.abs(arkStalkCue(heron, day, true)! - arkCatchChance(0.255, 0.635, 40)) < 1e-12);
+    assert.ok(arkStalkCue(heron, day, true)! >= ARK_STALK_CUE);
+    assert.equal(arkStalkCue(heron, day, false), null, "not out on its forays now");
+    assert.equal(arkStalkCue({...heron, dormant: true}, day, true), null);
+    assert.equal(arkStalkCue({find: null, catch: null, dormant: false}, day, true), null, "an older read");
+    assert.equal(arkStalkCue({find: 0, catch: 1, dormant: false}, day, true), null, "never found prey it could take");
+    assert.equal(arkStalkCue(heron, {steps: 1, firstAt: 0}, true), null, "a low chance: one step left");
+    assert.equal(arkStalkCouldCue(heron), true);
+    assert.equal(arkStalkCouldCue({find: 0, catch: 1, dormant: false}), false);
+    assert.equal(arkStalkCouldCue({find: 0.5, catch: 0.2, dormant: false}), false, "its catch chance caps it below the cue");
+});
+
+test("the switch: on by default (public since 2026-11-26); off with ?eatsoon=0 or the global", () => {
+    const g = globalThis as {__arkEatSoon?: boolean; location?: {search?: string}};
     assert.equal(arkEatSoonOn(), true);
+    g.__arkEatSoon = false;
+    assert.equal(arkEatSoonOn(), false);
     delete g.__arkEatSoon;
+    const had = Object.getOwnPropertyDescriptor(globalThis, "location");
+    Object.defineProperty(globalThis, "location", {value: {search: "?eatsoon=0"}, configurable: true});
+    assert.equal(arkEatSoonOn(), false);
+    Object.defineProperty(globalThis, "location", {value: {search: "?eatsoon=1"}, configurable: true});
+    assert.equal(arkEatSoonOn(), true);
+    if (had) Object.defineProperty(globalThis, "location", had);
+    else delete g.location;
 });
 
 const atlas = decodeAtlas(JSON.parse(readFileSync(join(process.cwd(), "src/ark-scene/positions/atlas.json"), "utf8")));

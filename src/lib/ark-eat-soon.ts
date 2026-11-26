@@ -1,7 +1,7 @@
 /**
  * "Chance of eating soon" on an animal's bars and card (owner 2026-11-24: a small % on the status bars, only if it costs
- * little compute, and honest: from the numbers the engine uses). Behind a display switch (`arkEatSoonOn`, `?eatsoon=1`),
- * off by default.
+ * little compute, and honest: from the numbers the engine uses). Public (on by default) since 2026-11-26; `?eatsoon=0`
+ * turns it off (`arkEatSoonOn`).
  *
  * What it says, by who the animal is:
  * - A wild hunter (one the hunting read names, `voyage_hunting_v1`): its chance of a catch in the next Ark day,
@@ -63,6 +63,27 @@ export function arkCatchChance(find: number, catchChance: number, steps: number)
     const f = Math.min(Math.max(find, 0), 1);
     const c = Math.min(Math.max(catchChance, 0), 1);
     return (1 - Math.pow(1 - f, Math.min(Math.floor(steps), ARK_EAT_SOON_STEPS))) * c;
+}
+
+/**
+ * The stalking cue (2026-11-26, "show what's about to happen"): a hunter out on its forays now whose chance of a catch in
+ * the next Ark day is at least this gets a faint pulsing ring in the scene. The same number as its card's %.
+ */
+export const ARK_STALK_CUE = 0.4;
+
+/**
+ * Its chance when the scene should cue it as stalking, else null: hunting now (due and awake, the hunting layer's own
+ * rule), not dormant, the engine's two numbers sent, and a chance of at least `ARK_STALK_CUE`. Pure.
+ */
+export function arkStalkCue(odds: ArkHuntOdds | null, window: ArkHuntWindow | null, huntingNow: boolean, least = ARK_STALK_CUE): number | null {
+    if (!huntingNow || !odds || odds.dormant || odds.find === null || odds.catch === null || !window || !(window.steps > 0)) return null;
+    const chance = arkCatchChance(odds.find, odds.catch, window.steps);
+    return chance >= least ? chance : null;
+}
+
+/** Whether a hunter's two numbers could ever reach the cue (no window needed): a cheap first pass over the read. */
+export function arkStalkCouldCue(odds: ArkHuntOdds | null, least = ARK_STALK_CUE): boolean {
+    return Boolean(odds && !odds.dormant && odds.find !== null && odds.catch !== null && odds.find > 0 && arkCatchChance(odds.find, odds.catch, ARK_EAT_SOON_STEPS) >= least);
 }
 
 const CARER: Record<string, ArkCarer> = {house: "owner", farm: "farmer", zoo: "keeper"};
@@ -152,13 +173,17 @@ export function arkEatSoonText(soon: ArkEatSoon, words: Partial<ArkEatSoonWords>
     }
 }
 
-/** The display switch: `?eatsoon=1` on the page or the embed, or `globalThis.__arkEatSoon`. Off by default. */
+/**
+ * The display switch. Public since 2026-11-26 (the engine's `voyage_hunt_odds` live on `voyage_hunting_v1`): on by
+ * default; `?eatsoon=0` on the page or the embed, or `globalThis.__arkEatSoon = false`, turns it off (a comparison
+ * picture, a fault to rule out).
+ */
 export function arkEatSoonOn(): boolean {
     const g = globalThis as {__arkEatSoon?: boolean; location?: {search?: string}};
-    if (g.__arkEatSoon === true) return true;
+    if (g.__arkEatSoon === false) return false;
     try {
-        return new URLSearchParams(g.location?.search ?? "").get("eatsoon") === "1";
+        return new URLSearchParams(g.location?.search ?? "").get("eatsoon") !== "0";
     } catch {
-        return false;
+        return true;
     }
 }

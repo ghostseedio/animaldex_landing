@@ -125,7 +125,8 @@ export class LiveJourneys<E> {
                 base = h.ground(at.x, at.z);
                 state = speed > h.walk(entry) * 2 ? "run" : "walk";
             }
-            h.setAct(entry, {x: at.x, z: at.z, base, yaw: at.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state, speed});
+            // (Its card says so while the trip is drawn: "on its way to its mate", the record's own find, never a guess.)
+            h.setAct(entry, {x: at.x, z: at.z, base, yaw: at.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state, speed, meal: "toMate"});
             acting.add(entry);
         }
         this.acting.forEach((e) => {

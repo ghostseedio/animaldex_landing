@@ -558,6 +558,7 @@
             "light": "dando vueltas a una luz",
             "feeding": "recibiendo su comida",
             "birthing": "dando a luz",
+            "toMate": "en camino hacia su pareja",
             "about": "dando una vuelta",
             "tag": "Ahora",
             "tagNote": "Ocurre ahora según el reloj compartido del Ark, igual para todos. Las líneas continuas son el registro del Ark.",

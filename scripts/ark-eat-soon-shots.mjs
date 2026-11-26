@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * EATSOON (`src/lib/ark-eat-soon.ts`): pictures of the chance of a catch on the bars over a selected hunter and on its
- * card, and the words for a plant-eater, composed in the real embed (`public/ark/embed.html` with `?eatsoon=1`, built by
+ * card, and the words for a plant-eater, composed in the real embed (`public/ark/embed.html`, public since 2026-11-26), built by
  * `node scripts/build-ark-bundle.mjs`), at phone and desktop width.
  *
  * The data are the live public reads (`/api/ark/*` from the site, read only). The hunting read is the live one; until the
@@ -104,7 +104,9 @@ const snapshot = JSON.parse((await live("/api/ark/voyage")).body.toString("utf8"
 const hunting = JSON.parse((await live("/api/ark/hunting")).body.toString("utf8")).hunting;
 const hunters = new Set(hunting.predators.map((p) => p[0]));
 const wild = (a) => !a.area && a.island !== "town";
-const hunter = snapshot.animals.find((a) => a.name === hunterName && hunters.has(a.id) && wild(a) && odds.has(a.id)) ?? snapshot.animals.find((a) => a.name === hunterName && hunters.has(a.id) && wild(a));
+// (`--hunter-id <id>`: that hunter, e.g. one the live read gives a high chance now, for the stalking cue's picture.)
+const hunterId = arg("hunter-id", null);
+const hunter = hunterId ? snapshot.animals.find((a) => a.id === hunterId) : snapshot.animals.find((a) => a.name === hunterName && hunters.has(a.id) && wild(a) && odds.has(a.id)) ?? snapshot.animals.find((a) => a.name === hunterName && hunters.has(a.id) && wild(a));
 const grazer = snapshot.animals.find((a) => a.name === grazerName && !hunters.has(a.id) && wild(a));
 if (!hunter || !grazer) throw new Error(`no ${!hunter ? hunterName : grazerName} in the live snapshot`);
 if (illustrate !== null && !odds.has(hunter.id)) {
@@ -132,7 +134,7 @@ try {
             await live(`/api/ark/words?lang=${encodeURIComponent(lang)}`);
             const page = await browser.newPage({viewport, deviceScaleFactor: scale});
             page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 200)));
-            await page.goto(`${base}/ark/embed.html?eatsoon=1&hud=bars&lang=${lang}`);
+            await page.goto(`${base}/ark/embed.html?hud=bars&lang=${lang}`);
             await page.waitForFunction(() => document.querySelector("canvas") && document.getElementById("ark-loader")?.style.display === "none", null, {timeout: 300000}).catch(() => null);
             await page.waitForTimeout(4000);
             for (const [who, animal] of [["hunter", hunter], ["grazer", grazer]]) {
@@ -151,6 +153,17 @@ try {
                 await page.screenshot({path: file});
                 log.push({file, who, name: animal.name, lang, ...said, engineOdds: odds.get(animal.id) ?? null});
                 console.log(label, lang, who, animal.name, JSON.stringify(said));
+                if (who === "hunter" && lang === langs[0]) {
+                    // The stalking cue (`arkStalkCue`): the card closed, the camera where it was, the hunter unselected:
+                    // its faint ring when the engine's odds are high and it is out on its forays now.
+                    await page.evaluate(() => window.postMessage({type: "ark:select", id: null}, "*"));
+                    for (const at of [1500, 2600]) {
+                        await page.waitForTimeout(at);
+                        const cue = path.join(out, `${label}-${lang}-hunter-cue-${at}.png`);
+                        await page.screenshot({path: cue});
+                        log.push({file: cue, who: "hunter-cue", name: animal.name, lang});
+                    }
+                }
             }
             await page.close();
         }

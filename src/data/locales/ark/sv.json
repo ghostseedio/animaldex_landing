@@ -558,6 +558,7 @@
             "light": "cirklar kring ett ljus",
             "feeding": "får mat",
             "birthing": "föder ungar",
+            "toMate": "är på väg till sin partner",
             "about": "är i farten",
             "tag": "Nu",
             "tagNote": "Händer nu enligt Arks gemensamma klocka, likadant för alla. Heldragna rader är Arks logg.",

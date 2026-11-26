@@ -20,7 +20,7 @@ import {arkSleepOf} from "@/ark-scene/sleep-hours";
 import type {ArkHunting} from "@/lib/ark-hunting";
 import pin from "@/ark-scene/positions/PIN.json";
 import {searchLeg, searchStyleOf} from "@/ark-scene/hunt-search";
-import type {ArkHuntOdds, ArkHuntWindow} from "@/lib/ark-eat-soon";
+import {arkStalkCouldCue, arkStalkCue, type ArkHuntOdds, type ArkHuntWindow} from "@/lib/ark-eat-soon";
 
 export type HuntPose = TripPose & {doing: ArkDoing};
 
@@ -138,7 +138,7 @@ export class HuntingLayer {
      * EATSOON: a hunter's due window (`ark-eat-soon.ts`): its awake steps in the next Ark day on or after its next hunt
      * (the server's), and the first such step within a few Ark days. Null when the read names no next hunt for it (not a
      * hunter, the pool, a town animal). At most 16 x 96 `awakeAt` reads (a few hundred microseconds), once per step (15 Ark minutes, about 35 real
-     * seconds) per animal asked: the card's selected animal only.
+     * seconds) per animal asked: the card's selected animal, and the stalking cue's few hunters (`stalkers`).
      */
     window(animal: ArkAnimal, epochSeconds: number): ArkHuntWindow | null {
         const st = this.state;
@@ -163,13 +163,33 @@ export class HuntingLayer {
         }
         const window = {steps, firstAt: first};
         this.windows.set(animal.id, {k, window});
-        if (this.windows.size > 16) this.windows.delete(this.windows.keys().next().value as string);
+        if (this.windows.size > 64) this.windows.delete(this.windows.keys().next().value as string);
         return window;
     }
 
     /** EATSOON: the engine's find share and catch chance for a hunter, when the read sends them. */
     odds(id: string): ArkHuntOdds | null {
         return this.state?.odds.get(id) ?? null;
+    }
+
+    /**
+     * The stalking cue (`ark-eat-soon.ts` arkStalkCue): the hunters out on their forays now whose chance of a catch in the
+     * next Ark day is high, by id, with that chance. Only the read's hunters with the engine's two numbers are looked
+     * at, and only those whose numbers could reach the cue get a window (cached per step): the scene asks every few seconds.
+     */
+    stalkers(animalOf: (id: string) => ArkAnimal | null, epochSeconds: number): Map<string, number> {
+        const out = new Map<string, number>();
+        const st = this.state;
+        if (!st) return out;
+        for (const [id, odds] of Array.from(st.odds)) {
+            if (!arkStalkCouldCue(odds)) continue;
+            const animal = animalOf(id);
+            if (!animal) continue;
+            const now = this.hunting(animal, epochSeconds);
+            const chance = now ? arkStalkCue(odds, this.window(animal, epochSeconds), now) : null;
+            if (chance !== null) out.set(id, chance);
+        }
+        return out;
     }
 
     /** The predators the read names (their ids). */
