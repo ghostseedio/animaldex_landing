@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Nukkuu yhdellä jalalla",
                 "asleepWater": "Nukkuu vedessä",
                 "asleepHuddle": "Nukkuu tiiviisti laumansa kyljessä",
+                "asleepBuried": "Nukkuu maahan kaivautuneena",
                 "resting": "Lepää",
                 "restingDen": "Lepää pesäkolossaan",
                 "dozingSun": "Torkkuu auringossa",
@@ -558,6 +559,7 @@
             "light": "kiertää valoa",
             "feeding": "saa ruokaa",
             "birthing": "synnyttää",
+            "toMate": "on matkalla kumppaninsa luo",
             "about": "on liikkeellä",
             "tag": "Nyt",
             "tagNote": "Tapahtuu nyt Arkin yhteisen kellon mukaan, kaikille samoin. Yhtenäiset rivit ovat Arkin kirjaa.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Se eli siellä 1 päivän.",
             "deathLivedMany": "Se eli siellä {days} päivää.",
             "deathSee": "Katso sen lajia Arkissa",
+            "arrivedLine": "Olen saapunut Arkiin!",
             "stats": {
                 "money": "Raha",
                 "relationships": "Ihmissuhteet",

@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Dorm sobre una pota",
                 "asleepWater": "Dorm a l’aigua",
                 "asleepHuddle": "Dorm arraulit amb el seu grup",
+                "asleepBuried": "Dorm colgat a terra",
                 "resting": "Descansa",
                 "restingDen": "Descansa al seu cau",
                 "dozingSun": "Dormisqueja al sol",
@@ -558,6 +559,7 @@
             "light": "fa voltes a una llum",
             "feeding": "rep el menjar",
             "birthing": "pareix",
+            "toMate": "va a trobar la seva parella",
             "about": "va amunt i avall",
             "tag": "Ara",
             "tagNote": "Passa ara segons el rellotge compartit de l'Ark, igual per a tothom. Les línies contínues són el registre de l'Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Hi va viure 1 dia.",
             "deathLivedMany": "Hi va viure {days} dies.",
             "deathSee": "Mira la seva espècie a l'Ark",
+            "arrivedLine": "Ja he arribat a l'Ark!",
             "stats": {
                 "money": "Diners",
                 "relationships": "Relacions",

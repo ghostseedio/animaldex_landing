@@ -334,10 +334,10 @@ for (const name of scenes) {
             for (let i = 0; i < STEPS.length; i++) {
                 const step = STEPS[i];
                 const note = await page.evaluate(async ([id, step, lengths, label]) => {
-                    const text = await window.__behaviours.lsShot(id, {k: step.k, lengths, azimuth: step.azimuth, hour: step.hour ?? null, month: step.month ?? null, run: step.hour ? 3 : 1.5, lift: Number(label.lift ?? 0)});
+                    const text = await window.__behaviours.lsShot(id, {k: step.k, lengths, azimuth: step.azimuth, hour: step.hour ?? null, month: step.month ?? null, run: step.hour ? 3 : 1.5, lift: Number(label.lift ?? 0), ...(label.polar ? {polar: Number(label.polar)} : {})});
                     document.getElementById("note").textContent = `${label.name}: ${step.label}\n${text}`;
                     return text;
-                }, [sp.ids[0], step, lengths, {name: sp.name, lift: arg("lift", "0")}]);
+                }, [sp.ids[0], step, lengths, {name: sp.name, lift: arg("lift", "0"), polar: arg("polar", "")}]);
                 const file = path.join(dir, `${sp.slug}-${i}.jpg`);
                 await page.screenshot({path: file, type: "jpeg", quality: 88});
                 files.push(file);

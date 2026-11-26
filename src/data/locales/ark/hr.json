@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Spava na jednoj nozi",
                 "asleepWater": "Spava u vodi",
                 "asleepHuddle": "Spava stisnut uz svoju skupinu",
+                "asleepBuried": "Spava zakopan u zemlji",
                 "resting": "Odmara se",
                 "restingDen": "Odmara se u svom brlogu",
                 "dozingSun": "Drijema na suncu",
@@ -558,6 +559,7 @@
             "light": "kruži oko svjetla",
             "feeding": "dobiva hranu",
             "birthing": "rađa mlade",
+            "toMate": "ide prema svom partneru",
             "about": "obilazi okolicu",
             "tag": "Sada",
             "tagNote": "Događa se sada prema zajedničkom satu broda Ark, isto za sve. Pune linije su zapis broda Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Ondje je živjela 1 dan.",
             "deathLivedMany": "Ondje je živjela {days} dana.",
             "deathSee": "Pogledaj njezinu vrstu u Arku",
+            "arrivedLine": "Evo me u Arku!",
             "stats": {
                 "money": "Novac",
                 "relationships": "Odnosi",

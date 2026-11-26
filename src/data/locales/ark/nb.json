@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Sover på ett bein",
                 "asleepWater": "Sover i vannet",
                 "asleepHuddle": "Sover tett inntil flokken sin",
+                "asleepBuried": "Sover nedgravd i bakken",
                 "resting": "Hviler",
                 "restingDen": "Hviler i hiet sitt",
                 "dozingSun": "Døser i sola",
@@ -558,6 +559,7 @@
             "light": "sirkler rundt et lys",
             "feeding": "blir fôret",
             "birthing": "føder unger",
+            "toMate": "er på vei til maken sin",
             "about": "er på farten",
             "tag": "Nå",
             "tagNote": "Skjer nå etter Arks felles klokke, likt for alle. Heltrukne linjer er Arks logg.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Den levde der i 1 dag.",
             "deathLivedMany": "Den levde der i {days} dager.",
             "deathSee": "Se arten dens i Ark",
+            "arrivedLine": "Jeg har kommet om bord i Ark!",
             "stats": {
                 "money": "Penger",
                 "relationships": "Relasjoner",

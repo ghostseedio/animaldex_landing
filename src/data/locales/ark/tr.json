@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Tek ayak üstünde uyuyor",
                 "asleepWater": "Suda uyuyor",
                 "asleepHuddle": "Grubuna sokulmuş uyuyor",
+                "asleepBuried": "Toprağa gömülü uyuyor",
                 "resting": "Dinleniyor",
                 "restingDen": "İninde dinleniyor",
                 "dozingSun": "Güneşte uyukluyor",
@@ -558,6 +559,7 @@
             "light": "bir ışığın etrafında dönüyor",
             "feeding": "besleniyor",
             "birthing": "doğum yapıyor",
+            "toMate": "eşine doğru gidiyor",
             "about": "ortalıkta dolaşıyor",
             "tag": "Şimdi",
             "tagNote": "Ark'ın ortak saatine göre şu an oluyor, herkes için aynı. Düz çizgiler Ark'ın kaydı.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Orada 1 gün yaşadı.",
             "deathLivedMany": "Orada {days} gün yaşadı.",
             "deathSee": "Türünü Ark'ta gör",
+            "arrivedLine": "Ark'a geldim!",
             "stats": {
                 "money": "Para",
                 "relationships": "İlişkiler",

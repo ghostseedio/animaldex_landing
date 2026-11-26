@@ -3113,6 +3113,7 @@
       "deathLivedOne": "It lived there for 1 day.",
       "deathLivedMany": "It lived there for {days} days.",
       "deathSee": "See its kind in the Ark",
+      "arrivedLine": "I've arrived in the Ark!",
       "stats": {
         "money": "Money",
         "relationships": "Relationships",
@@ -4444,6 +4445,7 @@
         "asleepOneLeg": "Asleep on one leg",
         "asleepWater": "Asleep in the water",
         "asleepHuddle": "Asleep, huddled with its group",
+        "asleepBuried": "Asleep, buried in the ground",
         "resting": "Resting",
         "restingDen": "Resting in its den",
         "dozingSun": "Dozing in the sun",
@@ -4776,6 +4778,7 @@
       "light": "circling a light",
       "feeding": "at feeding time",
       "birthing": "giving birth",
+      "toMate": "on its way to its mate",
       "about": "out and about",
       "tag": "Now",
       "tagNote": "Happening now on the Ark’s shared clock, the same for everyone. Solid lines are the Ark’s record.",

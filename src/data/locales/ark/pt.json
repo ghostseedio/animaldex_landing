@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Dormindo apoiado numa pata só",
                 "asleepWater": "Dormindo na água",
                 "asleepHuddle": "Dormindo, aconchegado ao seu grupo",
+                "asleepBuried": "Dorme enterrado no chão",
                 "resting": "Descansando",
                 "restingDen": "Descansando no seu covil",
                 "dozingSun": "Cochilando ao sol",
@@ -558,6 +559,7 @@
             "light": "voando em volta de uma luz",
             "feeding": "recebendo comida",
             "birthing": "dando à luz",
+            "toMate": "a caminho do seu par",
             "about": "dando uma volta",
             "tag": "Agora",
             "tagNote": "Acontecendo agora pelo relógio compartilhado da Ark, igual para todos. Linhas contínuas são o registro da Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Viveu lá 1 dia.",
             "deathLivedMany": "Viveu lá {days} dias.",
             "deathSee": "Ver a espécie dele na Ark",
+            "arrivedLine": "Cheguei na Ark!",
             "stats": {
                 "money": "Dinheiro",
                 "relationships": "Relacionamentos",

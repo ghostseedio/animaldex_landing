@@ -13,6 +13,7 @@
  * Pure.
  */
 
+import {askAnimalMessageDisplayText} from "@/lib/ask-animaldex/animal-messages";
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
 import {companionDisplayName} from "@/lib/ask-animaldex/companion-loop";
 import type {CompanionCard} from "@/lib/companion-cards";
@@ -119,9 +120,9 @@ export function animalMessagePreviewText(raw: string): string {
 }
 
 /** The animal's latest message as the row's line, with its time. */
-function lastMessageOf(conversation: AnimalConversation | undefined): CompanionTabRow["lastMessage"] {
+function lastMessageOf(conversation: AnimalConversation | undefined, words: CompanionWords): CompanionTabRow["lastMessage"] {
     if (!conversation?.lastMessageBody) return null;
-    const text = animalMessagePreviewText(conversation.lastMessageBody);
+    const text = animalMessagePreviewText(askAnimalMessageDisplayText(conversation.lastMessageBody, words.ark.arrivedLine));
     const at = timeOrNull(conversation.lastMessageAt, conversation.lastTalkedAt);
     return text && at !== null ? {text, at} : text ? {text, at: 0} : null;
 }
@@ -165,7 +166,7 @@ export function buildCompanionRows({
             slug: companion.slug ?? slugOf.get(species) ?? null,
             powerName: companion.powerName,
             openStep: companion.openTrial,
-            lastMessage: lastMessageOf(conversation),
+            lastMessage: lastMessageOf(conversation, words),
             lastActivityAt: timeOrNull(companion.lastActivity, conversation?.lastMessageAt, conversation?.lastTalkedAt),
             unreadCount: unread,
             muted: conversation?.muted ?? false,
@@ -208,7 +209,7 @@ export function buildCompanionRows({
             slug: seed.slug ?? slugOf.get(seed.speciesProfileId) ?? null,
             powerName: null,
             openStep: null,
-            lastMessage: lastMessageOf(conversation),
+            lastMessage: lastMessageOf(conversation, words),
             lastActivityAt: timeOrNull(conversation?.lastMessageAt, conversation?.lastTalkedAt),
             unreadCount: conversation?.unreadCount ?? 0,
             muted: conversation?.muted ?? false,

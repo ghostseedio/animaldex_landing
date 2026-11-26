@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Slaapt op één poot",
                 "asleepWater": "Slaapt in het water",
                 "asleepHuddle": "Slaapt dicht tegen zijn groep aan",
+                "asleepBuried": "Slaapt ingegraven in de grond",
                 "resting": "Rust uit",
                 "restingDen": "Rust in zijn hol",
                 "dozingSun": "Doezelt in de zon",
@@ -558,6 +559,7 @@
             "light": "draait rondjes om een licht",
             "feeding": "wordt gevoerd",
             "birthing": "krijgt jongen",
+            "toMate": "is op weg naar zijn partner",
             "about": "is op pad",
             "tag": "Nu",
             "tagNote": "Gebeurt nu volgens de gedeelde klok van de Ark, voor iedereen hetzelfde. Doorgetrokken regels zijn het logboek van de Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Het leefde er 1 dag.",
             "deathLivedMany": "Het leefde er {days} dagen.",
             "deathSee": "Bekijk zijn soort in de Ark",
+            "arrivedLine": "Ik ben aangekomen in de Ark!",
             "stats": {
                 "money": "Geld",
                 "relationships": "Relaties",

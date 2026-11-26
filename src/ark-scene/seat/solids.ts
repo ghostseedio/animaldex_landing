@@ -48,6 +48,12 @@ export function solidClass(label: string): number {
     return -1;
 }
 
+/** Whether a geometry still holds its vertex positions on the page (not let go once on the GPU). */
+function hasArrays(geometry: BufferGeometry): boolean {
+    const position = geometry.getAttribute("position") as {array?: ArrayLike<number>; itemSize?: number} | undefined;
+    return Boolean(position?.array && position.array.length >= 9);
+}
+
 export function solidLabel(mesh: Object3D): string {
     return `${String(mesh.userData?.kind ?? "")}|${mesh.name || ""}|${mesh.parent?.name || ""}`;
 }
@@ -182,10 +188,46 @@ export class DrawnSolids {
         }
     }
 
+    /**
+     * Geometries whose arrays were let go once on the GPU (the town's trees, `islands/town/render/assets.ts`) and that
+     * can be read again (`userData.seatArrays`): their copy on its way, or none to be had. The copy is held by its grid
+     * and goes with it (ten seconds unasked).
+     */
+    private readonly reading = new Map<BufferGeometry, "reading" | "none">();
+
+    /** The geometry the triangles are read from: its own, or for one let go, its copy read again (null: on its way). */
+    private trianglesOf(geometry: BufferGeometry): BufferGeometry | null {
+        const read = geometry.userData?.seatArrays as (() => Promise<BufferGeometry | null>) | undefined;
+        if (!read || hasArrays(geometry)) return geometry;
+        const state = this.reading.get(geometry);
+        if (state === "none") return geometry;
+        if (state === "reading") return null;
+        this.reading.set(geometry, "reading");
+        read().then(
+            (copy) => {
+                if (!copy || !hasArrays(copy)) return void this.reading.set(geometry, "none");
+                // (Drawn as the original is: its range, its box.)
+                copy.drawRange = geometry.drawRange;
+                if (geometry.boundingBox) copy.boundingBox = geometry.boundingBox.clone();
+                const grid = new TriGrid(copy);
+                if (grid.tris <= 400 || this.force) grid.step(Infinity);
+                else this.pending.push(grid);
+                this.grids.set(geometry, {grid, used: this.frame});
+                this.reading.delete(geometry);
+                // (What it is under is seated again now it can be read.)
+                this.version++;
+            },
+            () => void this.reading.set(geometry, "none")
+        );
+        return null;
+    }
+
     private gridOf(geometry: BufferGeometry): TriGrid | null {
         let held = this.grids.get(geometry);
         if (!held) {
-            held = {grid: new TriGrid(geometry), used: this.frame};
+            const triangles = this.trianglesOf(geometry);
+            if (!triangles) return null;
+            held = {grid: new TriGrid(triangles), used: this.frame};
             this.grids.set(geometry, held);
             if (this.force) held.grid.step(Infinity);
             else if (!held.grid.ready) {
@@ -439,6 +481,6 @@ export class DrawnSolids {
         let bytes = 0;
         this.grids.forEach((held) => (bytes += held.grid.bytes));
         for (const solid of this.solids) bytes += solid.boxes.byteLength;
-        return {solids: this.solids.length, grids: this.grids.size, pending: this.pending.length, bytes, casts: this.casts, refreshed: this.refreshed, unknown: Array.from(this.unknown).sort()};
+        return {solids: this.solids.length, grids: this.grids.size, pending: this.pending.length + Array.from(this.reading.values()).filter((r) => r === "reading").length, bytes, casts: this.casts, refreshed: this.refreshed, unknown: Array.from(this.unknown).sort()};
     }
 }

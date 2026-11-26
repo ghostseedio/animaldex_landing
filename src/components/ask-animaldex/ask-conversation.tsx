@@ -212,7 +212,7 @@ import {
     type AskMenuItem
 } from "@/components/ask-animaldex/ask-messenger";
 import {ASK_SUGGESTION_FRESHNESS_MS, askLabelledIndices, askReplyPieces, askTimeLabel} from "@/lib/ask-animaldex/thread-layout";
-import {mergeAskAnimalMessages, parseAskAnimalMessages} from "@/lib/ask-animaldex/animal-messages";
+import {askAnimalMessageDisplayText, mergeAskAnimalMessages, parseAskAnimalMessages} from "@/lib/ask-animaldex/animal-messages";
 import type {AskReportChoice} from "@/lib/ask-animaldex/report";
 import {createAskMessage, newAskMessageId, type AskFollowUpResolution} from "@/lib/ask-animaldex/thread";
 import {AskLitPlainText} from "@/components/ask-animaldex/ask-messenger";
@@ -1089,7 +1089,7 @@ function AskConversation({
                 const incoming = parseAskAnimalMessages(payload.messages);
                 transformThread((current) => {
                     const merged = mergeAskAnimalMessages(incoming, current, (message) =>
-                        createAskMessage("assistant", message.body, {animalMessageId: message.id, createdAt: message.createdAt})
+                        createAskMessage("assistant", askAnimalMessageDisplayText(message.body, words.ark.arrivedLine), {animalMessageId: message.id, createdAt: message.createdAt})
                     );
                     return merged.merged.length > 0 ? merged.messages : current;
                 });
@@ -1119,7 +1119,7 @@ function AskConversation({
             clearTimeout(timer);
             controller.abort();
         };
-    }, [animalSpeciesId, transformThread]);
+    }, [animalSpeciesId, transformThread, words.ark.arrivedLine]);
 
     /** "Mute messages from Luna" / "Let Luna message you", back as it was if that fails. */
     const toggleAnimalMuted = useCallback(() => {

@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Doarme într-un picior",
                 "asleepWater": "Doarme în apă",
                 "asleepHuddle": "Doarme strâns lângă grupul său",
+                "asleepBuried": "Doarme îngropat în pământ",
                 "resting": "Se odihnește",
                 "restingDen": "Se odihnește în bârlogul său",
                 "dozingSun": "Moțăie la soare",
@@ -558,6 +559,7 @@
             "light": "se rotește în jurul unei lumini",
             "feeding": "primește hrana",
             "birthing": "naște pui",
+            "toMate": "merge spre perechea sa",
             "about": "umblă de colo-colo",
             "tag": "Acum",
             "tagNote": "Se întâmplă acum după ceasul comun al Ark, la fel pentru toți. Liniile continue sunt jurnalul Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "A trăit acolo 1 zi.",
             "deathLivedMany": "A trăit acolo {days} zile.",
             "deathSee": "Vezi specia lui în Ark",
+            "arrivedLine": "Am ajuns în Ark!",
             "stats": {
                 "money": "Bani",
                 "relationships": "Relații",

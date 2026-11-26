@@ -474,7 +474,7 @@ test("the tap card's rest words: every status has words, in every Ark language",
     const {ARK_REST_KEYS, arkRestWords, arkRestIsSleep} = await import("@/lib/ark-rest-words");
     const {ARK_LANGUAGES} = await import("@/lib/ark-languages");
     const {readFileSync} = await import("node:fs");
-    const statuses = ["asleep", "asleep_den", "asleep_burrow", "asleep_perch", "asleep_hanging", "asleep_standing", "asleep_one_leg", "asleep_water", "asleep_huddle", "resting", "resting_den", "dozing_sun", "basking", "on_watch"];
+    const statuses = ["asleep", "asleep_den", "asleep_burrow", "asleep_perch", "asleep_hanging", "asleep_standing", "asleep_one_leg", "asleep_water", "asleep_huddle", "asleep_buried", "resting", "resting_den", "dozing_sun", "basking", "on_watch"];
     assert.deepEqual(Object.keys(ARK_REST_KEYS).sort(), [...statuses].sort());
     for (const lang of ARK_LANGUAGES) {
         const file = lang === "en" || lang === "id" ? `src/data/locales/${lang}.json` : `src/data/locales/ark/${lang}.json`;
@@ -488,4 +488,35 @@ test("the tap card's rest words: every status has words, in every Ark language",
     assert.equal(arkRestWords(null, {asleep: "Asleep"}), null);
     assert.equal(arkRestWords("asleep_den", null), null);
     assert.ok(arkRestIsSleep("asleep_den") && !arkRestIsSleep("on_watch") && !arkRestIsSleep(null));
+});
+
+test("SIG10: sleeps buried: the kinds whose own sleep text says so, sunk part of their height, the card says so only while asleep", async () => {
+    const {BURIED_SINK, buriedSink, sleepStyle, sleepStages} = await import("@/ark-scene/sleep");
+    const {readFileSync} = await import("node:fs");
+    assert.ok(SLEEP_POSTURES.includes("buried"));
+    const lane = JSON.parse(readFileSync("data/ark/signature-recipes-sig10.json", "utf8")) as {sleeps: Array<{slug: string; posture: string; quote: string}>};
+    const kinds = lane.sleeps.map((x) => x.slug).sort();
+    assert.deepEqual(kinds, ["asiatic-rhinoceros-beetle", "european-rhinoceros-beetle", "leaf-eating-slug", "malayan-box-turtle", "mealworm-beetle", "rugose-hermit-crab"]);
+    for (const row of lane.sleeps) {
+        assert.equal(sleepStyle(row.slug).posture, "buried", row.slug);
+        // (Only from its own sleep text: it says buried, burrowed or underground.)
+        assert.match(row.quote, /\bbur(y|ied|rows?)\b|underground/i, row.slug);
+    }
+    // Nothing else sleeps buried.
+    const sleepRows = JSON.parse(readFileSync("src/ark-scene/sleep.json", "utf8")).species as Record<string, string>;
+    assert.deepEqual(Object.entries(sleepRows).filter(([, r]) => r.split("|")[0] === "buried").map(([k]) => k).sort(), kinds);
+    // Sunk no more than BURIED_SINK of its height (part of it always shows), in as it lies down, out as it gets up.
+    const spec = POSTURE_SPECS.buried;
+    assert.ok(BURIED_SINK <= 0.5 && spec.sink === BURIED_SINK && spec.lying);
+    assert.equal(buriedSink({t: 1, spec}, false), BURIED_SINK);
+    assert.equal(buriedSink({t: 0, spec}, false), 0);
+    assert.ok(buriedSink({t: 0.5, spec}, false) <= BURIED_SINK * sleepStages(0.5).body + 1e-9);
+    assert.equal(buriedSink({t: 1, spec}, true), 0, "not in the water");
+    assert.equal(buriedSink({t: 1, spec: POSTURE_SPECS.flat}, false), 0, "only the buried posture");
+    assert.equal(buriedSink(null, false), 0);
+    // The card: buried while asleep so, not awake, not in the water, not on a night it lies on the litter.
+    assert.equal(restStatus({asleep: true, posture: "buried"}), "asleep_buried");
+    assert.equal(restStatus({asleep: false, doing: "rest", posture: "buried"}), "resting");
+    assert.equal(restStatus({asleep: true, posture: "buried", inWater: true}), "asleep_water");
+    assert.equal(restStatus({asleep: true, posture: "flat"}), "asleep");
 });

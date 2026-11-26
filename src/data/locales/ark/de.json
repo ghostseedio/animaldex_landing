@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Schläft auf einem Bein",
                 "asleepWater": "Schläft im Wasser",
                 "asleepHuddle": "Schläft eng an seine Gruppe gekuschelt",
+                "asleepBuried": "Schläft im Boden vergraben",
                 "resting": "Ruht sich aus",
                 "restingDen": "Ruht in seiner Höhle",
                 "dozingSun": "Döst in der Sonne",
@@ -558,6 +559,7 @@
             "light": "umkreist ein Licht",
             "feeding": "wird gefüttert",
             "birthing": "bringt Junge zur Welt",
+            "toMate": "ist unterwegs zu seinem Partner",
             "about": "ist unterwegs",
             "tag": "Jetzt",
             "tagNote": "Passiert gerade, nach der gemeinsamen Uhr der Ark, für alle gleich. Durchgezogene Zeilen sind das Logbuch der Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Es lebte dort 1 Tag.",
             "deathLivedMany": "Es lebte dort {days} Tage.",
             "deathSee": "Seine Art in der Ark ansehen",
+            "arrivedLine": "Ich bin in der Ark angekommen!",
             "stats": {
                 "money": "Geld",
                 "relationships": "Beziehungen",

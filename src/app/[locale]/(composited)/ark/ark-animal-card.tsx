@@ -26,6 +26,7 @@ import {ArkCaptureBadges} from "@/app/[locale]/(composited)/ark/ark-capture-badg
 import {ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-card-focus";
 import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
 import {arkCycleKey, arkCycleOf, arkCycleStep, type ArkCycle} from "@/lib/ark-cycle";
+import {arkLifeStoryOn} from "@/lib/ark-life-so-far";
 
 /**
  * The tapped animal's card along the world's foot (decision 240, owner 2026-11-12: "should be showing all the animals
@@ -55,6 +56,8 @@ const ArkCardPower = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card
 const ArkItsDay = lazy(() => import("@/app/[locale]/(composited)/ark/ark-its-day"));
 /** Care from visitors (GIFTS-CARE, decision 387): what was given and what the reader could give; lazy, nothing while the server's switch is off. */
 const ArkCardCare = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card-care"));
+/** Life so far (lane BIO, behind `?lifestory`): its recorded moments, newest first; loaded only while the switch is on. */
+const ArkLifeSoFar = lazy(() => import("@/app/[locale]/(composited)/ark/ark-life-so-far"));
 
 /** A tapped animal's life story (`voyage_animal_life_v1`), as ark-view reads it. */
 export {ArkFilled, useCardFocus};
@@ -286,6 +289,8 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
         scene()?.setFlowWords?.(locale.startsWith("en") ? null : words.flow ?? null);
     }, [scene, locale, words.flow]);
     const status = useAnimalStatus(scene, animal.id);
+    // Life so far (lane BIO): off unless `?lifestory` (until voyage_animal_moments_v1 is live).
+    const [lifeSoFar] = useState(arkLifeStoryOn);
     const [dayOpen, setDayOpen] = useState<string | null>(null);
     const dayShown = dayOpen === animal.id;
     // Its rhythm against System Dynamics is not on the card (owner 2026-11-20: jargon a new visitor cannot read).
@@ -381,6 +386,18 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                 />
         </>
     );
+    // Who brought it, or whom it was born to (founders contract): the header's line, and Life so far's first moment.
+    const byLine = facts.born && facts.anyFounder ? (
+        <><span className="text-ink-400">{words.life.bornTo}</span>{" "}<ArkFilled template={words.life.bornToValue} name="bringers"><ArkBringerNames entries={facts.bringerEntries} locale={locale} former={words.formerVoyager} /></ArkFilled></>
+    ) : facts.born ? (
+        <><span className="text-ink-400">{words.life.bornTo}</span> {fillArkWords(words.life.bornToValue, {bringers: facts.bringers})}</>
+    ) : facts.founder ? (
+        // A named founder (founders contract, section 5): "Brought by {name}", linked to their profile, with their photo.
+        <ArkBroughtByFounder template={words.founders.card.broughtBy} founder={facts.founder} />
+    ) : (
+        <><span className="text-ink-400">{words.broughtBy}</span> <span className="font-semibold text-ink-100">{facts.bringers}</span></>
+    );
+    const lifeSoFarProps = lifeSoFar && !placeholder ? {animalId: animal.id, self: animal.name, human: arkIsHuman(animal), locale, by: byLine, now: minute * 60_000 + 59_999} : null;
     return (
         <div ref={bandRef} onKeyDown={onKeyDown} data-testid="ark-animal-card" className="ark-card-glass rows-in pointer-events-auto absolute inset-x-0 bottom-0 border-t border-white/[0.12]" role="region" aria-labelledby={`ark-card-${animal.id}`}>
             <div className="mx-auto w-full max-w-[86rem] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:px-8 md:pb-4 md:pt-3.5">
@@ -415,16 +432,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             ) : null}
                         </div>
                         <p className="mt-0.5 min-w-0 truncate text-[12.5px] leading-snug text-ink-300" data-testid="ark-card-by">
-                            {facts.born && facts.anyFounder ? (
-                                <><span className="text-ink-400">{words.life.bornTo}</span>{" "}<ArkFilled template={words.life.bornToValue} name="bringers"><ArkBringerNames entries={facts.bringerEntries} locale={locale} former={words.formerVoyager} /></ArkFilled></>
-                            ) : facts.born ? (
-                                <><span className="text-ink-400">{words.life.bornTo}</span> {fillArkWords(words.life.bornToValue, {bringers: facts.bringers})}</>
-                            ) : facts.founder ? (
-                                // A named founder (founders contract, section 5): "Brought by {name}", linked to their profile, with their photo.
-                                <ArkBroughtByFounder template={words.founders.card.broughtBy} founder={facts.founder} />
-                            ) : (
-                                <><span className="text-ink-400">{words.broughtBy}</span> <span className="font-semibold text-ink-100">{facts.bringers}</span></>
-                            )}
+                            {byLine}
                             <span className="text-ink-500"> · </span>
                             <span title={words.lives}>{words.zones[animal.zone]}</span>
                         </p>
@@ -451,7 +459,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         {snapshot ? <Suspense fallback={<div className="h-[2.6rem]" />}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense> : null}
                         {/* Release to the Wild (P1-8, behind the server's switch) and carers (decision 418), then who is around it: what it eats, what could hunt it, its mates, as icons (lane ark-relation-lines; no fallback is React 18's null). */}
                         <Suspense><ArkTimeLeft release={Link} animal={animal} words={words} locale={locale} day={arkDay} scene={scene} snapshot={snapshot} /></Suspense>
-                        {/* EATSOON (behind `?eatsoon=1`): its chance of a catch in the next Ark day, or how it is fed; a kept animal's carers are said above. */}
+                        {/* EATSOON (public; `?eatsoon=0` hides it): its chance of a catch in the next Ark day, or how it is fed; a kept animal's carers are said above. */}
                         {text?.soon && status?.eatSoon?.kind !== "kept" ? (
                             <p data-testid="ark-card-eat-soon" data-kind={status?.eatSoon?.kind} className="flex min-w-0 items-center gap-1.5 text-[12px] leading-snug text-ink-200">
                                 {text.soon.percent ? <span className="shrink-0 font-bold tabular-nums text-ink-100">{text.soon.percent}</span> : null}
@@ -459,6 +467,8 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             </p>
                         ) : null}
                         {placeholder ? null : <Suspense fallback={null}><ArkCardCare animalId={animal.id} words={words.care} locale={locale} /></Suspense>}
+                        {/* Life so far (behind `?lifestory`): its newest recorded moment; the whole list opens in its life story. */}
+                        {lifeSoFarProps && !storyOpen ? <Suspense fallback={null}><ArkLifeSoFar part="line" {...lifeSoFarProps} onOpen={onStory} /></Suspense> : null}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} heartsInHeader /> : null}
                         {placeholder ? <p className="text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
                         {/* The last of its kind aboard (the server's last_of_kind), or a lone founder (decision 389): it ages out honestly unless another is caught. */}
@@ -487,7 +497,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         <ArkItsDay id={animal.id} scene={scene} words={words} locale={locale} onClose={() => setDayOpen(null)} />
                     </Suspense>
                 ) : null}
-                {storyOpen ? <ArkLifeStory animal={animal} life={life} state={state} facts={facts} words={words} locale={locale} rest={restWords} /> : null}
+                {storyOpen ? <ArkLifeStory animal={animal} life={life} state={state} facts={facts} words={words} locale={locale} rest={restWords} lifeSoFar={lifeSoFarProps ? <Suspense fallback={null}><ArkLifeSoFar part="list" {...lifeSoFarProps} /></Suspense> : null} /> : null}
 
                 <div className="mt-2.5 flex items-center gap-1.5 sm:gap-2 md:hidden">{moves}</div>
             </div>
@@ -496,7 +506,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
 }
 
 /** The life story in full, inside the card: how it got aboard, then every line from the server's record. */
-function ArkLifeStory({animal, life, state, facts, words, locale, rest = null}: {animal: ArkAnimal; life: ArkLife | null; state: ArkCardLife | null; facts: ReturnType<typeof lifeFacts>; words: ArkWords; locale: string; /** How it rests now, in words (the sleep lane): first in "Right now". */ rest?: string | null}) {
+function ArkLifeStory({animal, life, state, facts, words, locale, rest = null, lifeSoFar = null}: {animal: ArkAnimal; life: ArkLife | null; state: ArkCardLife | null; facts: ReturnType<typeof lifeFacts>; words: ArkWords; locale: string; /** How it rests now, in words (the sleep lane): first in "Right now". */ rest?: string | null; /** Life so far's list (lane BIO, behind `?lifestory`), under how it got aboard. */ lifeSoFar?: React.ReactNode}) {
     const w = words.life;
     const [keptFlags, setKeptFlags] = useState<ArkKeptFlags>(ARK_KEPT_OFF);
     const keptPlace = animal.area === "zoo" || animal.area === "house" || animal.area === "farm";
@@ -551,6 +561,7 @@ function ArkLifeStory({animal, life, state, facts, words, locale, rest = null}: 
     return (
         <div className="rows-in mt-2 max-h-[30svh] overflow-y-auto overscroll-contain border-t border-line-300 pt-2 md:max-h-[30svh] md:pl-[3.75rem]" aria-label={`${w.showStory}: ${animal.name}`}>
             <ArkStoryLine state={state} born={facts.born} hatched={facts.hatched} story={facts.story} capture={facts.source === "capture"} founder={facts.founder} words={words} />
+            {lifeSoFar}
             <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] sm:grid-cols-2 xl:grid-cols-4" data-testid={arkLineageHasAny(facts.lineage) ? "ark-card-lineage" : undefined}>
                 {rows.map(([label, value]) => (
                     <div key={label} className="flex min-w-0 gap-2 border-b border-line-300/60 pb-1.5">

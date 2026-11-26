@@ -109,6 +109,52 @@ test("seat: the solids index reads every instance as placed (against three's Ray
     assert.ok(met > 60, `only ${met} faces met`);
 });
 
+test("seat: a tree whose arrays went to the GPU is read again for the seats, its crown as drawn (SMALL-PERCHER)", async () => {
+    // The town's trees (`islands/town/render/assets.ts`): instanced, their CPU copies let go once uploaded, the box kept,
+    // and a way to read the file again (`userData.seatArrays`).
+    const scene = new Scene();
+    const drawn = new IcosahedronGeometry(1, 2);
+    const crown = drawn.clone();
+    crown.computeBoundingBox();
+    // (As `releaseArray` does: the attribute's array emptied, its count as it was.)
+    (crown.getAttribute("position") as unknown as {array: ArrayLike<number>}).array = new Float32Array(0);
+    let reads = 0;
+    crown.userData.seatArrays = async () => {
+        reads++;
+        return drawn.clone();
+    };
+    const trees = new InstancedMesh(crown, new MeshBasicMaterial({side: DoubleSide}), 2);
+    trees.userData.kind = "town:trees";
+    trees.name = "town:trees:cherry-a:lod1";
+    trees.setMatrixAt(0, new Matrix4().compose(new Vector3(5, 3, 5), new Quaternion(), new Vector3(1.5, 1, 1.5)));
+    trees.count = 1;
+    scene.add(trees);
+    scene.updateMatrixWorld(true);
+    const solids = new DrawnSolids(scene);
+    solids.force = true;
+    solids.begin(1);
+    const down = (): {whole: boolean; hits: SolidHit[]} => {
+        const hits: SolidHit[] = [];
+        const whole = solids.cast(5, 6, 5, 0, -6, 0, ALL, hits);
+        return {whole, hits};
+    };
+    // (Being read: not yet whole, asked again; the audit waits on it as on a grid being built.)
+    const first = down();
+    assert.equal(first.whole, false, "its triangles are on their way");
+    assert.ok(solids.stats().pending > 0);
+    const before = solids.version;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    solids.begin(2);
+    const {whole, hits} = down();
+    assert.ok(whole);
+    const top = hits.reduce((a, b) => (a.y > b.y ? a : b), hits[0]);
+    assert.ok(top && Math.abs(top.y - 4) < 0.05, `the crown's top as drawn (${top?.y})`);
+    assert.equal(top.kind, "town:trees|town:trees:cherry-a:lod1|");
+    assert.ok(solids.version > before, "what is under it is seated again");
+    down();
+    assert.equal(reads, 1, "read once, its grid kept");
+});
+
 test("seat: a level's mesh shown since the meshes were read is what the seats stand on the next frame (WILD-PERCH)", () => {
     // The asset rocks' and trees' levels (`asset-rocks.ts` update): one InstancedMesh per level, empty and hidden until
     // the camera brings an instance to it, then shown with the instance moved onto it from the level it was on.
@@ -193,12 +239,13 @@ test("seat: the kinds left alone and the kinds seated", () => {
 });
 
 /** A body (a box 0.6 long, 0.2 high, 0.2 wide, its base at its origin) drawn at a place, and the pass stepped to rest. */
-function seatBody(kind: SeatKind, at: Vector3, options: {surface?: SeatInput["surface"]; rotation?: Quaternion; frames?: number; long?: boolean} = {}) {
+function seatBody(kind: SeatKind, at: Vector3, options: {surface?: SeatInput["surface"]; rotation?: Quaternion; frames?: number; long?: boolean; tiny?: boolean} = {}) {
     const {scene} = world();
     const pass = new SeatPass(scene);
     // (`long`: a body 3 m long, a vertex every 25 cm along it: a dragon's, to a rock 1.2 m across.)
-    const geometry = options.long ? new BoxGeometry(0.3, 0.3, 3, 1, 1, 12) : new BoxGeometry(0.2, 0.2, 0.6);
-    geometry.translate(0, options.long ? 0.15 : 0.1, 0);
+    // (`tiny`: a butterfly's, 3 cm long and 1 cm high.)
+    const geometry = options.long ? new BoxGeometry(0.3, 0.3, 3, 1, 1, 12) : options.tiny ? new BoxGeometry(0.01, 0.01, 0.03) : new BoxGeometry(0.2, 0.2, 0.6);
+    geometry.translate(0, options.long ? 0.15 : options.tiny ? 0.005 : 0.1, 0);
     const holder: SeatHolder = {};
     const matrix = new Matrix4();
     const position = new Vector3();
@@ -214,7 +261,7 @@ function seatBody(kind: SeatKind, at: Vector3, options: {surface?: SeatInput["su
         if (offset) position.add(new Vector3(offset.x, offset.y, offset.z));
         matrix.compose(position, fell ? new Quaternion() : options.rotation ?? new Quaternion(), new Vector3(1, 1, 1));
         // (Its turn every frame here: the chosen animal's.)
-        pass.settle({holder, kind: as, matrix, geometry, pose: null, height: options.long ? 0.3 : 0.2, length: options.long ? 3 : 0.6, surface: fell ? null : options.surface ?? null, moving: false, ground, focus: true});
+        pass.settle({holder, kind: as, matrix, geometry, pose: null, height: options.long ? 0.3 : options.tiny ? 0.01 : 0.2, length: options.long ? 3 : options.tiny ? 0.03 : 0.6, surface: fell ? null : options.surface ?? null, moving: false, ground, focus: true});
         if (as !== "fly" && as !== "swim" && pass.solids.stats().pending === 0 && holder.seat?.solved && holder.seat.x === holder.seat.tx && holder.seat.y === holder.seat.ty && holder.seat.z === holder.seat.tz && !(holder.seat.doubt > 0 && !holder.seat.fell && holder.seat.doubt < 0.8) && holder.seat.gap === holder.seat.gap && frames > 3) break;
     }
     return {seat: holder.seat!, position: position.clone(), frames, pass};
@@ -291,6 +338,70 @@ test("seat: held on a leaf it rests on the leaf; held on nothing near, it stays 
     // One the scene only says stands, but plainly up in the air by a leaf (a bird between two of its tree's points): onto the leaf.
     const up = seatBody("stand", new Vector3(140, 1.56, 100));
     assert.ok(Math.abs(up.position.y - 1.5) < 0.014, `up by a leaf: ${up.position.y}`);
+});
+
+test("seat: a small percher moved onto a leaf beside it gets there and stays, not judged by the air it crosses (SMALL-PERCHER)", () => {
+    // The brimstone 21 cm over its tree's crown: first seated on its leaf, then its own motion has it a little off the
+    // leaf's edge in the air. It is moved onto the leaf beside it, slid there over a few frames; a solve on the way,
+    // over the gap, found nothing under it and put it back in the air for good.
+    const {scene} = world();
+    const pass = new SeatPass(scene);
+    const geometry = new BoxGeometry(0.01, 0.01, 0.03);
+    geometry.translate(0, 0.005, 0);
+    const holder: SeatHolder = {};
+    const matrix = new Matrix4();
+    const position = new Vector3();
+    const top = {nx: 0, ny: 1, nz: 0};
+    const step = (at: Vector3) => {
+        pass.begin();
+        position.copy(at);
+        const offset = pass.offset(holder, "perch", 1 / 60);
+        if (offset) position.add(new Vector3(offset.x, offset.y, offset.z));
+        matrix.compose(position, new Quaternion(), new Vector3(1, 1, 1));
+        pass.settle({holder, kind: "perch", matrix, geometry, pose: null, height: 0.01, length: 0.03, surface: top, moving: false, ground: () => 0, focus: false});
+    };
+    pass.force = true;
+    for (let i = 0; i < 30; i++) step(new Vector3(140, 1.5, 100));
+    assert.ok(Math.abs(position.y - 1.5) < 0.014, `on its leaf: ${position.y}`);
+    const off = new Vector3(140.3, 1.62, 100);
+    for (let i = 0; i < 240; i++) step(off);
+    assert.ok(Math.abs(position.y - 1.5) < 0.014 && position.x < 140.2, `onto the leaf beside it: ${position.x}, ${position.y}`);
+});
+
+test("seat: a small percher moved down onto its leaf, its own motion back, then up again, comes down again (SMALL-PERCHER)", () => {
+    // The brimstone traced frame by frame (wild island, 11 h): seated on its tree's leaf, its own motion bobbed it 16 cm
+    // up; it was moved down onto the leaf; its own motion came back down on the way, so it arrived under the leaf with
+    // nothing under it and was put back where its own motion had it. Its one move spent, its own motion bobbing up again
+    // as it got back left it there, over the leaf, for good.
+    const {scene} = world();
+    const pass = new SeatPass(scene);
+    const geometry = new BoxGeometry(0.01, 0.01, 0.03);
+    geometry.translate(0, 0.005, 0);
+    const holder: SeatHolder = {};
+    const matrix = new Matrix4();
+    const position = new Vector3();
+    const top = {nx: 0, ny: 1, nz: 0};
+    const step = (at: Vector3) => {
+        pass.begin();
+        position.copy(at);
+        const offset = pass.offset(holder, "perch", 1 / 60);
+        if (offset) position.add(new Vector3(offset.x, offset.y, offset.z));
+        matrix.compose(position, new Quaternion(), new Vector3(1, 1, 1));
+        pass.settle({holder, kind: "perch", matrix, geometry, pose: null, height: 0.01, length: 0.03, surface: top, moving: false, ground: () => 0, focus: false});
+    };
+    pass.force = true;
+    const on = new Vector3(140, 1.5, 100);
+    const bob = new Vector3(140, 1.66, 100);
+    for (let i = 0; i < 30; i++) step(on);
+    assert.ok(Math.abs(position.y - 1.5) < 0.014, `on its leaf: ${position.y}`);
+    // (Up: moved down onto the leaf. Down again before it is there: under the leaf.)
+    step(bob);
+    assert.ok(holder.seat!.ty < -0.1, `moved down onto the leaf: ${holder.seat!.ty}`);
+    // (Its own motion back down for half a second (put back under the leaf, on its way back up), then up again and
+    // staying up: as the brimstone's did.)
+    for (let i = 0; i < 28; i++) step(on);
+    for (let i = 0; i < 240; i++) step(bob);
+    assert.ok(Math.abs(position.y - 1.5) < 0.014, `down on its leaf again: ${position.y}`);
 });
 
 test("seat: on a wall's face it is brought to the face", () => {

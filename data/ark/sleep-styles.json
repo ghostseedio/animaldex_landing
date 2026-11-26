@@ -3159,7 +3159,7 @@
   },
   {
    "slug": "asiatic-rhinoceros-beetle",
-   "posture": "still",
+   "posture": "buried",
    "alts": [],
    "social": "apart",
    "eyes": false,
@@ -3167,7 +3167,8 @@
    "breath": 0,
    "src": {
     "posture": {
-     "rule": "plan insect: keeps still"
+     "field": "sleep",
+     "phrase": "By day they stay in their feeding tunnels or buried in the rotting material where they breed."
     },
     "social": {
      "rule": "no shared sleeping place in its text: each sleeps a little apart"
@@ -20626,7 +20627,7 @@
   },
   {
    "slug": "european-rhinoceros-beetle",
-   "posture": "still",
+   "posture": "buried",
    "alts": [],
    "social": "apart",
    "eyes": false,
@@ -20634,7 +20635,8 @@
    "breath": 0,
    "src": {
     "posture": {
-     "rule": "plan insect: keeps still"
+     "field": "sleep",
+     "phrase": "Adults fly from dusk into the night and often come to lights, then bury themselves again before morning."
     },
     "social": {
      "rule": "no shared sleeping place in its text: each sleeps a little apart"
@@ -32171,15 +32173,18 @@
   },
   {
    "slug": "leaf-eating-slug",
-   "posture": "still",
-   "alts": [],
+   "posture": "buried",
+   "alts": [
+    "still"
+   ],
    "social": "apart",
    "eyes": false,
    "mammal": false,
    "breath": 0,
    "src": {
     "posture": {
-     "rule": "plan other: keeps still"
+     "field": "sleep",
+     "phrase": "By day it burrows a short way into moist soil or lies flattened beneath stones, and dry spells keep it underground."
     },
     "social": {
      "rule": "no shared sleeping place in its text: each sleeps a little apart"
@@ -34400,15 +34405,18 @@
   },
   {
    "slug": "malayan-box-turtle",
-   "posture": "flat",
-   "alts": [],
+   "posture": "buried",
+   "alts": [
+    "flat"
+   ],
    "social": "apart",
    "eyes": true,
    "mammal": false,
    "breath": 0.3,
    "src": {
     "posture": {
-     "rule": "plan turtle: lies still, the belly down"
+     "field": "sleep",
+     "phrase": "It rests buried in mud, under leaf litter or waterside plants, or on the bottom in shallow water."
     },
     "social": {
      "rule": "no shared sleeping place in its text: each sleeps a little apart"
@@ -35680,7 +35688,7 @@
   },
   {
    "slug": "mealworm-beetle",
-   "posture": "still",
+   "posture": "buried",
    "alts": [],
    "social": "apart",
    "eyes": false,
@@ -35688,7 +35696,8 @@
    "breath": 0,
    "src": {
     "posture": {
-     "rule": "plan insect: keeps still"
+     "field": "sleep",
+     "phrase": "Mainly active at night, avoiding light and staying buried in grain or litter by day."
     },
     "social": {
      "rule": "no shared sleeping place in its text: each sleeps a little apart"
@@ -47145,7 +47154,7 @@
   },
   {
    "slug": "rugose-hermit-crab",
-   "posture": "still",
+   "posture": "buried",
    "alts": [],
    "social": "apart",
    "eyes": false,
@@ -47153,7 +47162,8 @@
    "breath": 0,
    "src": {
     "posture": {
-     "rule": "plan crustacean: keeps still"
+     "field": "sleep",
+     "phrase": "Days are spent buried in damp sand or tucked under debris, often in clusters, which limits water loss."
     },
     "social": {
      "rule": "no shared sleeping place in its text: each sleeps a little apart"

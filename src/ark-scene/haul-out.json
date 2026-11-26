@@ -1,0 +1,6 @@
+{
+ "about": "Lane SEA-SIG (2026-11-26): a seal's haul-out in the live log. A seal on its schedule basks, rests and sleeps ashore round its own roost (`behaviour-schedule.ts` roostOf: 'the same every night, and the same for everyone who asks'); while it is settled on its roost's spot, out of the water and close by, the log says its species' own sentence (AnimalDex docs/ark/signature-behaviours.json, the row's line, quoted from its stored text). Its text also ties its haul-outs to the tide; the Ark has no tide, so no line here says so.",
+ "species": {
+  "harbor-seal": {"line": "{aAnimal} is back at its usual haul-out spot", "field": "evidence", "quote": "Harbor Seals frequently return to specific, known haul-out locations."}
+ }
+}

@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Amelala kwa mguu mmoja",
                 "asleepWater": "Amelala majini",
                 "asleepHuddle": "Amelala amejibana na kundi lake",
+                "asleepBuried": "Amelala amejifukia ardhini",
                 "resting": "Anapumzika",
                 "restingDen": "Anapumzika pangoni mwake",
                 "dozingSun": "Anasinzia juani",
@@ -558,6 +559,7 @@
             "light": "anazunguka mwanga",
             "feeding": "ni wakati wa kulishwa",
             "birthing": "anazaa",
+            "toMate": "anaelekea kwa mwenzi wake",
             "about": "anatembea huku na huko",
             "tag": "Sasa",
             "tagNote": "Inatokea sasa kwa saa ya pamoja ya Ark, sawa kwa kila mtu. Mistari kamili ni kumbukumbu za Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Iliishi huko kwa siku 1.",
             "deathLivedMany": "Iliishi huko kwa siku {days}.",
             "deathSee": "Mwone jamii yake ndani ya Ark",
+            "arrivedLine": "Nimefika kwenye Ark!",
             "stats": {
                 "money": "Fedha",
                 "relationships": "Mahusiano",

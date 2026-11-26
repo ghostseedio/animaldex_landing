@@ -41,6 +41,7 @@ const TONE: Record<ArkActivityKey, string> = {
     nest: "#e08fb8",
     eggs: "#e08fb8",
     birthing: "#e08fb8",
+    toMate: "#e08fb8",
     courting: "#e07aa8",
     sparring: "#d9677a",
     playing: "#e8a0c8",

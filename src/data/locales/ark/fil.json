@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Natutulog nang nakatayo sa isang paa",
                 "asleepWater": "Natutulog sa tubig",
                 "asleepHuddle": "Natutulog nang nakasiksik sa kanyang grupo",
+                "asleepBuried": "Natutulog, nakabaon sa lupa",
                 "resting": "Nagpapahinga",
                 "restingDen": "Nagpapahinga sa kanyang lungga",
                 "dozingSun": "Naiidlip sa araw",
@@ -558,6 +559,7 @@
             "light": "umiikot sa paligid ng ilaw",
             "feeding": "oras ng pagpapakain",
             "birthing": "nanganganak",
+            "toMate": "papunta sa kapareha nito",
             "about": "naglilibot",
             "tag": "Ngayon",
             "tagNote": "Nangyayari ngayon ayon sa pinagsasaluhang orasan ng Ark, pareho para sa lahat. Ang mga buong linya ay talaan ng Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Nabuhay ito roon nang 1 araw.",
             "deathLivedMany": "Nabuhay ito roon nang {days} araw.",
             "deathSee": "Tingnan ang kauri nito sa Ark",
+            "arrivedLine": "Nakarating na ako sa Ark!",
             "stats": {
                 "money": "Pera",
                 "relationships": "Mga Relasyon",

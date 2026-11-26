@@ -30,7 +30,7 @@ import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, PACE_CAP, runFactor, swi
 import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
 import {bodyShape} from "@/ark-scene/collide/bodies";
 import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
-import {colliderDistance, type Collider} from "@/ark-scene/collide/colliders";
+import {colliderDistance, type Collider, type ColliderSet} from "@/ark-scene/collide/colliders";
 import {inKeep, intoKeep, type KeepBox} from "@/ark-scene/collide/resolve";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {allAttachPoints, type AttachPoint as SceneryPoint} from "@/ark-scene/sampler";
@@ -49,6 +49,7 @@ import {boutPhase, rhythmChoice} from "@/ark-scene/sd-rhythm";
 import type {ArkCondition, ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {sleepCover} from "@/ark-scene/sleep-sites";
+import roostAfloat from "@/ark-scene/roost-afloat.json";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
 // p3 (shake): shaking off the water at the edge.
 import {shakeTotal, waterShakeOf} from "@/ark-scene/water-shake";
@@ -494,6 +495,14 @@ function perchTags(profile: ArkBehaviourProfile): AttachTag[] {
     return tags.length ? tags : profile.move === "fly" ? ["branch", "post", "rock_top", "cliff_ledge"] : ["post", "rock_top"];
 }
 const flies = (profile: ArkBehaviourProfile) => profile.move === "fly" || profile.moves.includes("fly");
+const climbs = (profile: ArkBehaviourProfile) => profile.move === "climb" || profile.moves.includes("climb");
+/**
+ * PERCH: a nest up a tree is a flyer's or a climber's. One that neither flies nor climbs (a hedgehog: roost "nest", move
+ * "walk") nests on the ground, in cover: given a branch it slept 17 m up a town lime, on a limb it never reaches.
+ */
+export function groundNest(profile: ArkBehaviourProfile, tags: AttachTag[]): AttachTag[] {
+    return profile.roost === "nest" && !flies(profile) && !climbs(profile) ? tags.filter((tag) => tag !== "branch") : tags;
+}
 const swims = (profile: ArkBehaviourProfile) => profile.move === "swim" || profile.moves.includes("swim");
 const walks = (profile: ArkBehaviourProfile) => profile.move === "walk" || profile.moves.includes("walk") || profile.moves.includes("hop");
 
@@ -790,9 +799,27 @@ function climbFoot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
  */
 const CRAWL_RING = 12;
 const CRAWL_REACH_MAX = 12;
-export function crawlRound(world: ScheduleWorld, from: Spot, to: Spot, bodyR: number): Array<{x: number; z: number}> | null {
+// (The same crawl is asked for again and again, a forager going between the same spots all day: kept per collider set
+// and ground (neither changes once built), at most CRAWL_KEPT a world before it starts over.)
+const CRAWL_KEPT = 4096;
+const crawlKept = new WeakMap<ColliderSet, WeakMap<object, Map<string, ReadonlyArray<{x: number; z: number}> | null>>>();
+export function crawlRound(world: ScheduleWorld, from: Spot, to: Spot, bodyR: number): ReadonlyArray<{x: number; z: number}> | null {
     const solid = world.nav.colliders;
     if (!solid) return null;
+    let bySampler = crawlKept.get(solid);
+    if (!bySampler) crawlKept.set(solid, (bySampler = new WeakMap()));
+    let kept = bySampler.get(world.sampler);
+    if (!kept) bySampler.set(world.sampler, (kept = new Map()));
+    const key = `${from.x},${from.z},${to.x},${to.z},${bodyR}`;
+    const hit = kept.get(key);
+    if (hit !== undefined) return hit;
+    if (kept.size >= CRAWL_KEPT) kept.clear();
+    const way = crawlSearch(world, solid, from, to, bodyR);
+    kept.set(key, way);
+    return way;
+}
+
+function crawlSearch(world: ScheduleWorld, solid: ColliderSet, from: Spot, to: Spot, bodyR: number): Array<{x: number; z: number}> | null {
     const flat = Math.hypot(to.x - from.x, to.z - from.z);
     const near = solid.near((from.x + to.x) / 2, (from.z + to.z) / 2, flat / 2 + CRAWL_REACH_MAX, []).filter((c) => c.reach <= CRAWL_REACH_MAX);
     const nodes: Array<{x: number; z: number}> = [{x: from.x, z: from.z}, {x: to.x, z: to.z}];
@@ -805,27 +832,75 @@ export function crawlRound(world: ScheduleWorld, from: Spot, to: Spot, bodyR: nu
             if (!solid.blocked(x, z, bodyR) && world.sampler.heightAt(x, z) > 0) nodes.push({x, z});
         }
     }
-    // (Dijkstra over the clear straight runs; the node count is small: a few rings.)
+    // (A* over the runs between them, each run's clearance checked only when it is the next one taken (a lazy edge),
+    // never for the hundreds of runs a search never reaches: the same shortest way as checking every one first. The
+    // straight distance to the end is the estimate; ties go to the earlier-reached corner, then the lower index.)
     const n = nodes.length;
-    const dist = new Array<number>(n).fill(Infinity);
-    const prev = new Array<number>(n).fill(-1);
-    const done = new Array<boolean>(n).fill(false);
-    dist[0] = 0;
-    for (;;) {
-        let u = -1;
-        for (let i = 0; i < n; i++) if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
-        if (u < 0 || u === 1) break;
-        done[u] = true;
+    const dist = new Float64Array(n).fill(Infinity);
+    const prev = new Int32Array(n).fill(-1);
+    const done = new Uint8Array(n);
+    const left = (i: number) => Math.hypot(nodes[1].x - nodes[i].x, nodes[1].z - nodes[i].z);
+    // (A binary heap of candidate runs u -> v: key f = g + left(v), then the order u was reached, then v.)
+    const hf: number[] = [];
+    const hg: number[] = [];
+    const ho: number[] = [];
+    const hu: number[] = [];
+    const hv: number[] = [];
+    const less = (a: number, b: number) => hf[a] < hf[b] || (hf[a] === hf[b] && (ho[a] < ho[b] || (ho[a] === ho[b] && hv[a] < hv[b])));
+    const swap = (a: number, b: number) => {
+        [hf[a], hf[b]] = [hf[b], hf[a]];
+        [hg[a], hg[b]] = [hg[b], hg[a]];
+        [ho[a], ho[b]] = [ho[b], ho[a]];
+        [hu[a], hu[b]] = [hu[b], hu[a]];
+        [hv[a], hv[b]] = [hv[b], hv[a]];
+    };
+    const push = (f: number, g: number, o: number, u: number, v: number) => {
+        let i = hf.length;
+        hf.push(f), hg.push(g), ho.push(o), hu.push(u), hv.push(v);
+        while (i > 0) {
+            const up = (i - 1) >> 1;
+            if (!less(i, up)) break;
+            swap(i, up);
+            i = up;
+        }
+    };
+    const pop = () => {
+        const last = hf.length - 1;
+        swap(0, last);
+        const out = {g: hg.pop()!, u: hu.pop()!, v: hv.pop()!};
+        hf.pop(), ho.pop();
+        let i = 0;
+        for (;;) {
+            const l = 2 * i + 1;
+            const r = l + 1;
+            let m = i;
+            if (l < hf.length && less(l, m)) m = l;
+            if (r < hf.length && less(r, m)) m = r;
+            if (m === i) break;
+            swap(i, m);
+            i = m;
+        }
+        return out;
+    };
+    let order = 0;
+    const settle = (u: number, g: number, from: number) => {
+        done[u] = 1;
+        dist[u] = g;
+        prev[u] = from;
+        const o = order++;
         for (let v = 0; v < n; v++) {
             if (done[v]) continue;
-            const d = dist[u] + Math.hypot(nodes[v].x - nodes[u].x, nodes[v].z - nodes[u].z);
-            if (d < dist[v] && solid.segmentClear(nodes[u].x, nodes[u].z, nodes[v].x, nodes[v].z, bodyR)) {
-                dist[v] = d;
-                prev[v] = u;
-            }
+            const d = g + Math.hypot(nodes[v].x - nodes[u].x, nodes[v].z - nodes[u].z);
+            push(d + left(v), d, o, u, v);
         }
+    };
+    settle(0, 0, -1);
+    while (hf.length && !done[1]) {
+        const {g, u, v} = pop();
+        if (done[v] || !solid.segmentClear(nodes[u].x, nodes[u].z, nodes[v].x, nodes[v].z, bodyR)) continue;
+        settle(v, g, u);
     }
-    if (dist[1] === Infinity) return null;
+    if (!done[1]) return null;
     const way: Array<{x: number; z: number}> = [];
     for (let i = 1; i >= 0; i = prev[i]) way.unshift(nodes[i]);
     return way;
@@ -1131,6 +1206,22 @@ function denDry(world: ScheduleWorld, x: number, z: number): boolean {
     return true;
 }
 
+/** Lane SIG12: the birds that roost afloat on open water (`roost-afloat.json`, each with its own sentence). */
+const ROOSTS_AFLOAT: ReadonlySet<string> = new Set(Object.keys((roostAfloat as {species: Record<string, unknown>}).species));
+/** How far it looks for open water to sleep on (nav rings of 2 m: 120 m), and how deep that water is at least (m). */
+const AFLOAT_RINGS = 60;
+const AFLOAT_DEPTH = 0.6;
+function afloatRoost(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot | null {
+    const water = world.nav.nearest(animal.home.x, animal.home.z, "swim", AFLOAT_DEPTH, AFLOAT_RINGS);
+    if (!water) return null;
+    // (Its own place on that water: a seeded few metres out from the nearest point, on water still.)
+    const random = rng(hashString(`${animal.id}#afloat`));
+    const a = random() * Math.PI * 2;
+    const d = 1 + random() * 5;
+    const own = world.nav.nearest(water.x + Math.cos(a) * d, water.z + Math.sin(a) * d, "swim", AFLOAT_DEPTH, 3) ?? water;
+    return {x: own.x, y: surfaceAt(world, own.x, own.z), z: own.z, nx: 0, ny: 1, nz: 0, point: null};
+}
+
 /** The way a huddle faces on its raised place: the sampler's point's own (across its limb), else across a map limb. */
 function limbFacing(world: ScheduleWorld, spot: Spot): number | undefined {
     const at = spot.point ? RAISED_TAGS.map((tag) => world.sampler.attachPoints(tag, {x: spot.x, z: spot.z, r: 0.3}).find((p) => p.id === spot.point)).find(Boolean) : undefined;
@@ -1146,6 +1237,10 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     // (Lane ZOOSLEEP: a bed handed out with its enclosure's others is its own. Picked one by one from three shade points
     // by the shed, a mixed paddock's residents lay two on a point.)
     if (animal.bed) return {...groundSpot(world, animal.bed.x, animal.bed.z), heading: animal.bed.heading};
+    // (Lane SIG12: a bird whose own text has it roosting afloat on open water, a black-headed gull, sleeps on the nearest
+    // open water's surface, each a few body lengths from its colony's others, before its roof or its patch of grass.)
+    const afloat = ROOSTS_AFLOAT.has(profile.slug) ? afloatRoost(world, profile, animal) : null;
+    if (afloat) return afloat;
     const group = animal.group;
     // (A flock whose text has it sleeping together, huddled or in a row, roosts as a group too: `sleep.ts`.)
     const together = sleepStyle(profile.slug).social !== "apart";
@@ -1180,7 +1275,7 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     const seed = rng(hashString(`${animal.id}#roost`))();
     // A water animal (a fish, a crab) never roosts on a land place, whatever its profile says (a seal hauls out: it may).
     // (A hanger, a bat or a sloth, hangs under a limb first: `recipeRoostTags`.)
-    const tags = aquatic(profile) && !amphibious(profile) ? [] : recipeRoostTags(profile) ?? ROOST_TAGS[profile.roost] ?? [];
+    const tags = aquatic(profile) && !amphibious(profile) ? [] : groundNest(profile, recipeRoostTags(profile) ?? ROOST_TAGS[profile.roost] ?? []);
     const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, rangeCap(profile, animal)), seed) : null;
     // (A water-only animal's roost is in the water: a dry rock or a tree is no roost for a fish.)
     if (point && (!aquatic(profile) || amphibious(profile) || (wet(world, point) && point.y < surfaceY(world, point.x, point.z) + 0.02))) return spotOf(point);

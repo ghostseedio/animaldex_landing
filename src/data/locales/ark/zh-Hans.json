@@ -226,6 +226,7 @@
                 "asleepOneLeg": "单脚站着睡觉",
                 "asleepWater": "在水里睡觉",
                 "asleepHuddle": "和同伴挤在一起睡觉",
+                "asleepBuried": "钻进土里睡着了",
                 "resting": "正在休息",
                 "restingDen": "在巢穴里休息",
                 "dozingSun": "在阳光下打盹",
@@ -558,6 +559,7 @@
             "light": "绕着灯光打转",
             "feeding": "喂食时间",
             "birthing": "在生宝宝",
+            "toMate": "正前往伴侣身边",
             "about": "四处走动",
             "tag": "此刻",
             "tagNote": "按 Ark 的共享时钟此刻正在发生，对每个人都一样。实线是 Ark 的记录。",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "它在那里生活了 1 天。",
             "deathLivedMany": "它在那里生活了 {days} 天。",
             "deathSee": "在 Ark 中查看它的同类",
+            "arrivedLine": "我已经到 Ark 啦！",
             "stats": {
                 "money": "金钱",
                 "relationships": "人际关系",

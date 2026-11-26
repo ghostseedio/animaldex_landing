@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Fél lábon alszik",
                 "asleepWater": "A vízben alszik",
                 "asleepHuddle": "A csapatához bújva alszik",
+                "asleepBuried": "Alszik, a földbe ásva",
                 "resting": "Pihen",
                 "restingDen": "A vackán pihen",
                 "dozingSun": "A napon szundikál",
@@ -558,6 +559,7 @@
             "light": "egy fény körül kering",
             "feeding": "épp etetik",
             "birthing": "világra hozza a kicsinyét",
+            "toMate": "úton van a párjához",
             "about": "jár-kel",
             "tag": "Most",
             "tagNote": "Most történik az Ark közös órája szerint, mindenkinek ugyanúgy. A folytonos sorok az Ark naplója.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "1 napig élt ott.",
             "deathLivedMany": "{days} napig élt ott.",
             "deathSee": "Nézd meg a faját az Arkon",
+            "arrivedLine": "Megérkeztem az Arkba!",
             "stats": {
                 "money": "Pénz",
                 "relationships": "Kapcsolatok",

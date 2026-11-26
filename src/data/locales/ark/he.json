@@ -226,6 +226,7 @@
                 "asleepOneLeg": "ישן על רגל אחת",
                 "asleepWater": "ישן במים",
                 "asleepHuddle": "ישן צמוד לקבוצה שלו",
+                "asleepBuried": "ישן, קבור באדמה",
                 "resting": "נח",
                 "restingDen": "נח במאורה שלו",
                 "dozingSun": "מנמנם בשמש",
@@ -558,6 +559,7 @@
             "light": "בריחוף סביב אור",
             "feeding": "בזמן האכלה",
             "birthing": "בזמן המלטה",
+            "toMate": "בדרך אל בן הזוג",
             "about": "בסיבוב בסביבה",
             "tag": "עכשיו",
             "tagNote": "קורה עכשיו לפי השעון המשותף של Ark, אותו דבר לכולם. שורות רציפות הן היומן של Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "הוא חי שם יום אחד.",
             "deathLivedMany": "הוא חי שם {days} ימים.",
             "deathSee": "ראה את בני מינו ב-Ark",
+            "arrivedLine": "הגעתי ל-Ark!",
             "stats": {
                 "money": "כסף",
                 "relationships": "קשרים",

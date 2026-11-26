@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Đang ngủ trên một chân",
                 "asleepWater": "Đang ngủ dưới nước",
                 "asleepHuddle": "Đang ngủ, nép sát vào bầy",
+                "asleepBuried": "Đang ngủ, vùi mình trong đất",
                 "resting": "Đang nghỉ ngơi",
                 "restingDen": "Đang nghỉ trong hang",
                 "dozingSun": "Đang lim dim dưới nắng",
@@ -558,6 +559,7 @@
             "light": "lượn quanh ánh đèn",
             "feeding": "được cho ăn",
             "birthing": "sinh con",
+            "toMate": "đang đến với bạn đời",
             "about": "đi loanh quanh",
             "tag": "Lúc này",
             "tagNote": "Đang diễn ra theo đồng hồ chung của Ark, như nhau với mọi người. Dòng liền là nhật ký của Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Nó đã sống ở đó 1 ngày.",
             "deathLivedMany": "Nó đã sống ở đó {days} ngày.",
             "deathSee": "Xem đồng loại của nó trên Ark",
+            "arrivedLine": "Mình đã lên tàu Ark rồi!",
             "stats": {
                 "money": "Tiền bạc",
                 "relationships": "Các mối quan hệ",

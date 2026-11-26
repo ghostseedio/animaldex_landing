@@ -226,6 +226,7 @@
                 "asleepOneLeg": "片足で立って眠っています",
                 "asleepWater": "水の中で眠っています",
                 "asleepHuddle": "群れと身を寄せ合って眠っています",
+                "asleepBuried": "地面に潜って眠っています",
                 "resting": "休んでいます",
                 "restingDen": "巣穴で休んでいます",
                 "dozingSun": "日なたでうとうとしています",
@@ -558,6 +559,7 @@
             "light": "明かりの周りを飛び回っています",
             "feeding": "えさの時間です",
             "birthing": "赤ちゃんを産んでいます",
+            "toMate": "つがいの相手のもとへ向かうところです",
             "about": "あちこち出歩いています",
             "tag": "いま",
             "tagNote": "Arkの共有時計で、いま起きていること。誰にとっても同じです。実線はArkの記録です。",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "そこで1日暮らしました。",
             "deathLivedMany": "そこで{days}日暮らしました。",
             "deathSee": "Arkで同じ種類を見る",
+            "arrivedLine": "Arkに着いたよ！",
             "stats": {
                 "money": "お金",
                 "relationships": "人間関係",

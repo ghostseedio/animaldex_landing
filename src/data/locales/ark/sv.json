@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Sover på ett ben",
                 "asleepWater": "Sover i vattnet",
                 "asleepHuddle": "Sover tätt intill sin flock",
+                "asleepBuried": "Sover nedgrävd i marken",
                 "resting": "Vilar",
                 "restingDen": "Vilar i sitt gryt",
                 "dozingSun": "Slumrar i solen",
@@ -558,6 +559,7 @@
             "light": "cirklar kring ett ljus",
             "feeding": "får mat",
             "birthing": "föder ungar",
+            "toMate": "är på väg till sin partner",
             "about": "är i farten",
             "tag": "Nu",
             "tagNote": "Händer nu enligt Arks gemensamma klocka, likadant för alla. Heldragna rader är Arks logg.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Den levde där i 1 dag.",
             "deathLivedMany": "Den levde där i {days} dagar.",
             "deathSee": "Se dess art på Ark",
+            "arrivedLine": "Jag har kommit ombord på Ark!",
             "stats": {
                 "money": "Pengar",
                 "relationships": "Relationer",

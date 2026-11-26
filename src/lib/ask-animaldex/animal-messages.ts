@@ -16,6 +16,17 @@ export type AskAnimalInboxMessage = {
     unread: boolean;
 };
 
+/** The words the server writes for the Ark arrival (`animal_messages` kind `arrival`, migration 20261127190000). */
+export const ARK_ARRIVAL_LINE_EN = "I've arrived in the Ark!";
+
+/**
+ * A message as the reader sees it: the server's fixed Ark arrival line in the reader's language (`arrivedLine`), anything
+ * else as the animal wrote it. Port of iOS `AnimalInboxMessage.displayText`.
+ */
+export function askAnimalMessageDisplayText(body: string, arrivedLine: string): string {
+    return body.trim() === ARK_ARRIVAL_LINE_EN && arrivedLine.trim() ? arrivedLine : body;
+}
+
 /** Rows from `animal_messages_for`, kept only when whole. */
 export function parseAskAnimalMessages(raw: unknown): AskAnimalInboxMessage[] {
     if (!Array.isArray(raw)) return [];

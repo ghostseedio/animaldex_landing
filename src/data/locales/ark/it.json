@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Dorme su una zampa sola",
                 "asleepWater": "Dorme in acqua",
                 "asleepHuddle": "Dorme stretto al suo gruppo",
+                "asleepBuried": "Dorme sepolto nel terreno",
                 "resting": "Si riposa",
                 "restingDen": "Si riposa nella sua tana",
                 "dozingSun": "Sonnecchia al sole",
@@ -558,6 +559,7 @@
             "light": "gira intorno a una luce",
             "feeding": "riceve il pasto",
             "birthing": "partorisce",
+            "toMate": "sta raggiungendo il partner",
             "about": "è in giro",
             "tag": "Ora",
             "tagNote": "Succede ora secondo l'orologio condiviso dell'Ark, uguale per tutti. Le righe piene sono il registro dell'Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Ci ha vissuto 1 giorno.",
             "deathLivedMany": "Ci ha vissuto {days} giorni.",
             "deathSee": "Vedi la sua specie nell'Ark",
+            "arrivedLine": "Eccomi nell'Ark!",
             "stats": {
                 "money": "Denaro",
                 "relationships": "Relazioni",

@@ -1,17 +1,18 @@
 {
-  "about": "The web's copy of the Ark's shared position module and its data. positions.ts is byte-identical to AnimalDex's; atlas.json is generated here (scripts/ark-positions-atlas.mts) and copied there; contract.json is generated there (scripts/ark/positions-contract.ts). src/lib/ark-positions.test.ts checks these hashes and every contract case. sleep.json (version 4) is generated there (scripts/ark/generate_sleep_hours.py) and copied here. Change all four together, in both repos.",
+  "about": "The web's copy of the Ark's shared position module and its data. positions.ts is byte-identical to AnimalDex's; atlas.json is generated here (scripts/ark-positions-atlas.mts) and copied there; contract.json is generated there (scripts/ark/positions-contract.ts). src/lib/ark-positions.test.ts checks these hashes and every contract case. sleep.json (version 4) is generated there (scripts/ark/generate_sleep_hours.py) and copied here. hunt-geometry.json (decision 500, hunt geometry) is generated here (scripts/ark-hunt-geometry.mts) and copied there. Change all five together, in both repos.",
   "source": {
     "repo": "lennybeadle/animaldex",
-    "branch": "ark-p5-crater-server",
-    "commit": "ec91f4a14",
+    "branch": "hunt-geometry",
+    "commit": "8d8406e18",
     "path": "supabase/functions/_shared/ark-positions/"
   },
   "positionsVersion": 4,
   "sha256": {
-    "positions.ts": "11434cb158d6386fb2a18fca6f3db15a5d6e130648b2feb411466bb835ab6bb7",
+    "positions.ts": "707e10154b0fcb9b3ecfd8324f476c6436ecd8da3f317b8a99e07106a6a935eb",
     "atlas.json": "5bcb7e4ed16b1f111b9279ee2a2e73e399fbb8001004136de915ea324d281122",
-    "contract.json": "9ab9c813860dce757587ae9a7ceaf6d527a22a150815b74b744a71e8c32a6609",
-    "sleep.json": "991567d5ecb27559af0b5e563c2b3ff79a2bce0770239439f03a62283cf06807"
+    "contract.json": "f21964892788f2575a3ff4398b55e121032a799c50a070ebeabbbd7e16e16854",
+    "sleep.json": "991567d5ecb27559af0b5e563c2b3ff79a2bce0770239439f03a62283cf06807",
+    "hunt-geometry.json": "d79f00861acc7df694e6005c5237fda02e627d9df5384922d0620157c870f96f"
   },
   "forestry": {
     "about": "p5 humans (AnimalDex decision 379): forestry.ts and forest-stands.json are byte-identical to AnimalDex supabase/functions/_shared/ark-positions/ (branch ark-humans-decisions 543f6c02f). forest-stands.json is generated here (scripts/ark-forest-stands.mts) and copied there. Change both together, in both repos.",

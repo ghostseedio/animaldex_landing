@@ -226,6 +226,7 @@
                 "asleepOneLeg": "한 발로 서서 자는 중",
                 "asleepWater": "물속에서 자는 중",
                 "asleepHuddle": "무리와 몸을 맞대고 자는 중",
+                "asleepBuried": "땅속에 파묻혀 자고 있어요",
                 "resting": "쉬는 중",
                 "restingDen": "굴에서 쉬는 중",
                 "dozingSun": "햇볕 아래서 조는 중",
@@ -558,6 +559,7 @@
             "light": "불빛 주위를 맴도는 중",
             "feeding": "먹이를 받는 중",
             "birthing": "새끼를 낳는 중",
+            "toMate": "짝에게 가는 중",
             "about": "돌아다니는 중",
             "tag": "지금",
             "tagNote": "Ark의 공유 시계로 지금 일어나는 일이에요. 모두에게 똑같아요. 실선은 Ark의 기록이에요.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "그곳에서 1일 동안 살았어요.",
             "deathLivedMany": "그곳에서 {days}일 동안 살았어요.",
             "deathSee": "Ark에서 같은 종 보기",
+            "arrivedLine": "Ark에 도착했어요!",
             "stats": {
                 "money": "돈",
                 "relationships": "관계",

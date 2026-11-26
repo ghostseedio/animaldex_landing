@@ -26,24 +26,28 @@ import {
     Color,
     ConeGeometry,
     CylinderGeometry,
+    DataTexture,
     DoubleSide,
     FrontSide,
     IcosahedronGeometry,
     InstancedBufferAttribute,
     InstancedMesh,
+    LinearFilter,
     Matrix4,
     MeshStandardMaterial,
     Quaternion,
+    RGBAFormat,
     SphereGeometry,
     Vector3,
     type Material
 } from "three";
 import {mergeGeometries, mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {ARK_ENV, ARK_TIME, NOISE_GLSL} from "@/ark-scene/glsl";
-import {ARK_CAUSTICS} from "@/ark-scene/terrain";
+import {ARK_CAUSTICS, ARK_CORAL} from "@/ark-scene/terrain";
+import {CORAL_TEXELS, coralCover} from "@/ark-scene/coral-cover";
 import {KELP_HEIGHTS, REEF_HEIGHT, REEF_KINDS, REEF_VARIANTS, reefGrowth, type ReefItem, type ReefKind} from "@/ark-scene/reef";
 import {SEA_CLOCK_PERIOD, seaClockSeconds, seaEpochSeconds} from "@/ark-scene/fish-schools";
-import {seeded} from "@/ark-scene/world";
+import {seeded, TERRAIN_HALF} from "@/ark-scene/world";
 
 // MARK: - The shared sea clock (uniform)
 
@@ -843,6 +847,14 @@ export type ReefView = {
 
 export function buildReef(): ReefView {
     const items = reefGrowth();
+    // SEA-SURFACE: the same reef as a cover map the water shows from above (`coral-cover.ts`), over the depth map's square.
+    const cover = new DataTexture(coralCover(items, TERRAIN_HALF, CORAL_TEXELS), CORAL_TEXELS, CORAL_TEXELS, RGBAFormat);
+    cover.flipY = false;
+    cover.magFilter = LinearFilter;
+    cover.minFilter = LinearFilter;
+    cover.needsUpdate = true;
+    const coverBefore = ARK_CORAL.value;
+    ARK_CORAL.value = cover;
     const materials = {front: reefMaterial(false), double: reefMaterial(true)};
     const groups: Group[] = [];
     const matrix = new Matrix4();
@@ -986,6 +998,8 @@ export function buildReef(): ReefView {
                 }
             }
             (Object.values(materials) as Material[]).forEach((material) => material.dispose());
+            if (ARK_CORAL.value === cover) ARK_CORAL.value = coverBefore;
+            cover.dispose();
         }
     };
 }

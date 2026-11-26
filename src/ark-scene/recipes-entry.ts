@@ -11,7 +11,7 @@ import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import type {ArkAct, ArkEventAnimal} from "@/lib/ark-life";
 import {forgetSchedules, roostOf, scheduleWorld, SLOT_SECONDS, tripAt, tripEpisode, recipeNest, poseOnTrip, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
-import {microMurmuration, nestStageAt, pairWindows, ROOST_AMBIENT, roostPoint, setFallbackNests, setNestSource, sexLook, type Episode, type Key, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {crownPerches, microMurmuration, nestStageAt, pairWindows, ROOST_AMBIENT, roostPoint, setFallbackNests, setNestSource, sexLook, type Episode, type Key, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {hashString, heightAt} from "@/ark-scene/world";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {worldSampler} from "@/ark-scene/world-sampler";
@@ -47,6 +47,13 @@ const SPECIES: Record<string, Species> = {
     "laughing-kookaburra": {id: "0000b1d0-0000-4000-8000-000000000004", name: "Laughing Kookaburra", zone: "woodland", activity: "diurnal", sociality: null},
     "spotted-wood-owl": {id: "0000b1d0-0000-4000-8000-000000000005", name: "Spotted Wood Owl", zone: "woodland", activity: "any", sociality: null},
     rook: {id: "0000b1d0-0000-4000-8000-000000000006", name: "Rook", zone: "woodland", activity: "diurnal", sociality: "group"},
+    // (Lane SIG10: the black vulture's communal roost, its roost-mates in the dark tone.)
+    "black-vulture": {id: "d0d1c412-a1d6-4944-b2fe-afea3710315a", name: "Black Vulture", zone: "woodland", activity: "diurnal", sociality: "group"},
+    // (Lane SIG12: communal roosts in the species' own colours, on a crown's top.)
+    galah: {id: "f560e718-c750-4dad-91b9-5c3eac9b7fa5", name: "Galah", zone: "grassland", activity: "diurnal", sociality: "group"},
+    "african-grey-parrot": {id: "084078d2-49ab-4434-adda-877fb2371ca2", name: "African Grey Parrot", zone: "rainforest", activity: "diurnal", sociality: "group"},
+    "blue-fronted-amazon": {id: "69a47720-c24c-416e-8b43-b90813f90e9f", name: "Blue-fronted Amazon", zone: "rainforest", activity: "diurnal", sociality: "group"},
+    "eared-dove": {id: "060bfa61-7ecd-42f6-917c-36265b53a195", name: "Eared Dove", zone: "grassland", activity: "diurnal", sociality: "group"},
     "house-sparrow": {id: "0000b1d0-0000-4000-8000-000000000007", name: "House Sparrow", zone: "farm_garden", activity: "diurnal", sociality: "group"},
     "african-penguin": {id: "0000b1d0-0000-4000-8000-000000000009", name: "African Penguin", zone: "seashore", activity: "diurnal", sociality: "group"},
     "song-thrush": {id: "0000b1d0-0000-4000-8000-00000000000a", name: "Song Thrush", zone: "farm_garden", activity: "diurnal", sociality: null},
@@ -247,6 +254,16 @@ const CLIPS: Record<string, Clip> = {
     roost_lapse: {live: true, cast: [["rk", "rook", 5]], hours: 17.1, date: Date.UTC(2026, 10, 12, 17) / 1000 + 360, find: (ctx) => roostMoment(ctx, "lapse")},
     roost_wave: {live: true, cast: [["rk", "rook", 5]], hours: 17.1, date: Date.UTC(2026, 10, 12, 17) / 1000 + 360, find: (ctx) => roostMoment(ctx, "wave")},
     roost_sparrow: {live: true, cast: [["hs", "house-sparrow", 5]], hours: 17.1, date: Date.UTC(2026, 10, 12, 17) / 1000 + 360, find: (ctx) => roostMoment(ctx, "wave")},
+    roost_vulture: {live: true, cast: [["bv", "black-vulture", 4]], hours: 17.1, date: Date.UTC(2026, 10, 12, 17) / 1000 + 360, find: (ctx) => roostMoment(ctx, "wave")},
+    roost_vulture_night: {live: true, cast: [["bv", "black-vulture", 4]], hours: 22, date: Date.UTC(2026, 10, 12, 22) / 1000, find: (ctx) => roostMoment(ctx, "night")},
+    roost_galah_dusk: {live: true, cast: [["ga", "galah", 4]], hours: 18.2, date: Date.UTC(2026, 10, 12, 18) / 1000 + 720, find: (ctx) => roostMoment(ctx, "settled")},
+    roost_galah_night: {live: true, cast: [["ga", "galah", 4]], hours: 22, date: Date.UTC(2026, 10, 12, 22) / 1000, find: (ctx) => roostMoment(ctx, "night")},
+    roost_grey_dusk: {live: true, cast: [["gr", "african-grey-parrot", 4]], hours: 18.2, date: Date.UTC(2026, 10, 12, 18) / 1000 + 720, find: (ctx) => roostMoment(ctx, "settled")},
+    roost_grey_night: {live: true, cast: [["gr", "african-grey-parrot", 4]], hours: 22, date: Date.UTC(2026, 10, 12, 22) / 1000, find: (ctx) => roostMoment(ctx, "night")},
+    roost_amazon_dusk: {live: true, cast: [["am", "blue-fronted-amazon", 4]], hours: 18.2, date: Date.UTC(2026, 10, 12, 18) / 1000 + 720, find: (ctx) => roostMoment(ctx, "settled")},
+    roost_amazon_night: {live: true, cast: [["am", "blue-fronted-amazon", 4]], hours: 22, date: Date.UTC(2026, 10, 12, 22) / 1000, find: (ctx) => roostMoment(ctx, "night")},
+    roost_dove_dusk: {live: true, cast: [["do", "eared-dove", 4]], hours: 18.2, date: Date.UTC(2026, 10, 12, 18) / 1000 + 720, find: (ctx) => roostMoment(ctx, "settled")},
+    roost_dove_night: {live: true, cast: [["do", "eared-dove", 4]], hours: 22, date: Date.UTC(2026, 10, 12, 22) / 1000, find: (ctx) => roostMoment(ctx, "night")},
     roost_night: {live: true, cast: [["rk", "rook", 5]], hours: 22, date: Date.UTC(2026, 10, 12, 22) / 1000, find: (ctx) => roostMoment(ctx, "night")},
     roost_dawn: {live: true, cast: [["rk", "rook", 5]], hours: 5.4, date: Date.UTC(2026, 10, 13, 5) / 1000 + 1500, find: (ctx) => roostMoment(ctx, "dawn")},
     kingfisher_tunnel: {
@@ -423,7 +440,7 @@ function blockMoment(ctx: Context, recipe: string, block: string, before: number
 }
 
 /** A communal roost: its leader's roost point; the evening as a time lapse, the busiest wave in real time, the night, the dawn. */
-function roostMoment(ctx: Context, kind: "lapse" | "wave" | "night" | "dawn"): Moment | null {
+function roostMoment(ctx: Context, kind: "lapse" | "wave" | "night" | "dawn" | "settled"): Moment | null {
     const a = ctx.animals[0];
     if (!a) return null;
     const roost = roostOf(ctx.world, a.profile, a.animal);
@@ -433,17 +450,21 @@ function roostMoment(ctx: Context, kind: "lapse" | "wave" | "night" | "dawn"): M
     const seed = hashString(`${group.id}#roost`);
     // The window's start in world seconds: the evening's 17:00 (hours map to the clock one to one).
     const t0 = Date.UTC(2026, 10, 12, 17) / 1000;
+    // (Lane SIG12: a roost in a crown is on the crown's top: the camera on its places' middle.)
+    const perches = crownPerches(ctx.world, centre, seed) ?? undefined;
+    const look = perches ? {x: perches.reduce((s, p) => s + p.x, 0) / perches.length, y: perches.reduce((s, p) => s + p.y, 0) / perches.length, z: perches.reduce((s, p) => s + p.z, 0) / perches.length} : centre;
     const inFlight = (epoch: number) => {
         let n = 0;
         for (let i = 0; i < ROOST_AMBIENT; i++) {
-            const p = roostPoint(centre, seed, i, epoch, t0);
+            const p = roostPoint(centre, seed, i, epoch, t0, 2.1, perches);
             if (p && !p.perched) n++;
         }
         return n;
     };
-    const view0 = (distance: number, azimuth = 0.8) => view(centre.x, centre.y, centre.z, distance, 1.3, azimuth);
+    const view0 = (distance: number, azimuth = 0.8, polar = 1.3) => view(look.x, look.y, look.z, distance, polar, azimuth);
+    if (kind === "settled") return {start: t0 + 5400, seconds: 4, step: 1, close: true, view: view0(5.5, 0.8, 1.2), note: `settled at dusk; roost at ${look.x.toFixed(1)},${look.y.toFixed(1)},${look.z.toFixed(1)} (${perches ? `${perches.length} crown places` : "round its point"})`};
     if (kind === "lapse") return {start: t0 + 360, seconds: 5200, step: 450, view: view0(9), note: `roost at ${centre.x.toFixed(1)},${centre.y.toFixed(1)},${centre.z.toFixed(1)} (${a.animal.group ? "group" : "alone"})`};
-    if (kind === "night") return {start: t0 + 5 * 3600, seconds: 4, step: 1, view: view0(5.5), note: "perched at night"};
+    if (kind === "night") return {start: t0 + 5 * 3600, seconds: 4, step: 1, ...(perches ? {close: true} : {}), view: perches ? view0(5.5, 0.8, 1.2) : view0(5.5), note: `perched at night (${perches ? `${perches.length} crown places` : "round its point"})`};
     if (kind === "dawn") return {start: t0 + 12.4 * 3600, seconds: 2400, step: 200, view: view0(12), note: "leaving at dawn"};
     let best = t0 + 600;
     let most = 0;

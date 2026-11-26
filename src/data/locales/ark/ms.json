@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Tidur dengan sebelah kaki",
                 "asleepWater": "Tidur di dalam air",
                 "asleepHuddle": "Tidur berhimpit dengan kumpulannya",
+                "asleepBuried": "Tidur, tertimbus di dalam tanah",
                 "resting": "Sedang berehat",
                 "restingDen": "Berehat di sarangnya",
                 "dozingSun": "Terlelap di bawah matahari",
@@ -558,6 +559,7 @@
             "light": "mengelilingi cahaya",
             "feeding": "diberi makan",
             "birthing": "melahirkan anak",
+            "toMate": "dalam perjalanan ke pasangannya",
             "about": "bersiar-siar",
             "tag": "Sekarang",
             "tagNote": "Sedang berlaku mengikut jam bersama Ark, sama untuk semua. Baris penuh ialah rekod Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Ia hidup di sana selama 1 hari.",
             "deathLivedMany": "Ia hidup di sana selama {days} hari.",
             "deathSee": "Lihat spesiesnya di Ark",
+            "arrivedLine": "Saya sudah sampai di Ark!",
             "stats": {
                 "money": "Wang",
                 "relationships": "Hubungan",

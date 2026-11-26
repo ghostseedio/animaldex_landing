@@ -226,6 +226,7 @@
                 "asleepOneLeg": "Spí na jedné noze",
                 "asleepWater": "Spí ve vodě",
                 "asleepHuddle": "Spí natisknutý ke své skupině",
+                "asleepBuried": "Spí zahrabaný v zemi",
                 "resting": "Odpočívá",
                 "restingDen": "Odpočívá ve svém doupěti",
                 "dozingSun": "Podřimuje na slunci",
@@ -558,6 +559,7 @@
             "light": "krouží kolem světla",
             "feeding": "dostává krmení",
             "birthing": "rodí mláďata",
+            "toMate": "míří za svým partnerem",
             "about": "je na toulkách",
             "tag": "Teď",
             "tagNote": "Děje se teď podle společných hodin Ark, pro všechny stejně. Plné řádky jsou záznam Ark.",
@@ -1263,6 +1265,7 @@
             "deathLivedOne": "Žilo tam 1 den.",
             "deathLivedMany": "Žilo tam {days} dní.",
             "deathSee": "Zobrazit jeho druh v Ark",
+            "arrivedLine": "Už jsem na palubě Ark!",
             "stats": {
                 "money": "Peníze",
                 "relationships": "Vztahy",
