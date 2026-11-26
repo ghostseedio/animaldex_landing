@@ -279,7 +279,7 @@ import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import {arkCatchChance, arkEatSoon, arkEatSoonOn, arkEatSoonPercent} from "@/lib/ark-eat-soon";
-import {ARK_WATCH_IDLE, arkWatchNext, arkWatchParam, arkWatchStart, type ArkWatchCandidate, type ArkWatchKind} from "@/lib/ark-watch";
+import {ARK_WATCH_HIDDEN, ARK_WATCH_IDLE, arkWatchGiveUp, arkWatchNext, arkWatchParam, arkWatchStart, type ArkWatchCandidate, type ArkWatchKind} from "@/lib/ark-watch";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating tap)
@@ -10714,6 +10714,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let watchOn = false;
     let watchState = arkWatchStart();
     let watchAskedAt = 0;
+    const watchCost = {calls: 0, ms: 0, most: 0, sightMs: 0, pulled: 0, givenUp: 0};
     /** True while the director itself selects (a host selection while watching is the viewer's: it stops). */
     let directing = false;
     const watchParam = arkWatchParam((globalThis as {location?: {search?: string}}).location?.search);
@@ -10771,6 +10772,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!watchOn) return;
         watchOn = false;
         watchState = arkWatchStart();
+        watchHidden = {id: null, since: 0, pulled: 0, checkedAt: 0};
         if (followId) endFollow();
         options.onWatch?.(false, null);
     };
@@ -10791,6 +10793,84 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             directing = false;
         }
     };
+    // The shot kept in sight: the follow camera aims at the subject, but the subject can walk into a bush or under a
+    // crown and the view end up among leaves (the close-up's clear-view search counts walls, trunks and crowns, not
+    // the undergrowth's big instanced sets). Twice a second, three lines from the eye to the subject, small plants
+    // counted (`Sight.cover`); two blocked is hidden. Hidden: the camera pulls back and up (twice at most); still
+    // hidden after `ARK_WATCH_HIDDEN` s, the shot is given up for the next, or the island's view when there is none.
+    const watchSight = new Sight(scene);
+    watchSight.cover = true;
+    let watchHidden: {id: string | null; since: number; pulled: number; checkedAt: number} = {id: null, since: 0, pulled: 0, checkedAt: 0};
+    const watchEye = new Vector3();
+    const watchPoint = new Vector3();
+    const watchSpherical = new Spherical();
+    const watchBlocked = (entry: Entry, at: Vector3): number => {
+        watchEye.copy(camera.position);
+        const slack = Math.max(entry.length, entry.drawnHeight) * 0.5 + 0.05;
+        watchSight.near(at, watchEye.distanceTo(at) + entry.length);
+        const yaw = entry.yawNow ?? entry.place.yaw;
+        const along = entry.length * 0.3;
+        let blocked = 0;
+        for (let line = 0; line < 3; line++) {
+            if (line === 0) watchPoint.copy(at);
+            else if (line === 1) watchPoint.set(at.x, at.y + entry.drawnHeight * 0.35, at.z);
+            else watchPoint.set(at.x + Math.sin(yaw) * along, at.y, at.z + Math.cos(yaw) * along);
+            if (runtime.sightBlocked(watchEye, watchPoint, slack) || watchSight.blocked(watchEye, watchPoint, slack)) blocked++;
+        }
+        return blocked;
+    };
+    /** Back to the island's whole view (nothing worth a shot that the camera can see). */
+    const watchOverview = () => {
+        directing = true;
+        try {
+            pairFramed = null;
+            if (followId) endFollow();
+            if (selectedId) select(null, false);
+        } finally {
+            directing = false;
+        }
+        const view = islandView(islandNear);
+        fly(view.target, view.distance, 1.6, view.polar, view.azimuth);
+    };
+    const stepWatchSight = (nowS: number) => {
+        const shot = watchState.shot;
+        if (!shot || flight || pointers > 0 || nowS - watchHidden.checkedAt < 0.5) return;
+        watchHidden.checkedAt = nowS;
+        const entry = findEntry(shot.id);
+        const at = entry?.middle ?? null;
+        // (Not where the scene has its own view: under the ground, up a tree, on its microhabitat, under the sea.)
+        if (!entry || !at || entry.place.burrow || entry.place.canopy || entry.place.micro || (at.y < -0.3 && heightAt(at.x, at.z) < -0.3)) return;
+        if (watchHidden.id !== shot.id) watchHidden = {id: shot.id, since: 0, pulled: 0, checkedAt: nowS};
+        const t0 = performance.now();
+        const hidden = watchBlocked(entry, at) >= 2;
+        watchCost.sightMs += performance.now() - t0;
+        if (!hidden) {
+            watchHidden.since = 0;
+            return;
+        }
+        if (!watchHidden.since) watchHidden.since = nowS;
+        if (nowS - watchHidden.since >= ARK_WATCH_HIDDEN) {
+            watchCost.givenUp++;
+            watchState = arkWatchGiveUp(watchState, nowS);
+            watchHidden = {id: null, since: 0, pulled: 0, checkedAt: nowS};
+            const step = arkWatchNext(watchState, watchCandidates(nowS), nowS);
+            watchState = step.state;
+            if (step.cut) cutTo(step.cut);
+            else watchOverview();
+            watchAskedAt = nowS;
+            return;
+        }
+        if (watchHidden.pulled < 2) {
+            // Back and up: farther, and looking down more steeply (over the leaves), the same side.
+            watchHidden.pulled++;
+            watchCost.pulled++;
+            watchSpherical.setFromVector3(watchEye.copy(camera.position).sub(controls.target));
+            const id = shot.id;
+            fly(controls.target.clone(), Math.max(watchSpherical.radius * 1.7, watchSpherical.radius + 4, entry.length * 6), 0.8, Math.max(0.3, watchSpherical.phi * 0.6), watchSpherical.theta);
+            const back = flight as Flight | null;
+            if (back) back.aim = () => (watchOn && followId === id ? findEntry(id)?.middle ?? null : null);
+        }
+    };
     const stepWatch = (nowS: number) => {
         if (options.recording || reducedMotion) return;
         if (!watchOn) {
@@ -10800,10 +10880,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!idle || !ready || selectedId || followId || selectedHerd || opening || replay || flight || document.hidden) return;
             startWatch();
         }
-        if (nowS - watchAskedAt < 1 || replay || opening) return;
+        if (replay || opening) return;
+        stepWatchSight(nowS);
+        if (nowS - watchAskedAt < 1) return;
         watchAskedAt = nowS;
+        const t0 = performance.now();
         const step = arkWatchNext(watchState, watchCandidates(nowS), nowS);
         watchState = step.state;
+        // (Its own cost, the candidates and the pick, for the development hook: the cut's flight is the selection's.)
+        const spent = performance.now() - t0;
+        watchCost.calls++;
+        watchCost.ms += spent;
+        watchCost.most = Math.max(watchCost.most, spent);
         if (step.cut) cutTo(step.cut);
     };
     /** V1: the departed fading where they stood (`departing`); one an act has taken up (its death, its meal, a stand-in) gives way. */
@@ -11829,7 +11917,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, watch: () => ({on: watchOn, shot: watchState.shot, candidates: watchOn ? watchCandidates(performance.now() / 1000) : []}), talking, lighting, entries: () => allEntries(), townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, watch: () => ({on: watchOn, shot: watchState.shot, cost: {...watchCost}, candidates: watchOn ? watchCandidates(performance.now() / 1000) : []}), talking, lighting, entries: () => allEntries(), townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)

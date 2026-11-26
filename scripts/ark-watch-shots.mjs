@@ -71,7 +71,7 @@ const frames = [];
 try {
     await live("/api/ark/words?lang=en");
     const page = await browser.newPage({viewport, deviceScaleFactor: 1});
-    page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 200)));
+    page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 200), String(e.stack ?? "").split("\n").slice(1, 4).join(" | ").slice(0, 400)));
     await page.goto(`${base}/ark/embed.html?watch=1&lang=en`);
     await page.waitForFunction(() => document.querySelector("canvas") && document.getElementById("ark-loader")?.style.display === "none", null, {timeout: 300000}).catch(() => null);
     const t0 = Date.now();
@@ -82,7 +82,7 @@ try {
             const d = window.__arkDebug;
             const w = d?.watch?.() ?? null;
             const name = (id) => d?.entries?.().find((e) => e.animal.id === id)?.animal.name ?? null;
-            return w ? {on: w.on, shot: w.shot ? {...w.shot, name: name(w.shot.id)} : null, candidates: w.candidates.map((c) => ({kind: c.kind, weight: Math.round(c.weight * 100) / 100, name: name(c.id)}))} : null;
+            return w ? {on: w.on, cost: w.cost, shot: w.shot ? {...w.shot, name: name(w.shot.id)} : null, candidates: w.candidates.map((c) => ({kind: c.kind, weight: Math.round(c.weight * 100) / 100, name: name(c.id)}))} : null;
         });
         const file = path.join(out, `frame-${String(i).padStart(3, "0")}.png`);
         await page.screenshot({path: file});

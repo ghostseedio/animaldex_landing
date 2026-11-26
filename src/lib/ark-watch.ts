@@ -36,6 +36,8 @@ export type ArkWatchState = {
     lostAt: number | null;
     /** Subjects shot lately (id to when the shot ended), not cut back to while others are on. */
     recent: Array<{id: string; at: number}>;
+    /** Subjects the camera could not see (hidden in a bush, under a crown): not cut back to at all for a while. */
+    hidden?: Array<{id: string; at: number}>;
 };
 
 /** The shortest hold of a shot (s): a cut never comes sooner, whatever else starts. */
@@ -50,6 +52,10 @@ export const ARK_WATCH_PREEMPT = 6;
 export const ARK_WATCH_AGAIN = 90;
 /** Untouched for this long (s), with nothing selected, the director starts by itself (the idle Watch). */
 export const ARK_WATCH_IDLE = 45;
+/** A subject hidden from the camera this long (s), after the camera has pulled back and up, is given up. */
+export const ARK_WATCH_HIDDEN = 3;
+/** A subject given up as hidden is not cut back to for this long (s), even with nothing else on. */
+export const ARK_WATCH_HIDDEN_AGAIN = 60;
 
 export const arkWatchStart = (): ArkWatchState => ({shot: null, lostAt: null, recent: []});
 
@@ -75,17 +81,19 @@ export function arkWatchRanked(candidates: readonly ArkWatchCandidate[]): ArkWat
  * happening and no shot, nothing is cut (the view stays where it is).
  */
 export function arkWatchNext(state: ArkWatchState, candidates: readonly ArkWatchCandidate[], now: number): {state: ArkWatchState; cut: ArkWatchCandidate | null} {
-    const ranked = arkWatchRanked(candidates);
+    const hidden = (state.hidden ?? []).filter((h) => now - h.at < ARK_WATCH_HIDDEN_AGAIN);
+    if (hidden.length || state.hidden) state = {...state, hidden};
+    const ranked = arkWatchRanked(candidates.filter((c) => !hidden.some((h) => h.id === c.id)));
     const recent = state.recent.filter((r) => now - r.at < ARK_WATCH_AGAIN);
     const fresh = (c: ArkWatchCandidate) => !recent.some((r) => r.id === c.id);
     const take = (c: ArkWatchCandidate): {state: ArkWatchState; cut: ArkWatchCandidate} => ({
-        state: {shot: {id: c.id, other: c.other ?? null, kind: c.kind, score: arkWatchScore(c), from: now}, lostAt: null, recent: state.shot ? [...recent.filter((r) => r.id !== state.shot!.id), {id: state.shot.id, at: now}].slice(-12) : recent},
+        state: {shot: {id: c.id, other: c.other ?? null, kind: c.kind, score: arkWatchScore(c), from: now}, lostAt: null, recent: state.shot ? [...recent.filter((r) => r.id !== state.shot!.id), {id: state.shot.id, at: now}].slice(-12) : recent, hidden},
         cut: c
     });
     const shot = state.shot;
     if (!shot) {
         const first = ranked.find(fresh) ?? ranked[0];
-        return first ? take(first) : {state: {...state, recent}, cut: null};
+        return first ? take(first) : {state: {...state, recent, hidden}, cut: null};
     }
     const held = now - shot.from;
     const others = ranked.filter((c) => c.id !== shot.id);
@@ -95,10 +103,10 @@ export function arkWatchNext(state: ArkWatchState, candidates: readonly ArkWatch
         const lostAt = state.lostAt ?? now;
         const next = others.find(fresh) ?? others[0];
         if (next && held >= ARK_WATCH_HOLD && now - lostAt >= ARK_WATCH_GRACE) return take(next);
-        return {state: {shot, lostAt, recent}, cut: null};
+        return {state: {shot, lostAt, recent, hidden}, cut: null};
     }
     const score = arkWatchScore(current);
-    const kept: ArkWatchState = {shot: {...shot, kind: current.kind, score}, lostAt: null, recent};
+    const kept: ArkWatchState = {shot: {...shot, kind: current.kind, score}, lostAt: null, recent, hidden};
     const best = others.find(fresh);
     // A stronger kind starting (a chase while a signature plays) takes over early (not one just left).
     if (best && held >= ARK_WATCH_PREEMPT && Math.floor(arkWatchScore(best) / 10) > Math.floor(score / 10)) return take(best);
@@ -108,6 +116,19 @@ export function arkWatchNext(state: ArkWatchState, candidates: readonly ArkWatch
     if (next && arkWatchScore(next) > score + 0.5) return take(next);
     if (held >= ARK_WATCH_MOST && (next ?? others[0])) return take(next ?? others[0]);
     return {state: kept, cut: null};
+}
+
+/**
+ * The shot's subject has stayed hidden from the camera (`ARK_WATCH_HIDDEN`): the shot is given up, and the subject is
+ * neither cut back to soon nor at all for `ARK_WATCH_HIDDEN_AGAIN`. The next `arkWatchNext` then cuts to the best other
+ * (none: the caller goes back to the island's view).
+ */
+export function arkWatchGiveUp(state: ArkWatchState, now: number): ArkWatchState {
+    const shot = state.shot;
+    if (!shot) return state;
+    const hidden = [...(state.hidden ?? []).filter((h) => h.id !== shot.id && now - h.at < ARK_WATCH_HIDDEN_AGAIN), {id: shot.id, at: now}].slice(-12);
+    const recent = [...state.recent.filter((r) => r.id !== shot.id), {id: shot.id, at: now}].slice(-12);
+    return {shot: null, lostAt: null, recent, hidden};
 }
 
 /** The switch from the address: `?watch=1` starts it at once, `?watch=0` never starts it by itself. */

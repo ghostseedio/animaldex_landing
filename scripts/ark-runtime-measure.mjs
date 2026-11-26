@@ -504,7 +504,7 @@ for (const deviceName of devices) {
                     }});
                 });
             }
-            const query = `snapshot=${encodeURIComponent(populationFile ? "/population-file.json" : "/ark-missing.json")}${pageKind === "hero" ? "&refresh=600&idle=900" : ""}${modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : ""}${lane}`;
+            const query = `snapshot=${encodeURIComponent(populationFile ? "/population-file.json" : "/ark-missing.json")}${pageKind === "hero" ? "&refresh=600&idle=900" : ""}${modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : ""}${arg("watch", "") ? `&watch=${arg("watch", "")}` : ""}${lane}`;
             await page.goto(`${base}/${pageKind === "hero" ? "hero.html" : "ark/embed.html"}?${query}`, {waitUntil: "commit", timeout: 120_000});
         }
         // The Mac running this is busy with other work: its CPU pressure is not the device's (the browser's Compute

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {ARK_WATCH_AGAIN, ARK_WATCH_GRACE, ARK_WATCH_HOLD, ARK_WATCH_MOST, ARK_WATCH_PREEMPT, arkWatchNext, arkWatchParam, arkWatchRanked, arkWatchScore, arkWatchStart, type ArkWatchCandidate} from "@/lib/ark-watch";
+import {ARK_WATCH_AGAIN, ARK_WATCH_GRACE, ARK_WATCH_HIDDEN, ARK_WATCH_HIDDEN_AGAIN, ARK_WATCH_HOLD, ARK_WATCH_MOST, ARK_WATCH_PREEMPT, arkWatchGiveUp, arkWatchNext, arkWatchParam, arkWatchRanked, arkWatchScore, arkWatchStart, type ArkWatchCandidate} from "@/lib/ark-watch";
 
 const c = (id: string, kind: ArkWatchCandidate["kind"], weight = 1, since = 0): ArkWatchCandidate => ({id, kind, weight, since});
 
@@ -59,4 +59,16 @@ test("the address switch", () => {
     assert.equal(arkWatchParam("?watch=0"), "off");
     assert.equal(arkWatchParam("?x=1"), null);
     assert.equal(arkWatchParam(null), null);
+});
+
+test("a subject hidden from the camera is given up: the next other, and never it again for a while", () => {
+    let {state} = arkWatchNext(arkWatchStart(), [c("a", "hunt")], 0);
+    state = arkWatchGiveUp(state, 5);
+    assert.equal(state.shot, null);
+    // The hunt is still the best on, but hidden: the lower one instead.
+    assert.equal(arkWatchNext(state, [c("a", "hunt"), c("b", "signature")], 6).cut?.id, "b");
+    // With only it on: nothing (the caller goes back to the island's view), until the while is over.
+    assert.equal(arkWatchNext(state, [c("a", "hunt")], 6).cut, null);
+    assert.equal(arkWatchNext(state, [c("a", "hunt")], 5 + ARK_WATCH_HIDDEN_AGAIN).cut?.id, "a");
+    assert.ok(ARK_WATCH_HIDDEN < ARK_WATCH_HOLD);
 });
