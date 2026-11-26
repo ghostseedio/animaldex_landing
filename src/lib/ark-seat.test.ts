@@ -368,6 +368,47 @@ test("seat: a small percher moved onto a leaf beside it gets there and stays, no
     assert.ok(Math.abs(position.y - 1.5) < 0.014 && position.x < 140.2, `onto the leaf beside it: ${position.x}, ${position.y}`);
 });
 
+test("seat: a small percher moved down onto its leaf, its own motion back, then up again, comes down again (SMALL-PERCHER)", () => {
+    // The brimstone traced frame by frame (wild island, 11 h): seated on its tree's leaf, its own motion bobbed it 16 cm
+    // up; it was moved down onto the leaf; its own motion came back down on the way, so it arrived under the leaf with
+    // nothing under it and was put back where its own motion had it. Its one move spent, its own motion bobbing up again
+    // as it got back left it there, over the leaf, for good.
+    const {scene} = world();
+    const pass = new SeatPass(scene);
+    const geometry = new BoxGeometry(0.01, 0.01, 0.03);
+    geometry.translate(0, 0.005, 0);
+    const holder: SeatHolder = {};
+    const matrix = new Matrix4();
+    const position = new Vector3();
+    const top = {nx: 0, ny: 1, nz: 0};
+    const step = (at: Vector3) => {
+        pass.begin();
+        position.copy(at);
+        const offset = pass.offset(holder, "perch", 1 / 60);
+        if (offset) position.add(new Vector3(offset.x, offset.y, offset.z));
+        matrix.compose(position, new Quaternion(), new Vector3(1, 1, 1));
+        pass.settle({holder, kind: "perch", matrix, geometry, pose: null, height: 0.01, length: 0.03, surface: top, moving: false, ground: () => 0, focus: false});
+    };
+    pass.force = true;
+    const on = new Vector3(140, 1.5, 100);
+    const bob = new Vector3(140, 1.66, 100);
+    for (let i = 0; i < 30; i++) step(on);
+    assert.ok(Math.abs(position.y - 1.5) < 0.014, `on its leaf: ${position.y}`);
+    // (Up: moved down onto the leaf. Down again before it is there: under the leaf.)
+    step(bob);
+    assert.ok(holder.seat!.ty < -0.1, `moved down onto the leaf: ${holder.seat!.ty}`);
+    // (On its way back to the leaf, and up again before it is there, and staying up.)
+    let under = false;
+    for (let i = 0; i < 120; i++) {
+        step(on);
+        if (holder.seat!.y < -0.12) under = true;
+        if (under && holder.seat!.y > -0.06) break;
+    }
+    assert.ok(under && holder.seat!.y > -0.06, `on its way back: ${holder.seat!.y}`);
+    for (let i = 0; i < 240; i++) step(bob);
+    assert.ok(Math.abs(position.y - 1.5) < 0.014, `down on its leaf again: ${position.y}`);
+});
+
 test("seat: on a wall's face it is brought to the face", () => {
     // The wall's +x face is at x = 120.15; a body clinging 10 cm off it, its back along the face's normal.
     const rotation = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), new Vector3(1, 0, 0));
