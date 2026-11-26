@@ -23,7 +23,7 @@ test("REEF-PATCHES: the reef's coral heads are separate patches with sand channe
     for (let i = -17; i < 17; i++) for (let j = -17; j < 17; j++) if (Math.hypot((i + 0.5) * cell, (j + 0.5) * cell) <= 34) total++;
     const seen = new Set<string>();
     const sizes: number[] = [];
-    for (const k of grid) {
+    for (const k of Array.from(grid)) {
         if (seen.has(k)) continue;
         let size = 0;
         const stack = [k];
@@ -100,7 +100,7 @@ test("REEF-PATCHES: from above (the water's cover map) the reef is separate dark
     }
     const seen = new Set<number>();
     const pieces: number[] = [];
-    for (const k of coral) {
+    for (const k of Array.from(coral)) {
         if (seen.has(k)) continue;
         let n = 0;
         const stack = [k];
