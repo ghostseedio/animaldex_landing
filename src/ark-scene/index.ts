@@ -80,7 +80,7 @@ import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, REVIV
 import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
 import {WaterReflections} from "@/ark-scene/water-reflect-render"; // p3 (reflect)
 import {headLimits} from "@/ark-scene/head-look";
-import {bellyOfGeometry, clipDrawsSleep, goesIntoRoost, LEGLESS_BELLY, lyingBody, lyingDrop, lyingTorso, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, sleepsOnFeet, stepSleepNow, type ArkRestStatus, type SleepNow, type SleepPosture} from "@/ark-scene/sleep";
+import {BURIED_SINK, bellyOfGeometry, buriedSink, clipDrawsSleep, goesIntoRoost, LEGLESS_BELLY, lyingBody, lyingDrop, lyingTorso, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, sleepsOnFeet, stepSleepNow, type ArkRestStatus, type SleepNow, type SleepPosture} from "@/ark-scene/sleep";
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
@@ -710,6 +710,8 @@ type Entry = {
     stirShare?: number;
     /** Its rig plays the lying clips now (`sleepClip`): the procedural lying gives way to them as the rig fades in. */
     sleepClipped?: boolean;
+    /** Lane SIG10: the share of its height a buried sleeper is drawn sunk into the ground this frame (`buriedSink`), 0 when not. */
+    buriedDrawn?: number;
     /** Lane SIG6: turned over on its own clip, or getting up from it: left by the seat pass, rested on its turned pose. */
     rollHeld?: boolean;
     /** 0 out … 1 gone into its burrow or den to sleep or rest (its roost is the way in: `goesIntoRoost`), eased. */
@@ -2675,7 +2677,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const raised = Boolean(pose && own && pose.y > Math.max(own.ground, 0) + 0.4) || Boolean(entry.place.canopy);
         const inWater = Boolean(entry.depth && (pose ? pose.y < 0.02 && own!.ground < 0 : true)) || Boolean(entry.place.water);
         const sunny = lighting.daylight.night < 0.2 && reactiveWeather.rain < 0.3;
-        return restStatus({asleep, doing: entry.state.doing ?? null, atRoost: settled, enclosed, roost: own?.profile.roost ?? null, posture: entry.sleepNow?.posture ?? style.posture, social: style.social, raised, inWater, sunny});
+        // (Lane SIG10: "buried" only while it is drawn sunk at least half way (`buriedDrawn`, set where the sink is applied),
+        // never on its way in or out, on a leaf or a rock top, in the water, nor before its sleep is drawn at all.)
+        const sn = entry.sleepNow ?? null;
+        const shownPosture = sn ? (sn.posture === "buried" && (entry.buriedDrawn ?? 0) < BURIED_SINK * 0.5 ? "still" : sn.posture) : style.posture === "buried" ? "still" : style.posture;
+        return restStatus({asleep, doing: entry.state.doing ?? null, atRoost: settled, enclosed, roost: own?.profile.roost ?? null, posture: shownPosture, social: style.social, raised, inWater, sunny});
     };
     const tellState = () => {
         const entry = selectedId ? findEntry(selectedId) : null;
@@ -7193,6 +7199,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 );
             }
             const rest = Math.max(entry.place.ground, 0);
+            // (Lane SIG10: not drawn sunk unless its body is drawn below, `buriedNow`: a marker, an icon or the talking model.)
+            entry.buriedDrawn = 0;
             const marked = selectedId === animal.id ? 2 : mineOnly && animal.mine ? 1 : cast?.marks.has(animal.id) ? 3 : 0;
             // Too small to find on its own (a few pixels across: from far, or a beetle a few metres off): a soft dot over it,
             // and its icon once tapped. Close by it is drawn true to size, and found by looking. (True scale, motion pass §3.)
@@ -7288,13 +7296,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const clipShare = sn && rig && entry.sleepClipped && entry.rig ? entry.rig.weight : 0;
             // p2 (contact): the drawn ground a lying sleeper rests on (its contact shadow's), null otherwise.
             let lyingOn: number | null = null;
+            // (Lane SIG10: how far a buried sleeper is drawn sunk this frame: on the ground, lying or on a ground-facing surface.)
+            let buriedNow = 0;
+            // (How far lower it is drawn for it (m): its middle, for the label, the ring and the follow camera, goes with it.)
+            let sunkBy = 0;
             const slept = sn && !surface && !act ? sleepDraw(sn, {id: animal.id, slug: animal.model_slug, length: entry.length, epoch: epochNow, procedural: 1 - clipShare, reduced: reducedMotion}) : null;
             // ARK-CONTACT (the owner, 2026-11-21, the farm at night: "cows and pigs are sunk into the ground, with the lower
             // half of their legs cut off"): a sleeper whose legs are drawn standing (no lying clip plays: the four-legged
             // rigs' lying clips are held, `QUADRUPED_LYING_HELD`, and the near and far meshes stand) is not lowered onto its
             // belly with its legs through the ground; it sleeps on its feet, its head low and its eyes shut, its hooves on
             // the drawn ground like any standing animal (`groundedStand`). A rig's own lying clip still lies it down.
-            const sleepsStanding = sleepsOnFeet({slept: Boolean(slept), rigged: Boolean(rig), sleepClipped: entry.sleepClipped === true, clipShare, water: Boolean(where.water), lying: Boolean(sn?.spec.lying), flat: sn?.posture === "flat", legsUnder: Boolean(slept) && legsUnder((level === "near" ? model.near ?? model.far : model.far ?? model.near)?.geometry ?? null)});
+            const sleepsStanding = sleepsOnFeet({slept: Boolean(slept), rigged: Boolean(rig), sleepClipped: entry.sleepClipped === true, clipShare, water: Boolean(where.water), lying: Boolean(sn?.spec.lying), flat: sn?.posture === "flat" || sn?.posture === "buried", legsUnder: Boolean(slept) && legsUnder((level === "near" ? model.near ?? model.far : model.far ?? model.near)?.geometry ?? null)});
             if (slept && sleepsStanding) {
                 const stirTarget = entry.sched?.pose?.moving ? 0 : 1;
                 const stirWas = entry.stirShare ?? stirTarget;
@@ -7320,6 +7332,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (where.water) {
                     // On the bottom: down to the floor under it as it settles.
                     if (sn!.posture === "bottom") where.base += (where.water.floorY + modelHeight * 0.05 - where.base) * sleepStages(sn!.t).body;
+                    // (Lane SIG10: a buried sleeper whose bed is under water (a box turtle "buried in mud ... or on the bottom in
+                    // shallow water"): down to the bed as it settles, then into its mud, `buriedSink`. Not "buried in the ground"
+                    // on its card (`buriedNow` stays 0): it is asleep in the water.)
+                    else if (sn!.posture === "buried") {
+                        const was = where.base;
+                        where.base += (where.water.floorY - where.base) * sleepStages(sn!.t).body - buriedSink(sn, false) * modelHeight;
+                        sunkBy = was - where.base;
+                    }
                 } else if (box && !surface && groundingRules() === "grounded" && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase))) {
                     const lyingGround = standGround(where.x, where.z, poseBase);
                     const lie = lieOnGround(where.x, where.z, where.yaw, s, lyingTorso(box, body.legs), where.pitch, where.roll, lyingGround, groundNormalAt(where.x, where.z, lyingGround), (x, z) => standGround(x, z, poseBase));
@@ -7328,7 +7348,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     where.base = lie.rootY + groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s;
                     lyingOn = lie.ground;
                 } else if (box) where.base -= lyingDrop({minX: box.min.x, maxX: box.max.x, minY: box.min.y, maxY: box.max.y}, body.legs, body.roll) * s;
+                // (Lane SIG10: a buried sleeper sunk part of its height into the litter or sand, `sleep.ts` buriedSink: its back
+                // still shows, for the tap and the follow camera.)
+                if (!where.water) {
+                    buriedNow = buriedSink(sn, false);
+                    where.base -= buriedNow * modelHeight;
+                    sunkBy = buriedNow * modelHeight;
+                }
             }
+            if (sunkBy > 0 && entry.middle) entry.middle.y -= sunkBy;
             if (entry.denIn) where.base -= entry.denIn * modelHeight * 1.1;
             // A catch lying on its side (`meal-acts.ts`): its body turned by the roll, lowered so its side meets the ground.
             if (act?.lying && !where.water) {
@@ -7359,7 +7387,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 basisZ.addScaledVector(basisY, -basisZ.dot(basisY)).normalize();
                 basisX.crossVectors(basisY, basisZ);
                 rotation.setFromRotationMatrix(basisMatrix.makeBasis(basisX, basisY, basisZ));
-                const up = -groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s + (1 - Math.min(grow, 1)) * -modelHeight * 0.3;
+                // (Lane SIG10: a small sleeper buried for the day on the ground (litter, sand, soil) sinks into it along the
+                // surface's normal, `buriedSink`: only on a face that looks up and lies on the drawn ground, never on a leaf,
+                // a flower, a rock top or a wall, where nothing could bury it, and its back always shows.)
+                // (Into the ground as drawn: a crawler's surface point can sit a few millimetres over the drawn ground, a
+                // mealworm beetle's 8 mm over it, more than its own height; it settles down onto the drawn ground first.)
+                let down = 0;
+                if (sn && !act && !where.water && entry.air <= 0.001 && surface.ny > 0.7) {
+                    const gap = where.base - standGround(where.x, where.z, where.base);
+                    if (Math.abs(gap) < Math.max(0.03, modelHeight)) {
+                        buriedNow = buriedSink(sn, false);
+                        down = Math.max(gap, 0) * (buriedNow / BURIED_SINK) + buriedNow * modelHeight;
+                    }
+                }
+                const up = -groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s + (1 - Math.min(grow, 1)) * -modelHeight * 0.3 - down;
+                if (down > 0 && entry.middle) entry.middle.set(entry.middle.x - surface.nx * down, entry.middle.y - surface.ny * down, entry.middle.z - surface.nz * down);
                 position.set(where.x + surface.nx * up, where.base + surface.ny * up, where.z + surface.nz * up);
             } else {
                 // Grounding: its true base on the drawn ground, leaning to the slope (the pose's own offsets carried over).
@@ -7463,7 +7505,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             facts.afloat = false;
             // (One the town holds in a tank, a cage, a vivarium or a room is on that container's own floor, which no ground
             // knows and, at night, nothing draws: pets asleep in the tower's flats were 70 m 'over the ground'. Left to it.)
-            facts.den = Boolean(entry.denIn) || Boolean(entry.power?.drop) || (loose && Boolean(entry.place.burrow)) || Boolean(island?.held(animal.id));
+            facts.den = Boolean(entry.denIn) || Boolean(entry.power?.drop) || (loose && Boolean(entry.place.burrow)) || Boolean(island?.held(animal.id))
+                // (Lane SIG10: buried for its sleep, in the litter or sand on purpose, `buriedSink`: left alone like one in its den.)
+                || buriedNow > 0.01;
+            entry.buriedDrawn = buriedNow;
             facts.growing = grow < 1;
             // (An act on its feet, a stalk, a run, a meal, is seated like any other; one in the air or the water, or fading out, is its own.)
             facts.acting = Boolean(act) && (act!.hidden || act!.scale < 0.999 || SEAT_ACT_FREE.has(act!.state ?? ""));
@@ -7737,7 +7782,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const underFeet = broadSurface ? null : groundUnderAt(where.x + seatX, where.z + seatZ, ARK_ENVIRONMENT.seaLevel.value, level === "near", poseBase);
             // (A sleeper lying on the ground touches it with its body, its legs folded into it: its shadow stays.)
             const contact = underFeet ? groundContact(seatOn !== null ? underFeet.height : lyingOn !== null ? Math.max(lyingOn, underFeet.height) : where.base + seatY + lift, underFeet.height, underFeet.water, modelHeight) : null;
-            if (broadSurface || contact) {
+            // (Lane SIG10: a buried sleeper casts none: its body is in the litter or sand, faded out as it sinks, back as it
+            // gets up; its seat is left alone like a denned one's, so a shadow put by the seat's offset floated beside it.)
+            const unburied = 1 - Math.min(buriedNow / BURIED_SINK, 1);
+            if ((broadSurface || contact) && unburied > 0.01) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
                 // ARK-CONTACT (decision 447, "animal shadows don't match their body or size"): its own box as it lies now,
                 // turned by its pitch and roll (a lion on its side, a giraffe's long narrow body), at every level; no
@@ -7748,7 +7796,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (broadSurface && surface) {
                     // On a wall, a leaf, a flower or a stone: under its body (not its splayed legs), on that surface where it
                     // touches it, long the way it crawls.
-                    shadowList.push({x: where.x + seatX, y: where.base + seatY, z: where.z + seatZ, width: width * 0.8, length: length * 0.9, yaw: where.yaw, strength: grow, nx: surface.nx, ny: surface.ny, nz: surface.nz, tx: surface.tx, ty: surface.ty, tz: surface.tz});
+                    shadowList.push({x: where.x + seatX, y: where.base + seatY, z: where.z + seatZ, width: width * 0.8, length: length * 0.9, yaw: where.yaw, strength: grow * unburied, nx: surface.nx, ny: surface.ny, nz: surface.nz, tx: surface.tx, ty: surface.ty, tz: surface.tz});
                 } else if (contact) {
                     // On the ground under it: on its slope (near ones, with the pass on), under the body's middle (a
                     // model's origin is not always there: a seal's is at its chest), turned with it.
@@ -7763,7 +7811,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                         width: Math.max(width, 0.004),
                         length: Math.max(length, 0.004),
                         yaw: where.yaw,
-                        strength: grow * contact.strength,
+                        strength: grow * contact.strength * unburied,
                         ...(normal ? {nx: normal.x, ny: normal.y, nz: normal.z} : {})
                     });
                 }
@@ -11713,7 +11761,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), restOf: (id: string) => { const e = findEntry(id); return e ? restOf(e) : null; }, townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)

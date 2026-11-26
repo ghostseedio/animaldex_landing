@@ -36,7 +36,7 @@ const bySlug = new Map(rows.map((r) => [r.slug, r]));
 const profiles: Profile[] = JSON.parse(readFileSync(path.join(root, "data/ark/behaviour-profiles.json"), "utf8")).profiles;
 const recipes: Record<string, string> = JSON.parse(readFileSync(path.join(root, "src/ark-scene/recipes.json"), "utf8")).species;
 
-export type Posture = "sternal" | "side" | "curl" | "stand" | "one_leg" | "tuck" | "hang" | "float_back" | "sit" | "flat" | "bottom" | "hover" | "bottle" | "still";
+export type Posture = "sternal" | "side" | "curl" | "stand" | "one_leg" | "tuck" | "hang" | "float_back" | "sit" | "flat" | "bottom" | "hover" | "bottle" | "still" | "buried";
 export type Social = "apart" | "huddle" | "pile" | "row" | "cluster";
 type Source = {field: "sleep"; phrase: string} | {recipe: string} | {rule: string};
 

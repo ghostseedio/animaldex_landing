@@ -51,10 +51,15 @@ const coats: Coats[] = [];
 // (Lane SIG9: `withdraw`, a generated row a lane takes out of the table again, with why: one that reads wrong once it can
 // run, a bufflehead's strut on land when its courtship is on the water.)
 const withdrawn: Array<{slug: string; recipe: string; reason: string}> = [];
+// (Lane SIG10: a sleep posture a species' own sleep text gives that the sleep generator has no word for: a night beetle, a
+// hermit crab or a slug that spends the day buried in litter, sand or soil (`buried`). Its other postures stay as alts.)
+type SleepPostureRow = {slug: string; posture: string; alts?: string[]; field: string; quote: string};
+const sleepPostures: SleepPostureRow[] = [];
 for (const f of files) {
-    const j = JSON.parse(fs.readFileSync(path.join(root, "data/ark", f), "utf8")) as {additions: Addition[]; templates?: Record<string, {plans: string[]; weight: number}>; replaces?: Array<{slug: string; recipe: string}>; held?: Array<{slug: string; recipe: string; reason: string}> | Record<string, string>; coats?: Coats; withdraw?: Array<{slug: string; recipe: string; reason: string}>};
+    const j = JSON.parse(fs.readFileSync(path.join(root, "data/ark", f), "utf8")) as {additions: Addition[]; templates?: Record<string, {plans: string[]; weight: number}>; replaces?: Array<{slug: string; recipe: string}>; held?: Array<{slug: string; recipe: string; reason: string}> | Record<string, string>; coats?: Coats; withdraw?: Array<{slug: string; recipe: string; reason: string}>; sleeps?: SleepPostureRow[]};
     additions.push(...j.additions);
     withdrawn.push(...(j.withdraw ?? []));
+    sleepPostures.push(...(j.sleeps ?? []));
     if (j.coats) coats.push(j.coats);
     Object.assign(seeded, j.templates ?? {});
     for (const r of j.replaces ?? []) replaced.add(`${r.slug} ${r.recipe}`);
@@ -240,6 +245,23 @@ for (const [key, reason] of holds) {
         style.src.social = {rule: `held (signature-holds.json): ${reason.slice(0, 160)}`};
     }
 }
+let postured = 0;
+for (const sp of sleepPostures) {
+    const f = (sleepTable.species[sp.slug] ?? "still").split("|");
+    const alts = (sp.alts ?? []).join(",");
+    if (f[0] === sp.posture && (f[1] ?? "") === alts) continue;
+    f[0] = sp.posture;
+    while (f.length < 2) f.push("");
+    f[1] = alts;
+    sleepTable.species[sp.slug] = f.join("|").replace(/\|+$/, "");
+    const style = sleepStyles.species.find((x) => x.slug === sp.slug) as {posture?: string; alts?: string[]; src: Record<string, unknown>} | undefined;
+    if (style) {
+        style.posture = sp.posture;
+        style.alts = sp.alts ?? [];
+        style.src.posture = {field: sp.field, phrase: sp.quote};
+    }
+    postured++;
+}
 // (Lane SIG7: a coat variant (a bicolor domestic cat) is the same animal as its parent: its parent's row, sleep row and
 // sentences, less the acts whose clips its rig lacks. Only where the generator gave it no row of its own.)
 let coated = 0;
@@ -277,6 +299,6 @@ if (!dry) {
     fs.writeFileSync(sleepStylesPath, `${JSON.stringify(sleepStyles, null, 1)}\n`);
     fs.writeFileSync(linesPath, JSON.stringify(lines));
 }
-console.log(JSON.stringify({additions: additions.length, added, already: already.length, superseded, coated, skipped: skipped.length, birds: {rows: birds.rows.length, added: birdReport.added.length, already: birdReport.already.length, missing: birdReport.missing.length, sleepRows: birdSleep, lines: birdLines, notShown: birds.notShown.map((n) => `${n.slug} ${n.was}`)}}, null, 1));
+console.log(JSON.stringify({additions: additions.length, added, already: already.length, superseded, coated, postured, skipped: skipped.length, birds: {rows: birds.rows.length, added: birdReport.added.length, already: birdReport.already.length, missing: birdReport.missing.length, sleepRows: birdSleep, lines: birdLines, notShown: birds.notShown.map((n) => `${n.slug} ${n.was}`)}}, null, 1));
 if (skipped.length) console.log(skipped.join("\n"));
 if (birdReport.missing.length) console.log(birdReport.missing.join("\n"));

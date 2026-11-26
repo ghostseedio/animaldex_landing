@@ -32,7 +32,7 @@ import data from "@/ark-scene/sleep.json";
 import {groupRoostOf} from "@/ark-scene/behaviour-group";
 import {hashString} from "@/ark-scene/world";
 
-export const SLEEP_POSTURES = ["sternal", "side", "curl", "stand", "one_leg", "tuck", "hang", "float_back", "sit", "flat", "bottom", "hover", "bottle", "still"] as const;
+export const SLEEP_POSTURES = ["sternal", "side", "curl", "stand", "one_leg", "tuck", "hang", "float_back", "sit", "flat", "bottom", "hover", "bottle", "still", "buried"] as const;
 export type SleepPosture = (typeof SLEEP_POSTURES)[number];
 export type SleepSocial = "apart" | "huddle" | "pile" | "row" | "cluster";
 
@@ -107,9 +107,9 @@ export function sleepPostureFor(id: string, slug: string, epochSeconds: number):
  * curl, radians each half), how deep it breathes, whether it is lying (its clips go by `lie_down`/`get_up`), and
  * whether it is in the water (its depth band's).
  */
-export type PostureSpec = {drop: number; roll: number; pitch: number; headYaw: number; headPitch: number; curl: number; breath: number; lying: boolean; water: boolean};
+export type PostureSpec = {drop: number; roll: number; pitch: number; headYaw: number; headPitch: number; curl: number; breath: number; lying: boolean; water: boolean; sink: number};
 
-const P = (s: Partial<PostureSpec>): PostureSpec => Object.freeze({drop: 0, roll: 0, pitch: 0, headYaw: 0, headPitch: 0, curl: 0, breath: 1, lying: false, water: false, ...s}) as PostureSpec;
+const P = (s: Partial<PostureSpec>): PostureSpec => Object.freeze({drop: 0, roll: 0, pitch: 0, headYaw: 0, headPitch: 0, curl: 0, breath: 1, lying: false, water: false, sink: 0, ...s}) as PostureSpec;
 export const POSTURE_SPECS: Record<SleepPosture, PostureSpec> = {
     // On its chest, the legs folded under (they go under the body: into the ground, out of sight).
     sternal: P({drop: 0.4, roll: 0.06, headPitch: -0.12, lying: true}),
@@ -138,8 +138,15 @@ export const POSTURE_SPECS: Record<SleepPosture, PostureSpec> = {
     hover: P({pitch: 0.05, breath: 0, water: true}),
     // Upright in the water, the head at the surface (a sperm whale, a seal bottling).
     bottle: P({pitch: -1.3, breath: 0.6, water: true}),
-    still: P({breath: 0})
+    still: P({breath: 0}),
+    // (Lane SIG10: buried in litter, sand or soil for the day, as its own sleep text says: belly down like a flat sleeper,
+    // then sunk `sink` of its height into the ground (`BURIED_SINK`). Never all of it: the back shows, so it can be tapped
+    // and followed.)
+    buried: P({drop: 0.1, breath: 0, lying: true, sink: 0.45})
 };
+
+/** The most of its height a buried sleeper goes under (the rest shows: it stays tappable and in the follow camera's frame). */
+export const BURIED_SINK = 0.45;
 
 /** Its head asleep (yaw toward its flank, pitch: + up), by its posture and the night's head choice. */
 export function sleepHead(spec: PostureSpec, side: 1 | -1, head: 0 | 1 | 2, posture: SleepPosture): {yaw: number; pitch: number} {
@@ -175,7 +182,8 @@ const POSTURE_CLIPS: Record<SleepPosture, readonly string[]> = {
     bottom: [],
     hover: [],
     bottle: [],
-    still: []
+    still: [],
+    buried: ["sleep"]
 };
 
 // MARK: Lying down and getting up
@@ -196,8 +204,10 @@ export function getUpSeconds(length: number, lying: boolean, startled: boolean):
  * and ends at once (no long tail) and the stages below ease within it.
  */
 export function stepSleep(t: number, asleep: boolean, dt: number, seconds: number): number {
-    const rate = dt / Math.max(seconds, 0.05);
-    return asleep ? Math.min(t + rate, 1) : Math.max(t - rate, 0);
+    // (Lane SIG10: a clock set back, a replay or the harness's `setAt`, gives a negative step: never out of 0…1 for it, or a
+    // sleeper was drawn up and about while asleep, and a buried one's card said buried with nothing sunk.)
+    const rate = Math.max(dt, 0) / Math.max(seconds, 0.05);
+    return Math.min(Math.max(asleep ? t + rate : t - rate, 0), 1);
 }
 
 const smooth = (a: number, b: number, x: number) => {
@@ -293,7 +303,8 @@ export type ArkRestStatus =
     | "resting_den"
     | "dozing_sun"
     | "basking"
-    | "on_watch";
+    | "on_watch"
+    | "asleep_buried";
 
 export type RestStatusInput = {
     asleep: boolean;
@@ -318,6 +329,7 @@ export function restStatus(input: RestStatusInput): ArkRestStatus | null {
     if (input.asleep) {
         if (input.enclosed) return input.roost === "burrow" ? "asleep_burrow" : "asleep_den";
         if (input.posture === "hang") return "asleep_hanging";
+        if (input.posture === "buried" && !input.inWater) return "asleep_buried";
         if (input.inWater || input.posture === "float_back" || input.posture === "bottom" || input.posture === "hover" || input.posture === "bottle") return "asleep_water";
         if (input.social === "huddle" || input.social === "pile") return "asleep_huddle";
         if (input.posture === "one_leg") return "asleep_one_leg";
@@ -529,6 +541,16 @@ export function clipDrawsSleep(name: string, base: string): boolean {
  */
 export function sleepsOnFeet(o: {slept: boolean; rigged: boolean; sleepClipped: boolean; clipShare: number; water: boolean; lying: boolean; flat: boolean; legsUnder: boolean}): boolean {
     return o.slept && !(o.rigged && o.sleepClipped && o.clipShare > 0) && !o.water && o.lying && !o.flat && o.legsUnder;
+}
+
+/**
+ * Lane SIG10: how far a buried sleeper is sunk into the ground now (a share of its height): its posture's `sink` as its
+ * body settles (`sleepStages(t).body`: in as it lies down, out as it gets up), never more than `BURIED_SINK`. 0 in the
+ * water and for every other posture.
+ */
+export function buriedSink(now: Pick<SleepNow, "t" | "spec"> | null | undefined, water: boolean): number {
+    if (!now || water || !(now.spec.sink > 0)) return 0;
+    return Math.min(now.spec.sink, BURIED_SINK) * sleepStages(now.t).body;
 }
 
 /** A belly this close to the ground (a share of the height) has no legs under it to fold: a snake, a slug, a fish. */

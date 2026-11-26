@@ -2649,7 +2649,7 @@ function roostWindow(hours: number, epoch: number): {t0: number; t1: number} | n
     return {t0, t1: t0 + (24 - ROOST_HOURS[0] + ROOST_HOURS[1]) * 3600};
 }
 
-const DARK_ROOSTERS = /crow|rook|jackdaw|starling|myna|grackle|blackbird|magpie/;
+const DARK_ROOSTERS = /crow|rook|jackdaw|starling|myna|grackle|blackbird|magpie|vulture/;
 
 function roostFlock(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): Flock | null {
     if (!speciesRecipes(owner.slug).has.has("roost_gather")) return null;

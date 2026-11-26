@@ -47,6 +47,8 @@ const SPECIES: Record<string, Species> = {
     "laughing-kookaburra": {id: "0000b1d0-0000-4000-8000-000000000004", name: "Laughing Kookaburra", zone: "woodland", activity: "diurnal", sociality: null},
     "spotted-wood-owl": {id: "0000b1d0-0000-4000-8000-000000000005", name: "Spotted Wood Owl", zone: "woodland", activity: "any", sociality: null},
     rook: {id: "0000b1d0-0000-4000-8000-000000000006", name: "Rook", zone: "woodland", activity: "diurnal", sociality: "group"},
+    // (Lane SIG10: the black vulture's communal roost, its roost-mates in the dark tone.)
+    "black-vulture": {id: "d0d1c412-a1d6-4944-b2fe-afea3710315a", name: "Black Vulture", zone: "woodland", activity: "diurnal", sociality: "group"},
     "house-sparrow": {id: "0000b1d0-0000-4000-8000-000000000007", name: "House Sparrow", zone: "farm_garden", activity: "diurnal", sociality: "group"},
     "african-penguin": {id: "0000b1d0-0000-4000-8000-000000000009", name: "African Penguin", zone: "seashore", activity: "diurnal", sociality: "group"},
     "song-thrush": {id: "0000b1d0-0000-4000-8000-00000000000a", name: "Song Thrush", zone: "farm_garden", activity: "diurnal", sociality: null},
@@ -247,6 +249,8 @@ const CLIPS: Record<string, Clip> = {
     roost_lapse: {live: true, cast: [["rk", "rook", 5]], hours: 17.1, date: Date.UTC(2026, 10, 12, 17) / 1000 + 360, find: (ctx) => roostMoment(ctx, "lapse")},
     roost_wave: {live: true, cast: [["rk", "rook", 5]], hours: 17.1, date: Date.UTC(2026, 10, 12, 17) / 1000 + 360, find: (ctx) => roostMoment(ctx, "wave")},
     roost_sparrow: {live: true, cast: [["hs", "house-sparrow", 5]], hours: 17.1, date: Date.UTC(2026, 10, 12, 17) / 1000 + 360, find: (ctx) => roostMoment(ctx, "wave")},
+    roost_vulture: {live: true, cast: [["bv", "black-vulture", 4]], hours: 17.1, date: Date.UTC(2026, 10, 12, 17) / 1000 + 360, find: (ctx) => roostMoment(ctx, "wave")},
+    roost_vulture_night: {live: true, cast: [["bv", "black-vulture", 4]], hours: 22, date: Date.UTC(2026, 10, 12, 22) / 1000, find: (ctx) => roostMoment(ctx, "night")},
     roost_night: {live: true, cast: [["rk", "rook", 5]], hours: 22, date: Date.UTC(2026, 10, 12, 22) / 1000, find: (ctx) => roostMoment(ctx, "night")},
     roost_dawn: {live: true, cast: [["rk", "rook", 5]], hours: 5.4, date: Date.UTC(2026, 10, 13, 5) / 1000 + 1500, find: (ctx) => roostMoment(ctx, "dawn")},
     kingfisher_tunnel: {
