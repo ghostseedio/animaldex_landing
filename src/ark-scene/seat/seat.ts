@@ -101,6 +101,10 @@ export type SeatState = {
     ring: number;
     /** Moves onto a surface beside it in a row that left it no nearer one. */
     sides: number;
+    /** Where its own motion had it when it was last moved beside (NaN: never): moved on from there, it may be moved again. */
+    bx: number;
+    by: number;
+    bz: number;
     /** Held where nothing is drawn (a trunk's side that is not there, a perch over nothing): drawn upright, coming down; and where that was. */
     fell: boolean;
     fellX: number;
@@ -387,7 +391,7 @@ export class SeatPass {
      * After its matrix is final: work out where it rests, if it is its turn. Sets the target its offset eases to.
      */
     settle(input: SeatInput): void {
-        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, ox: NaN, oy: NaN, oz: NaN, sx: NaN, sz: NaN, urgent: false, mute: 0, mutes: 0, wasGap: NaN, wasOff: 0, wasOwnY: NaN, lean: 0, idle: 99, lift: 0, liftFrom: NaN, ring: 0, sides: 0, fell: false, fellX: 0, fellZ: 0});
+        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, ox: NaN, oy: NaN, oz: NaN, sx: NaN, sz: NaN, urgent: false, mute: 0, mutes: 0, wasGap: NaN, wasOff: 0, wasOwnY: NaN, lean: 0, idle: 99, lift: 0, liftFrom: NaN, ring: 0, sides: 0, bx: NaN, by: NaN, bz: NaN, fell: false, fellX: 0, fellZ: 0});
         s.kind = input.kind;
         if (this.keepPoints) {
             // Development (the audit's probe, `audit-probe.ts`): the animal as drawn this frame.
@@ -842,7 +846,17 @@ export class SeatPass {
         let left = false;
         // (Not one whose body lies on a closed thing by another part of it than its feet: a frog on a rock's shoulder.)
         const nothing = held && !cling && gap > Math.max(0.1, height) && closedMin > Math.max(0.1, height);
-        if (nothing && this.besidesLeft <= 0 && !this.forced && !input.focus) waiting = true;
+        // (SMALL-PERCHER: moved onto a surface beside it, and its own motion has carried it on since: it is not on its way
+        // to that surface any more, nor on a sliver there; it is somewhere else. Moved beside again from where it is. Its
+        // move spent instead, the brimstone was put back where its own motion had it as that bobbed up 21 cm over its
+        // tree's crown, and left there for good.)
+        const movedOn = s.sides > 0 && Math.hypot(ownX - s.bx, ownY - s.by, ownZ - s.bz) > Math.max(DEAD, 0.25 * length);
+        if (nothing && movedOn) s.sides = 0;
+        // (Still on its way there, its own motion where it was: judged once it is there, not by the air it crosses. Judged
+        // on the way, a brimstone sliding onto a leaf 12 cm off found nothing under it half way and was put back.)
+        const arriving = s.sides > 0 && (s.x !== s.tx || s.y !== s.ty || s.z !== s.tz);
+        if (nothing && arriving) waiting = true;
+        else if (nothing && this.besidesLeft <= 0 && !this.forced && !input.focus) waiting = true;
         else if (nothing) {
             this.besidesLeft--;
             // (Moved onto a surface beside it and still with nothing under it: a sliver. It comes down where it is.)
@@ -857,6 +871,9 @@ export class SeatPass {
                 left = true;
             } else if (side) {
                 s.sides++;
+                s.bx = ownX;
+                s.by = ownY;
+                s.bz = ownZ;
                 s.tx = s.x + side.x;
                 s.ty = s.y - side.gap;
                 s.tz = s.z + side.z;

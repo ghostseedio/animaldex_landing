@@ -494,6 +494,14 @@ function perchTags(profile: ArkBehaviourProfile): AttachTag[] {
     return tags.length ? tags : profile.move === "fly" ? ["branch", "post", "rock_top", "cliff_ledge"] : ["post", "rock_top"];
 }
 const flies = (profile: ArkBehaviourProfile) => profile.move === "fly" || profile.moves.includes("fly");
+const climbs = (profile: ArkBehaviourProfile) => profile.move === "climb" || profile.moves.includes("climb");
+/**
+ * PERCH: a nest up a tree is a flyer's or a climber's. One that neither flies nor climbs (a hedgehog: roost "nest", move
+ * "walk") nests on the ground, in cover: given a branch it slept 17 m up a town lime, on a limb it never reaches.
+ */
+export function groundNest(profile: ArkBehaviourProfile, tags: AttachTag[]): AttachTag[] {
+    return profile.roost === "nest" && !flies(profile) && !climbs(profile) ? tags.filter((tag) => tag !== "branch") : tags;
+}
 const swims = (profile: ArkBehaviourProfile) => profile.move === "swim" || profile.moves.includes("swim");
 const walks = (profile: ArkBehaviourProfile) => profile.move === "walk" || profile.moves.includes("walk") || profile.moves.includes("hop");
 
@@ -1246,7 +1254,7 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     const seed = rng(hashString(`${animal.id}#roost`))();
     // A water animal (a fish, a crab) never roosts on a land place, whatever its profile says (a seal hauls out: it may).
     // (A hanger, a bat or a sloth, hangs under a limb first: `recipeRoostTags`.)
-    const tags = aquatic(profile) && !amphibious(profile) ? [] : recipeRoostTags(profile) ?? ROOST_TAGS[profile.roost] ?? [];
+    const tags = aquatic(profile) && !amphibious(profile) ? [] : groundNest(profile, recipeRoostTags(profile) ?? ROOST_TAGS[profile.roost] ?? []);
     const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, rangeCap(profile, animal)), seed) : null;
     // (A water-only animal's roost is in the water: a dry rock or a tree is no roost for a fish.)
     if (point && (!aquatic(profile) || amphibious(profile) || (wet(world, point) && point.y < surfaceY(world, point.x, point.z) + 0.02))) return spotOf(point);
