@@ -5,6 +5,7 @@ import {fontClassName, fontCssVariables} from "@/app/fonts";
 import {cookies} from "next/headers";
 import {getSiteUrl} from "@/lib/site";
 import AdminShell from "@/app/admin/_components/admin-shell";
+import InternalVisitorMark from "@/app/admin/_components/internal-visitor-mark";
 import {isSupportAdminCookieAuthorized} from "@/lib/support-admin-auth";
 
 export const metadata: Metadata = {
@@ -31,6 +32,8 @@ export default async function AdminLayout({children}: {children: ReactNode}) {
         <html lang="en" className="scroll-smooth selection:bg-primary-200 selection:text-canvas-950">
         <body className={`${fontClassName} font-sans font-medium bg-canvas-950 text-ink-100`} style={fontCssVariables}>
             {authorized ? <AdminShell defaultCollapsed={collapsed}>{children}</AdminShell> : children}
+            {/* The operator's browser: its Ark visits stay out of the metrics (lib/internal-visitor). */}
+            {authorized ? <InternalVisitorMark /> : null}
         </body>
         </html>
     );

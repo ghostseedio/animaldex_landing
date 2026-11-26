@@ -1,10 +1,12 @@
 import {NextResponse} from "next/server";
 import {cookies} from "next/headers";
 import {checkRateLimit, getRequestIdentifier} from "@/lib/rate-limit";
-import {normalizeArkMeasureReport} from "@/lib/ark-measure";
+import {arkDeviceOf, normalizeArkMeasureReport} from "@/lib/ark-measure";
 import {recordArkMeasureEvent} from "@/lib/ark-measure-server";
 import {isNonHumanAgent} from "@/lib/web-funnel";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
+import {supportAdminCookieName, verifySupportAdminSession} from "@/lib/support-admin-auth";
+import {INTERNAL_VISITOR_COOKIE} from "@/lib/internal-visitor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,6 +50,13 @@ export async function POST(request: Request) {
     const byAddress = checkRateLimit(`ark-measure:ip:${getRequestIdentifier(request)}`, PER_ADDRESS, WINDOW_MS);
     if (!byAddress.allowed) return answer({ok: false, limited: true});
 
-    const result = await recordArkMeasureEvent({...parsed, signedIn: requestHasSupabaseAuthCookie(cookies().getAll())});
+    const jar = cookies();
+    // The operator's browsers: any that has opened /admin carries the mark, and
+    // an admin session counts on its own. Faking the mark only hides yourself.
+    const internal = jar.get(INTERNAL_VISITOR_COOKIE)?.value === "1" || verifySupportAdminSession(jar.get(supportAdminCookieName)?.value);
+    const result = await recordArkMeasureEvent(
+        {...parsed, signedIn: requestHasSupabaseAuthCookie(jar.getAll())},
+        {device: arkDeviceOf(request.headers.get("user-agent")), internal}
+    );
     return answer({ok: true, recorded: result.recorded});
 }
