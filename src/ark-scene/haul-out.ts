@@ -25,6 +25,8 @@ export function haulOutKinds(): string[] {
  */
 export function atHaulOut(at: {x: number; z: number; moving: boolean; afloat: boolean; ground: number; water: number}, roost: {x: number; z: number}, length: number, doing: string | null | undefined): boolean {
     if (doing !== "bask" && doing !== "rest" && doing !== "sleep") return false;
-    if (at.moving || at.afloat || at.ground <= at.water + 0.02) return false;
+    // (Dry: not drawn afloat, and the ground under it above the water. No margin over the water: the live wild seal settled
+    // at its spot on the tide line, 2026-11-26, its ground 0.0199 m over the water, not afloat, failed a 2 cm one.)
+    if (at.moving || at.afloat || at.ground <= at.water) return false;
     return Math.hypot(at.x - roost.x, at.z - roost.z) <= Math.max(3, length * 2);
 }

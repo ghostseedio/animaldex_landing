@@ -15,7 +15,6 @@ import {GROUP_TEMPLATES} from "@/ark-scene/behaviour-group-templates";
 import {REPTILE_TEMPLATES} from "@/ark-scene/recipe-templates-reptiles";
 import {SMALL_TEMPLATES} from "@/ark-scene/recipe-small";
 import {DOMESTIC_TEMPLATES} from "@/ark-scene/recipe-templates-domestic";
-import {SEA_TEMPLATES} from "@/ark-scene/recipe-templates-sea";
 
 /**
  * Where a step goes:
@@ -94,9 +93,6 @@ export type Template = {
     drift?: boolean;
     /** Its turns are flights (signature wave 2, birds: a swoop and the flight back up are a U-turn in the air): not counted against the turn budget, which is for turning on the spot. */
     airTurns?: boolean;
-    /** (Lane SEA-SIG) A swimmer's act at its own depth: the water band keeps its height (a reef fish near the floor, a turtle on
-     *  the seagrass), the act gives where it goes, its heading and its attitude. Not an own pose: no surface swim. */
-    banded?: boolean;
     /** Only males (a display), or the pair's sexes (pair templates: "males" both male, "mixed" a male and a female, "any"). */
     sex?: "male" | "female" | "males" | "mixed" | "any";
     steps: TemplateStep[];
@@ -1170,8 +1166,6 @@ for (const t of GROUP_TEMPLATES) TEMPLATES[t.id] = t;
 for (const template of REPTILE_TEMPLATES) TEMPLATES[template.id] = template;
 // (Lane SIG5: the most-seen species' own acts, `recipe-templates-domestic.ts`.)
 for (const template of DOMESTIC_TEMPLATES) TEMPLATES[template.id] = template;
-// (Lane SEA-SIG: the sea's own feeding acts, `recipe-templates-sea.ts`.)
-for (const template of SEA_TEMPLATES) TEMPLATES[template.id] = template;
 
 /** Land-water crossings: the way in, the way out, and what follows (the schedule's enter and exit legs). */
 export const ENTRY_STYLES = ["wade", "slide", "slip", "dive", "launch"] as const;
