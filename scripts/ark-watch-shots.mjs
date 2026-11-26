@@ -88,6 +88,8 @@ try {
         }, subjects);
         console.log("subjects", JSON.stringify(picked));
     }
+    // `--subject-id <id>`: one animal only (as `--subjects`), with what the eye's line to it crosses each frame.
+    if (arg("subject-id", null)) picked = arg("subject-id", null).split(",").map((id) => ({id, name: null}));
     const t0 = Date.now();
     for (let i = 0; i * every <= seconds; i++) {
         if (picked.length) {

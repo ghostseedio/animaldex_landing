@@ -127,6 +127,7 @@ import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize,
 import {CAMERA_RANGE, closeUpViews, fitAboveCard, fitWhole, meetDistance, type CloseView} from "@/ark-scene/runtime/camera";
 import {easeLift, tinyLift} from "@/ark-scene/tiny-lift";
 import {Sight} from "@/ark-scene/runtime/sight";
+import {PlantBoxes} from "@/ark-scene/runtime/plant-boxes";
 import {flightHeading, newFlightHeading, type FlightHeadingState} from "@/ark-scene/flight-heading";
 import {newHopState, stepHop, type HopState} from "@/ark-scene/hop-gait";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
@@ -10714,7 +10715,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let watchOn = false;
     let watchState = arkWatchStart();
     let watchAskedAt = 0;
-    const watchCost = {calls: 0, ms: 0, most: 0, sightMs: 0, pulled: 0, givenUp: 0};
+    const watchCost = {calls: 0, ms: 0, most: 0, sightMs: 0, sightMost: 0, checks: 0, pulled: 0, givenUp: 0, plants: "clear" as string};
     /** True while the director itself selects (a host selection while watching is the viewer's: it stops). */
     let directing = false;
     let watchParamUsed = false;
@@ -10799,29 +10800,24 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     // The shot kept in sight: the follow camera aims at the subject, but the subject can walk into a bush or under a
     // crown and the view end up among leaves (the close-up's clear-view search counts walls, trunks and crowns, not
-    // the undergrowth's big instanced sets). Twice a second, three lines from the eye to the subject, small plants
-    // counted (`Sight.cover`); two blocked is hidden. Hidden: the camera pulls back and up (twice at most); still
+    // the undergrowth's big instanced sets, and a crown's leaf cards have gaps a line slips through). Twice a second:
+    // the eye among plants, or the subject seen through one (`runtime/plant-boxes.ts`), is hidden. Hidden: the camera pulls back and up (twice at most); still
     // hidden after `ARK_WATCH_HIDDEN` s, the shot is given up for the next, or the island's view when there is none.
-    const watchSight = new Sight(scene);
-    watchSight.cover = true;
+    const watchPlants = new PlantBoxes(scene);
     let watchHidden: {id: string | null; since: number; pulled: number; checkedAt: number} = {id: null, since: 0, pulled: 0, checkedAt: 0};
     const watchEye = new Vector3();
-    const watchPoint = new Vector3();
     const watchSpherical = new Spherical();
-    const watchBlocked = (entry: Entry, at: Vector3): number => {
+    const watchBlocked = (entry: Entry, at: Vector3, nowS: number): number => {
         watchEye.copy(camera.position);
         const slack = Math.max(entry.length, entry.drawnHeight) * 0.5 + 0.05;
-        watchSight.near(at, watchEye.distanceTo(at) + entry.length);
-        const yaw = entry.yawNow ?? entry.place.yaw;
-        const along = entry.length * 0.3;
-        let blocked = 0;
-        for (let line = 0; line < 3; line++) {
-            if (line === 0) watchPoint.copy(at);
-            else if (line === 1) watchPoint.set(at.x, at.y + entry.drawnHeight * 0.35, at.z);
-            else watchPoint.set(at.x + Math.sin(yaw) * along, at.y, at.z + Math.cos(yaw) * along);
-            if (runtime.sightBlocked(watchEye, watchPoint, slack) || watchSight.blocked(watchEye, watchPoint, slack)) blocked++;
-        }
-        return blocked;
+        // Among plants (the eye in a crown or a bush), or looking at it through one: hidden, whatever the lines say
+        // (a crown's leaf cards have gaps a line slips through while the picture is leaves).
+        // (Walls, trunks, rocks and crowns drawn as meshes: the selection's own clear-view search, `stepClearView`, already
+        // flies round them for the chosen animal; the hills: the ground's heights.)
+        const plants = watchPlants.check(watchEye, at, slack, nowS);
+        watchCost.plants = plants;
+        if (plants !== "clear") return 3;
+        return runtime.sightBlocked(watchEye, at, slack) ? 3 : 0;
     };
     /** Back to the island's whole view (nothing worth a shot that the camera can see). */
     const watchOverview = () => {
@@ -10846,8 +10842,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!entry || !at || entry.place.burrow || entry.place.canopy || entry.place.micro || (at.y < -0.3 && heightAt(at.x, at.z) < -0.3)) return;
         if (watchHidden.id !== shot.id) watchHidden = {id: shot.id, since: 0, pulled: 0, checkedAt: nowS};
         const t0 = performance.now();
-        const hidden = watchBlocked(entry, at) >= 2;
-        watchCost.sightMs += performance.now() - t0;
+        const hidden = watchBlocked(entry, at, nowS) >= 2;
+        const spentSight = performance.now() - t0;
+        watchCost.sightMs += spentSight;
+        watchCost.sightMost = Math.max(watchCost.sightMost, spentSight);
+        watchCost.checks++;
         if (!hidden) {
             watchHidden.since = 0;
             return;

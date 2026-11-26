@@ -44,11 +44,6 @@ export class Sight {
     skip: ((mesh: Mesh) => boolean) | null = null;
     /** What the last blocked line met (its mesh's name or kind; "" for a gathered triangle): the probes read it. */
     last = "";
-    /**
-     * The big instanced sets of small plants count too (the camera director's lines, `ark-watch.ts`: a followed animal
-     * in a jungle's undergrowth is hidden by its leaves). Grass, litter and the rest of `NEVER` still never do.
-     */
-    cover = false;
 
     constructor(private readonly root: Object3D) {}
 
@@ -91,7 +86,7 @@ export class Sight {
     private walk(object: Object3D, covered: boolean): boolean {
         if (!object.visible) return false;
         const mesh = object as Mesh;
-        if (mesh.isMesh && solid(mesh, this.cover) && !(covered && big(mesh)) && !this.skip?.(mesh)) {
+        if (mesh.isMesh && solid(mesh) && !(covered && big(mesh)) && !this.skip?.(mesh)) {
             this.hits.length = 0;
             object.raycast(this.rays, this.hits);
             if (this.hits.length > 0) {
@@ -271,6 +266,7 @@ export function solid(mesh: Mesh, cover = false): boolean {
     const name = mesh.name || (mesh.userData.kind as string | undefined) || mesh.parent?.name || (mesh.parent?.userData.kind as string | undefined) || "";
     if (name && (NEVER.test(name) || GROUND.test(name))) return false;
     const instanced = mesh as unknown as InstancedMesh;
+    // (`cover`: the big instanced sets too, the camera director's plant boxes, `runtime/plant-boxes.ts`.)
     if (!cover && instanced.isInstancedMesh && instanced.count > COVER_INSTANCES) return false;
     return true;
 }
