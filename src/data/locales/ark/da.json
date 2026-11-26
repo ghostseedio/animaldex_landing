@@ -1215,6 +1215,10 @@
             "spots": "steder gennemsøgt: {n}",
             "lookingFood": "leder efter føde",
             "eating": "spiser"
+        },
+        "watch": {
+            "start": "Se med",
+            "stop": "Stop med at se"
         }
     },
     "talkPage": {

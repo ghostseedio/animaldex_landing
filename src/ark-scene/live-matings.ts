@@ -665,6 +665,21 @@ export class LiveMatings<E> {
         return this.matings.length;
     }
 
+    /**
+     * WATCH (the camera director): the matings under way now: the pair (`a` the one that walks to the other), its rival
+     * while their contest is on (`rival`), and whether the two are still coming together (`meeting`).
+     */
+    pairs(epoch: number): Array<{a: string; b: string; rival: string | null; meeting: boolean; t0: number}> {
+        const out: Array<{a: string; b: string; rival: string | null; meeting: boolean; t0: number}> = [];
+        for (const m of this.matings) {
+            if (!m.acting.size || m.over || m.failed || !m.script) continue;
+            const s = epoch - m.act.t0;
+            const contestEnd = m.contest?.script.end ?? 0;
+            out.push({a: m.act.a, b: m.act.b, rival: m.contest && s < contestEnd ? m.contest.rival : null, meeting: s < contestEnd + m.script.walk, t0: m.act.t0});
+        }
+        return out;
+    }
+
     /** Every id a mating under way names now (drawn one by one, never as a herd's figure). */
     pins(): string[] {
         const out: string[] = [];

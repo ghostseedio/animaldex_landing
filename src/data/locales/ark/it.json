@@ -1215,6 +1215,10 @@
             "spots": "punti esplorati: {n}",
             "lookingFood": "cerca cibo",
             "eating": "mangia"
+        },
+        "watch": {
+            "start": "Guarda",
+            "stop": "Smetti di guardare"
         }
     },
     "talkPage": {

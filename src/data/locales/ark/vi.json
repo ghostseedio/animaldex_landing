@@ -1215,6 +1215,10 @@
             "spots": "chỗ đã tìm: {n}",
             "lookingFood": "tìm thức ăn",
             "eating": "đang ăn"
+        },
+        "watch": {
+            "start": "Xem",
+            "stop": "Dừng xem"
         }
     },
     "talkPage": {

@@ -5418,6 +5418,10 @@
       "spots": "tempat dicari: {n}",
       "lookingFood": "mencari makanan",
       "eating": "makan"
+    },
+    "watch": {
+      "start": "Tonton",
+      "stop": "Berhenti menonton"
     }
   },
   "seo": {

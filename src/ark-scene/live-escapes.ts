@@ -629,6 +629,13 @@ export class LiveEscapes<E> {
         return this.escapes.length + this.wounded.size;
     }
 
+    /** WATCH (the camera director): the chases under way now (the record's escapes, before the limp). */
+    chases(): Array<{prey: string; predator: string; t0: number}> {
+        const out: Array<{prey: string; predator: string; t0: number}> = [];
+        for (const e of this.escapes) if (e.acting.size && !e.over) out.push({prey: e.act.prey, predator: e.act.predator, t0: e.act.t0});
+        return out;
+    }
+
     /** Everyone a chase under way names now (drawn one by one, never as a herd's figure). */
     pins(): string[] {
         const out: string[] = [];

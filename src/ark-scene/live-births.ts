@@ -336,6 +336,13 @@ export class LiveBirths<E> {
         return this.births.length;
     }
 
+    /** WATCH (the camera director): the mothers giving birth now, with when their act began. */
+    mothers(): Array<{id: string; t0: number}> {
+        const out: Array<{id: string; t0: number}> = [];
+        for (const b of this.births) if (b.acting.size && b.motherId && !b.over && !b.failed) out.push({id: b.motherId, t0: b.act.t0});
+        return out;
+    }
+
     pins(): string[] {
         const out: string[] = [];
         for (const b of this.births) if (b.acting.size && b.motherId) out.push(b.motherId, ...b.act.young);

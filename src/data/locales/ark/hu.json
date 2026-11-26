@@ -1215,6 +1215,10 @@
             "spots": "átkutatott helyek: {n}",
             "lookingFood": "táplálékot keres",
             "eating": "eszik"
+        },
+        "watch": {
+            "start": "Nézd",
+            "stop": "Nézés leállítása"
         }
     },
     "talkPage": {

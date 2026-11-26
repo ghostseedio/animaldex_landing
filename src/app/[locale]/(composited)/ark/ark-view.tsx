@@ -300,6 +300,9 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     const [photo, setPhoto] = useState<{id: string; photo: ArkCapturePhoto | null} | null>(null);
     const photosRef = useRef(new Map<string, ArkCapturePhoto | null>());
     const [following, setFollowing] = useState(false);
+    /** WATCH (`lib/ark-watch.ts`): the camera director on; its cuts select animals, which are not the reader's taps. */
+    const [watching, setWatching] = useState(false);
+    const watchingRef = useRef(false);
     const [storyOpen, setStoryOpen] = useState(false);
     const [replay, setReplay] = useState<ReplayState | null>(null);
     const [summary, setSummary] = useState<string | null>(null);
@@ -387,7 +390,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     const replaySkipped = useRef(false);
     const onSelect = useCallback((animal: ArkAnimal | null) => {
         setSelected(animal);
-        if (animal && !autoSelecting.current) trackArk("ark_animal_tap", {source: sourceRef.current, species_profile_id: animal.species_profile_id, is_mine: animal.mine});
+        if (animal && !autoSelecting.current && !watchingRef.current) trackArk("ark_animal_tap", {source: sourceRef.current, species_profile_id: animal.species_profile_id, is_mine: animal.mine});
     }, []);
     useEffect(() => {
         if (hasSnapshot) stepLoad("data");
@@ -531,6 +534,11 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                         reducedMotion,
                         hours,
                         onFollowEnd: () => setFollowing(false),
+                        watchIdle: true,
+                        onWatch: (on) => {
+                            watchingRef.current = on;
+                            setWatching(on);
+                        },
                         onSoundCredits: () => setCredits(sceneRef.current?.sound().credits ?? []),
                         // A lost WebGL context, back: it comes back empty, so the page starts over (`ark-context-restore.ts`).
                         onContextRestored: () => void arkReloadForRestoredContext(),
@@ -1298,6 +1306,22 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                                     </button>
                                 </ArkToast>
+                            ) : null}
+
+                            {/* WATCH: the camera director (any touch of the view stops it too). */}
+                            {ready && !replay && !reducedMotion ? (
+                                <button
+                                    type="button"
+                                    data-testid="ark-watch"
+                                    aria-pressed={watching}
+                                    onClick={() => sceneRef.current?.watch?.(!watching)}
+                                    className={`${ARK_GLASS} pointer-events-auto inline-flex h-9 items-center gap-2 rounded-full px-3 text-[12.5px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c8fa63] md:h-8 ${watching ? "text-[#c8fa63]" : "text-white/85 hover:text-white"}`}
+                                >
+                                    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        {watching ? <path d="M7 7h10v10H7z" /> : <><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z" /><circle cx="12" cy="12" r="2.6" /></>}
+                                    </svg>
+                                    <span>{watching ? words.watch?.stop ?? "Stop watching" : words.watch?.start ?? "Watch"}</span>
+                                </button>
                             ) : null}
 
                             {liveHunt && !replay && selected?.id !== liveHunt.id ? (

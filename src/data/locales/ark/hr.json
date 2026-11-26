@@ -1215,6 +1215,10 @@
             "spots": "pretražena mjesta: {n}",
             "lookingFood": "traži hranu",
             "eating": "jede"
+        },
+        "watch": {
+            "start": "Gledaj",
+            "stop": "Prestani gledati"
         }
     },
     "talkPage": {

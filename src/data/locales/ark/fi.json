@@ -1215,6 +1215,10 @@
             "spots": "paikkoja tutkittu: {n}",
             "lookingFood": "etsii ruokaa",
             "eating": "syö"
+        },
+        "watch": {
+            "start": "Katsele",
+            "stop": "Lopeta katselu"
         }
     },
     "talkPage": {

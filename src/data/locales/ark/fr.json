@@ -1215,6 +1215,10 @@
             "spots": "endroits fouillés : {n}",
             "lookingFood": "cherche de la nourriture",
             "eating": "mange"
+        },
+        "watch": {
+            "start": "Regarder",
+            "stop": "Arrêter de regarder"
         }
     },
     "talkPage": {

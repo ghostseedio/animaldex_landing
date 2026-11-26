@@ -1215,6 +1215,10 @@
             "spots": "prehľadané miesta: {n}",
             "lookingFood": "hľadá potravu",
             "eating": "žerie"
+        },
+        "watch": {
+            "start": "Sledovať",
+            "stop": "Prestať sledovať"
         }
     },
     "talkPage": {

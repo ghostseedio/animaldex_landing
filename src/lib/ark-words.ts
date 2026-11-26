@@ -475,6 +475,8 @@ export type ArkWords = {
     flow?: Record<string, string>;
     /** The live hunt marker (lane ark-kills-real); optional: an older bundle lacks it. */
     hunt?: ArkHuntWords;
+    /** WATCH, the camera director's toggle (`ark.watch`); optional: an older bundle lacks it, and English is said. */
+    watch?: {start?: string; stop?: string};
     sound: ArkSoundWords;
     a11y: ArkA11yWords;
     person: ArkPersonWords;

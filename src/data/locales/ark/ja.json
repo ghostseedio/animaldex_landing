@@ -1215,6 +1215,10 @@
             "spots": "探した場所：{n}",
             "lookingFood": "食べ物を探している",
             "eating": "食べている"
+        },
+        "watch": {
+            "start": "見守る",
+            "stop": "見守るのをやめる"
         }
     },
     "talkPage": {

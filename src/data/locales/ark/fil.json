@@ -1215,6 +1215,10 @@
             "spots": "lugar na nahalughog: {n}",
             "lookingFood": "naghahanap ng pagkain",
             "eating": "kumakain"
+        },
+        "watch": {
+            "start": "Manood",
+            "stop": "Itigil ang panonood"
         }
     },
     "talkPage": {

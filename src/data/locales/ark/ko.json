@@ -1215,6 +1215,10 @@
             "spots": "뒤진 곳: {n}",
             "lookingFood": "먹이를 찾는 중",
             "eating": "먹는 중"
+        },
+        "watch": {
+            "start": "지켜보기",
+            "stop": "그만 보기"
         }
     },
     "talkPage": {

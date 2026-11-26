@@ -5433,6 +5433,10 @@
       "spots": "spots searched: {n}",
       "lookingFood": "looking for food",
       "eating": "eating"
+    },
+    "watch": {
+      "start": "Watch",
+      "stop": "Stop watching"
     }
   },
   "seo": {

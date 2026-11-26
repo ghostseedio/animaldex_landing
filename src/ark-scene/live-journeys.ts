@@ -68,6 +68,16 @@ export class LiveJourneys<E> {
         return this.trips.size;
     }
 
+    /** WATCH (the camera director): the travellers on their way to a far mate now. */
+    travellers(): Array<{id: string; t0: number}> {
+        const out: Array<{id: string; t0: number}> = [];
+        for (const t of Array.from(this.trips.values())) {
+            const entry = this.acting.size ? this.host.find(t.id) : null;
+            if (entry && this.acting.has(entry)) out.push({id: t.id, t0: t.t0});
+        }
+        return out;
+    }
+
     pins(): string[] {
         return Array.from(this.trips.values()).map((t) => t.id);
     }

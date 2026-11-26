@@ -1215,6 +1215,10 @@
             "spots": "aranan yer: {n}",
             "lookingFood": "yiyecek arıyor",
             "eating": "yiyor"
+        },
+        "watch": {
+            "start": "İzle",
+            "stop": "İzlemeyi bırak"
         }
     },
     "talkPage": {

@@ -1215,6 +1215,10 @@
             "spots": "locuri căutate: {n}",
             "lookingFood": "caută hrană",
             "eating": "mănâncă"
+        },
+        "watch": {
+            "start": "Privește",
+            "stop": "Oprește vizionarea"
         }
     },
     "talkPage": {

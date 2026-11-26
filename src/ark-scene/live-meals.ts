@@ -442,6 +442,16 @@ export class LiveMeals<E> {
         return out;
     }
 
+    /** WATCH (the camera director): every hunt under way now, from the hunter's walk to the catch (the record's own). */
+    hunts(epoch: number): Array<{predator: string; prey: string; t0: number}> {
+        const out: Array<{predator: string; prey: string; t0: number}> = [];
+        for (const m of this.meals) {
+            const s = epoch - m.t0;
+            if (m.built && s >= -APPROACH_SECONDS && s < m.built.catchAt + 3) out.push({predator: m.act.predator.id, prey: m.act.prey.id, t0: m.t0});
+        }
+        return out;
+    }
+
     /** The newest hunt or meal under way (the marker): its chase or its feeding, not its rest. */
     newest(epoch: number): LiveHunt | null {
         let best: LiveHunt | null = null;

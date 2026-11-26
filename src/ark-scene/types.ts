@@ -401,6 +401,10 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
     reactive?: boolean;
     /** The camera stopped following (a drag, or the animal left). */
     onFollowEnd?: () => void;
+    /** WATCH (`lib/ark-watch.ts`): the camera director started or stopped (`on`), and the kind of each shot it cuts to. */
+    onWatch?: (on: boolean, kind: import("@/lib/ark-watch").ArkWatchKind | null) => void;
+    /** WATCH: start the director by itself after `ARK_WATCH_IDLE` s untouched with nothing selected (/ark's page only). */
+    watchIdle?: boolean;
     /**
      * A recording (`/ark?record=1`, the marketing clip recorder): no opening
      * flight and no idle drift, so every camera move is the director's.
@@ -529,6 +533,9 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     focusRegion: (region: ArkRegion | null) => void;
     /** The camera follows this animal until any drag (or null to stop). */
     follow: (id: string | null) => void;
+    /** WATCH: the camera director on or off (off: the camera stays where it is). Any touch stops it too. */
+    watch?: (on: boolean) => void;
+    watching?: () => boolean;
     /**
      * Pin the weather and tide (sea level in m; wetness, snow, wind, storm 0–1; windDirection radians), or follow the
      * island clock with null. Any field left out keeps following the clock. `rain` (0–1, falling now): coats soak in it

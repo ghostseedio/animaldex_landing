@@ -1215,6 +1215,10 @@
             "spots": "已搜寻地点：{n}",
             "lookingFood": "正在寻找食物",
             "eating": "正在进食"
+        },
+        "watch": {
+            "start": "观看",
+            "stop": "停止观看"
         }
     },
     "talkPage": {

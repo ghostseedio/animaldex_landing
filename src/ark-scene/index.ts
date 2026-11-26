@@ -278,7 +278,8 @@ import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
 import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
-import {arkEatSoon, arkEatSoonOn, arkEatSoonPercent} from "@/lib/ark-eat-soon";
+import {arkCatchChance, arkEatSoon, arkEatSoonOn, arkEatSoonPercent} from "@/lib/ark-eat-soon";
+import {ARK_WATCH_IDLE, arkWatchNext, arkWatchParam, arkWatchStart, type ArkWatchCandidate, type ArkWatchKind} from "@/lib/ark-watch";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating tap)
@@ -3096,7 +3097,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // next one), not the one just done: a glide is over in 2 to 4 s, and the line came 5 to 10 s after it began,
             // only when nothing else was said.
             const leap = leapMomentIn(w, start + MOMENT_WINDOW_SECONDS, start + 2 * MOMENT_WINDOW_SECONDS, subjects);
-            if (leap) moments.push(leap);
+            if (leap) {
+                moments.push(leap);
+                watchMoments.push({id: leap.animalId, kind: "signature", weight: 0.6, at: leap.at});
+            }
             const moment = pickMoment(w, subjects, forays);
             const entry = moment ? findEntry(moment.animalId) : null;
             if (!moment || !entry) continue;
@@ -3113,6 +3117,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (Behaviour flows, pilot: an animal doing something says its flow's own step, as its card does.)
             const flowSays = flowsOn() && (moment.kind === "doing" || moment.kind === "group") ? flowActivity(a.id, moment.at + 1) : null;
             moments.push({id: moment.id, kind: moment.kind, activity: flowSays ?? moment.activity, animalId: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, count: moment.count, at: moment.at, ...(ownLine ? {line: ownLine} : {})});
+            // WATCH: a species' own signature line, or two rivals' contest, is a shot the director may cut to.
+            if (ownLine || moment.kind === "contest") watchMoments.push({id: a.id, kind: moment.kind === "contest" ? "rivals" : "signature", weight: moment.kind === "contest" ? 0.3 : 0.8, at: moment.at});
         }
         return {window: Math.max(done, after ?? done), moments};
     };
@@ -7946,6 +7952,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     let lastTouch = performance.now() / 1000;
     controls.addEventListener("start", () => {
+        stopWatch();
         flight = null;
         lastTouch = performance.now() / 1000;
         controls.autoRotate = false;
@@ -9195,6 +9202,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let pointers = 0;
     const onPointerDown = (event: PointerEvent) => {
         pointers++;
+        // Any touch stops the camera director at once (the viewer steers).
+        stopWatch();
         // A tap wakes a sound context the system put to sleep (sound only ever starts from the page's toggle).
         liveliness.audio.touch();
         lastTouch = performance.now() / 1000;
@@ -9251,6 +9260,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         down = null;
     };
     const onWheel = () => {
+        stopWatch();
         lastTouch = performance.now() / 1000;
         if (opening) {
             opening = false;
@@ -9266,6 +9276,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.listenToKeyEvents(canvas);
     controls.keyPanSpeed = 14;
     const onKey = (event: KeyboardEvent) => {
+        stopWatch();
         lastTouch = performance.now() / 1000;
         if (opening) {
             opening = false;
@@ -10691,6 +10702,110 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         huntAsked = {at: now, hunt};
         return hunt;
     };
+
+    // MARK: Watch (the camera director, `lib/ark-watch.ts`)
+
+    /**
+     * When the viewer is not steering (the page's Watch toggle, `?watch=1`, or, where the host asks (`watchIdle`),
+     * untouched for `ARK_WATCH_IDLE` s with nothing selected), the camera cuts to the most dramatic real thing happening now, through the scene's own
+     * selection flight and follow camera, and holds it. Any touch, wheel or key stops it at once. Camera only: what
+     * happens is the record's and the engine's. Asked once a second; nothing per frame.
+     */
+    let watchOn = false;
+    let watchState = arkWatchStart();
+    let watchAskedAt = 0;
+    /** True while the director itself selects (a host selection while watching is the viewer's: it stops). */
+    let directing = false;
+    const watchParam = arkWatchParam((globalThis as {location?: {search?: string}}).location?.search);
+    /** The schedule's signature moments said lately (`happening`): who, what, when (epoch s). */
+    let watchMoments: Array<{id: string; kind: ArkWatchKind; weight: number; at: number}> = [];
+    /** The engine's hunters out on their forays now with a real chance of a catch (by id), every few seconds. */
+    let watchHunters: Array<{id: string; chance: number; since: number}> = [];
+    let watchHuntersAt = -Infinity;
+    /** A hunter out now counts as a hunt worth the camera from this chance of a catch in the next Ark day. */
+    const WATCH_HUNT_LEAST = 0.4;
+    const watchHuntersNow = (nowS: number, epoch: number) => {
+        if (nowS - watchHuntersAt < 5) return watchHunters;
+        watchHuntersAt = nowS;
+        const out: typeof watchHunters = [];
+        if (hunting.active) {
+            for (const id of hunting.predators()) {
+                const odds = hunting.odds(id);
+                if (!odds || odds.dormant || odds.find === null || odds.catch === null || !(odds.find > 0) || arkCatchChance(odds.find, odds.catch, 96) < WATCH_HUNT_LEAST) continue;
+                const entry = entryById.get(id);
+                if (!entry || !hunting.hunting(entry.animal, epoch)) continue;
+                const window = hunting.window(entry.animal, epoch);
+                const chance = window && window.steps > 0 ? arkCatchChance(odds.find, odds.catch, window.steps) : 0;
+                if (chance >= WATCH_HUNT_LEAST) out.push({id, chance, since: hunting.since(entry.animal, epoch) ?? epoch});
+            }
+        }
+        watchHunters = out;
+        return out;
+    };
+    const watchCandidates = (nowS: number): ArkWatchCandidate[] => {
+        const epoch = worldMs() / 1000;
+        const out: ArkWatchCandidate[] = [];
+        const here = (id: string) => Boolean(findEntry(id));
+        for (const h of liveMeals.hunts(epoch)) if (here(h.predator)) out.push({id: h.predator, kind: "hunt", weight: 1, since: h.t0});
+        for (const h of watchHuntersNow(nowS, epoch)) if (here(h.id)) out.push({id: h.id, kind: "hunt", weight: h.chance * 0.9, since: h.since});
+        for (const b of liveBirths.mothers()) if (here(b.id)) out.push({id: b.id, kind: "birth", weight: 1, since: b.t0});
+        for (const c of liveEscapes.chases()) if (here(c.predator)) out.push({id: c.predator, kind: "chase", weight: 1, since: c.t0});
+        for (const t of liveJourneys.travellers()) if (here(t.id)) out.push({id: t.id, kind: "mate", weight: 0.8, since: t.t0});
+        for (const p of liveMatings.pairs(epoch)) {
+            if (!here(p.a)) continue;
+            if (p.rival && here(p.rival)) out.push({id: p.a, other: p.rival, kind: "rivals", weight: 1, since: p.t0});
+            else out.push({id: p.a, other: here(p.b) ? p.b : null, kind: "mate", weight: p.meeting ? 0.6 : 0.4, since: p.t0});
+        }
+        watchMoments = watchMoments.filter((m) => epoch - m.at < 25);
+        for (const m of watchMoments) if (here(m.id)) out.push({id: m.id, kind: m.kind, weight: m.weight, since: m.at});
+        return out;
+    };
+    const startWatch = () => {
+        if (watchOn || options.recording) return;
+        watchOn = true;
+        watchState = arkWatchStart();
+        watchAskedAt = 0;
+        options.onWatch?.(true, null);
+    };
+    const stopWatch = () => {
+        if (!watchOn) return;
+        watchOn = false;
+        watchState = arkWatchStart();
+        if (followId) endFollow();
+        options.onWatch?.(false, null);
+    };
+    const cutTo = (shot: ArkWatchCandidate) => {
+        options.onWatch?.(true, shot.kind);
+        directing = true;
+        try {
+            if (shot.other && (shot.kind === "mate" || shot.kind === "rivals")) {
+                // (Two framed together: the mating tap's own pair framing, which eases to both as they move.)
+                pairFramed = {a: shot.id, b: shot.other, kin: false};
+                arrive(shot.id, false);
+            } else {
+                pairFramed = null;
+                arrive(shot.id, false);
+                follow(shot.id);
+            }
+        } finally {
+            directing = false;
+        }
+    };
+    const stepWatch = (nowS: number) => {
+        if (options.recording || reducedMotion) return;
+        if (!watchOn) {
+            // (By itself after a while untouched only where the host asks, /ark's page: never in the apps' embed, the
+            // measurement pages or the audits, whose untouched views must stay as they were.)
+            const idle = watchParam === "on" || (watchParam !== "off" && options.watchIdle === true && nowS - lastTouch > ARK_WATCH_IDLE);
+            if (!idle || !ready || selectedId || followId || selectedHerd || opening || replay || flight || document.hidden) return;
+            startWatch();
+        }
+        if (nowS - watchAskedAt < 1 || replay || opening) return;
+        watchAskedAt = nowS;
+        const step = arkWatchNext(watchState, watchCandidates(nowS), nowS);
+        watchState = step.state;
+        if (step.cut) cutTo(step.cut);
+    };
     /** V1: the departed fading where they stood (`departing`); one an act has taken up (its death, its meal, a stand-in) gives way. */
     const stepDeparting = (now: number, roster: Map<string, Entry> = entryById) => {
         const epoch = worldMs() / 1000;
@@ -11423,6 +11538,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepIslandNear();
         // 3.3 fix: the kept town animals around the look point out to move (`near-kept.ts`).
         stepNearKept(now);
+        stepWatch(now);
         // Idle: after a while untouched, the view drifts slowly round.
         if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) {
             if (!controls.autoRotate) driftFrom = now;
@@ -11713,7 +11829,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, watch: () => ({on: watchOn, shot: watchState.shot, candidates: watchOn ? watchCandidates(performance.now() / 1000) : []}), talking, lighting, entries: () => allEntries(), townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
@@ -11981,6 +12097,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             mineOnly = value;
         },
         select: whenAnimals((id: string | null, closeUp?: boolean) => {
+            // (A selection from the page while watching is the viewer's: the director stops.)
+            if (!directing) stopWatch();
             pairFramed = null; // 3.3 fix (mating tap): a plain selection frames the one
             // (An animal a read just brought aboard, while that read is being placed: selected once it is laid out.)
             if (id && readPlacing && !aboard.has(id)) {
@@ -12032,7 +12150,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 applyHours();
             }
         },
-        follow: whenAnimals((id: string | null) => follow(id)),
+        follow: whenAnimals((id: string | null) => {
+            stopWatch();
+            follow(id);
+        }),
+        watch: (on: boolean) => (on ? startWatch() : stopWatch()),
+        watching: () => watchOn,
         setClockScale: (scale, atMs) => {
             // Development: the world's time runs `scale` times faster from now, or from `atMs` (a day-night recording); 1 is the clock again.
             const now = typeof atMs === "number" && Number.isFinite(atMs) ? atMs : worldMs();

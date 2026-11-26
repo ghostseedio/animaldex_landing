@@ -1215,6 +1215,10 @@
             "spots": "sitios buscados: {n}",
             "lookingFood": "buscando comida",
             "eating": "comiendo"
+        },
+        "watch": {
+            "start": "Mirar",
+            "stop": "Dejar de mirar"
         }
     },
     "talkPage": {

@@ -50,6 +50,7 @@
  *   --perf                    `?perf=1`: the scene's own frame profiler (runtime/perf.ts), its sections in the report
  *   --network slow4g          Lighthouse's slow 4G (1.6 Mbit/s, 150 ms); text is served gzipped as the site's CDN does
  *                             (`--raw`: as is)
+ * Watch (the camera director, `lib/ark-watch.ts`): `--watch 1` starts it at once, `--watch 0` keeps it from starting by itself.
  * Carers (decision 418): `--carers` draws the keepers, farmers and pet owners as if the server's switch were on;
  *   `--hour <h>` pins the island hour (7.6: the morning rounds, every kind at work).
  * Town performance lane (docs/ark/town-draws-2026-11.md), the embed or the hero only:
@@ -481,7 +482,7 @@ for (const deviceName of devices) {
             await cdp.send("Profiler.setSamplingInterval", {interval: 500});
             await cdp.send("Profiler.start");
         }
-        const extra = `${arg("render", "") ? `&render=${arg("render", "")}` : ""}${arg("render-scale", "") ? `&renderScale=${arg("render-scale", "")}` : ""}${flag("tour") ? "&tour=1" : ""}${arg("focus", "") ? `&focus=${arg("focus", "")}` : ""}${flag("islands") ? "&islands=1" : ""}${arg("world", "") ? `&world=${arg("world", "")}` : ""}${arg("pan", "") ? `&pan=${arg("pan", "")}` : ""}${arg("mem", "") ? `&mem=${arg("mem", "")}` : ""}${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${arg("relations", "") ? `&relations=${arg("relations", "")}` : ""}${flag("prebuild") ? "&prebuild=1" : ""}${arg("hour", "") ? `&hour=${arg("hour", "")}` : ""}${flag("carers") ? "&carers=1" : ""}${arg("select", "") ? `&select=${arg("select", "")}` : ""}${arg("ants", "") ? `&ants=${arg("ants", "")}` : ""}${arg("grazed", "") ? `&grazed=${arg("grazed", "")}` : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
+        const extra = `${arg("render", "") ? `&render=${arg("render", "")}` : ""}${arg("render-scale", "") ? `&renderScale=${arg("render-scale", "")}` : ""}${flag("tour") ? "&tour=1" : ""}${arg("focus", "") ? `&focus=${arg("focus", "")}` : ""}${flag("islands") ? "&islands=1" : ""}${arg("world", "") ? `&world=${arg("world", "")}` : ""}${arg("pan", "") ? `&pan=${arg("pan", "")}` : ""}${arg("mem", "") ? `&mem=${arg("mem", "")}` : ""}${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${arg("relations", "") ? `&relations=${arg("relations", "")}` : ""}${flag("prebuild") ? "&prebuild=1" : ""}${arg("watch", "") ? `&watch=${arg("watch", "")}` : ""}${arg("hour", "") ? `&hour=${arg("hour", "")}` : ""}${flag("carers") ? "&carers=1" : ""}${arg("select", "") ? `&select=${arg("select", "")}` : ""}${arg("ants", "") ? `&ants=${arg("ants", "")}` : ""}${arg("grazed", "") ? `&grazed=${arg("grazed", "")}` : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
         const modelsParam = modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : cdnDir ? `&models=${encodeURIComponent(`${base}/cdn/talking-models/v1/ark`)}` : "";
         let navigated = Date.now();
         const lane = `${interact ? "&interact=1" : ""}${perfOn ? "&perf=1" : ""}`;

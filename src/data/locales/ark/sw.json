@@ -1215,6 +1215,10 @@
             "spots": "maeneo aliyochunguza: {n}",
             "lookingFood": "anatafuta chakula",
             "eating": "anakula"
+        },
+        "watch": {
+            "start": "Tazama",
+            "stop": "Acha kutazama"
         }
     },
     "talkPage": {
