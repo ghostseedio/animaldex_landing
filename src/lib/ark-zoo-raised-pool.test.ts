@@ -87,3 +87,32 @@ test("no walker placed in a raised pool (the seat audit's black giant squirrel a
     assert.deepEqual(bad, []);
     assert.deepEqual(dry, [], "every swimmer in its pool");
 });
+
+test("lane SEAT: a raised pool's swimmer has its whole body on the water, inside the rim (the seat audit's sea lion)", () => {
+    // (A California sea lion's middle 18 cm inside the seal pool's edge left two metres of it across the rim, on nothing;
+    // the seat pass pushed it out through the fence into the snake house next door.)
+    const raw = JSON.parse(gunzipSync(readFileSync("tests/ark-seat/snapshot.json.gz")).toString());
+    const town = arkIslandSnapshot(decodeArkSnapshot(raw)!, "town");
+    const placed = placeTownAnimals(town.animals);
+    const across: string[] = [];
+    let swimmers = 0;
+    for (const animal of town.animals) {
+        const info = placed.town.get(animal.id);
+        const at = placed.places.get(animal.id);
+        const pool = info?.enclosure ? raisedPool(info.enclosure) : null;
+        if (!info || !at || !pool || info.tank || info.where !== "pool") continue;
+        swimmers++;
+        // (The water's own edge is the rim's inner face: 0.35 m in from the box's long ends, 0.175 m from its sides, and the
+        // walls' half thickness more.)
+        const c = Math.cos(pool.rot);
+        const n = Math.sin(pool.rot);
+        const lx = Math.abs((at.x - pool.x) * c + (at.z - pool.z) * n);
+        const lz = Math.abs(-(at.x - pool.x) * n + (at.z - pool.z) * c);
+        const half = Math.min(arkBody(animal, modelBase(animal.model_slug)?.plan ?? null).display, Math.min(pool.hw - 0.525, pool.hd - 0.35) * 2) / 2;
+        if (lx + half > pool.hw - 0.525 + 1e-6 || lz + half > pool.hd - 0.35 + 1e-6) across.push(`${animal.model_slug} ${animal.id} in ${info.enclosure!.id}: ${lx.toFixed(2)}, ${lz.toFixed(2)} (half ${half.toFixed(2)})`);
+    }
+    const seaLion = placed.town.get("10ebe727-4228-4760-91b0-7414f72b61af");
+    assert.equal(seaLion?.where, "pool", "the seat audit's sea lion is one of them");
+    assert.ok(swimmers > 3, `${swimmers} swimmers`);
+    assert.deepEqual(across, []);
+});
