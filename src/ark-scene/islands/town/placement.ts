@@ -469,7 +469,14 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         // p3 (solid): a walker's body out of its enclosure's raised pool and its rim (its swimmers are on the water).
         if (!held && base.where !== "pool" && info.enclosure) at = offRaisedPool(info.enclosure, at, drawnLength(animal, length), bound);
         // (And a swimmer's step off its pool spot kept on the pool's water, never on the ground beside it at the water's height.)
-        else if (!held && base.where === "pool" && info.enclosure && raisedPool(info.enclosure)) at = inside(info.enclosure.pool, at.x, at.z, base.x, base.z);
+        else if (!held && base.where === "pool" && info.enclosure && raisedPool(info.enclosure)) {
+            at = inside(info.enclosure.pool, at.x, at.z, base.x, base.z);
+            // Lane SEAT (2026-11-27): its whole body on the water, not its middle alone. A sea lion's spot 18 cm inside the
+            // seal pool's edge left two metres of it across the rim at the water's height, standing on nothing (the water
+            // ends at the rim), and the seat pass, finding it in the rim's rockwork, pushed it out sideways through the
+            // fence into the snake house next door.
+            at = keepInside(raisedPoolWater(raisedPool(info.enclosure)!), at.x, at.z, drawnLength(animal, length) / 2 + 0.1);
+        }
         // (In the town every water is above the sea: a pool, the canal, a pond. The scene's water pose works from the sea's
         // level, so a swimmer here floats at its spot's surface, on its own ground: `water` stays false.)
         // (A raised pool's water is 0.45 m over the highest ground at its rim: a swimmer floats there, not under the rim.)
@@ -700,6 +707,14 @@ function spreadZoo(animals: readonly ArkAnimal[], places: Map<string, Placement>
         }
         group.push({x: f.placement.x, z: f.placement.z, length: f.length});
     }
+}
+
+/**
+ * A raised pool's open water, inside its rim's inner faces (`render/scenery.ts` enclosure: 0.35 m walls centred on the
+ * pool's edges; `raised-pool.ts`'s box is the rim's outside, the long walls 0.7 m longer than the pool is wide).
+ */
+function raisedPoolWater(pool: {x: number; z: number; hw: number; hd: number; rot: number}): Box {
+    return {x: pool.x, z: pool.z, w: Math.max(2 * (pool.hw - 0.35) - 0.35, 0.1), d: Math.max(2 * (pool.hd - 0.175) - 0.35, 0.1), rot: pool.rot};
 }
 
 /** Its body's length as drawn (m: its model's display size), at least its stats' (`placement`'s `length`). */

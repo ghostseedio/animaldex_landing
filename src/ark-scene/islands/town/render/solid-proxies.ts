@@ -18,11 +18,15 @@
  * pass reads its rockwork, sheds, perches, banks and ground cover exactly as drawn.
  */
 
-import {BufferAttribute, BufferGeometry, Group, Mesh, MeshBasicMaterial} from "three";
+import {Box3, BufferAttribute, BufferGeometry, Group, Mesh, MeshBasicMaterial, Sphere, Vector3} from "three";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
-import {townHeight} from "@/ark-scene/islands/town/ground";
+import {townBuildingFloor, townHeight} from "@/ark-scene/islands/town/ground";
+import {local} from "@/ark-scene/islands/town/geom";
+import type {Building} from "@/ark-scene/islands/town/plan";
+import {buildingSolid} from "@/ark-scene/islands/town/roof-perch";
 import type {Collider} from "@/ark-scene/collide/colliders";
 import {ZOO_HOUSE_TYPES} from "@/ark-scene/islands/town/tanks";
+import {zooAnnex} from "@/ark-scene/islands/town/zoo-homes";
 
 /** The layer the proxies are on: never the camera's (it draws layer 0; 30 and 31 are the streamer's and the held rigs'). */
 export const SOLID_PROXY_LAYER = 29;
@@ -152,13 +156,26 @@ function cylinder(b: Builder, ax: number, ay: number, az: number, bx: number, by
  */
 const SOLID_IDS = ["town:deadwood:", "town:bed:", "town:garden-room:"];
 const HALL = new RegExp(`^town:zoo:(${Array.from(ZOO_HOUSE_TYPES).join("|")})-`);
+/** The enclosure a zoo collider is of (`town:zoo:<id>/…` or `town:zoo:<id>:…`). */
+const ENCLOSURE = /^town:zoo:([^/:]+)/;
 export function proxied(c: Collider): boolean {
     if (c.gap > 0 || c.kind === "pond" || !(c.y1 > c.y0 + 0.02)) return false;
     if (c.kind === "rock" && !isMound(c)) return false;
     if (SOLID_IDS.some((p) => c.id.startsWith(p))) return true;
     if (!c.id.startsWith("town:zoo:")) return false;
     // (A hall's: all of it. An open enclosure's: its library logs and climbing trees.)
-    return HALL.test(c.id) || c.id.includes("/log-") || c.id.includes("/trunk-");
+    return HALL.test(c.id) || annexHall(c.id) || c.id.includes("/log-") || c.id.includes("/trunk-");
+}
+
+/**
+ * Lane SEAT (2026-11-27): a hall built as a new home (`zoo-homes.ts`: `zoo_snakes-1`, a reptile house by its type) is a
+ * hall as much as one named for its type: its furnishings are drawn in the halls' interior (`render/zoo-houses.ts`
+ * inside, let go once on the GPU) like any other's. By its name alone they were left out, and the seat pass read the
+ * snake house next to the seal pools as empty.
+ */
+function annexHall(id: string): boolean {
+    const annex = zooAnnex(ENCLOSURE.exec(id)?.[1]);
+    return annex !== null && ZOO_HOUSE_TYPES.has(annex.type);
 }
 
 const isMound = (c: Collider) => c.id.includes("/mound-");
@@ -233,4 +250,83 @@ export function buildSolidProxies(colliders: readonly Collider[], origin: {x: nu
             group.clear();
         }
     };
+}
+
+// MARK: - The buildings
+
+/**
+ * How far a building's drawn solid reaches past its plan (m): out of its footprint (porches, bays, overhangs, a
+ * chimney's breast), under its floor (a foundation on sloping ground) and over its `top` or its tall part's ledge (the
+ * church's spire). Measured over every building of the plan (2026-11-27: 4.05 m out, 2.0 m under, 7.6 m over), with room.
+ */
+const BUILDING_OUT = 4.5;
+const BUILDING_UNDER = 2.5;
+const BUILDING_OVER = 8.5;
+
+/**
+ * Lane SEAT (2026-11-27): one building's walls and roof as the seat pass reads them, never drawn.
+ *
+ * The town's chunks draw their buildings in the "solid" batch, whose arrays are let go once on the GPU (phone heap,
+ * `render/index.ts` layers). The seat pass found no wall or roof there at all: a house wren roosting at its eave (on the
+ * drawn roof, `roof-perch.ts`) was moved onto the eave's near detail 23 cm off and lay 18 cm inside the wall, a common
+ * swift 48 cm down into the roof, and a jackdaw foraging on a roof came down 13 m to the ground inside the house. The
+ * colliders' boxes are no stand-in for a pitched roof (a bird on one would stand at the ridge's height over the eaves).
+ *
+ * So each building has this mesh in its chunk's group (shown and hidden with the chunk), holding only a box (its plan's
+ * footprint and heights with the reach above), and the pass reads its triangles when it first asks near it
+ * (`seat/solids.ts` trianglesOf, `userData.seatArrays`): the building drawn again by the town's own `buildBuilding`, its
+ * solid's positions only, the same triangles the batch draws (`roof-perch.ts` buildingSolid). The copy goes with its grid
+ * (ten seconds unasked), so the phone's heap keeps what the batches gave it. The audit's probe passes over it (`solidProxy`):
+ * it measures against the batch as drawn.
+ */
+export function buildingProxy(b: Building, n: number): Mesh {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(0), 3));
+    const floor = townBuildingFloor(b.at);
+    const top = floor + Math.max(b.top, b.tall?.y ?? 0) + BUILDING_OVER;
+    const box = new Box3();
+    const at = new Vector3();
+    for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        const p = local(b.at, sx * (b.at.w / 2 + BUILDING_OUT), sz * (b.at.d / 2 + BUILDING_OUT));
+        box.expandByPoint(at.set(p.x, floor - BUILDING_UNDER, p.z));
+        box.expandByPoint(at.set(p.x, top, p.z));
+    }
+    geometry.boundingBox = box;
+    geometry.boundingSphere = box.getBoundingSphere(new Sphere());
+    // (Built a moment later, off the frame that asked: the asker waits for it as for a grid being built.)
+    geometry.userData.seatArrays = () =>
+        new Promise<BufferGeometry>((resolve) =>
+            setTimeout(() => {
+                const copy = new BufferGeometry();
+                copy.setAttribute("position", new BufferAttribute(new Float32Array(buildingSolid(b)), 3));
+                resolve(copy);
+            }, 0)
+        );
+    const mesh = new Mesh(geometry, HIDDEN);
+    // (A built solid by its name, `seat/solids.ts` HARDS; its chunk's group is its parent.)
+    mesh.name = `town:solid-proxy:building:${n}`;
+    mesh.userData.solidProxy = true;
+    mesh.layers.set(SOLID_PROXY_LAYER);
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    return mesh;
+}
+
+/**
+ * Lane SEAT (2026-11-27): drawn solids of the town's scenery the seat pass cannot read (the chunks' solid batch lets its
+ * arrays go) and no collider stands for, as an invisible copy of their triangles, positions only: the millpond's edge
+ * stones (a yellow-legged gull resting at the pond's edge stood 27 cm deep in one), the zoo houses' plinths.
+ */
+export function triangleProxy(positions: ArrayLike<number>, name: string): Mesh {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(Float32Array.from(positions), 3));
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+    const mesh = new Mesh(geometry, HIDDEN);
+    mesh.name = name;
+    mesh.userData.solidProxy = true;
+    mesh.layers.set(SOLID_PROXY_LAYER);
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    return mesh;
 }

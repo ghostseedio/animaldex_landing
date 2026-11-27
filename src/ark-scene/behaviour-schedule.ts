@@ -672,11 +672,15 @@ function rimCramped(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
 /** The places a flyer goes up to perch on. */
 const PERCH_PLACES: ReadonlySet<ArkInteraction> = new Set<ArkInteraction>(["perch_branch", "perch_rock", "cliff_ledge"]);
 
-/** A seeded attach point of these tags within reach of a centre (and suiting its size), or null. */
-function placeNear(world: ScheduleWorld, centre: {x: number; z: number}, length: number, tags: AttachTag[], radius: number, roll: number, climber = false): AttachPoint | null {
+/**
+ * A seeded attach point of these tags within reach of a centre (and suiting its size), or null. A penned one (`keep`):
+ * only a place over its pen (lane SEAT, 2026-11-27: a children's farm peafowl roosted on a lime's limb 2.75 m past its
+ * rails; its bound held it inside the pen at the limb's height, 6.8 m up over nothing).
+ */
+function placeNear(world: ScheduleWorld, centre: {x: number; z: number}, length: number, tags: AttachTag[], radius: number, roll: number, climber = false, keep: KeepBox | null = null): AttachPoint | null {
     for (const tag of tags) {
         // (3.3 fix (wall): an eave's two places, the roof's for a flyer, the wall's face under it for a climber: `wallPlaceSuits`.)
-        const near = world.sampler.attachPoints(tag, {x: centre.x, z: centre.z, r: radius}).filter((p) => wallPlaceSuits(p, climber));
+        const near = world.sampler.attachPoints(tag, {x: centre.x, z: centre.z, r: radius}).filter((p) => wallPlaceSuits(p, climber) && (!keep || inKeep(keep, p.x, p.z)));
         // (A place inside a tree's crown, on the bigger wild island: no body larger than its own small size; a heavy body
         // only on a limb that suits all of it: `perchSuits`.)
         const fits = near.filter((p) => perchSuits(p, length));
@@ -1293,7 +1297,7 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     // A water animal (a fish, a crab) never roosts on a land place, whatever its profile says (a seal hauls out: it may).
     // (A hanger, a bat or a sloth, hangs under a limb first: `recipeRoostTags`.)
     const tags = aquatic(profile) && !amphibious(profile) ? [] : groundNest(profile, recipeRoostTags(profile) ?? ROOST_TAGS[profile.roost] ?? []);
-    const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, rangeCap(profile, animal)), seed) : null;
+    const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, rangeCap(profile, animal)), seed, false, animal.keep ?? null) : null;
     // (A water-only animal's roost is in the water: a dry rock or a tree is no roost for a fish.)
     if (point && (!aquatic(profile) || amphibious(profile) || (wet(world, point) && point.y < surfaceY(world, point.x, point.z) + 0.02))) return spotOf(point);
     if (aquatic(profile) || profile.roost === "water" || profile.roost === "bottom" || profile.roost === "reef") {
@@ -1326,7 +1330,7 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
  */
 function sleepCoverNear(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, radius: number, roll: number): AttachPoint | null {
     const tags = sleepCover(profile, animal.length);
-    return tags.length && radius > 0 ? placeNear(world, animal.home, animal.length, tags as AttachTag[], radius, roll) : null;
+    return tags.length && radius > 0 ? placeNear(world, animal.home, animal.length, tags as AttachTag[], radius, roll, false, animal.keep ?? null) : null;
 }
 
 /** Ground cover lain beside, not on: the neighbours that pick the same bush or burrow lie round it, never stacked. */
@@ -2072,7 +2076,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             // swim at a duck's 0.3 m/s: a flock's member searched only its small share of the flock's spread, and its swim
             // reach is its walk clip's, and it never came ashore.)
             const bank = place === "shore" && aquatic(profile) && amphibious(profile) ? 20 : 0;
-            const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(Math.max(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), bank), cap), random(), !flyer);
+            const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(Math.max(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), bank), cap), random(), !flyer, animal.keep ?? null);
             if (point) {
                 const up = point.y > topAt(world, point.x, point.z) + 0.5;
                 // (Lane MA3: a bird that walks or swims first flies up to a perch, a branch, a ledge only as often as it flies:
@@ -2131,7 +2135,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             }
             // (Lane MA3: one that walks first flies across its ground and comes down on it, never up to a perch: else it
             // would fly twice, up and down again.)
-            const perch = roll < 0.5 && profile.move === "fly" && !rimCramped(world, profile, animal, own) ? placeNear(world, own, animal.length, perchTags(profile), radius * (group ? 0.5 : 1), random()) : null;
+            const perch = roll < 0.5 && profile.move === "fly" && !rimCramped(world, profile, animal, own) ? placeNear(world, own, animal.length, perchTags(profile), radius * (group ? 0.5 : 1), random(), false, animal.keep ?? null) : null;
             if (perch) return {doing: behaviour, to: spotOf(perch), mode: "air", stay: stayBeats("perch", random, null)};
             if (roll > 0.88 && floats(profile)) {
                 // (Down on water only where there is water: with none near, `waterSpot` is the ground there, a roof gull's

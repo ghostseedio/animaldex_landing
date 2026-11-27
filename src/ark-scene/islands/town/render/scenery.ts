@@ -45,7 +45,7 @@ import {drawCanalBridge} from "@/ark-scene/islands/town/render/canal-bridges";
 
 /** A chunk's merged geometry by material; `foliage`: hedges, flower beds and crops (lane GC, `render/nature.ts`). */
 export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo; foliage: Geo};
-export type SceneryOut = {chunks: Map<number, SceneryChunk>; fresh: Geo; /** p3 (zoofix): the zoo habitats' ground cover, walked on (`drawn-ground.ts` walk surfaces; drawn in `solid`). */ cover?: Geo; trees: Array<{x: number; z: number; kind: string; scale: number; seed: number}>; lamps: Array<{x: number; y: number; z: number}>; bridges: Array<{street: string; at: Box}>; /** The street furniture and lamps (`furniture.ts`, lane GA): its lights, lamp heads and lamp map. */ furniture?: FurnitureOut};
+export type SceneryOut = {chunks: Map<number, SceneryChunk>; fresh: Geo; /** Lane SEAT: the millpond's edge stones by chunk once more, for the seat pass (the chunks' solid batch lets its arrays go). */ stones?: Map<number, Geo>; /** p3 (zoofix): the zoo habitats' ground cover, walked on (`drawn-ground.ts` walk surfaces; drawn in `solid`). */ cover?: Geo; trees: Array<{x: number; z: number; kind: string; scale: number; seed: number}>; lamps: Array<{x: number; y: number; z: number}>; bridges: Array<{street: string; at: Box}>; /** The street furniture and lamps (`furniture.ts`, lane GA): its lights, lamp heads and lamp map. */ furniture?: FurnitureOut};
 
 const H = (x: number, z: number) => townHeight(x, z);
 
@@ -850,6 +850,12 @@ function lamps(out: SceneryOut, plan: TownPlan, pits: readonly TreePit[]) {
             const z = MILLPOND.z + Math.sin(a + j * 0.035) * MILLPOND.rz * rr;
             const size = 0.35 + ((s >>> 6) % 50) / 100;
             chunkFor(out, x, z).solid.rock(x, H(x, z) - 0.12, z, size, size * 0.6, size * 0.8, (s % 628) / 100, tone(s % 2 ? "#7d7a6c" : "#6f7465"), s);
+            // (Lane SEAT, 2026-11-27: and again for the seat pass, which saw none of them: a yellow-legged gull resting at
+            // the pond's edge stood 27 cm deep in one, `render/solid-proxies.ts` triangleProxy.)
+            const stones = (out.stones ??= new Map<number, Geo>());
+            const key = townChunkOf(x, z);
+            if (!stones.has(key)) stones.set(key, new Geo());
+            stones.get(key)!.rock(x, H(x, z) - 0.12, z, size, size * 0.6, size * 0.8, (s % 628) / 100, tone("#7d7a6c"), s);
         }
     }
     // A bandstand in the park.
