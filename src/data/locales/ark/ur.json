@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "دیکھیں",
             "stop": "دیکھنا بند کریں"
+        },
+        "broods": {
+            "eggs": "{start} انڈے · {left} باقی",
+            "eggsAll": "{start} انڈے",
+            "eggOne": "ایک انڈا",
+            "young": "{start} بچے · {left} باقی",
+            "youngAll": "{start} بچے",
+            "carried": "پیٹ میں {start} بچے",
+            "takenBy": "{count} شکار بنے · شکاری: {aPredator}",
+            "didNotSurvive": "{count} زندہ نہیں رہے",
+            "nestFailed": "گھونسلا ناکام رہا",
+            "failed": "بچے زندہ نہیں رہے",
+            "parentLost": "ماں یا باپ کے ساتھ کھو گئے",
+            "unsettled": "{count} کو ٹھکانا نہیں ملا",
+            "independent": "{count} اب خود مختار",
+            "logHatched": "{animal}: {count} انڈوں سے بچے نکلے",
+            "logBorn": "{animal}: {count} بچے پیدا ہوئے",
+            "logRaid": "{animal}: {count} انڈے شکار بنے · شکاری: {aPredator} · {left} باقی",
+            "logTaken": "{animal}: {count} بچے شکار بنے · شکاری: {aPredator} · {left} باقی",
+            "logHeldOff": "{animal}: ماں باپ نے شکاری کو بھگا دیا: {aPredator}",
+            "logNestFailed": "{animal}: گھونسلا ناکام رہا",
+            "logFailed": "{animal}: بچے زندہ نہیں رہے",
+            "logParentLost": "{animal}: بچے ماں یا باپ کے ساتھ کھو گئے",
+            "logRecruited": "{animal}: {count} بچے اب خود مختار",
+            "logUnsettled": "{animal}: {count} بچوں کو ٹھکانا نہیں ملا"
         }
     },
     "talkPage": {

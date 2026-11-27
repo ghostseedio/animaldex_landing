@@ -289,6 +289,9 @@ import {LiveBirths, newbornScale} from "@/ark-scene/live-births";
 import {LiveSeeking, seekLive, seekNear} from "@/ark-scene/live-seeking";
 import {LiveJourneys} from "@/ark-scene/live-journeys"; // MATE-FINDING (decision 432)
 import {LiveClutches} from "@/ark-scene/live-clutches";
+import type {LiveBroods} from "@/ark-scene/live-broods"; // BROODS (types only: loaded for a read that says `on`)
+import type {BroodDraw} from "@/ark-scene/brood-draw";
+import type {ArkBroodsRead} from "@/lib/ark-broods";
 import {reproOf, ReproFx} from "@/ark-scene/repro"; // REAL-REPRODUCTION (decision 440)
 import {LiveDeaths, type DeathRecord} from "@/ark-scene/live-deaths"; // 3.3 fix (log)
 import {ForestScene} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): logging and replanting
@@ -1105,7 +1108,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         onSoundCredits: options.onSoundCredits,
         hooks: {
             // 3.3 batch (C): the young one's recorded mother (the parent drawn female, as the birth act has it).
-            recordedParents: (id) => lineage.parentsOf(id),
+            recordedParents: (id) => broods?.layer.parentsOf(id) ?? lineage.parentsOf(id), // BROODS: a stand-in's parents are its brood's
+            stayAt: (id) => broods?.layer.stayAt(id) ?? null, // BROODS: young kept at a spot lie at their brood's nest
             maleOf: (animal) => {
                 const sex = sexLook(animal.id, animal.model_slug).sex;
                 return sex === "male" ? true : sex === "female" ? false : null;
@@ -1752,6 +1756,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * stand-ins for animals an act names that are gone now, and the ids pinned so they are always drawn one by one.
      */
     let cast: ArkCastLayer | null = null;
+    /** BROODS (AnimalDex docs/ark/broods.md 7): the brood layer and its meshes, made for a brood read that says `on: true`; null: the scene is today's. */
+    let broods: {layer: LiveBroods<Entry>; draw: BroodDraw} | null = null;
     /** V2 replay: the camera's near plane pushed out toward a shot's subject (m), or null: the scene's own. */
     let nearCut: number | null = null;
     /**
@@ -3459,7 +3465,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** Again from the snapshot as it is: after a pin changed (a herd member selected, a replay's animals). */
     const refreshLive = () => {
-        if (herds.length || replayPins.size || mealPins.size || selectionPin || cast) setSnapshot(current, false);
+        if (herds.length || replayPins.size || mealPins.size || selectionPin || cast || broods) setSnapshot(current, false);
     };
 
     // The hamlet (`map/hamlet.ts`): its plots' key, its residents, and who is out now (worked out once a second), on the
@@ -3516,7 +3522,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const people = splitHumans(whole);
         const base = people.rest;
         // V2 replay: the roster with the cast's stand-ins (and, as of a time, without who came later); else the read itself.
-        const snapshot = cast ? cast.roster(base) : base;
+        const castRoster = cast ? cast.roster(base) : base;
+        // BROODS: and a brood's young as stand-ins (ordinary roster animals: they take their turn in the live budget).
+        const snapshot = broods ? broods.layer.roster(castRoster) : castRoster;
         humansAboard = people.humans;
         townHumans.setRoster(people.humans);
         // The entrance's clock is the frame's (seconds since the scene started).
@@ -3595,7 +3603,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const body = before ? arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan) : null;
             const entry: Entry = before && body
                 ? ownSize(Object.assign(before, {animal, place, thrive: arkThriveOf(animal), length: body.display * sexScale(animal), full: body.display * sexScale(animal), trueLength: body.metres, micro: place.micro ? microSpecies(animal.model_slug) : null, layer: speciesLayer(animal.model_slug), depth: place.micro ? null : speciesDepth(animal.model_slug, animal.zone), floor: body.floor, stats: arkStats(animal), pace: loopPace(animal)}))
-                : newEntry(animal, place, entrances ? now : null);
+                : newEntry(animal, place, entrances && !broods?.layer.isRecruit(animal.id) ? now : null); // (BROODS: a recruit takes over from its stand-in: no entrance.)
             next.push(entry);
             nextById.set(animal.id, entry);
             // (Payload lane: on a touch device an icon is fetched when its kind is first drawn as an icon,
@@ -3642,9 +3650,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         layersScene.setBurrows(burrows, molehills, mouths);
         // Runtime: the scenery modules (the props' homes and nests) depend on the snapshot only: not rebuilt when the same
         // one is laid out again (a tier change, the resting rotation), which cost seconds at the captures scale.
-        if (modulesFor !== snapshot && modules.length) {
-            modulesFor = snapshot;
-            for (const sceneModule of modules) sceneModule.setSnapshot(snapshot);
+        // (BROODS: the scenery reads the roster without the broods' stand-ins, so it is not rebuilt as a brood's count changes.)
+        if (modulesFor !== castRoster && modules.length) {
+            modulesFor = castRoster;
+            for (const sceneModule of modules) sceneModule.setSnapshot(castRoster);
         }
         // A school or a flock keeps to its first one.
         for (const entry of next) entry.leader = entry.place.leader && entry.place.leader !== entry.animal.id ? nextById.get(entry.place.leader) ?? null : null;
@@ -8346,6 +8355,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!close) for (const sceneModule of modules) moduleWant = Math.min(moduleWant, sceneModule.closeUp?.(target.x, target.y, target.z) ?? 4);
         if (!close && spiderWebs) moduleWant = Math.min(moduleWant, spiderWebs.closeUp(target.x, target.y, target.z)); // ARK-WEBS
         if (!close && ants) moduleWant = Math.min(moduleWant, ants.closeUp(target.x, target.z)); // ARK-ANTS
+        if (!close && broods) moduleWant = broods.layer.closeUp(target.x, target.z, moduleWant); // BROODS: near enough to count a clutch
         const want = Math.min(shotClosest ?? Infinity, castTiny ? Math.min(MICRO_MIN_DISTANCE, Math.max(castTiny.trueLength * 4, 0.008)) : close ? MICRO_MIN_DISTANCE : moduleWant);
         // Down at once; back up gently (the camera eases out rather than jumping).
         controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
@@ -9014,6 +9024,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {target, distance: distanceNow, polar, small: small || distanceNow < 1, under: true};
     };
     const select = (id: string | null, flyTo: boolean, close = false) => {
+        // BROODS: a tap on a brood's stand-in chooses the parent attending it (the brood's line is on its card).
+        if (id && broods && id.startsWith("brood:")) {
+            const parent = broods.layer.parentFor(id);
+            id = parent && aboard.has(parent) ? parent : null;
+        }
         heldHuman = null;
         if (id !== null) pendingHuman = null;
         const human = chosenHuman(id, humansAboard, townHumans.out, townHumans.nightNow);
@@ -10131,6 +10146,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         mine: false,
         origin: animal.origin ?? undefined,
         generation: animal.generation ?? undefined,
+        // BROODS: a brood member's stand-in is as old as its brood (drawn at young scale, `ark-age.ts`).
+        ...(typeof (animal as {born_ark_day?: unknown}).born_ark_day === "number" ? {born_ark_day: (animal as unknown as {born_ark_day: number}).born_ark_day} : {}),
         slot: animal.slot,
         slot_rank: animal.slot_rank,
         sociality: animal.sociality,
@@ -10904,6 +10921,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const out: ArkWatchCandidate[] = [];
         const here = (id: string) => Boolean(findEntry(id));
         for (const h of liveMeals.hunts(epoch)) if (here(h.predator)) out.push({id: h.predator, kind: "hunt", weight: 1, since: h.t0});
+        if (broods) for (const h of broods.layer.raids(epoch)) if (here(h.predator)) out.push({id: h.predator, kind: "hunt", weight: 1, since: h.t0}); // BROODS: a nest raid ranks as a hunt
         for (const h of watchHuntersNow(nowS, epoch)) if (here(h.id)) out.push({id: h.id, kind: "hunt", weight: h.chance * 0.9, since: h.since});
         for (const b of liveBirths.mothers()) if (here(b.id)) out.push({id: b.id, kind: "birth", weight: 1, since: b.t0});
         for (const c of liveEscapes.chases()) if (here(c.predator)) out.push({id: c.predator, kind: "chase", weight: 1, since: c.t0});
@@ -11189,6 +11207,87 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         remove: (key) => nests.remove(key)
     });
+    /**
+     * BROODS (AnimalDex docs/ark/broods.md 7; owner 2026-11-27: "drawn on the world and not just a log"): the engine's
+     * broods drawn from its public read (`live-broods.ts`, `brood-draw.ts`). Both files are loaded the first time a read
+     * says `on: true`; until then nothing here runs and the scene is today's.
+     */
+    let broodsRead: ArkBroodsRead | null = null;
+    let broodsLoading = false;
+    /** Who the other live layers hold this frame (the brood layer leaves them alone). */
+    let broodsBusy: ReadonlySet<string> = new Set();
+    const BROOD_REACH: Record<QualityTier, number> = {high: 170, medium: 120, low: 80};
+    const setBroods = (read: ArkBroodsRead) => {
+        broodsRead = read;
+        if (broods) {
+            broods.layer.tier = tier;
+            broods.layer.set(read, worldMs() / 1000);
+            return;
+        }
+        if (!read.on || broodsLoading) return;
+        broodsLoading = true;
+        void Promise.all([import("@/ark-scene/live-broods"), import("@/ark-scene/brood-draw"), library.ready()])
+            .then(([layerModule, drawModule]) => {
+                if (disposed) return;
+                const draw = new drawModule.BroodDraw(tier, (slug) => {
+                    const model = library.get(slug);
+                    return model?.far ? textureColour(model.far.map, model.placeholder ? "#b9a789" : "#8f7f66") : null;
+                });
+                scene.add(draw.root);
+                const layer = new layerModule.LiveBroods<Entry>({
+                    find: (id) => {
+                        const e = entryById.get(id);
+                        return e && !e.held && !e.visitor ? e : null;
+                    },
+                    plan: (slug) => library.get(slug)?.behaviour?.plan ?? null,
+                    place: (animals) => {
+                        const out = new Map<string, {x: number; z: number; y: number; top: number; yaw: number; water: boolean}>();
+                        placeAll(animals, true).forEach((place, id) => {
+                            // (A small bird's home is its perch, a point of its own: `map/place.ts` MapPerch.)
+                            const at = place.perch ? {x: place.perch.x, z: place.perch.z, y: place.perch.y} : {x: place.x, z: place.z, y: place.ground};
+                            const top = waterTopAt(at.x, at.z);
+                            out.set(id, {...at, top, yaw: place.yaw, water: !place.perch && !place.canopy && (place.water || top > heightAt(at.x, at.z) + 0.05)});
+                        });
+                        return out;
+                    },
+                    shore: (x, z) => waterEdgeNear(x, z, 14),
+                    adultLength: (brood) => {
+                        const parent = entryById.get(brood.carer ?? brood.parents[0] ?? "") ?? entryById.get(brood.parents[1] ?? "");
+                        return parent ? parent.full : arkBody({model_slug: brood.model_slug, species_profile_id: brood.species_profile_id} as ArkAnimal, library.get(brood.model_slug)?.behaviour?.plan).display;
+                    },
+                    // (Where it was drawn this frame when it was; else worked out.)
+                    body: (entry) => (entry.middle ? {x: entry.middle.x, z: entry.middle.z, base: entry.middle.y - entry.drawnHeight * 0.5, yaw: entry.yawNow ?? entry.place.yaw ?? 0, length: entry.length} : bodyOf(entry)),
+                    scheduleAt: (entry, epoch) => {
+                        if (!entry.sched || !world || reducedMotion) return null;
+                        const at = schedulePose(entry, epoch);
+                        return {x: at.x, z: at.z, y: at.y, yaw: at.yaw};
+                    },
+                    ground: heightAt,
+                    waterTop: waterTopAt,
+                    walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
+                    flies: (entry) => entry.sched?.profile.move === "fly",
+                    setAct: (entry, pose) => {
+                        entry.act = pose;
+                    },
+                    busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || broodsBusy.has(entry.animal.id)),
+                    addMeals: (acts) => liveMeals.add(acts, worldMs() / 1000),
+                    catchAt: (predator, prey) => {
+                        const meal = liveMeals.debug().find((m) => m.key.startsWith(`${predator}>${prey}@`));
+                        return meal && meal.plan ? meal.t0 + meal.catchAt : null;
+                    },
+                    dropMeal: (predator, prey) => liveMeals.forget(predator, prey),
+                    relayout: () => {
+                        if (current && animalsIn) setSnapshot(current, false);
+                    }
+                });
+                layer.tier = tier;
+                broods = {layer, draw};
+                if (broodsRead) layer.set(broodsRead, worldMs() / 1000);
+            })
+            .catch(() => {
+                broodsLoading = false;
+            });
+    };
     let seekingRead = -Infinity;
     const readSeeking = (epoch: number) => {
         if (epoch - seekingRead < 2 && epoch >= seekingRead) return;
@@ -11209,7 +11308,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             reproFx.update([]); // REAL-REPRODUCTION
             reproNests = [];
         }
-        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !duckDrops.size && !liveEscapes.size && !mouthCarry.size && !liveClutches.size) || reducedMotion) return; // 3.3 batch (B, C, D): + duckDrops, mouthCarry, liveEscapes; ARK-MATING-SHOWN: + liveClutches
+        if (reducedMotion && broods?.layer.size) {
+            // BROODS, reduced motion: drawn as the record has them (the eggs, the parent on them, the young), nothing acted.
+            broods.draw.begin();
+            broods.layer.step(worldMs() / 1000, broods.draw, {x: controls.target.x, z: controls.target.z}, BROOD_REACH[tier] + Math.min(camera.position.distanceTo(controls.target), 200), true);
+            broods.draw.end();
+        }
+        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !duckDrops.size && !liveEscapes.size && !mouthCarry.size && !liveClutches.size && !broods?.layer.size) || reducedMotion) return; // 3.3 batch (B, C, D): + duckDrops, mouthCarry, liveEscapes; ARK-MATING-SHOWN: + liveClutches; BROODS
         const epoch = worldMs() / 1000;
         if (liveMeals.size) liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
         if (liveMatings.size) liveMatings.step(epoch);
@@ -11224,6 +11329,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // them off; the eggs are then in sight. `poseCore`'s tank branch reads it.)
         reproNests = reproNow.filter((e) => e.kind === "rock").map((e) => ({x: e.x, z: e.z, r: Math.max(0.45, (e.long ?? e.size) * 3), k: Math.min(e.t / 3, 1)}));
         const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins(), ...duckDrops.pins(), ...liveEscapes.pins(), ...mouthCarry.pins(), ...liveClutches.pins()]); // 3.3 batch (B, C, D); ARK-MATING-SHOWN
+        if (broods?.layer.size) {
+            // BROODS (after every other act: a parent or a hunter another layer holds is left to it): the takes' acts, the
+            // attending parents, and the eggs and instanced young drawn round the point looked at.
+            broodsBusy = pins.size ? new Set(pins) : pins;
+            broods.draw.begin();
+            broods.layer.step(epoch, broods.draw, {x: controls.target.x, z: controls.target.z}, BROOD_REACH[tier] + Math.min(camera.position.distanceTo(controls.target), 200));
+            broods.draw.end();
+            for (const id of broods.layer.pins(epoch)) pins.add(id);
+        }
         if (pins.size !== mealPins.size || Array.from(pins).some((id) => !mealPins.has(id))) {
             mealPins = pins;
             refreshLive();
@@ -12085,7 +12199,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             watchHidden = {id: null, since: 0, pulled: 0, checkedAt: 0};
             cutTo(shot);
             watchAskedAt = nowS;
-        }, stalkers: () => Object.fromEntries(stalkers), talking, lighting, entries: () => allEntries(), restOf: (id: string) => { const e = findEntry(id); return e ? restOf(e) : null; }, townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+        }, stalkers: () => Object.fromEntries(stalkers), talking, lighting, entries: () => allEntries(), restOf: (id: string) => { const e = findEntry(id); return e ? restOf(e) : null; }, townPlace: (id: string) => island?.townPlace(id) ?? null, meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), broods: () => (broods ? {broods: broods.layer.debug(), drawn: broods.draw.counts()} : null), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
@@ -12476,6 +12590,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         addLayings: (layings) => {
             liveClutches.most = tier === "low" ? 10 : 24;
             liveClutches.addLaid(layings);
+        },
+        // BROODS: the engine's brood read (decoded, `ark-broods.ts`); off or never given: the scene is today's.
+        setBroods,
+        // BROODS: recruits (a `birth` with `recruit: true`): no birth is acted; they take over from their brood's stand-ins.
+        noteRecruits: (list) => {
+            for (const r of list) {
+                broods?.layer.recruited(r.brood, r.young);
+                // (One the read already brought: its entrance, begun a moment ago, is dropped.)
+                if (broods) for (const id of r.young) {
+                    const e = entryById.get(id);
+                    if (e) e.arrivedAt = null;
+                }
+            }
+            if (list.map((r) => lineage.note(r.young, r.parents)).some(Boolean)) liveliness.lineageChanged();
         },
         addHatchings: (hatchings) => {
             // ARK-MATING-SHOWN: the young come out of their clutch, held as a birth is (`live-clutches.ts`).
@@ -13021,6 +13149,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             setFishSource(null);
             setFishChasers(null);
             nests.dispose();
+            broods?.draw.dispose(); // BROODS
             document.removeEventListener("visibilitychange", syncSound);
             liveliness.dispose();
             if (jetty) (jetty.userData.dispose as () => void)();

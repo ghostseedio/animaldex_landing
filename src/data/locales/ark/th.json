@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "ดู",
             "stop": "หยุดดู"
+        },
+        "broods": {
+            "eggs": "ไข่ {start} ฟอง · เหลือ {left} ฟอง",
+            "eggsAll": "ไข่ {start} ฟอง",
+            "eggOne": "ไข่ 1 ฟอง",
+            "young": "ลูก {start} ตัว · เหลือ {left} ตัว",
+            "youngAll": "ลูก {start} ตัว",
+            "carried": "ตั้งท้องลูก {start} ตัว",
+            "takenBy": "ถูก {aPredator} เอาไป {count}",
+            "didNotSurvive": "{count} ไม่รอด",
+            "nestFailed": "รังล้มเหลว",
+            "failed": "ลูกทั้งครอกไม่รอด",
+            "parentLost": "สูญเสียไปพร้อมกับพ่อแม่",
+            "unsettled": "{count} หาที่อยู่ไม่ได้",
+            "independent": "{count} ออกไปใช้ชีวิตเองแล้ว",
+            "logHatched": "{animal}: ไข่ฟักแล้ว {count} ฟอง",
+            "logBorn": "{animal}: ลูกเกิดใหม่ {count} ตัว",
+            "logRaid": "{animal}: ไข่ {count} ฟองถูก {aPredator} เอาไป · เหลือ {left} ฟอง",
+            "logTaken": "{animal}: ลูก {count} ตัวถูก {aPredator} เอาไป · เหลือ {left} ตัว",
+            "logHeldOff": "{animal}: พ่อแม่ไล่ {aPredator} ไปได้",
+            "logNestFailed": "{animal}: รังล้มเหลว",
+            "logFailed": "{animal}: ลูกทั้งครอกไม่รอด",
+            "logParentLost": "{animal}: ลูกทั้งครอกสูญเสียไปพร้อมกับพ่อแม่",
+            "logRecruited": "{animal}: ลูก {count} ตัวออกไปใช้ชีวิตเองแล้ว",
+            "logUnsettled": "{animal}: ลูก {count} ตัวหาที่อยู่ไม่ได้"
         }
     },
     "talkPage": {

@@ -33,6 +33,9 @@ import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt
 import {crisisText, recordItems} from "@/ark-scene/live/crisis-lines"; // E4 (the crisis layer)
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
+import {broodItems, broodRecruitIds, broodRecruits, broodText, isBroodRow} from "@/ark-scene/live/brood-lines"; // BROODS
+import {ARK_BROODS_OFF, decodeArkBroods, type ArkBroodsRead} from "@/lib/ark-broods";
+import {arkBroodsStore} from "@/lib/ark-broods-store";
 import {cacheEventItems, cacheEventText, signatureCues, signatureEventItems, signatureEventText} from "@/ark-scene/live/signature-events"; // SIG-EVENTS: saved signature moves
 import {richItems, richNotes} from "@/ark-scene/live/rich-lines"; // decision 434
 import {careItems, careNotes} from "@/ark-scene/live/care-lines"; // GIFTS-CARE, decision 387
@@ -51,11 +54,17 @@ import {ArkLiveLogView} from "@/ark-scene/live/log-view";
 import {breedFocus, isBreedKind, youngStillWanted, YOUNG_WAIT_MS} from "@/ark-scene/live/breed-focus";
 
 /** The words the log needs (the Ark's `live` and `replay`, and "Show me"), as the page or `/api/ark/words` has them. */
-export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null; /** V1: the marks' words (`ark.endangered`'s "Last one" and "Critical", `ark.life.lone`) and the states' (`ark.seen`). */ endangered?: {last?: string | null; critical?: string | null} | null; life?: ({lone?: string | null} & Partial<Record<GrassKey, string | null>>) | null; seen?: Partial<Record<string, string | null>> | null; /** ARK-MATING-SHOWN: a clutch's countdown's (`ark.eggs`). */ eggs?: Partial<Record<string, string | null>> | null; /** MATE-FINDING: the far mate's lines (`ark.mate`). */ mate?: Partial<Record<string, string | null>> | null} | null;
+export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null; /** V1: the marks' words (`ark.endangered`'s "Last one" and "Critical", `ark.life.lone`) and the states' (`ark.seen`). */ endangered?: {last?: string | null; critical?: string | null} | null; life?: ({lone?: string | null} & Partial<Record<GrassKey, string | null>>) | null; seen?: Partial<Record<string, string | null>> | null; /** ARK-MATING-SHOWN: a clutch's countdown's (`ark.eggs`). */ eggs?: Partial<Record<string, string | null>> | null; /** MATE-FINDING: the far mate's lines (`ark.mate`). */ mate?: Partial<Record<string, string | null>> | null; /** BROODS: the broods' lines (`ark.broods`). */ broods?: Partial<Record<string, string>> | null} | null;
 
 /** V1: the server's kinds that are acted with a cast (`seen/live-cast.ts` ARK_SEEN_KINDS; here so nothing of `seen/` loads until one comes). */
 // (ARK-MATING-SHOWN: and `laid`, for its clutch's countdown on the mother: `seen/index.ts` eggs.)
 const SEEN_KINDS: ReadonlySet<string> = new Set(["mated", "birth", "death_old", "starved", "meal", "escaped", "extinction", "laid"]);
+/** BROODS: the brood read (`/api/ark/broods`): asked a little after the log starts, then this often while the server's switch is on; rarely while it is off. */
+const BROODS_FIRST_MS = 6_000;
+const BROODS_EVERY_MS = 2 * 60_000;
+const BROODS_OFF_MS = 30 * 60_000;
+/** After a brood's row in the log, the read is asked again this soon (ms): the row's own change is in it by then. */
+const BROODS_SOON_MS = 2_500;
 /** V1: the crises read (`/api/ark/crises`, E4): asked a little after the log starts, then this often; rarely while it is not there. */
 const CRISES_FIRST_MS = 12_000;
 const CRISES_EVERY_MS = 3 * 60_000;
@@ -120,6 +129,8 @@ export type ArkLiveOptions = {
     onFocused?: (line: ArkLiveLine) => void;
     /** V1 (`seen/`): false leaves the casts, the watch and the marks out (a test's log). Default on. */
     seen?: boolean;
+    /** BROODS: each brood read as it comes (decoded; `on: false` while the server's switch is off), for the page's cards. */
+    onBroods?: (read: ArkBroodsRead) => void;
     /** The frame clock, the next frame and the acts' clock for `seen/` (the harness steps them itself). */
     seenClock?: {now?: () => number; frame?: (step: () => void) => void; epochMs?: () => number};
 };
@@ -192,6 +203,10 @@ export class ArkLive {
     private seenLoading: Promise<ArkSeen | null> | null = null;
     private crisesAt = -Infinity;
     private crisesEvery = CRISES_FIRST_MS;
+    /** BROODS: the last brood read, when it is asked next (the frame clock, ms), and whether one is on its way. */
+    private broodsNow: ArkBroodsRead = ARK_BROODS_OFF;
+    private broodsDue = Infinity;
+    private broodsReading = false;
     private readonly lineText: (line: ArkLiveLine) => string;
 
     constructor(private readonly options: ArkLiveOptions) {
@@ -210,8 +225,9 @@ export class ArkLive {
             })();
             if (stored === "1" || stored === "0") collapsed = stored === "1";
         }
-        this.lineText = (line) => signatureEventText(line, this.text, this.locale) ?? cacheEventText(line, this.text) ?? signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? releaseText(line, this.text) ?? mateText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? crisisText(line, this.text) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale);
+        this.lineText = (line) => broodText(line) ?? signatureEventText(line, this.text, this.locale) ?? cacheEventText(line, this.text) ?? signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? releaseText(line, this.text) ?? mateText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? crisisText(line, this.text) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale);
         this.crisesAt = performance.now();
+        this.broodsDue = performance.now() + BROODS_FIRST_MS;
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
             text: this.lineText,
@@ -281,7 +297,8 @@ export class ArkLive {
      */
     private casting(raw: unknown): Promise<void> | null {
         const list: unknown[] = Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as {events?: unknown}).events) ? (raw as {events: unknown[]}).events : [];
-        const rows = list.filter((row) => row && typeof row === "object" && SEEN_KINDS.has(String((row as {kind?: unknown}).kind)));
+        // (BROODS: a brood's take, held-off raid and recruits are the brood layer's; its `laid` keeps the clutch's countdown.)
+        const rows = list.filter((row) => row && typeof row === "object" && SEEN_KINDS.has(String((row as {kind?: unknown}).kind)) && !(isBroodRow(row) && (row as {kind?: unknown}).kind !== "laid"));
         if (!rows.length || this.options.seen === false || !this.options.scene()?.setCast) return null;
         if (this.seen) {
             this.seen.note(rows, this.current);
@@ -339,6 +356,67 @@ export class ArkLive {
             .catch(() => {
                 this.crisesEvery = CRISES_ABSENT_MS;
             });
+    }
+
+    /**
+     * BROODS: the engine's brood read (`/api/ark/broods` beside the events' URL, `voyage_broods_v1`), handed to the scene
+     * (`setBroods`: it draws every brood from it) and to the page (the parents' cards). While the server's switch is off
+     * the read says so, nothing is handed on, and it is asked again only rarely.
+     */
+    private readBroods() {
+        const url = this.options.eventsUrl?.replace(/\/events(\?.*)?$/, "/broods");
+        this.broodsDue = performance.now() + (this.broodsNow.on ? BROODS_EVERY_MS : BROODS_OFF_MS);
+        if (!url || url === this.options.eventsUrl || this.disposed || this.broodsReading) return;
+        this.broodsReading = true;
+        fetch(url)
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: unknown) => {
+                if (this.disposed || body === null) return;
+                this.setBroods(decodeArkBroods(body));
+            })
+            .catch(() => {
+                // (No answer: the broods as they were last read; asked again later.)
+            })
+            .finally(() => {
+                this.broodsReading = false;
+            });
+    }
+
+    /** BROODS: a brood read, decoded (the page's own fetch, development's fixture): to the scene and the page. Off after on clears them. */
+    setBroods(read: ArkBroodsRead) {
+        const was = this.broodsNow.on;
+        this.broodsNow = read;
+        if (!read.on && !was) return;
+        this.broodsDue = Math.min(this.broodsDue, performance.now() + BROODS_EVERY_MS);
+        try {
+            this.options.scene()?.setBroods?.(read);
+        } catch {
+            // (A scene without it: the log says the broods' lines all the same.)
+        }
+        arkBroodsStore.set(read); // (the parents' cards read it there: `ark-card-brood.tsx`)
+        this.options.onBroods?.(read);
+    }
+
+    /** BROODS: the rows' brood lines (`brood-lines.ts`), the recruits for the scene, and the read asked again for what they changed. */
+    private broods(raw: unknown, from: number) {
+        const known = (id: string) => {
+            const b = this.broodsNow.broods.find((x) => x.id === id) ?? this.broodsNow.ended.find((x) => x.id === id);
+            return b ? {name: b.name, species: b.species_profile_id, zone: b.zone || null, stage: b.stage, carer: b.carer} : null;
+        };
+        const {items, touched} = broodItems(raw, from, (key) => this.said.has(key), {words: this.options.words?.broods ?? null, text: this.text, locale: this.locale, brood: known});
+        if (!touched) return;
+        for (const item of items) this.remember(item.id);
+        const recruits = broodRecruits(raw, from);
+        if (recruits.length) {
+            try {
+                this.options.scene()?.noteRecruits?.(recruits);
+            } catch {
+                // (A scene without it: the new animals are simply there.)
+            }
+        }
+        this.broodsDue = Math.min(this.broodsDue, performance.now() + BROODS_SOON_MS);
+        const rows: Array<{id?: unknown; at?: unknown}> = Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as {events?: unknown}).events) ? (raw as {events: Array<{id?: unknown; at?: unknown}>}).events : [];
+        if (items.length) this.push(this.staying(items, (id) => Date.parse(String(rows.find((row) => row && `event:${String(row.id)}` === id)?.at ?? ""))));
     }
 
     setCovered(covered: boolean) {
@@ -401,7 +479,10 @@ export class ArkLive {
     private eventsNow(raw: unknown) {
         if (this.disposed) return;
         this.dormancy(raw, -Infinity);
-        const decoded = decodeArkEvents(raw, this.current).filter((event) => !this.said.has(`event:${event.id}`));
+        this.broods(raw, -Infinity); // BROODS
+        // (BROODS: a recruit's `birth` is no birth: said and handed over by `broods`, never acted or said as one.)
+        const recruitRows = broodRecruitIds(raw);
+        const decoded = decodeArkEvents(raw, this.current).filter((event) => !this.said.has(`event:${event.id}`) && !recruitRows.has(String(event.id)));
         for (const event of decoded) {
             this.remember(`event:${event.id}`);
             if (event.animal && (event.kind === "arrival" || event.kind === "birth")) this.remember(`animal:${event.animal.id}`);
@@ -652,6 +733,8 @@ export class ArkLive {
         for (const item of list) {
             const row = item as {kind?: unknown; id?: unknown; at?: unknown; ark_day?: unknown; parents?: unknown; clutch?: {eggs?: unknown; hatch_ark_day?: unknown} | null} | null;
             if (!row || row.kind !== "laid" || !Array.isArray(row.parents) || !row.parents.length) continue;
+            // (BROODS: a brood's clutch is drawn at its nest from the brood read, for as long as the record has it.)
+            if (isBroodRow(row)) continue;
             const t0 = Date.parse(String(row.at)) / 1000;
             const hatch = typeof row.clutch?.hatch_ark_day === "number" ? row.clutch.hatch_ark_day : NaN;
             const hatchAt = (Number.isFinite(start) ? start + hatch * ARK_DAY_MS : typeof row.ark_day === "number" ? t0 * 1000 + (hatch - row.ark_day) * ARK_DAY_MS : NaN) / 1000;
@@ -773,7 +856,9 @@ export class ArkLive {
                 if (this.disposed) return;
                 const from = Date.parse(since);
                 this.dormancy(body.events ?? [], from);
-                const events = decodeArkEvents(body.events ?? [], next).filter((event) => Date.parse(event.at) >= from && !this.said.has(`event:${event.id}`));
+                this.broods(body.events ?? [], from); // BROODS
+                const recruitRows = broodRecruitIds(body.events ?? []);
+                const events = decodeArkEvents(body.events ?? [], next).filter((event) => Date.parse(event.at) >= from && !this.said.has(`event:${event.id}`) && !recruitRows.has(String(event.id)));
                 let newest = from;
                 for (const event of events) {
                     this.remember(`event:${event.id}`);
@@ -814,6 +899,7 @@ export class ArkLive {
         this.ticks++;
         if (now - this.dormantAt > 600_000) this.readDormant();
         if (now - this.crisesAt > this.crisesEvery) this.readCrises(); // V1
+        if (now > this.broodsDue) this.readBroods(); // BROODS
         this.seen?.tick(); // V1: the casts whose act is over let go
         // Seen and now: only while the log is open (above the card too, when one is up: a line said late is no longer happening).
         const open = !this.view.isCollapsed && !this.options.reducedMotion;

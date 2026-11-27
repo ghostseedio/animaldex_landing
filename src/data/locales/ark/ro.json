@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "Privește",
             "stop": "Oprește vizionarea"
+        },
+        "broods": {
+            "eggs": "Ouă: {start} · rămase: {left}",
+            "eggsAll": "Ouă: {start}",
+            "eggOne": "1 ou",
+            "young": "Pui: {start} · rămași: {left}",
+            "youngAll": "Pui: {start}",
+            "carried": "Așteaptă pui: {start}",
+            "takenBy": "{aPredator} a luat {count}",
+            "didNotSurvive": "Nu au supraviețuit: {count}",
+            "nestFailed": "Cuibul a eșuat",
+            "failed": "Puii nu au supraviețuit",
+            "parentLost": "Pierduți odată cu părintele",
+            "unsettled": "Nu s-au stabilit: {count}",
+            "independent": "Acum pe cont propriu: {count}",
+            "logHatched": "{animal}: ouă eclozate: {count}",
+            "logBorn": "{animal}: pui născuți: {count}",
+            "logRaid": "{animal}: ouă luate de {aPredator}: {count} · rămase: {left}",
+            "logTaken": "{animal}: pui luați de {aPredator}: {count} · rămași: {left}",
+            "logHeldOff": "{animal}: părintele a alungat {aPredator}",
+            "logNestFailed": "{animal}: cuibul a eșuat",
+            "logFailed": "{animal}: puii nu au supraviețuit",
+            "logParentLost": "{animal}: puii s-au pierdut odată cu părintele",
+            "logRecruited": "{animal}: pui acum pe cont propriu: {count}",
+            "logUnsettled": "{animal}: pui care nu s-au stabilit: {count}"
         }
     },
     "talkPage": {

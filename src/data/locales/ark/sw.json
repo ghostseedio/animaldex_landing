@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "Tazama",
             "stop": "Acha kutazama"
+        },
+        "broods": {
+            "eggs": "Mayai {start} · yamebaki {left}",
+            "eggsAll": "Mayai {start}",
+            "eggOne": "Yai 1",
+            "young": "Watoto {start} · wamebaki {left}",
+            "youngAll": "Watoto {start}",
+            "carried": "Ana mimba ya watoto {start}",
+            "takenBy": "{aPredator} amechukua {count}",
+            "didNotSurvive": "{count} hawakunusurika",
+            "nestFailed": "Kiota hakikufanikiwa",
+            "failed": "Watoto hawakunusurika",
+            "parentLost": "Wamepotea pamoja na mzazi wao",
+            "unsettled": "{count} hawakupata makazi",
+            "independent": "{count} sasa wanajitegemea",
+            "logHatched": "{animal}: mayai {count} yameanguliwa",
+            "logBorn": "{animal}: watoto {count} wamezaliwa",
+            "logRaid": "{animal}: {aPredator} amechukua mayai {count} · yamebaki {left}",
+            "logTaken": "{animal}: {aPredator} amechukua watoto {count} · wamebaki {left}",
+            "logHeldOff": "{animal}: mzazi amemfukuza {aPredator}",
+            "logNestFailed": "{animal}: kiota hakikufanikiwa",
+            "logFailed": "{animal}: watoto hawakunusurika",
+            "logParentLost": "{animal}: watoto wamepotea pamoja na mzazi wao",
+            "logRecruited": "{animal}: watoto {count} sasa wanajitegemea",
+            "logUnsettled": "{animal}: watoto {count} hawakupata makazi"
         }
     },
     "talkPage": {

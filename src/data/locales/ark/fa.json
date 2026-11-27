@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "تماشا",
             "stop": "توقف تماشا"
+        },
+        "broods": {
+            "eggs": "{start} تخم · {left} باقی‌مانده",
+            "eggsAll": "{start} تخم",
+            "eggOne": "یک تخم",
+            "young": "{start} بچه · {left} باقی‌مانده",
+            "youngAll": "{start} بچه",
+            "carried": "{start} بچه در شکم دارد",
+            "takenBy": "{aPredator} {count} تا را برد",
+            "didNotSurvive": "{count} تا زنده نماندند",
+            "nestFailed": "لانه ناکام ماند",
+            "failed": "بچه‌ها زنده نماندند",
+            "parentLost": "همراه با والدشان از دست رفتند",
+            "unsettled": "{count} تا مستقر نشدند",
+            "independent": "{count} تا اکنون مستقل شده‌اند",
+            "logHatched": "{animal}: {count} تخم تفریخ شد",
+            "logBorn": "{animal}: {count} بچه به دنیا آمد",
+            "logRaid": "{animal}: {aPredator} {count} تخم را برد · {left} باقی‌مانده",
+            "logTaken": "{animal}: {aPredator} {count} بچه را برد · {left} باقی‌مانده",
+            "logHeldOff": "{animal}: والد {aPredator} را فراری داد",
+            "logNestFailed": "{animal}: لانه ناکام ماند",
+            "logFailed": "{animal}: بچه‌ها زنده نماندند",
+            "logParentLost": "{animal}: بچه‌ها همراه با والدشان از دست رفتند",
+            "logRecruited": "{animal}: {count} بچه اکنون مستقل شده‌اند",
+            "logUnsettled": "{animal}: {count} بچه مستقر نشدند"
         }
     },
     "talkPage": {

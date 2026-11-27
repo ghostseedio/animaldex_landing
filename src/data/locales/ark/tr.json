@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "İzle",
             "stop": "İzlemeyi bırak"
+        },
+        "broods": {
+            "eggs": "{start} yumurta · {left} kaldı",
+            "eggsAll": "{start} yumurta",
+            "eggOne": "1 yumurta",
+            "young": "{start} yavru · {left} kaldı",
+            "youngAll": "{start} yavru",
+            "carried": "{start} yavru taşıyor",
+            "takenBy": "{aPredator} {count} tanesini kaptı",
+            "didNotSurvive": "{count} tanesi hayatta kalamadı",
+            "nestFailed": "Yuva başarısız oldu",
+            "failed": "Yavrular hayatta kalamadı",
+            "parentLost": "Ebeveyniyle birlikte kaybedildi",
+            "unsettled": "{count} tanesi yerleşemedi",
+            "independent": "{count} tanesi artık kendi başına",
+            "logHatched": "{animal}: {count} yumurtadan yavru çıktı",
+            "logBorn": "{animal}: {count} yavru doğdu",
+            "logRaid": "{animal}: {aPredator} {count} yumurta kaptı · {left} kaldı",
+            "logTaken": "{animal}: {aPredator} {count} yavru kaptı · {left} kaldı",
+            "logHeldOff": "{animal}: ebeveyn yırtıcıyı kovdu: {aPredator}",
+            "logNestFailed": "{animal}: yuva başarısız oldu",
+            "logFailed": "{animal}: yavrular hayatta kalamadı",
+            "logParentLost": "{animal}: yavrular ebeveynleriyle birlikte kaybedildi",
+            "logRecruited": "{animal}: {count} yavru artık kendi başına",
+            "logUnsettled": "{animal}: {count} yavru yerleşemedi"
         }
     },
     "talkPage": {

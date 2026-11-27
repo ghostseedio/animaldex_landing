@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "చూడండి",
             "stop": "చూడటం ఆపండి"
+        },
+        "broods": {
+            "eggs": "{start} గుడ్లు · {left} మిగిలాయి",
+            "eggsAll": "{start} గుడ్లు",
+            "eggOne": "1 గుడ్డు",
+            "young": "{start} పిల్లలు · {left} మిగిలాయి",
+            "youngAll": "{start} పిల్లలు",
+            "carried": "కడుపులో {start} పిల్లలు",
+            "takenBy": "{aPredator} {count} ఎత్తుకుపోయింది",
+            "didNotSurvive": "{count} బతకలేదు",
+            "nestFailed": "గూడు విఫలమైంది",
+            "failed": "పిల్లలు బతకలేదు",
+            "parentLost": "తల్లి లేదా తండ్రితో పాటే పోయాయి",
+            "unsettled": "{count} స్థిరపడలేదు",
+            "independent": "{count} ఇప్పుడు స్వతంత్రంగా ఉన్నాయి",
+            "logHatched": "{animal}: {count} గుడ్లు పొదిగాయి",
+            "logBorn": "{animal}: {count} పిల్లలు పుట్టాయి",
+            "logRaid": "{animal}: {aPredator} {count} గుడ్లను ఎత్తుకుపోయింది · {left} మిగిలాయి",
+            "logTaken": "{animal}: {aPredator} {count} పిల్లలను ఎత్తుకుపోయింది · {left} మిగిలాయి",
+            "logHeldOff": "{animal}: తల్లి లేదా తండ్రి వేటాడే జంతువును తరిమేసింది: {aPredator}",
+            "logNestFailed": "{animal}: గూడు విఫలమైంది",
+            "logFailed": "{animal}: పిల్లలు బతకలేదు",
+            "logParentLost": "{animal}: పిల్లలు తల్లి లేదా తండ్రితో పాటే పోయాయి",
+            "logRecruited": "{animal}: {count} పిల్లలు ఇప్పుడు స్వతంత్రంగా ఉన్నాయి",
+            "logUnsettled": "{animal}: {count} పిల్లలు స్థిరపడలేదు"
         }
     },
     "talkPage": {

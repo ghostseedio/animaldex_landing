@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "पाहा",
             "stop": "पाहणे थांबवा"
+        },
+        "broods": {
+            "eggs": "{start} अंडी · {left} शिल्लक",
+            "eggsAll": "{start} अंडी",
+            "eggOne": "1 अंडे",
+            "young": "{start} पिल्ले · {left} शिल्लक",
+            "youngAll": "{start} पिल्ले",
+            "carried": "गर्भात {start} पिल्ले",
+            "takenBy": "{count} भक्ष्य बनली · शिकारी: {aPredator}",
+            "didNotSurvive": "{count} वाचली नाहीत",
+            "nestFailed": "घरटे अयशस्वी ठरले",
+            "failed": "पिल्ले वाचली नाहीत",
+            "parentLost": "पालकासोबत गमावली",
+            "unsettled": "{count} स्थिरावली नाहीत",
+            "independent": "{count} आता स्वतंत्र",
+            "logHatched": "{animal}: {count} अंड्यांतून पिल्ले बाहेर आली",
+            "logBorn": "{animal}: {count} पिल्ले जन्मली",
+            "logRaid": "{animal}: {count} अंडी भक्ष्य बनली · शिकारी: {aPredator} · {left} शिल्लक",
+            "logTaken": "{animal}: {count} पिल्ले भक्ष्य बनली · शिकारी: {aPredator} · {left} शिल्लक",
+            "logHeldOff": "{animal}: पालकाने शिकाऱ्याला पळवून लावले: {aPredator}",
+            "logNestFailed": "{animal}: घरटे अयशस्वी ठरले",
+            "logFailed": "{animal}: पिल्ले वाचली नाहीत",
+            "logParentLost": "{animal}: पिल्ले पालकासोबत गमावली",
+            "logRecruited": "{animal}: {count} पिल्ले आता स्वतंत्र",
+            "logUnsettled": "{animal}: {count} पिल्ले स्थिरावली नाहीत"
         }
     },
     "talkPage": {

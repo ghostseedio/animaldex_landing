@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "شاهد",
             "stop": "إيقاف المشاهدة"
+        },
+        "broods": {
+            "eggs": "البيض: {start} · المتبقي: {left}",
+            "eggsAll": "البيض: {start}",
+            "eggOne": "بيضة واحدة",
+            "young": "الصغار: {start} · المتبقي: {left}",
+            "youngAll": "الصغار: {start}",
+            "carried": "تحمل {start} من الصغار",
+            "takenBy": "وقع {count} فريسة لـ {aPredator}",
+            "didNotSurvive": "لم ينجُ {count}",
+            "nestFailed": "فشل العش",
+            "failed": "لم تنجُ الصغار",
+            "parentLost": "فُقدت مع أحد أبويها",
+            "unsettled": "لم يستقر {count}",
+            "independent": "استقلّ {count} الآن",
+            "logHatched": "{animal}: فقس {count} من البيض",
+            "logBorn": "{animal}: وُلد {count} من الصغار",
+            "logRaid": "{animal}: وقع {count} من البيض فريسة لـ {aPredator} · المتبقي: {left}",
+            "logTaken": "{animal}: وقع {count} من الصغار فريسة لـ {aPredator} · المتبقي: {left}",
+            "logHeldOff": "{animal}: صدّ أحد الأبوين هجوم {aPredator}",
+            "logNestFailed": "{animal}: فشل العش",
+            "logFailed": "{animal}: لم تنجُ الصغار",
+            "logParentLost": "{animal}: فُقدت الصغار مع أحد أبويها",
+            "logRecruited": "{animal}: استقلّ {count} من الصغار الآن",
+            "logUnsettled": "{animal}: لم يستقر {count} من الصغار"
         }
     },
     "talkPage": {

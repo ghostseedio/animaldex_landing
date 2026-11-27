@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "കാണുക",
             "stop": "കാണുന്നത് നിർത്തുക"
+        },
+        "broods": {
+            "eggs": "{start} മുട്ടകൾ · {left} ബാക്കി",
+            "eggsAll": "{start} മുട്ടകൾ",
+            "eggOne": "1 മുട്ട",
+            "young": "{start} കുഞ്ഞുങ്ങൾ · {left} ബാക്കി",
+            "youngAll": "{start} കുഞ്ഞുങ്ങൾ",
+            "carried": "ഗർഭത്തിൽ {start} കുഞ്ഞുങ്ങൾ",
+            "takenBy": "{aPredator} {count} എണ്ണം കൊണ്ടുപോയി",
+            "didNotSurvive": "{count} എണ്ണം അതിജീവിച്ചില്ല",
+            "nestFailed": "കൂട് പരാജയപ്പെട്ടു",
+            "failed": "കുഞ്ഞുങ്ങൾ അതിജീവിച്ചില്ല",
+            "parentLost": "രക്ഷിതാവിനൊപ്പം നഷ്ടപ്പെട്ടു",
+            "unsettled": "{count} എണ്ണത്തിന് ഇടം കണ്ടെത്താനായില്ല",
+            "independent": "{count} എണ്ണം ഇപ്പോൾ സ്വതന്ത്രമായി",
+            "logHatched": "{animal}: {count} മുട്ടകൾ വിരിഞ്ഞു",
+            "logBorn": "{animal}: {count} കുഞ്ഞുങ്ങൾ ജനിച്ചു",
+            "logRaid": "{animal}: {aPredator} {count} മുട്ടകൾ കൊണ്ടുപോയി · {left} ബാക്കി",
+            "logTaken": "{animal}: {aPredator} {count} കുഞ്ഞുങ്ങളെ കൊണ്ടുപോയി · {left} ബാക്കി",
+            "logHeldOff": "{animal}: രക്ഷിതാവ് ഇരപിടിയനെ ഓടിച്ചു: {aPredator}",
+            "logNestFailed": "{animal}: കൂട് പരാജയപ്പെട്ടു",
+            "logFailed": "{animal}: കുഞ്ഞുങ്ങൾ അതിജീവിച്ചില്ല",
+            "logParentLost": "{animal}: കുഞ്ഞുങ്ങൾ രക്ഷിതാവിനൊപ്പം നഷ്ടപ്പെട്ടു",
+            "logRecruited": "{animal}: {count} കുഞ്ഞുങ്ങൾ ഇപ്പോൾ സ്വതന്ത്രമായി",
+            "logUnsettled": "{animal}: {count} കുഞ്ഞുങ്ങൾക്ക് ഇടം കണ്ടെത്താനായില്ല"
         }
     },
     "talkPage": {

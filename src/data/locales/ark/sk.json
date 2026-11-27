@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "Sledovať",
             "stop": "Prestať sledovať"
+        },
+        "broods": {
+            "eggs": "Vajcia: {start} · zostáva: {left}",
+            "eggsAll": "Vajcia: {start}",
+            "eggOne": "1 vajce",
+            "young": "Mláďatá: {start} · zostáva: {left}",
+            "youngAll": "Mláďatá: {start}",
+            "carried": "Čaká mláďatá: {start}",
+            "takenBy": "Ukoristené: {count} · predátor: {aPredator}",
+            "didNotSurvive": "Neprežilo: {count}",
+            "nestFailed": "Hniezdo nebolo úspešné",
+            "failed": "Mláďatá neprežili",
+            "parentLost": "Stratené spolu s rodičom",
+            "unsettled": "Neusadilo sa: {count}",
+            "independent": "Teraz samostatné: {count}",
+            "logHatched": "{animal}: mláďatá sa vyliahli z {count} vajec",
+            "logBorn": "{animal}: narodené mláďatá: {count}",
+            "logRaid": "{animal}: ukoristené vajcia: {count} · predátor: {aPredator} · zostáva: {left}",
+            "logTaken": "{animal}: ukoristené mláďatá: {count} · predátor: {aPredator} · zostáva: {left}",
+            "logHeldOff": "{animal}: rodič odohnal predátora: {aPredator}",
+            "logNestFailed": "{animal}: hniezdo nebolo úspešné",
+            "logFailed": "{animal}: mláďatá neprežili",
+            "logParentLost": "{animal}: mláďatá sa stratili spolu s rodičom",
+            "logRecruited": "{animal}: teraz samostatné mláďatá: {count}",
+            "logUnsettled": "{animal}: neusadené mláďatá: {count}"
         }
     },
     "talkPage": {

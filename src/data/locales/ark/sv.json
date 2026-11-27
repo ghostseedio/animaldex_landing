@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "Titta",
             "stop": "Sluta titta"
+        },
+        "broods": {
+            "eggs": "{start} ägg · {left} kvar",
+            "eggsAll": "{start} ägg",
+            "eggOne": "1 ägg",
+            "young": "{start} ungar · {left} kvar",
+            "youngAll": "{start} ungar",
+            "carried": "Väntar {start} ungar",
+            "takenBy": "{count} tagna av {aPredator}",
+            "didNotSurvive": "{count} överlevde inte",
+            "nestFailed": "Boet misslyckades",
+            "failed": "Kullen överlevde inte",
+            "parentLost": "Gick förlorad tillsammans med föräldern",
+            "unsettled": "{count} hittade ingen plats att slå sig ner på",
+            "independent": "{count} klarar sig nu själva",
+            "logHatched": "{animal}: {count} ägg kläcktes",
+            "logBorn": "{animal}: {count} ungar föddes",
+            "logRaid": "{animal}: {count} ägg tagna av {aPredator} · {left} kvar",
+            "logTaken": "{animal}: {count} ungar tagna av {aPredator} · {left} kvar",
+            "logHeldOff": "{animal}: föräldern jagade bort {aPredator}",
+            "logNestFailed": "{animal}: boet misslyckades",
+            "logFailed": "{animal}: kullen överlevde inte",
+            "logParentLost": "{animal}: kullen gick förlorad tillsammans med föräldern",
+            "logRecruited": "{animal}: {count} ungar klarar sig nu själva",
+            "logUnsettled": "{animal}: {count} ungar hittade ingen plats att slå sig ner på"
         }
     },
     "talkPage": {

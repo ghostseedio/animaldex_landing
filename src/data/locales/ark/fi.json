@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "Katsele",
             "stop": "Lopeta katselu"
+        },
+        "broods": {
+            "eggs": "{start} munaa · {left} jäljellä",
+            "eggsAll": "{start} munaa",
+            "eggOne": "1 muna",
+            "young": "{start} poikasta · {left} jäljellä",
+            "youngAll": "{start} poikasta",
+            "carried": "Odottaa {start} poikasta",
+            "takenBy": "{aPredator} vei {count}",
+            "didNotSurvive": "{count} ei selvinnyt",
+            "nestFailed": "Pesintä epäonnistui",
+            "failed": "Poikue ei selvinnyt",
+            "parentLost": "Menetettiin emon mukana",
+            "unsettled": "{count} ei asettunut aloilleen",
+            "independent": "{count} elää nyt omillaan",
+            "logHatched": "{animal}: {count} munaa kuoriutui",
+            "logBorn": "{animal}: {count} poikasta syntyi",
+            "logRaid": "{animal}: {aPredator} vei {count} munaa · {left} jäljellä",
+            "logTaken": "{animal}: {aPredator} vei {count} poikasta · {left} jäljellä",
+            "logHeldOff": "{animal}: emo hätisti saalistajan pois: {aPredator}",
+            "logNestFailed": "{animal}: pesintä epäonnistui",
+            "logFailed": "{animal}: poikue ei selvinnyt",
+            "logParentLost": "{animal}: poikue menetettiin emon mukana",
+            "logRecruited": "{animal}: {count} poikasta elää nyt omillaan",
+            "logUnsettled": "{animal}: {count} poikasta ei asettunut aloilleen"
         }
     },
     "talkPage": {

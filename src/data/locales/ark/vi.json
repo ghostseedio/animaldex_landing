@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "Xem",
             "stop": "Dừng xem"
+        },
+        "broods": {
+            "eggs": "{start} quả trứng · còn {left}",
+            "eggsAll": "{start} quả trứng",
+            "eggOne": "1 quả trứng",
+            "young": "{start} con non · còn {left}",
+            "youngAll": "{start} con non",
+            "carried": "Đang mang thai {start} con non",
+            "takenBy": "{count} bị {aPredator} lấy mất",
+            "didNotSurvive": "{count} không sống sót",
+            "nestFailed": "Tổ thất bại",
+            "failed": "Đàn con không sống sót",
+            "parentLost": "Mất cùng bố mẹ",
+            "unsettled": "{count} không tìm được nơi ở",
+            "independent": "{count} đã sống tự lập",
+            "logHatched": "{animal}: {count} quả trứng đã nở",
+            "logBorn": "{animal}: {count} con non chào đời",
+            "logRaid": "{animal}: {count} quả trứng bị {aPredator} lấy mất · còn {left}",
+            "logTaken": "{animal}: {count} con non bị {aPredator} bắt mất · còn {left}",
+            "logHeldOff": "{animal}: bố mẹ đã đuổi được {aPredator}",
+            "logNestFailed": "{animal}: tổ thất bại",
+            "logFailed": "{animal}: đàn con không sống sót",
+            "logParentLost": "{animal}: đàn con mất cùng bố mẹ",
+            "logRecruited": "{animal}: {count} con non đã sống tự lập",
+            "logUnsettled": "{animal}: {count} con non không tìm được nơi ở"
         }
     },
     "talkPage": {

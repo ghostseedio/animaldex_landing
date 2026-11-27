@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "צפייה",
             "stop": "הפסקת צפייה"
+        },
+        "broods": {
+            "eggs": "{start} ביצים · נותרו {left}",
+            "eggsAll": "{start} ביצים",
+            "eggOne": "ביצה אחת",
+            "young": "{start} צאצאים · נותרו {left}",
+            "youngAll": "{start} צאצאים",
+            "carried": "נושאת {start} צאצאים",
+            "takenBy": "{count} נלקחו על ידי {aPredator}",
+            "didNotSurvive": "{count} לא שרדו",
+            "nestFailed": "הקן נכשל",
+            "failed": "הצאצאים לא שרדו",
+            "parentLost": "אבדו יחד עם ההורה",
+            "unsettled": "{count} לא התיישבו",
+            "independent": "{count} עצמאיים כעת",
+            "logHatched": "{animal}: {count} ביצים בקעו",
+            "logBorn": "{animal}: נולדו {count} צאצאים",
+            "logRaid": "{animal}: {count} ביצים נלקחו על ידי {aPredator} · נותרו {left}",
+            "logTaken": "{animal}: {count} צאצאים נלקחו על ידי {aPredator} · נותרו {left}",
+            "logHeldOff": "{animal}: ההורה הבריח {aPredator}",
+            "logNestFailed": "{animal}: הקן נכשל",
+            "logFailed": "{animal}: הצאצאים לא שרדו",
+            "logParentLost": "{animal}: הצאצאים אבדו יחד עם ההורה",
+            "logRecruited": "{animal}: {count} צאצאים עצמאיים כעת",
+            "logUnsettled": "{animal}: {count} צאצאים לא התיישבו"
         }
     },
     "talkPage": {

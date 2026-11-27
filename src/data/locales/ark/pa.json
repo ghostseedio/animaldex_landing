@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "ਦੇਖੋ",
             "stop": "ਦੇਖਣਾ ਬੰਦ ਕਰੋ"
+        },
+        "broods": {
+            "eggs": "{start} ਆਂਡੇ · {left} ਬਾਕੀ",
+            "eggsAll": "{start} ਆਂਡੇ",
+            "eggOne": "1 ਆਂਡਾ",
+            "young": "{start} ਬੱਚੇ · {left} ਬਾਕੀ",
+            "youngAll": "{start} ਬੱਚੇ",
+            "carried": "ਗਰਭ ਵਿੱਚ {start} ਬੱਚੇ",
+            "takenBy": "{count} ਸ਼ਿਕਾਰ ਬਣੇ · ਸ਼ਿਕਾਰੀ: {aPredator}",
+            "didNotSurvive": "{count} ਨਹੀਂ ਬਚੇ",
+            "nestFailed": "ਆਲ੍ਹਣਾ ਨਾਕਾਮ ਰਿਹਾ",
+            "failed": "ਬੱਚੇ ਨਹੀਂ ਬਚੇ",
+            "parentLost": "ਮਾਂ ਜਾਂ ਪਿਓ ਦੇ ਨਾਲ ਗੁਆਚ ਗਏ",
+            "unsettled": "{count} ਟਿਕ ਨਹੀਂ ਸਕੇ",
+            "independent": "{count} ਹੁਣ ਆਤਮ-ਨਿਰਭਰ",
+            "logHatched": "{animal}: {count} ਆਂਡਿਆਂ ਵਿੱਚੋਂ ਬੱਚੇ ਨਿਕਲੇ",
+            "logBorn": "{animal}: {count} ਬੱਚੇ ਜੰਮੇ",
+            "logRaid": "{animal}: {count} ਆਂਡੇ ਸ਼ਿਕਾਰ ਬਣੇ · ਸ਼ਿਕਾਰੀ: {aPredator} · {left} ਬਾਕੀ",
+            "logTaken": "{animal}: {count} ਬੱਚੇ ਸ਼ਿਕਾਰ ਬਣੇ · ਸ਼ਿਕਾਰੀ: {aPredator} · {left} ਬਾਕੀ",
+            "logHeldOff": "{animal}: ਮਾਪਿਆਂ ਨੇ ਸ਼ਿਕਾਰੀ ਨੂੰ ਭਜਾ ਦਿੱਤਾ: {aPredator}",
+            "logNestFailed": "{animal}: ਆਲ੍ਹਣਾ ਨਾਕਾਮ ਰਿਹਾ",
+            "logFailed": "{animal}: ਬੱਚੇ ਨਹੀਂ ਬਚੇ",
+            "logParentLost": "{animal}: ਬੱਚੇ ਮਾਂ ਜਾਂ ਪਿਓ ਦੇ ਨਾਲ ਗੁਆਚ ਗਏ",
+            "logRecruited": "{animal}: {count} ਬੱਚੇ ਹੁਣ ਆਤਮ-ਨਿਰਭਰ",
+            "logUnsettled": "{animal}: {count} ਬੱਚੇ ਟਿਕ ਨਹੀਂ ਸਕੇ"
         }
     },
     "talkPage": {

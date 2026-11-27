@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "Regarder",
             "stop": "Arrêter de regarder"
+        },
+        "broods": {
+            "eggs": "{start} œufs · {left} restants",
+            "eggsAll": "{start} œufs",
+            "eggOne": "1 œuf",
+            "young": "{start} petits · {left} restants",
+            "youngAll": "{start} petits",
+            "carried": "Porte {start} petits",
+            "takenBy": "{count} emportés par {aPredator}",
+            "didNotSurvive": "{count} n'ont pas survécu",
+            "nestFailed": "La nidification a échoué",
+            "failed": "Les petits n'ont pas survécu",
+            "parentLost": "Perdus avec leur parent",
+            "unsettled": "{count} ne se sont pas établis",
+            "independent": "{count} désormais autonomes",
+            "logHatched": "{animal} : {count} œufs éclos",
+            "logBorn": "{animal} : {count} petits nés",
+            "logRaid": "{animal} : {count} œufs emportés par {aPredator} · {left} restants",
+            "logTaken": "{animal} : {count} petits emportés par {aPredator} · {left} restants",
+            "logHeldOff": "{animal} : le parent a repoussé {aPredator}",
+            "logNestFailed": "{animal} : la nidification a échoué",
+            "logFailed": "{animal} : les petits n'ont pas survécu",
+            "logParentLost": "{animal} : les petits ont été perdus avec leur parent",
+            "logRecruited": "{animal} : {count} petits désormais autonomes",
+            "logUnsettled": "{animal} : {count} petits ne se sont pas établis"
         }
     },
     "talkPage": {

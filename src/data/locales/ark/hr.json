@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "Gledaj",
             "stop": "Prestani gledati"
+        },
+        "broods": {
+            "eggs": "Jaja: {start} · preostalo: {left}",
+            "eggsAll": "Jaja: {start}",
+            "eggOne": "1 jaje",
+            "young": "Mladi: {start} · preostalo: {left}",
+            "youngAll": "Mladi: {start}",
+            "carried": "Nosi mlade: {start}",
+            "takenBy": "Odneseno: {count} · grabežljivac: {aPredator}",
+            "didNotSurvive": "Nije preživjelo: {count}",
+            "nestFailed": "Gnijezdo nije uspjelo",
+            "failed": "Mladi nisu preživjeli",
+            "parentLost": "Izgubljeni zajedno s roditeljem",
+            "unsettled": "Nije se nastanilo: {count}",
+            "independent": "Sada samostalni: {count}",
+            "logHatched": "{animal}: izleglo se jaja: {count}",
+            "logBorn": "{animal}: rođeno mladih: {count}",
+            "logRaid": "{animal}: odneseno jaja: {count} · grabežljivac: {aPredator} · preostalo: {left}",
+            "logTaken": "{animal}: odneseno mladih: {count} · grabežljivac: {aPredator} · preostalo: {left}",
+            "logHeldOff": "{animal}: roditelj je otjerao grabežljivca: {aPredator}",
+            "logNestFailed": "{animal}: gnijezdo nije uspjelo",
+            "logFailed": "{animal}: mladi nisu preživjeli",
+            "logParentLost": "{animal}: mladi su izgubljeni zajedno s roditeljem",
+            "logRecruited": "{animal}: sada samostalnih mladih: {count}",
+            "logUnsettled": "{animal}: mladih koji se nisu nastanili: {count}"
         }
     },
     "talkPage": {

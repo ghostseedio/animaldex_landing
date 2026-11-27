@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "見守る",
             "stop": "見守るのをやめる"
+        },
+        "broods": {
+            "eggs": "卵{start}個 · 残り{left}個",
+            "eggsAll": "卵{start}個",
+            "eggOne": "卵1個",
+            "young": "子ども{start}匹 · 残り{left}匹",
+            "youngAll": "子ども{start}匹",
+            "carried": "おなかに子ども{start}匹",
+            "takenBy": "{aPredator}が{count}を捕食",
+            "didNotSurvive": "{count}が生き残れなかった",
+            "nestFailed": "営巣は失敗した",
+            "failed": "子どもたちは生き残れなかった",
+            "parentLost": "親とともに失われた",
+            "unsettled": "{count}は定着できなかった",
+            "independent": "{count}が独り立ち",
+            "logHatched": "{animal}：卵{count}個がふ化",
+            "logBorn": "{animal}：子ども{count}匹が誕生",
+            "logRaid": "{animal}：{aPredator}が卵{count}個を捕食 · 残り{left}個",
+            "logTaken": "{animal}：{aPredator}が子ども{count}匹を捕食 · 残り{left}匹",
+            "logHeldOff": "{animal}：親が{aPredator}を追い払った",
+            "logNestFailed": "{animal}：営巣は失敗した",
+            "logFailed": "{animal}：子どもたちは生き残れなかった",
+            "logParentLost": "{animal}：子どもたちは親とともに失われた",
+            "logRecruited": "{animal}：子ども{count}匹が独り立ち",
+            "logUnsettled": "{animal}：子ども{count}匹は定着できなかった"
         }
     },
     "talkPage": {

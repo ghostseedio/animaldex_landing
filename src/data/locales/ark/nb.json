@@ -1221,6 +1221,31 @@
         "watch": {
             "start": "Se på",
             "stop": "Slutt å se"
+        },
+        "broods": {
+            "eggs": "{start} egg · {left} igjen",
+            "eggsAll": "{start} egg",
+            "eggOne": "1 egg",
+            "young": "{start} unger · {left} igjen",
+            "youngAll": "{start} unger",
+            "carried": "Venter {start} unger",
+            "takenBy": "{count} tatt av {aPredator}",
+            "didNotSurvive": "{count} overlevde ikke",
+            "nestFailed": "Reiret mislyktes",
+            "failed": "Kullet overlevde ikke",
+            "parentLost": "Gikk tapt sammen med forelderen",
+            "unsettled": "{count} fant ikke noe sted å slå seg ned",
+            "independent": "{count} klarer seg nå selv",
+            "logHatched": "{animal}: {count} egg klekket",
+            "logBorn": "{animal}: {count} unger født",
+            "logRaid": "{animal}: {count} egg tatt av {aPredator} · {left} igjen",
+            "logTaken": "{animal}: {count} unger tatt av {aPredator} · {left} igjen",
+            "logHeldOff": "{animal}: forelderen jaget bort {aPredator}",
+            "logNestFailed": "{animal}: reiret mislyktes",
+            "logFailed": "{animal}: kullet overlevde ikke",
+            "logParentLost": "{animal}: kullet gikk tapt sammen med forelderen",
+            "logRecruited": "{animal}: {count} unger klarer seg nå selv",
+            "logUnsettled": "{animal}: {count} unger fant ikke noe sted å slå seg ned"
         }
     },
     "talkPage": {
