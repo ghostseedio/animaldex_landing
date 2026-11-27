@@ -467,16 +467,22 @@ const DRIVE_HOME = 2.4;
 const DRIVE_ALERT = 5;
 export type DriveStyle = "mob" | "charge" | "distract";
 
+/** Birds that lead a hunter off their nest or young with a distraction display (a broken wing, a crouched run): the plovers and other shorebirds, the nightjars, the grouse and their kin. */
+const DISTRACT = /(?:^|-)(?:plover|killdeer|lapwing|dotterel|stilt|avocet|sandpiper|curlew|godwit|whimbrel|snipe|woodcock|oystercatcher|turnstone|thick-knee|stone-curlew|courser|pratincole|nightjar|nighthawk|whip-poor-will|poorwill|sandgrouse|grouse|ptarmigan|quail|partridge|bustard)$/;
+/** Waterfowl: on the water with their young, they charge (a duck's rush, a swan's or a goose's hiss and wings). */
+const WATERFOWL = /(?:^|-)(?:mallard|duck|teal|wigeon|pintail|eider|merganser|goose|swan|shelduck|scaup|pochard|goldeneye|bufflehead|canvasback|smew|garganey|gadwall|shoveler|coot|moorhen|gallinule|grebe|loon|diver)$/;
+
 /**
- * How a parent drives a hunter off its brood, by what its kind does: a bird that keeps a nest and flies MOBS it
- * (scolding close in, jabbing at it, a swoop over its head, as songbirds and crows do); a ground-nesting bird whose
- * young run about on land (a plover) LEADS IT OFF with the broken-wing display; any other (a duck or a goose with its
- * young, a mammal at its den, a crocodile at its mound, a guarding fish) CHARGES it. Pure.
+ * How a parent drives a hunter off its brood, by what its kind does: a shorebird, a nightjar or a grouse LEADS IT OFF
+ * with the distraction display (`DISTRACT`); waterfowl, birds that do not fly, and every other animal (a mammal at its
+ * den, a crocodile at its mound, a guarding fish) CHARGE it; any other bird that flies MOBS it (scolding and jabbing
+ * close in, swooping at its head, as songbirds and crows do). Pure.
  */
-export function driveStyle(plan: string | null, care: string | null, flies: boolean, swims: boolean): DriveStyle {
+export function driveStyle(plan: string | null, slug: string, flies: boolean): DriveStyle {
     if (plan !== "bird") return "charge";
-    if (care === "follow") return swims ? "charge" : "distract";
-    return flies ? "mob" : "charge";
+    if (DISTRACT.test(slug)) return "distract";
+    if (WATERFOWL.test(slug) || !flies) return "charge";
+    return "mob";
 }
 
 /** A drive-off clip as the act uses it (`drive-clips.ts`): its length, and the share of it it moves on over, and how far. */
@@ -511,6 +517,40 @@ export function driveGuardPose(d: number, style: DriveStyle, home: Being, hunter
         const base = flying ? from.base + (home.base - from.base) * e + lift : e < 1 ? surface(x, z) + (home.base - surface(home.x, home.z)) * e : home.base;
         return mk(x, z, base, far > 0.05 ? Math.atan2(home.x - from.x, home.z - from.z) : home.yaw, flying ? "fly" : "walk", far / DRIVE_HOME);
     };
+    if (style === "mob" && hunter.base - surface(hunter.x, hunter.z) > 0.3) {
+        // At a raised nest (the hunter up beside it): from the rim on the nest's far side it scolds and jabs at it
+        // (`drive_mob`), then a pass low over its head and round back to the rim, and scolds again; then onto its eggs.
+        // (`home`: where it sat, the nest; its rim faces the hunter across the cup.)
+        const away = Math.atan2(home.x - hunter.x, home.z - hunter.z);
+        const rimR = Math.max(L * 0.5, 0.08);
+        const rim = {x: home.x + Math.sin(away) * rimR, z: home.z + Math.cos(away) * rimR};
+        const level = home.base;
+        const head = hunter.base + Math.max(hunter.length * 0.6, 0.15);
+        const high = Math.max(head, level) + clamp(hunter.length * 1.2, 0.6, 2);
+        const beyond = {x: hunter.x - Math.sin(away) * clamp(hunter.length * 1.5, 0.6, 3), z: hunter.z - Math.cos(away) * clamp(hunter.length * 1.5, 0.6, 3)};
+        const HOP = 0.6;
+        const PASS = 2.4;
+        const passAt = HOP + 2.4;
+        const face = away + Math.PI;
+        const scold = (t: number): ActPose => mk(rim.x, rim.z, level, face, "drive_mob", 0, {pitch: clip ? 0 : 0.22 * Math.max(Math.sin(t * Math.PI * 3), 0)});
+        if (d < HOP) return mk(home.x + (rim.x - home.x) * ease(d / HOP), home.z + (rim.z - home.z) * ease(d / HOP), level, face, "walk", rimR / HOP);
+        if (d < passAt) return scold(d - HOP);
+        if (d < passAt + PASS) {
+            const k = (d - passAt) / PASS;
+            const half = k < 0.5;
+            const u = half ? k * 2 : k * 2 - 1;
+            const a = half ? rim : beyond;
+            const b = half ? beyond : rim;
+            const x = a.x + (b.x - a.x) * u;
+            const z = a.z + (b.z - a.z) * u;
+            // (Out low over its head; round and back above it.)
+            const y = level + ((half ? head + 0.2 : high) - level) * Math.sin(Math.PI * u);
+            return mk(x, z, y, Math.atan2(b.x - a.x, b.z - a.z), "fly", Math.hypot(b.x - a.x, b.z - a.z) / (PASS / 2), {pitch: half ? (u < 0.5 ? 0.3 : -0.2) : 0});
+        }
+        if (after < 0) return scold(d - passAt - PASS);
+        if (after < DRIVE_HOME) return mk(rim.x + (home.x - rim.x) * ease(after / DRIVE_HOME), rim.z + (home.z - rim.z) * ease(after / DRIVE_HOME), level, face, "walk", rimR / DRIVE_HOME);
+        return null;
+    }
     if (style === "mob") {
         // Close in by air, scold and jab at it from the ground beside it (`drive_mob`), a swoop low over its head to its
         // other side, and again; then away home.
@@ -617,15 +657,21 @@ export function driveGuardPose(d: number, style: DriveStyle, home: Being, hunter
  * day. Null once it is back. Pure.
  */
 export function driveHunterPose(s: number, style: DriveStyle, from: Spot | null, back: Spot | null, nest: BroodPlace, length: number, size: number, walk: number, flies: boolean, ground: (x: number, z: number) => number, lure: Point | null): ActPose | null {
-    if (s < RAID_WALK) return raidPose(s, 0, from, null, nest, length, size, walk, flies, ground);
     const mk = (x: number, z: number, base: number, yaw: number, state: string, speed = 0): ActPose => ({x, z, base, yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state, speed, meal: "hunting"});
     const reach = Math.max(length * 0.45, size * 0.5);
     const dir = from && Math.hypot(nest.x - from.x, nest.z - from.z) > 0.05 ? Math.atan2(nest.x - from.x, nest.z - from.z) : nest.yaw;
-    const at = {x: nest.x - Math.sin(dir) * reach, z: nest.z - Math.cos(dir) * reach};
-    const surface = (x: number, z: number) => (nest.water ? nest.y + Math.max(length * 0.1, 0.02) : ground(x, z));
+    // It is met short of the brood (held off, it never gets to it): a body length and more out, on its way in. At a raised
+    // nest it is up beside it, as the nest's own height.
+    const raised = !nest.water && nest.y > ground(nest.x, nest.z) + 0.2;
+    const stop = raised ? length * 0.3 : Math.max(length * 1.5, size * 2, 1);
+    const stand: BroodPlace = {...nest, x: nest.x - Math.sin(dir) * stop, z: nest.z - Math.cos(dir) * stop};
+    if (!raised && !nest.water) stand.y = ground(stand.x, stand.z);
+    if (s < RAID_WALK) return raidPose(s, 0, from, null, stand, length, size, walk, flies, ground);
+    const at = {x: stand.x - Math.sin(dir) * reach, z: stand.z - Math.cos(dir) * reach};
+    const surface = (x: number, z: number) => (raised ? nest.y : nest.water ? nest.y + Math.max(length * 0.1, 0.02) : ground(x, z));
     const d = s - RAID_WALK;
-    // (How far it gives ground by the end of the stand: back the way it came, a body length and more.)
-    const give = Math.min(Math.max(length * 1.2, size * 1.5), 6);
+    // (How far it gives ground by the end of the stand: back the way it came, a body length and more; up beside a nest, none.)
+    const give = raised ? 0 : Math.min(Math.max(length * 1.2, size * 1.5), 6);
     let x = at.x;
     let z = at.z;
     let yaw = dir;
@@ -1475,7 +1521,7 @@ export class LiveBroods<E> {
                     if (dry) act.at = {...act.at, x: dry.x, z: dry.z, y: Math.max(h.ground(dry.x, dry.z), 0), top: h.waterTop(dry.x, dry.z), water: false};
                 }
             }
-            const style = (act.style ??= driveStyle(plan, live.brood.care, h.flies(guard), Boolean(h.swims?.(guard))));
+            const style = (act.style ??= driveStyle(plan, live.brood.model_slug, h.flies(guard)));
             const hb = h.body(hunter);
             const hp = driveHunterPose(s, style, act.from, h.scheduleAt(hunter, epoch), act.at, hb.length, live.size, h.walk(hunter), h.flies(hunter), h.ground, act.lure ?? null);
             if (!hp) {
@@ -1486,8 +1532,9 @@ export class LiveBroods<E> {
             const d = s - RAID_WALK;
             // (It goes on as it was until the hunter is close: the last seconds of its way in, it stops and faces it.)
             if (d < -DRIVE_ALERT) return;
-            // (Where the guard was when the hunter came: its stand is from there.)
-            if (d < 0 || !act.home) act.home = h.body(guard);
+            // (Where the guard was when it saw the hunter: it stops there, and its stand is from there. Taken once: its drawn
+            // body follows the pose, and read again each frame it would creep.)
+            if (!act.home) act.home = h.body(guard);
             const surface = (x: number, z: number) => (wet(x, z) ? h.waterTop(x, z) : h.ground(x, z));
             const name = style === "mob" ? "drive_mob" : style === "distract" ? "drive_distract" : "drive_charge";
             const gp = driveGuardPose(d, style, act.home, {x: hp.x, z: hp.z, base: hp.base, yaw: hp.yaw, length: hb.length}, surface, h.driveClip?.(guard, name) ?? null, wet);

@@ -723,11 +723,13 @@ test("every Ark locale has the broods' words, each with its placeholders", () =>
 // MARK: Phase B: the drive-off, feeding, Ark Lite
 
 test("a drive-off's style is its kind's: a songbird mobs, a plover leads off, a duck with its young or a fox charges", () => {
-    assert.equal(driveStyle("bird", "nest", true, false), "mob", "an American Robin at its nest");
-    assert.equal(driveStyle("bird", "follow", true, false), "distract", "a Killdeer with its chicks: the broken-wing display");
-    assert.equal(driveStyle("bird", "follow", true, true), "charge", "a Mallard with her ducklings");
-    assert.equal(driveStyle("mammal", "nest", false, false), "charge", "a Red Fox at its den");
-    assert.equal(driveStyle("reptile", "guard", false, true), "charge", "a crocodile at its mound");
+    assert.equal(driveStyle("bird", "american-robin", true), "mob", "an American Robin at its nest");
+    assert.equal(driveStyle("bird", "killdeer", true), "distract", "a Killdeer (it wades, it flies): the broken-wing display");
+    assert.equal(driveStyle("bird", "ruffed-grouse", true), "distract");
+    assert.equal(driveStyle("bird", "mallard", true), "charge", "a Mallard with her ducklings");
+    assert.equal(driveStyle("bird", "emu", false), "charge", "a bird that does not fly");
+    assert.equal(driveStyle("mammal", "red-fox", false), "charge", "a Red Fox at its den");
+    assert.equal(driveStyle("reptile", "mugger-crocodile", false), "charge", "a crocodile at its mound");
 });
 
 test("the drive-off: the guard faces the hunter, makes its stand at it, and goes back; the hunter stands, gives ground, and goes", () => {
@@ -768,6 +770,19 @@ test("the drive-off: the guard faces the hunter, makes its stand at it, and goes
     const swoop = driveGuardPose(4.2 + 0.9, "mob", home, hunter, ground, null)!;
     assert.equal(swoop.state, "fly");
     assert.ok(swoop.base > hunter.base + hunter.length * 0.6, "over its head");
+    // At a raised nest (the hunter up beside it): scolding from the rim across the cup, a pass over its head and back, again.
+    const sitting = {x: 0, z: 0, base: 2, yaw: 0, length: 0.25};
+    const perched = {x: 0, z: 0.6, base: 2, yaw: Math.PI, length: 0.45};
+    const rimScold = driveGuardPose(1.5, "mob", sitting, perched, ground, null)!;
+    assert.equal(rimScold.state, "drive_mob");
+    assert.equal(rimScold.base, 2, "on the nest's rim, at its height");
+    assert.ok(rimScold.z < 0, "on the far side of the cup from it");
+    assert.ok(rimScold.pitch > 0 || driveGuardPose(1.6, "mob", sitting, perched, ground, null)!.pitch > 0, "jabbing at it, without its clip");
+    const over = driveGuardPose(3 + 0.6, "mob", sitting, perched, ground, null)!;
+    assert.equal(over.state, "fly");
+    assert.ok(over.base > perched.base + perched.length * 0.6, "low over its head");
+    assert.equal(driveGuardPose(7, "mob", sitting, perched, ground, null)!.state, "drive_mob", "and scolding again");
+    assert.equal(driveGuardPose(DRIVE_SECONDS + 3, "mob", sitting, perched, ground, null), null, "then on its eggs again");
     // A broken-wing display: dragging a wing, a few steps, dragging again, ever further off; the hunter following.
     const drag = driveGuardPose(0.5, "distract", home, hunter, ground, null)!;
     assert.equal(drag.state, "drive_distract");
