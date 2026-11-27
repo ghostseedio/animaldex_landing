@@ -35,7 +35,7 @@ import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
 import {corners, inBox, sub, toLocal, type Box} from "@/ark-scene/islands/town/geom";
-import {bodyClear as standsClear, inKeep, keepBoxOf, keepGive, pushOut, type KeepBox, type ResolveBody} from "@/ark-scene/collide/resolve";
+import {bodyClear as standsClear, inKeep, keepBoxOf, keepGrow, pushOut, type KeepBox, type ResolveBody} from "@/ark-scene/collide/resolve";
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
 import {aquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
 import {townPlan} from "@/ark-scene/islands/town/plan";
@@ -897,7 +897,7 @@ export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}
     // Lane PENKEEP: and theirs for a body wedged by the rails against something in the pen: within the keep's give, clear.
     if (body && solid && "near" in solid && "distance" in solid) {
         const keep = penKeep(pen, margin, ox, oz);
-        if (inKeep(keep, pose.x, pose.z, keepGive(keep, body)) && standsClear(solid as ColliderSet, body, {x: pose.x, y: body.y ?? -Infinity, z: pose.z, yaw: body.yaw, aloft: false}, pose.x, pose.z)) return;
+        if (inKeep(keep, pose.x, pose.z, keepGrow(keep, body, body.yaw)) && standsClear(solid as ColliderSet, body, {x: pose.x, y: body.y ?? -Infinity, z: pose.z, yaw: body.yaw, aloft: false}, pose.x, pose.z)) return;
     }
     const qx = Math.min(Math.max(lx, -hx), hx);
     const qz = Math.min(Math.max(lz, -hz), hz);

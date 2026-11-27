@@ -8,7 +8,7 @@
  * step the collisions' push takes in a frame, and how many frames one is drawn across a fence from where its day has it.
  *
  *   npx tsx scripts/ark-paddock-overlap.ts --snapshot public/ark-local/live.json [--pens rural-paddock-2,rural-paddock-1]
- *        [--from <epoch s>] [--minutes 20] [--fps 60] [--world v2] [--old] [--hour h] [--no-beds]
+ *        [--from <epoch s>] [--minutes 20] [--fps 60] [--world v2] [--old] [--hour h] [--no-beds] [--no-groups]
  *
  * Pens or zoo enclosures (`--pens hoofstock_paddocks-2`: a zoo resident is kept by its enclosure's box, as the scene
  * keeps it). Two asleep of one group may lie together; two of different groups count asleep too. `--no-beds`: the zoo
@@ -32,6 +32,7 @@ import {displayLength} from "@/ark-scene/sizes";
 import {collideBlocked, collideSegmentClear, setIslandColliders} from "@/ark-scene/collide";
 import {setRecipeColliders} from "@/ark-scene/behaviour-recipes";
 import {townZooBeds} from "@/ark-scene/islands/town/zoo-beds";
+import {groupLives} from "@/ark-scene/behaviour-group";
 import {setArkWorld} from "@/ark-scene/world";
 
 const arg = (name: string, fallback: string) => {
@@ -79,7 +80,8 @@ const beds = process.argv.includes("--no-beds") ? new Map() : townZooBeds(placed
 for (const a of town.animals) {
     const info = placed.town.get(a.id);
     const p = placed.places.get(a.id);
-    if (!info || !p || !pens.has(info.place)) continue;
+    // (`--pens zoo`: every zoo enclosure.)
+    if (!info || !p || !(pens.has(info.place) || (pens.has("zoo") && info.area === "zoo"))) continue;
     const length = displayLength(a);
     const profile = behaviourProfile(a.model_slug);
     const shape = bodyShape(a.model_slug, length);
@@ -90,8 +92,32 @@ for (const a of town.animals) {
     const sched: ScheduleAnimal = {id: a.id, zone: a.zone, home: {x: p.x + origin.x, y: p.ground, z: p.z + origin.z}, length, sea: false, range: Math.max(info.range, 0.6) * 1.5, kept: true, keep: !old && box ? penKeep(box, margin, origin.x, origin.z) : null, bed: beds.get(a.id) ?? null};
     items.push({id: a.id, slug: a.model_slug, pen: info.place, box, margin, sched, profile, body: {id: a.id, radius: shape.radius, half: shape.half, height: shape.height, group: p.leader ?? a.id}, last: null});
 }
+// (A herd's member keeps to its placement's leader of its kind, as the scene wires a kept town animal: `index.ts`
+// wireSchedules keptLeader. Without it the sim's herd members roamed each on its own.)
+const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
+const byId = new Map(items.map((it) => [it.id, it]));
+const slugOf = new Map(town.animals.map((a) => [a.id, a.model_slug]));
+if (!process.argv.includes("--no-groups")) {
+    for (const it of items) {
+        const lead = placed.places.get(it.id)?.leader;
+        const leader = lead && lead !== it.id ? byId.get(lead) : undefined;
+        if (!leader || leader.slug !== it.slug || !(GROUPED.has(it.profile.social) || groupLives(it.slug))) continue;
+        let size = 1;
+        placed.places.forEach((p, id) => {
+            if (id !== lead && p.leader === lead && slugOf.get(id) === it.slug) size++;
+        });
+        it.sched.group = {leader: leader.sched, profile: leader.profile, activity: undefined, rank: Math.max(placed.places.get(it.id)?.rank ?? 1, 1), size: Math.max(size, 2)};
+    }
+    const led = new Map<ScheduleAnimal, number>();
+    for (const it of items) if (it.sched.group) led.set(it.sched.group.leader, (led.get(it.sched.group.leader) ?? 1) + 1);
+    for (const it of items) it.sched.led = led.get(it.sched) ?? 0;
+}
 // (Lane ZOOSLEEP: a zoo resident's goals keep off its enclosure-mates' beds, as the scene wires them: `index.ts` mates.)
 if (!process.argv.includes("--no-beds")) for (const it of items) if (placed.town.get(it.id)?.area === "zoo") it.sched.mates = () => items.filter((o) => o.pen === it.pen).map((o) => ({animal: o.sched, profile: o.profile}));
+// (`--time`: the schedule's own cost, ms a frame: each resident's trip for the frame, worked out or remembered.)
+let scheduleMs = 0;
+let worstFrameMs = 0;
+let warmMs = 0;
 const baseOf = (it: Item, epoch: number): ResolvePose & {moving: boolean} => {
     const pose = poseOnTrip(world, tripAt(world, it.profile, it.sched, epoch, hours), epoch);
     return {x: pose.x, y: pose.y, z: pose.z, yaw: pose.yaw, aloft: pose.aloft, asleep: pose.beat === "sleep", still: !pose.aloft && !pose.moving, moving: pose.moving};
@@ -110,8 +136,15 @@ let boundJumpAt = "";
 const boundBy = new Map<Item, number>();
 const push = new Map<Item, {x: number; z: number}>();
 const frames = Math.round(minutes * 60 * fps);
+// (The first minute's frames, the cold start's, left out of the steady cost.)
+const WARM = Math.min(60 * fps, frames - 1);
 for (let f = 0; f < frames; f++) {
     const epoch = from + f / fps;
+    const t0 = performance.now();
+    const frameStart = scheduleMs;
+    // (`--time`: each resident's trip asked for first, the schedule's own work, before the collisions ask again.)
+    for (const it of items) tripAt(world, it.profile, it.sched, epoch, hours);
+    scheduleMs += performance.now() - t0;
     const drawn = items.map((it) => {
         const base = baseOf(it, epoch);
         const at = {...layer.apply(it, epoch, base)};
@@ -142,6 +175,8 @@ for (let f = 0; f < frames; f++) {
         push.set(it, now);
         return {it, pose: {...base, x: at.x, z: at.z}};
     });
+    worstFrameMs = Math.max(worstFrameMs, scheduleMs - frameStart);
+    if (f === WARM) warmMs = scheduleMs;
     for (let i = 0; i < drawn.length; i++) {
         for (let j = i + 1; j < drawn.length; j++) {
             const a = drawn[i];
@@ -170,4 +205,5 @@ for (const [key, s] of rows.slice(0, 10)) console.log(`  ${key}: longest ${s.lon
 console.log(`frames drawn across a fence from its day's pose: ${across}${acrossAt.length ? ` (${acrossAt.join("; ")})` : ""}`);
 console.log(`biggest push step in a frame: ${step.toFixed(3)} m (${stepAt})`);
 console.log(`frames the pen bound moved the collisions' answer: ${boundFrames}; its biggest change in a frame: ${boundJump.toFixed(3)} m (${boundJumpAt})`);
+if (process.argv.includes("--time")) console.log(`schedule: ${(scheduleMs / frames).toFixed(3)} ms a frame (${((scheduleMs - warmMs) / (frames - 1 - WARM)).toFixed(3)} after the first minute), all told ${(scheduleMs / 1000).toFixed(2)} s, worst frame ${worstFrameMs.toFixed(1)} ms`);
 if (process.argv.includes("--gate") && overSecond) process.exit(1);
