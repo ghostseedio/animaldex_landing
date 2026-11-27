@@ -16,7 +16,7 @@ import {
     type ChunkSpan
 } from "@/ark-scene/streaming/chunks";
 import {ArkStreamer, spansFromHeights} from "@/ark-scene/streaming";
-import {ARK_STREAM_TIERS, chooseTier, heapBudgetMB, hidesCores, MIN_RENDER_SCALE, stepRenderScale, tierOnTrial, type StreamTierName} from "@/ark-scene/streaming/tiers";
+import {ARK_STREAM_TIERS, chooseTier, DESKTOP_HEAP_MOST_MB, desktopStartTier, heapBudgetMB, hidesCores, MIN_RENDER_SCALE, stepRenderScale, tierOnTrial, type StreamTierName} from "@/ark-scene/streaming/tiers";
 import {hazeEndDepth, hazeFog} from "@/ark-scene/streaming/haze";
 import {ChunkedInstances} from "@/ark-scene/streaming/instances";
 import {tileGeometry, MAP_STRIDE} from "@/ark-scene/streaming/ground-tiles";
@@ -211,6 +211,27 @@ test("streaming: memory pressure pulls the distance in, to a floor, then asks fo
     assert.equal(state.scale, MIN_RENDER_SCALE);
     state = stepRenderScale(state.scale, {heapMB: 10, gpuMB: 10}, tier, 31);
     assert.ok(state.scale > MIN_RENDER_SCALE);
+});
+
+test("streaming: a desktop pointer never starts on the high tier, and gets a desktop's heap budget (PERF-WEB)", () => {
+    // The device's class is unchanged (`chooseTier`); only where a desktop starts.
+    assert.equal(desktopStartTier(chooseTier({coarse: false, cores: 16, memoryGB: 8, heapLimitMB: 4096})), "medium");
+    assert.equal(desktopStartTier("medium"), "medium");
+    assert.equal(desktopStartTier("low"), "low");
+    // Desktop Chrome's 4 GB heap: 1,536 MB, not the medium tier's 512 (the real world's floor is 640-746 MB there).
+    assert.equal(heapBudgetMB(ARK_STREAM_TIERS.medium, 4096, true), DESKTOP_HEAP_MOST_MB);
+    assert.equal(heapBudgetMB(ARK_STREAM_TIERS.medium, 2048, true), 2048 * 0.4);
+    // Never under the tier's own budget, and nothing changes where the browser does not say its heap.
+    assert.equal(heapBudgetMB(ARK_STREAM_TIERS.high, 1024, true), 512);
+    assert.equal(heapBudgetMB(ARK_STREAM_TIERS.medium, null, true), ARK_STREAM_TIERS.medium.memory.heapMB);
+    // Phones (and recordings) keep today's budgets.
+    assert.equal(heapBudgetMB(ARK_STREAM_TIERS.medium, 4096), ARK_STREAM_TIERS.medium.memory.heapMB);
+    assert.equal(heapBudgetMB(ARK_STREAM_TIERS.low, 1024), 384);
+    // The desktop world's 700 MB heap floor on medium: no pull-in, no drop; the same reading on a phone pulls in.
+    const desk = stepRenderScale(1, {heapMB: 700, gpuMB: 10}, ARK_STREAM_TIERS.medium, 0, 4096, true);
+    assert.deepEqual(desk, {scale: 1, calmFor: 0, drop: false});
+    const phone = stepRenderScale(1, {heapMB: 700, gpuMB: 10}, ARK_STREAM_TIERS.medium, 0, 4096);
+    assert.ok(phone.scale < 1);
 });
 
 test("streaming: the haze leaves the fog as it was while off, and pulls it in when on", () => {

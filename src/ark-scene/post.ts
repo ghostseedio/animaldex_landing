@@ -21,7 +21,7 @@ import {SMAAPass} from "three/examples/jsm/postprocessing/SMAAPass.js";
 import {FXAAShader} from "three/examples/jsm/shaders/FXAAShader.js";
 import {HorizontalTiltShiftShader} from "three/examples/jsm/shaders/HorizontalTiltShiftShader.js";
 import {VerticalTiltShiftShader} from "three/examples/jsm/shaders/VerticalTiltShiftShader.js";
-import {chooseTier, deviceSignals, tierOnTrial} from "@/ark-scene/streaming/tiers";
+import {chooseTier, desktopStartTier, deviceSignals, tierOnTrial} from "@/ark-scene/streaming/tiers";
 import {TierTrial, type TrialStore, type TrialWhy} from "@/ark-scene/runtime/trial";
 import {arkCpuScore, tierForCpu} from "@/ark-scene/runtime/pace";
 
@@ -35,9 +35,10 @@ export function tierFor(appMemoryGB?: number | null): QualityTier {
     if (typeof window === "undefined") return "medium";
     const signals = deviceSignals(appMemoryGB);
     const tier = chooseTier(signals);
+    // A desktop pointer: never the high tier from the start (PERF-WEB, `streaming/tiers.ts` desktopStartTier).
+    if (!signals.coarse) return desktopStartTier(tier);
     // Mobile performance lane: on a touch device, a slow main thread starts on the low tier (a short benchmark, once a
     // page: the prebuild and the mount ask the same question and must get the same answer).
-    if (!signals.coarse) return tier;
     cpuScoreMs ??= arkCpuScore();
     const byCpu = tierForCpu(tier, cpuScoreMs);
     // A device that hides what it is (iOS WebKit: `streaming/tiers.ts` hidesCores) starts on the medium tier on trial:

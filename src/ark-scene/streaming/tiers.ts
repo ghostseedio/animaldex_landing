@@ -90,6 +90,17 @@ export function chooseTier(signals: DeviceSignals): StreamTierName {
 }
 
 /**
+ * PERF-WEB (2026-11-27): the tier a desktop pointer starts on, from `chooseTier`'s class. No desktop measured holds the
+ * high tier: an M3 Max at 1440x900 on a 2x screen drew 9-24 fps on it for its first 35-55 s (GPU and main thread both:
+ * GTAO, bloom and SMAA over ~10 M triangles in 1,000-1,500 draws) before the tier check dropped it to medium, which is
+ * where every desktop ended up anyway. So a desktop classed high starts on medium: the picture it had after that first
+ * minute, without the minute. (High stays the development override's, `window.__arkQuality`, and the recordings'.)
+ */
+export function desktopStartTier(tier: StreamTierName): StreamTierName {
+    return tier === "high" ? "medium" : tier;
+}
+
+/**
  * What a hidden core count stands for: every iPhone since 2017 (the A11) has six cores, and iOS 16 and later run on
  * nothing older; the iPads WebKit answers 4 for have six too.
  */
@@ -138,9 +149,22 @@ export function deviceSignals(appMemoryGB?: number | null): DeviceSignals {
     };
 }
 
-/** The tier's heap budget, never more than half the heap's own limit where the browser says it. */
-export function heapBudgetMB(tier: StreamTier, heapLimitMB: number | null): number {
-    return heapLimitMB && heapLimitMB > 0 ? Math.min(tier.memory.heapMB, heapLimitMB * 0.5) : tier.memory.heapMB;
+/** A desktop's heap budget: this share of the heap's own limit (PERF-WEB, `heapBudgetMB`), at most `DESKTOP_HEAP_MOST_MB`. */
+export const DESKTOP_HEAP_SHARE = 0.4;
+export const DESKTOP_HEAP_MOST_MB = 1536;
+
+/**
+ * The tier's heap budget, never more than half the heap's own limit where the browser says it.
+ *
+ * A desktop (PERF-WEB, 2026-11-27): at least `DESKTOP_HEAP_SHARE` of the heap's limit, to `DESKTOP_HEAP_MOST_MB`. The
+ * tiers' budgets are a phone's measure: the real world's heap floor on a desktop is 640-746 MB, over the medium tier's
+ * 512, so every desktop Chrome was pulled in to the smallest distance and dropped to the low tier at ~75 s (no shadows,
+ * no anti-aliasing), and the drop freed nothing. Phones keep their budgets (the 384 MB low gate).
+ */
+export function heapBudgetMB(tier: StreamTier, heapLimitMB: number | null, desktop = false): number {
+    const own = heapLimitMB && heapLimitMB > 0 ? Math.min(tier.memory.heapMB, heapLimitMB * 0.5) : tier.memory.heapMB;
+    if (!desktop || !(heapLimitMB && heapLimitMB > 0)) return own;
+    return Math.max(own, Math.min(heapLimitMB * DESKTOP_HEAP_SHARE, DESKTOP_HEAP_MOST_MB));
 }
 
 export type MemoryReading = {heapMB: number | null; gpuMB: number};
@@ -150,8 +174,8 @@ export type MemoryReading = {heapMB: number | null; gpuMB: number};
  * budget it steps in by `RENDER_SCALE_STEP` (to `MIN_RENDER_SCALE`); under `RELAX_BELOW` of both for `RELAX_SECONDS`
  * it steps back out. `drop` asks for a lower tier when already at the floor and still over.
  */
-export function stepRenderScale(scale: number, reading: MemoryReading, tier: StreamTier, calmFor: number, heapLimitMB: number | null = null): {scale: number; calmFor: number; drop: boolean} {
-    const heapShare = reading.heapMB === null ? 0 : reading.heapMB / heapBudgetMB(tier, heapLimitMB);
+export function stepRenderScale(scale: number, reading: MemoryReading, tier: StreamTier, calmFor: number, heapLimitMB: number | null = null, desktop = false): {scale: number; calmFor: number; drop: boolean} {
+    const heapShare = reading.heapMB === null ? 0 : reading.heapMB / heapBudgetMB(tier, heapLimitMB, desktop);
     const gpuShare = reading.gpuMB / tier.memory.gpuMB;
     const share = Math.max(heapShare, gpuShare);
     if (share > 1) {

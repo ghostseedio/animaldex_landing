@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {CALM_AFTER, displayCap, refreshPeriod, DROWSY_AFTER, powerCap, POWER_DEFAULT, RenderGovernor} from "@/ark-scene/runtime/governor";
-import {lowBattery, parsePowerMessage, parseVisibleMessage, pressureThermal} from "@/ark-scene/runtime/power";
+import {lowBattery, parsePowerMessage, parseVisibleMessage, pressureCounts, pressureThermal, watchBrowserPower} from "@/ark-scene/runtime/power";
 
 const idle = {busy: false, reducedMotion: false};
 
@@ -105,6 +105,34 @@ test("runtime bridge: ark:visible and ark:power are read strictly; anything malf
     assert.equal(pressureThermal("critical"), "serious");
     assert.equal(pressureThermal("serious"), "fair");
     assert.equal(pressureThermal("whatever"), "nominal");
+});
+
+test("runtime power: the browser's CPU pressure is read on a touch device only, never on a desktop pointer (PERF-WEB)", () => {
+    const g = globalThis as {matchMedia?: unknown; PressureObserver?: unknown};
+    const before = {matchMedia: g.matchMedia, PressureObserver: g.PressureObserver};
+    let observed = 0;
+    g.PressureObserver = class {
+        observe() {
+            observed++;
+            return Promise.resolve();
+        }
+        disconnect() {}
+    };
+    try {
+        for (const coarse of [false, true]) {
+            g.matchMedia = (query: string) => ({matches: coarse && query === "(pointer: coarse)"});
+            assert.equal(pressureCounts(), coarse);
+            observed = 0;
+            const stop = watchBrowserPower(new RenderGovernor(0));
+            assert.equal(observed, coarse ? 1 : 0);
+            stop();
+        }
+        g.matchMedia = undefined;
+        assert.equal(pressureCounts(), false);
+    } finally {
+        g.matchMedia = before.matchMedia;
+        g.PressureObserver = before.PressureObserver;
+    }
 });
 
 test("runtime governor: the visibility hook fires on every flip, the app's ark:visible included (the sound follows it)", () => {

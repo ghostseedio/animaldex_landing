@@ -99,7 +99,11 @@ export function watchBrowserPower(governor: RenderGovernor): () => void {
         }
     }
     const Pressure = (globalThis as {PressureObserver?: new (callback: (records: PressureRecord[]) => void) => PressureObserverLike}).PressureObserver;
-    if (typeof Pressure === "function") {
+    // PERF-WEB (2026-11-27): the CPU's pressure counts on a touch device only. On a desktop `critical` is a busy machine
+    // (other apps, or the Ark's own first minute) far more often than heat, and the cap it brought, 30 fps and the low
+    // tier, landed in the middle of the reader's drags: on a shared desktop at load 30-90 every visit was capped 20 s
+    // in. A desktop's frames are judged by the tier check instead; at rest the view is at 30 fps anyway (`calm`).
+    if (typeof Pressure === "function" && pressureCounts()) {
         try {
             let criticalSince = 0;
             let held: ReturnType<typeof setTimeout> | null = null;
@@ -129,6 +133,12 @@ export function watchBrowserPower(governor: RenderGovernor): () => void {
         }
     }
     return () => stops.forEach((stop) => stop());
+}
+
+/** Whether the browser's CPU pressure is read here: on a touch device (a coarse pointer), not on a desktop pointer. */
+export function pressureCounts(): boolean {
+    const media = (globalThis as {matchMedia?: (query: string) => {matches: boolean}}).matchMedia;
+    return typeof media === "function" && Boolean(media.call(globalThis, "(pointer: coarse)")?.matches);
 }
 
 /** Whether a battery reading alone counts as saver (for the bridge doc and the tests). */
