@@ -976,6 +976,12 @@ export class LiveBroods<E> {
                     if (!live.sitter || live.sitter.id !== carer) live.sitter = {id: carer, since: walks ? epoch : epoch - SETTLE, from: body};
                     const water = nest.water || WATER_PLAN.test(plan ?? "");
                     let to = carerPose(brood.hold!, water, nest, body.length, brood.id, still ? 0 : epoch);
+                    if (!water && !raised && brood.hold === "guard") {
+                        // (Guarding a body length off: on what is there, not at the nest's height. On a slope or a bank the
+                        // nest's height floats it or sinks it; over the water's edge it swims at the top.)
+                        const wet = h.waterTop(to.x, to.z) > h.ground(to.x, to.z) + 0.05;
+                        to = {...to, base: wet ? h.waterTop(to.x, to.z) : h.ground(to.x, to.z), state: wet ? "swim" : to.state};
+                    }
                     if (raided) {
                         // A raider at its eggs: it gives way, off to the far side, facing the nest.
                         const act = raided as LossAct;
