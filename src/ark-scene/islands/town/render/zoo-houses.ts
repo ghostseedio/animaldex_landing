@@ -24,6 +24,7 @@ import {cutAttribute, cutawayMaterial, cutEye, followEye, glassMaterial, glowMat
 import {aquariumHall, inAquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
 import {RockInstances} from "@/ark-scene/islands/town/render/rock-instances";
 import {buildAquariumHall, hallRocks, hallWaterMaterial, underwaterMaterial, type HallRock} from "@/ark-scene/islands/town/render/aquarium-hall";
+import {triangleProxy} from "@/ark-scene/islands/town/render/solid-proxies";
 
 type RGB = [number, number, number];
 
@@ -81,11 +82,18 @@ function shell(geo: Geo, e: ZooEnclosure, ranges: Array<{from: number; to: numbe
     ranges.push({from, to: geo.pos.length / 3, x: f.box.x, y: f.floor, z: f.box.z, h: h + 2});
 }
 
+/** The plinth from the floor down into the ground (m), so a slope never shows a gap; the hall's floor its top. */
+const PLINTH = 1.6;
+function plinth(geo: Geo, e: ZooEnclosure) {
+    const f = zooHouseFrame(e);
+    geo.box(frameAt(f.box, f.floor), 0, -PLINTH, 0, f.box.w + 0.1, PLINTH, f.box.d + 0.1, tone("#8e877a"), 0, {top: tone(FLOOR[e.type] ?? "#6a6a64")});
+}
+
 function plinthAndFloor(geo: Geo, e: ZooEnclosure) {
     const f = zooHouseFrame(e);
     const fr = frameAt(f.box, f.floor);
-    // The plinth from the floor down into the ground, so a slope never shows a gap; the hall's floor and the porch's.
-    geo.box(fr, 0, -1.6, 0, f.box.w + 0.1, 1.6, f.box.d + 0.1, tone("#8e877a"), 0, {top: tone(FLOOR[e.type] ?? "#6a6a64")});
+    // The plinth, the hall's floor and the porch's.
+    plinth(geo, e);
     geo.box(fr, 0, 0, f.box.d / 2 - ZOO_HOUSE_PORCH / 2, f.box.w, 0.02, ZOO_HOUSE_PORCH, tone("#b9b2a4"));
     // Climbing plants on the front corners, outside.
     const q = rng(e.slot.seed + 3);
@@ -403,10 +411,15 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
         buildAquariumHall(aquaHall, shellGeo, ranges, {...parts, under, water: hallWater}, rocks);
         for (const t of aquaHall.tanks) tanks.push(t.tank);
     }
+    // Lane SEAT (2026-11-27): each hall's plinth again, never drawn, for the seat pass (`solid-proxies.ts`' way): the
+    // interior below lets its arrays go once on the GPU, and the pass read a hall as open ground under its floor (a sea
+    // lion pushed out of the seal pools' wall went in under the snake house's sand, a metre below its floor).
+    const plinths = new Geo();
     for (const e of houses) {
         if (aquaHall && inAquariumHall(e)) continue;
         shell(shellGeo, e, ranges);
         plinthAndFloor(parts.inside, e);
+        plinth(plinths, e);
         // The glass front from the base to the lintel.
         const f = zooHouseFrame(e);
         const fr = frameAt(f.box, f.floor);
@@ -446,6 +459,12 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
         materials.push(depth);
         followEye(mesh, eye);
     }
+    let plinthProxy: Mesh | null = null;
+    if (plinths.triangles) {
+        // (A built solid by its name, `seat/solids.ts` HARDS; the audit's probe passes over it, `solidProxy`.)
+        plinthProxy = triangleProxy(plinths.pos, "zoo-houses:solid-proxy");
+        group.add(plinthProxy);
+    }
     let boulders: RockInstances | null = null;
     if (parts.inside.triangles) {
         // (Its page copy let go once on the GPU: nothing reads it back; the floors are `zooHouseFloors`'.)
@@ -478,6 +497,7 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
         habitats,
         dispose: () => {
             boulders?.dispose();
+            plinthProxy?.geometry.dispose();
             for (const mesh of meshes) {
                 mesh.geometry.dispose();
                 // (p2 (aqua): the hall's instanced boulders free their instance buffers too.)

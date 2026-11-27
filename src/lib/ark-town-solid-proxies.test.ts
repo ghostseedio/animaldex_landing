@@ -13,7 +13,7 @@ import {townSolids} from "@/ark-scene/islands/town/solids";
 import {launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
 import {ZOO_HOUSE_TYPES} from "@/ark-scene/islands/town/tanks";
 import {buildSolidProxies, proxied, SOLID_PROXY_LAYER} from "@/ark-scene/islands/town/render/solid-proxies";
-import {DrawnSolids, ALL, HARD, solidClass, solidLabel, type SolidHit} from "@/ark-scene/seat/solids";
+import {DrawnSolids, ALL, HARD, ROCK, solidClass, solidLabel, type SolidHit} from "@/ark-scene/seat/solids";
 
 const open = launchEnclosures();
 const origin = {x: 480, z: -320};
@@ -136,4 +136,64 @@ test("each proxy is closed and wound outward: a drop meets its top facing up and
     }
     assert.equal(checked, chosen.length);
     proxies.dispose();
+});
+
+test("lane SEAT: each building's proxy holds all its walls and roof, reads them only when asked, and is never drawn", async () => {
+    // (The house wren, the swift and the jackdaw of the seat audit: in a wall or a roof the town's solid batch had let
+    // go of, so the seat pass saw none of it.)
+    const {townPlan} = await import("@/ark-scene/islands/town/plan");
+    const {buildingSolid} = await import("@/ark-scene/islands/town/roof-perch");
+    const {buildingProxy} = await import("@/ark-scene/islands/town/render/solid-proxies");
+    const buildings = townPlan().buildings;
+    assert.ok(buildings.length > 50, `${buildings.length} buildings`);
+    const camera = new Camera();
+    const step = Math.max(1, Math.floor(buildings.length / 80));
+    let checked = 0;
+    for (let i = 0; i < buildings.length; i += step) {
+        const mesh = buildingProxy(buildings[i], i);
+        assert.equal(mesh.geometry.getAttribute("position").count, 0, "nothing held until asked");
+        assert.equal(mesh.layers.test(camera.layers), false);
+        assert.equal((mesh.material as import("three").Material).visible, false);
+        assert.equal(mesh.userData.solidProxy, true);
+        assert.equal(solidClass(solidLabel(mesh)), HARD);
+        const box = mesh.geometry.boundingBox!;
+        const read = await (mesh.geometry.userData.seatArrays as () => Promise<import("three").BufferGeometry>)();
+        const pos = read.getAttribute("position");
+        const own = buildingSolid(buildings[i]);
+        assert.equal(pos.count * 3, own.length);
+        for (let k = 0; k < own.length; k += 3) {
+            const [x, y, z] = [own[k], own[k + 1], own[k + 2]];
+            assert.ok(x >= box.min.x - 1e-3 && x <= box.max.x + 1e-3 && y >= box.min.y - 1e-3 && y <= box.max.y + 1e-3 && z >= box.min.z - 1e-3 && z <= box.max.z + 1e-3, `building ${i}: (${x}, ${y}, ${z}) outside its proxy's box`);
+        }
+        checked++;
+    }
+    assert.ok(checked > 50);
+});
+
+test("lane SEAT: the millpond's edge stones are proxied in their chunks; the seat audit's gull's spot is in one", async () => {
+    const {buildScenery} = await import("@/ark-scene/islands/town/render/scenery");
+    const {triangleProxy} = await import("@/ark-scene/islands/town/render/solid-proxies");
+    const {townChunkOf} = await import("@/ark-scene/islands/town/chunks");
+    const scenery = buildScenery();
+    const stones = scenery.stones!;
+    assert.ok(stones && stones.size >= 1);
+    // (The yellow-legged gull of the seat audit, town 11 h: resting 27 cm deep in a stone at the pond's edge, town frame.)
+    const gull = {x: -38.1, z: -73.47};
+    const geo = stones.get(townChunkOf(gull.x, gull.z));
+    assert.ok(geo && geo.triangles > 0, "the gull's chunk has its stones");
+    const mesh = triangleProxy(geo!.pos, "town:solid-proxy:stones:test");
+    assert.equal(mesh.userData.solidProxy, true);
+    // (Read as rock: anything stands on it, nothing is inside it.)
+    assert.equal(solidClass(solidLabel(mesh)), ROCK);
+    assert.equal(mesh.layers.test(new Camera().layers), false);
+    const scene = new Scene();
+    scene.add(mesh);
+    scene.updateMatrixWorld(true);
+    const solids = new DrawnSolids(scene);
+    solids.force = true;
+    solids.begin(0);
+    const hits: SolidHit[] = [];
+    assert.ok(solids.cast(gull.x, 3, gull.z, 0, -3, 0, ALL, hits), "a stone under the gull's spot");
+    const top = Math.max(...hits.map((h) => h.y));
+    assert.ok(top > 1.45 && top < 1.65, `its top ${top}`);
 });

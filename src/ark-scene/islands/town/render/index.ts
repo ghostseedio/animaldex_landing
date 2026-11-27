@@ -37,6 +37,7 @@ import {townGroundMaterial, townPavingMaterial} from "@/ark-scene/islands/town/r
 import {batchedVariant, disposeBatchedVariant, plainCopy, sidedCopy, TownBandParts, TownBatch, townBandOf, townBatchEnabled, type TownBatchPart} from "@/ark-scene/islands/town/render/batches";
 import {RockInstances, strataRock} from "@/ark-scene/islands/town/render/rock-instances";
 import {townWeather, TOWN_LIGHT} from "@/ark-scene/islands/town/render/materials";
+import {buildingProxy, triangleProxy} from "@/ark-scene/islands/town/render/solid-proxies";
 import {loadTownTextures} from "@/ark-scene/islands/town/render/textures";
 
 export type TownTier = "high" | "medium" | "low";
@@ -439,10 +440,22 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     /** Each chunk's lit windows: where its panes (or its glass) are in their batch's `aLit`, and its windows. */
     const litOf: Array<{attribute: BufferAttribute; offset: number; windows: WindowRecord[]} | null> = new Array(TOWN_CHUNK_COUNT).fill(null);
     const litLayer = new Map<number, {layer: "glass" | "panes"; windows: WindowRecord[]}>();
+    // Lane SEAT: each building's walls and roof for the seat pass (the solid batch lets its arrays go), in its chunk.
+    const buildingsOf = new Map<number, number[]>();
+    plan.buildings.forEach((b, i) => {
+        const key = townChunkOf(b.at.x, b.at.z);
+        const list = buildingsOf.get(key);
+        if (list) list.push(i);
+        else buildingsOf.set(key, [i]);
+    });
     for (let key = 0; key < TOWN_CHUNK_COUNT; key++) {
         const group = new Group();
         group.name = `town:chunk:${key}`;
         const meshes: Mesh[] = [];
+        for (const i of buildingsOf.get(key) ?? []) group.add(buildingProxy(plan.buildings[i], i));
+        // (And the millpond's edge stones in it, `render/scenery.ts`.)
+        const stones = scenery.stones?.get(key);
+        if (stones?.triangles) group.add(triangleProxy(stones.pos, `town:solid-proxy:stones:${key}`));
         let has = false;
         const tile = groundTile(grid, key);
         let minY = 0;
