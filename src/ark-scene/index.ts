@@ -12643,7 +12643,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             liveClutches.addLaid(layings);
         },
         // BROODS: the engine's brood read (decoded, `ark-broods.ts`); off or never given: the scene is today's.
-        setBroods,
+        // (Once the animals are in: a nest is its parent's own place, already worked out, never a placement of its own.)
+        setBroods: whenAnimals(setBroods),
         // BROODS: recruits (a `birth` with `recruit: true`): no birth is acted; they take over from their brood's stand-ins.
         noteRecruits: (list) => {
             for (const r of list) {

@@ -163,11 +163,14 @@ const round = (value: number) => Math.round(value * 10) / 10;
         // `?broods=<n>` (BROODS, docs/ark/broods.md 7): a development brood read of up to n broods made from this snapshot's
         // own wildlife (`fixtures/broods.ts`), handed to the scene as the record's read would be: the nests, the stand-ins
         // and the instanced young of a switched-on Ark are then in the measured heap and frames. Absent: no read (today's scene).
-        const broodCount = Number(params.get("broods"));
+        // (`<n>e`: the eggs only, no young: the nests and their parents without any stand-in in the roster, to tell the two costs apart.)
+        const broodCount = parseInt(params.get("broods") ?? "", 10);
         if (params.get("broods") !== null && broodCount > 0) {
             const [{rawBroodsFromSnapshot}, {decodeArkBroods}] = await Promise.all([import("@/ark-scene/fixtures/broods"), import("@/lib/ark-broods")]);
             const started = Date.parse(decoded.voyage.started_at ?? "") || Date.now() - 86_400_000 * 20;
-            const read = decodeArkBroods(rawBroodsFromSnapshot(decoded.animals, broodCount, Date.now() / 1000, ((Date.now() - started) * 365) / (14 * 86_400_000)));
+            const raw = rawBroodsFromSnapshot(decoded.animals, broodCount, Date.now() / 1000, ((Date.now() - started) * 365) / (14 * 86_400_000));
+            if ((params.get("broods") ?? "").endsWith("e")) raw.broods = raw.broods.filter((b) => b.stage === "egg");
+            const read = decodeArkBroods(raw);
             (handle as {setBroods?: (r: typeof read) => void}).setBroods?.(read);
             (window as unknown as {__arkMeasureBroods?: number}).__arkMeasureBroods = read.broods.length;
         }
