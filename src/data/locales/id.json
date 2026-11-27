@@ -5970,7 +5970,8 @@
       "trendSeparator": ", ",
       "arkEats": "Di Ark ia bisa memakan",
       "arkEatenBy": "Di Ark ia bisa dimangsa oleh",
-      "foodChain": "Lihat siapa memangsa siapa di Ark"
+      "foodChain": "Lihat siapa memangsa siapa di Ark",
+      "simulation": "Tentang simulasi hewan ini"
     }
   },
   "battleTier": {
