@@ -87,14 +87,16 @@ for (const name of scenes) {
         mkdirSync(dir, {recursive: true});
         const labels = [];
         const hashes = [];
+        const states = [];
         for (let i = 0; i < plan.length; i++) {
             // (The `on` run's own views are the others': the same camera before and after.)
-            const [note, shown] = await page.evaluate(async ([k, given]) => {
+            const [note, shown, state] = await page.evaluate(async ([k, given]) => {
                 const text = await window.__broods.shot(k, given);
                 document.getElementById("note").textContent = text.split("\n").slice(0, 3).join("\n");
-                return [text, window.__broods.lastView];
+                return [text, window.__broods.lastView, window.__broods.lastState];
             }, [i, mode === "on" ? null : views[name]?.[i] ?? null]);
             if (mode === "on") (views[name] ??= [])[i] = shown;
+            states.push(createHash("md5").update(state ?? "").digest("hex"));
             labels.push(`${String(i).padStart(2, "0")} ${note.replace(/\n/g, " | ")}`);
             const file = path.join(dir, `${String(i).padStart(2, "0")}.jpg`);
             // (The same frame without the note, hashed: `off` must be `none`'s picture.)
@@ -106,7 +108,7 @@ for (const name of scenes) {
         writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
         const cols = 4;
         execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(plan.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-${mode === "on" ? "after" : mode === "none" ? "before" : mode}-strip.jpg`)]);
-        summary[name][mode] = {errors: errors.slice(0, 10), shots: labels, hashes};
+        summary[name][mode] = {errors: errors.slice(0, 10), shots: labels, hashes, states};
         console.log(name, mode, "\n" + labels.join("\n"));
         if (errors.length) console.log(name, mode, "errors:", errors.slice(0, 5));
         await context.close();
@@ -114,14 +116,17 @@ for (const name of scenes) {
     const s = summary[name];
     if (s.off && s.none) {
         const same = s.off.hashes.filter((h, i) => h === s.none.hashes[i]).length;
+        const sameState = s.off.states.filter((h, i) => h === s.none.states[i]).length;
         s.offSameAsNone = `${same}/${s.off.hashes.length}`;
-        console.log(name, "off vs none: identical frames", s.offSameAsNone);
+        s.offStateSameAsNone = `${sameState}/${s.off.states.length}`;
+        console.log(name, "off vs none: identical frames", s.offSameAsNone, "identical scene state", s.offStateSameAsNone);
     }
     // (The control: the same scene with no read, loaded twice.)
     if (s.none2 && s.none) {
         const same = s.none2.hashes.filter((h, i) => h === s.none.hashes[i]).length;
+        const sameState = s.none2.states.filter((h, i) => h === s.none.states[i]).length;
         s.noneSameAsNone = `${same}/${s.none2.hashes.length}`;
-        console.log(name, "none vs none again (control): identical frames", s.noneSameAsNone);
+        console.log(name, "none vs none again (control): identical frames", s.noneSameAsNone, "identical scene state", `${sameState}/${s.none2.states.length}`);
     }
 }
 writeFileSync(path.join(out, "summary.json"), JSON.stringify(summary, null, 1));

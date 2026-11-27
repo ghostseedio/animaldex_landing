@@ -3559,7 +3559,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const standIns = snapshot === base ? [] : snapshot.animals.filter((animal) => !placedAll.has(animal.id));
         if (standIns.length) {
             places = new Map(placedAll);
-            placeAll(standIns, true).forEach((place, id) => places.set(id, place));
+            // (BROODS: a brood's stand-ins live at their parent's own place, already worked out: no placement of their own.)
+            const own = broods ? standIns.filter((animal) => !broodHome(animal.id, places)) : standIns;
+            if (own.length) placeAll(own, true).forEach((place, id) => places.set(id, place));
         }
         // Part B: the chunks the animals live in hold content (the haze is on only while such a chunk lies beyond).
         places.forEach((place) => streamer.markContent(place.x, place.z));
@@ -11213,6 +11215,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * says `on: true`; until then nothing here runs and the scene is today's.
      */
     let broodsRead: ArkBroodsRead | null = null;
+    /**
+     * A brood's nest or stand-in at its parent's own place (the record copies the parent's home slot onto the brood, and
+     * that place is already worked out, off the main thread where the page prebuilds): set into `into` under `id`, the
+     * young a little apart on open ground. False: no parent aboard still lives at the nest's slot (placed from the record).
+     */
+    const broodHome = (id: string, into: Map<string, Placement>): boolean => {
+        const home = broods?.layer.homeOf(id);
+        if (!home || !current) return false;
+        for (const parentId of home.parents) {
+            const parent = entryById.get(parentId)?.animal ?? current.animals.find((animal) => animal.id === parentId);
+            const place = parent && parent.zone === home.zone && parent.slot === home.slot && (parent.slot_rank ?? 0) === home.rank ? placedAll.get(parentId) : null;
+            if (!place) continue;
+            const open = !place.micro && !place.canopy && !place.perch && !place.burrow && !place.hamlet;
+            const k = home.index;
+            const off = open && k >= 0 ? 0.35 + 0.12 * k : 0;
+            into.set(id, {x: place.x + Math.cos(k * 2.4) * off, z: place.z + Math.sin(k * 2.4) * off, ground: place.ground, yaw: place.yaw, water: place.water, ...(place.sea ? {sea: true} : {}), ...(place.micro ? {micro: place.micro} : {}), ...(place.canopy ? {canopy: place.canopy} : {}), ...(place.perch ? {perch: place.perch} : {})});
+            return true;
+        }
+        return false;
+    };
     let broodsLoading = false;
     /** Who the other live layers hold this frame (the brood layer leaves them alone). */
     let broodsBusy: ReadonlySet<string> = new Set();
@@ -11243,7 +11265,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     plan: (slug) => library.get(slug)?.behaviour?.plan ?? null,
                     place: (animals) => {
                         const out = new Map<string, {x: number; z: number; y: number; top: number; yaw: number; water: boolean}>();
-                        placeAll(animals, true).forEach((place, id) => {
+                        // (The nest at its parent's own place where that still is the nest's slot; else placed from the record.)
+                        const placed = new Map<string, Placement>();
+                        const rest = animals.filter((animal) => !broodHome(animal.id, placed));
+                        if (rest.length) placeAll(rest, true).forEach((place, id) => placed.set(id, place));
+                        placed.forEach((place, id) => {
                             // (A small bird's home is its perch, a point of its own: `map/place.ts` MapPerch.)
                             const at = place.perch ? {x: place.perch.x, z: place.perch.z, y: place.perch.y} : {x: place.x, z: place.z, y: place.ground};
                             const top = waterTopAt(at.x, at.z);
@@ -11336,7 +11362,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (reducedMotion && broods?.layer.size) {
             // BROODS, reduced motion: drawn as the record has them (the eggs, the parent on them, the young), nothing acted.
             broods.draw.begin();
-            broods.layer.step(worldMs() / 1000, broods.draw, {x: controls.target.x, z: controls.target.z}, BROOD_REACH[tier] + Math.min(camera.position.distanceTo(controls.target), 200), true);
+            broods.layer.step(worldMs() / 1000, broods.draw, {x: camera.position.x, z: camera.position.z}, Math.max(BROOD_REACH[tier] - Math.max(camera.position.y - controls.target.y, 0) * 0.5, 0), true);
             broods.draw.end();
         }
         if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !duckDrops.size && !liveEscapes.size && !mouthCarry.size && !liveClutches.size && !broods?.layer.size) || reducedMotion) return; // 3.3 batch (B, C, D): + duckDrops, mouthCarry, liveEscapes; ARK-MATING-SHOWN: + liveClutches; BROODS
@@ -11359,7 +11385,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // attending parents, and the eggs and instanced young drawn round the point looked at.
             broodsBusy = pins.size ? new Set(pins) : pins;
             broods.draw.begin();
-            broods.layer.step(epoch, broods.draw, {x: controls.target.x, z: controls.target.z}, BROOD_REACH[tier] + Math.min(camera.position.distanceTo(controls.target), 200));
+            broods.layer.step(epoch, broods.draw, {x: camera.position.x, z: camera.position.z}, Math.max(BROOD_REACH[tier] - Math.max(camera.position.y - controls.target.y, 0) * 0.5, 0));
             broods.draw.end();
             for (const id of broods.layer.pins(epoch)) pins.add(id);
         }

@@ -170,6 +170,9 @@ type Live = {
     recruits: Array<{id: string; from: BroodBody | null; since: number | null; done: boolean}>;
     /** Where each stand-in was last drawn (for a hand-over). */
     last: Map<string, BroodBody>;
+    /** Worked out once: each egg's place in the clutch (x, y, z by threes), and each instanced member's two own numbers. */
+    spots?: {all: number; layout: string; at: Float32Array};
+    rand?: Float32Array;
     /** How many stand-ins it had when it ended with survivors (they wait for their recruits). */
     handing?: number;
 };
@@ -451,6 +454,18 @@ export class LiveBroods<E> {
     /** Whether a new animal is a brood's recruit (it takes over from a stand-in: no entrance of its own). */
     isRecruit(id: string): boolean {
         return this.recruitIds.has(id);
+    }
+
+    /**
+     * The parents whose home a brood's nest may be (the record copies the first parent's home slot onto the brood): the
+     * scene gives the nest and its stand-ins that parent's own place when its slot is still the nest's, with no placement
+     * of their own. For a stand-in's id or a `nest:<brood id>` key; null for any other.
+     */
+    homeOf(id: string): {parents: readonly string[]; zone: string; slot: number; rank: number; index: number} | null {
+        const nestKey = id.startsWith("nest:") ? id.slice(5) : null;
+        const brood = this.broods.get(nestKey ?? arkBroodOfMember(id) ?? "")?.brood;
+        if (!brood?.nest) return null;
+        return {parents: brood.parents, zone: brood.zone, slot: brood.nest.slot, rank: brood.nest.slot_rank, index: nestKey ? -1 : Number(id.slice(id.lastIndexOf(":") + 1)) || 0};
     }
 
     /** The parent a tap on a stand-in chooses (its carer, else its first parent), or null for any other id. */
@@ -903,13 +918,26 @@ export class LiveBroods<E> {
         const all = broodDrawn(of, of, look.cap);
         const n = Math.min(broodDrawn(Math.ceil(left), of, look.cap), all);
         if (look.egg === "sac") {
-            if (n > 0) sink.egg("sac", nest.x, y + size * 0.3, nest.z, size * 0.6, 0);
+            if (n > 0) sink.egg("sac", nest.x, y + size * 0.18, nest.z, size * 0.36, 0);
             return;
         }
         const seed = unit(brood.id);
+        if (!live.spots || live.spots.all !== all || live.spots.layout !== look.layout) {
+            const at = new Float32Array(all * 3);
+            for (let k = 0; k < all; k++) {
+                const p = eggSpot(look.layout, k, all, seed);
+                at[k * 3] = p.x;
+                at[k * 3 + 1] = p.y;
+                at[k * 3 + 2] = p.z;
+            }
+            live.spots = {all, layout: look.layout, at};
+        }
+        const spots = live.spots.at;
         const bead = look.egg === "spawn" ? size * (look.layout === "string" ? 0.07 : 0.085) : size * clamp(0.62 / Math.sqrt(Math.max(all, 1)), 0.1, 0.2);
         for (let k = 0; k < n; k++) {
-            const p = eggSpot(look.layout, k, all, seed);
+            const px = spots[k * 3];
+            const py = spots[k * 3 + 1];
+            const pz = spots[k * 3 + 2];
             // Coming one by one as she lays; rocking, then split and gone, as they hatch.
             let s = 1;
             let roll = 0;
@@ -922,7 +950,7 @@ export class LiveBroods<E> {
                 if (hatch >= HATCH_ROCK) s *= 1 - clamp((hatch - HATCH_ROCK) / (HATCH_GONE - HATCH_ROCK), 0, 1);
             }
             if (s <= 0.001) continue;
-            sink.egg(look.egg, nest.x + p.x * size, y + bead * 0.45 + p.y * size + (look.nest === "nest" ? size * 0.06 : 0), nest.z + p.z * size, bead * s, roll);
+            sink.egg(look.egg, nest.x + px * size, y + bead * 0.45 + py * size + (look.nest === "nest" ? size * 0.06 : 0), nest.z + pz * size, bead * s, roll);
         }
     }
 
@@ -933,17 +961,26 @@ export class LiveBroods<E> {
         const water = nest.water || WATER_PLAN.test(plan ?? "");
         const look = broodSpeck(plan, water);
         // (A member's drawn length: a newborn's share of the adult's, as the young's own scale has it, with a floor so it is seen.)
-        const length = Math.max(live.adult * (look === "tadpole" || look === "grub" ? 0.22 : 0.3), 0.025);
+        const length = Math.max(live.adult * (look === "tadpole" || look === "grub" ? 0.22 : 0.3), Math.min(0.025, live.adult * 0.45));
         const carerEntry = brood.carer && (brood.care === "follow" || brood.care === "carry" || brood.care === "guard") ? h.find(brood.carer) : null;
         const anchor = carerEntry ? h.body(carerEntry) : null;
         const pop = hatch < HATCH_GONE + 1 ? ease((hatch - HATCH_ROCK) / 1.2) : 1;
         if (pop <= 0) return;
         const seed = unit(brood.id);
+        if (!live.rand || live.rand.length < drawn * 2) {
+            const made = new Float32Array(Math.max(drawn, 16) * 2);
+            for (let k = 0; k < made.length / 2; k++) {
+                made[k * 2] = unit(`${brood.id}:${k}`);
+                made[k * 2 + 1] = unit(`${brood.id}:${k}:b`);
+            }
+            live.rand = made;
+        }
+        const rand = live.rand;
         for (let k = 0; k < drawn; k++) {
             // (The last one fades as a part-count goes.)
             const fade = k === drawn - 1 ? clamp(rest - (drawn - 1), 0.05, 1) : 1;
-            const a = unit(`${brood.id}:${k}`);
-            const b = unit(`${brood.id}:${k}:b`);
+            const a = rand[k * 2];
+            const b = rand[k * 2 + 1];
             let x: number;
             let z: number;
             let y: number;
