@@ -1,0 +1,10 @@
+import os from "node:os"; import path from "node:path"; import {existsSync, readdirSync} from "node:fs";
+const cache = path.join(os.homedir(), "Library", "Caches", "ms-playwright");
+const exe = readdirSync(cache).filter((e) => /^chromium-\d+$/.test(e)).sort().reverse().map((n) => path.join(cache, n, "chrome-mac-arm64", "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing")).find(existsSync);
+const {chromium} = await import("playwright-core");
+const b = await chromium.launch({executablePath: exe, headless: true, args: ["--headless=new", "--enable-gpu", "--ignore-gpu-blocklist", "--use-angle=metal"]});
+const p = await b.newPage();
+await p.goto("http://127.0.0.1:3390/ark/embed.html?fixture=1");
+const r = await p.evaluate(() => { const c = document.createElement("canvas"); const gl = c.getContext("webgl2"); const dbg = gl.getExtension("WEBGL_debug_renderer_info"); return {timer: !!gl.getExtension("EXT_disjoint_timer_query_webgl2"), renderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : null, exts: gl.getSupportedExtensions().length}; });
+console.log(JSON.stringify(r));
+await b.close();
