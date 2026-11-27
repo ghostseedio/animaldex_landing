@@ -5,7 +5,7 @@ import {test} from "node:test";
 import {ARK_BROODS_OFF, ARK_BROOD_ENGLISH, arkBroodCardLine, arkBroodLossStage, arkBroodMemberId, arkBroodOfMember, arkBroodsByParent, decodeArkBroods, type ArkBroodsRead} from "@/lib/ark-broods";
 import {rawBrood, rawBroodsRead, rawLoss, type RawBrood} from "@/ark-scene/fixtures/broods";
 import {BROOD_EGGS_DRAWN, BROOD_MODELS, BROOD_MODELS_MOST, LiveBroods, RAID_WALK, broodDrawn, broodEggLook, broodFlees, broodModels, broodSpeck, carerPose, eggSpot, raidPose, type BroodPlace, type BroodSink, type LiveBroodsHost} from "@/ark-scene/live-broods";
-import {broodItems, broodRecruitIds, broodRecruits, broodText, isBroodRow} from "@/ark-scene/live/brood-lines";
+import {broodItems, broodRecruitIds, broodRecruits, broodText, isBroodActedRow, isBroodRow} from "@/ark-scene/live/brood-lines";
 import {ARK_ACT_HOLD_SECONDS} from "@/lib/ark-act-hold";
 import type {ActPose} from "@/ark-scene/acts";
 import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
@@ -616,6 +616,35 @@ test("the log's brood lines: hatched, taken, held off, failed, recruited; census
     assert.equal(broodItems([rows[10], rows[11]], -Infinity, () => false, {words: null, text: TEXT, locale: "en", brood: () => null}).touched, false);
     assert.equal(broodText({key: "meal:x", line: "something"}), null);
     for (const item of items) assert.doesNotMatch(item.line ?? "", /@|brought|user/i, "species only");
+});
+
+test("7.2 as of BROODS 3feb455cf: a brood's mated and laid stay the pair's; an escape with a guard and no animal; a carer-lost recruit; a stage past the young says nothing", () => {
+    const rows = [
+        row(1, "mated", {animal: duck, parents: [A, B], brood: {id: ID}}),
+        // (The laying parent is now the row's `animal`, not an egg row: every reader takes its name, kind and parents.)
+        row(2, "laid", {animal: duck, parents: [A, B], brood: {id: ID}, clutch: {eggs: 9, hatch_ark_day: DAY + 20}}),
+        row(3, "escaped", {other: heron, brood: {id: ID, taken: 0, left: 9, stage: "egg", defended: true, guard: B}, prey: {species_profile_id: "sp-mallard", name: "Mallard", model_slug: "mallard"}}),
+        row(4, "meal", {animal: heron, other: null, brood: {id: ID, taken: 2, left: 7, stage: "young"}, prey: {species_profile_id: "sp-mallard", name: "Mallard", model_slug: "mallard"}}),
+        row(5, "brood_loss", {animal: duck, brood: {id: ID, cause: "parent_lost", count: 0, left: 7, of: 9, unguarded: true}}),
+        row(6, "birth", {animal: {...duck, id: "r-1"}, parents: [A, B], recruit: true, carerLost: true, brood: {id: ID, survivors: 1, of: 9}}),
+        row(7, "brood_stage", {animal: duck, brood: {id: ID, from: "young", count: 3, of: 9}})
+    ];
+    // Which the brood layer acts (the seen layers leave these alone): the take, the drive-off, the recruit. Not the mating or the laying.
+    assert.deepEqual(rows.map(isBroodActedRow), [false, false, true, true, false, true, false]);
+    const {items} = broodItems(rows, -Infinity, () => false, {words: null, text: TEXT, locale: "en", brood: () => null});
+    assert.deepEqual(items.map((item) => broodText(item)), [
+        "Mallard: the parent drove off a Grey Heron",
+        "Mallard: 2 young taken by a Grey Heron · 7 left",
+        "Mallard: 1 young now on their own"
+    ], "the mated and laid rows are the log's own lines; a brood that carries on unguarded was not lost; a stage change past the young (floaters, to come) says nothing yet");
+    // (A brood lost with its parent is still said so.)
+    const lost = broodItems([row(8, "brood_loss", {animal: duck, brood: {id: ID, cause: "parent_lost", count: 7, left: 0, of: 9}})], -Infinity, () => false, {words: null, text: TEXT, locale: "en", brood: () => null}).items;
+    assert.deepEqual(lost.map((item) => broodText(item)), ["Mallard: the brood was lost with its parent"]);
+    assert.equal(items[0].focus.animalId, B, "the drive-off's tap goes to the row's guard");
+    assert.deepEqual(broodRecruits(rows, -Infinity), [{brood: ID, young: ["r-1"], parents: [A, B]}], "a recruit whose carers were lost is handed over as any other");
+    // A live brood at a stage this client does not know is not drawn (and nothing throws); the others are.
+    const later = decodeArkBroods(rawBroodsRead(T0, DAY, [mallard({id: "b100d000-0000-4000-8000-0000000000f1", stage: "floater" as never}), mallard()]));
+    assert.deepEqual(later.broods.map((b) => b.id), [ID]);
 });
 
 test("every Ark locale has the broods' words, each with its placeholders", () => {

@@ -33,7 +33,7 @@ import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt
 import {crisisText, recordItems} from "@/ark-scene/live/crisis-lines"; // E4 (the crisis layer)
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
-import {broodItems, broodRecruitIds, broodRecruits, broodText, isBroodRow} from "@/ark-scene/live/brood-lines"; // BROODS
+import {broodItems, broodRecruitIds, broodRecruits, broodText, isBroodActedRow, isBroodRow} from "@/ark-scene/live/brood-lines"; // BROODS
 import {ARK_BROODS_OFF, decodeArkBroods, type ArkBroodsRead} from "@/lib/ark-broods";
 import {arkBroodsStore} from "@/lib/ark-broods-store";
 import {cacheEventItems, cacheEventText, signatureCues, signatureEventItems, signatureEventText} from "@/ark-scene/live/signature-events"; // SIG-EVENTS: saved signature moves
@@ -297,8 +297,8 @@ export class ArkLive {
      */
     private casting(raw: unknown): Promise<void> | null {
         const list: unknown[] = Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as {events?: unknown}).events) ? (raw as {events: unknown[]}).events : [];
-        // (BROODS: a brood's take, held-off raid and recruits are the brood layer's; its `laid` keeps the clutch's countdown.)
-        const rows = list.filter((row) => row && typeof row === "object" && SEEN_KINDS.has(String((row as {kind?: unknown}).kind)) && !(isBroodRow(row) && (row as {kind?: unknown}).kind !== "laid"));
+        // (BROODS: a brood's take, held-off raid and recruits are the brood layer's; its `mated` and `laid` stay the pair's.)
+        const rows = list.filter((row) => row && typeof row === "object" && SEEN_KINDS.has(String((row as {kind?: unknown}).kind)) && !isBroodActedRow(row));
         if (!rows.length || this.options.seen === false || !this.options.scene()?.setCast) return null;
         if (this.seen) {
             this.seen.note(rows, this.current);

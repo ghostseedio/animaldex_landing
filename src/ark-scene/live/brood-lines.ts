@@ -15,7 +15,7 @@ import {arkBroodWords, type ArkBroodWordKey, type ArkBroodWords} from "@/lib/ark
 import {fillArkWords} from "@/lib/ark-words";
 
 type Animal = {id?: unknown; name?: unknown; species_profile_id?: unknown; model_slug?: unknown; zone?: unknown};
-type BroodKey = {id?: unknown; taken?: unknown; left?: unknown; stage?: unknown; egg?: unknown; defended?: unknown; guard?: unknown; from?: unknown; cause?: unknown; count?: unknown; of?: unknown; survivors?: unknown};
+type BroodKey = {id?: unknown; taken?: unknown; left?: unknown; stage?: unknown; egg?: unknown; defended?: unknown; guard?: unknown; from?: unknown; cause?: unknown; count?: unknown; of?: unknown; survivors?: unknown; unguarded?: unknown};
 type Row = {id?: unknown; kind?: unknown; at?: unknown; animal?: Animal | null; other?: Animal | null; prey?: Animal | null; brood?: BroodKey | null; recruit?: unknown; parents?: unknown; payload?: {brood?: unknown; recruit?: unknown} | null};
 
 const rowsOf = (raw: unknown): Row[] => (Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as {events?: unknown}).events) ? (raw as {events: Row[]}).events : []);
@@ -32,6 +32,17 @@ const broodOf = (row: Row): (BroodKey & {id: string}) | null => {
 /** Whether a row is one of a brood's (the layers that act a meal, a birth or a laying leave those to the brood layer). */
 export function isBroodRow(row: unknown): boolean {
     return Boolean(row && typeof row === "object" && broodOf(row as Row));
+}
+
+/**
+ * Whether a row is one the brood layer acts in the brood's own place (a take, a raid held off, a recruit's hand-over),
+ * so the layers that act a meal, an escape or a birth leave it alone. A brood's `mated` and `laid` (docs/ark/broods.md
+ * 7.2: each carries `brood: {id}`, the laying parent as `animal`) are a pair's own, acted and said as they always were.
+ */
+export function isBroodActedRow(row: unknown): boolean {
+    if (!isBroodRow(row)) return false;
+    const r = row as Row;
+    return r.kind === "meal" || r.kind === "escaped" || (r.kind === "birth" && r.recruit === true);
 }
 
 /** The ids of the rows' recruit births (a `birth` with `recruit: true`): never said or acted as a birth. */
@@ -108,6 +119,9 @@ export function broodItems(raw: unknown, from: number, said: (key: string) => bo
             // (Its place in the queue and its dot are a return's: they live. As an escape's line.)
             say("revived", "logHeldOff", name, speciesOf(row.prey) || known?.species || "", {animalId: guard, speciesId: speciesOf(row.prey) || known?.species || null, zone: zoneOf(row.prey)}, {aPredator: arkWithArticle(hunter, ctx.text)});
         } else if (row.kind === "brood_stage") {
+            // (Born out of the carrying parent, or hatched from the eggs. A stage the contract may yet add, past the young
+            // (BROODS' floaters, coming): said by no line until its words are agreed.)
+            if (brood.from !== "carried" && brood.from !== "egg") continue;
             const name = named(row.animal) || known?.name || "";
             const count = n(brood.count);
             if (!name || count === null || count < 1) continue;
@@ -119,7 +133,9 @@ export function broodItems(raw: unknown, from: number, said: (key: string) => bo
             const focus = {animalId: typeof row.animal?.id === "string" ? row.animal.id : null, speciesId: speciesOf(row.animal) || known?.species || null, zone: zoneOf(row.animal)};
             const species = speciesOf(row.animal) || known?.species || "";
             if (cause === "unsettled") say("gone", "logUnsettled", name, species, focus, {count: num(n(brood.count) ?? 0)});
-            else if (cause === "parent_lost") say("gone", "logParentLost", name, species, focus, {});
+            // (`unguarded` with count 0, docs/ark/broods.md 7.2: its last carer is gone and the brood carries on. Nothing of
+            // it was lost, so no "lost with its parent" line; the words for "goes on without a parent" are a follow-up.)
+            else if (cause === "parent_lost" && brood.unguarded !== true && (n(brood.count) ?? 1) > 0) say("gone", "logParentLost", name, species, focus, {});
             else if (cause === "failed") say("gone", (brood.stage ?? known?.stage) === "egg" ? "logNestFailed" : "logFailed", name, species, focus, {});
         } else if (row.kind === "birth" && row.recruit === true) {
             // Recruits: one line a brood, its young counted.
