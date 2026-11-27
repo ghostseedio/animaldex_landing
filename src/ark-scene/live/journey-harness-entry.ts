@@ -17,6 +17,7 @@ import {decodeAtlas, sheetOf} from "@/ark-scene/positions/positions";
 import atlasJson from "@/ark-scene/positions/atlas.json";
 import type {ArkAnimal, ArkSceneHandle} from "@/ark-scene/types";
 import {arkIslandSnapshot, arkTwoIslands} from "@/lib/ark-islands";
+import {attachArkSeen} from "@/ark-scene/seen";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -33,6 +34,10 @@ async function main() {
     const clock = installRecordClock(window);
     const handle: ArkSceneHandle = mountArk(el, {snapshot: real, modelBase: MODELS, iconUrl, recording: true, ...(town ? {island: town, wildAnimals: arkIslandSnapshot(real, "wild").animals} : {})});
     const atlas = decodeAtlas(atlasJson);
+    // Daylight (the saved read's own hour may be night), and the seen layer: the card line comes from the record's row.
+    handle.setHours(11);
+    const seen = attachArkSeen({handle, aspect: () => el.clientWidth / Math.max(el.clientHeight, 1), host: el, epochMs: () => epoch * 1000});
+    seen.snapshot(real);
     let epoch = now / 1000;
     pinArkClock(epoch);
     clock.tick(0);
@@ -44,38 +49,30 @@ async function main() {
     const api = {
         ready: true,
         loading: () => handle.loading(),
-        pairs: (n: number) => {
-            const by = new Map<string, ArkAnimal[]>();
-            for (const a of wild()) {
-                const k = a.kind_species_profile_id || a.species_profile_id;
-                const l = by.get(k);
-                if (l) l.push(a);
-                else by.set(k, [a]);
-            }
-            const out: Pair[] = [];
-            for (const list of by.values()) {
-                if (list.length < 2) continue;
-                const sheet = sheetOf(atlas, list[0].model_slug, "wild");
-                if (!sheet || sheet.move === "sessile" || displayLength(list[0].model_slug, null) < 0.08) continue;
-                const way = sheet.flies ? "air" : sheet.aquatic && !sheet.amphibious ? "water" : "ground";
-                let best: Pair | null = null;
-                for (const a of list) for (const b of list) {
-                    if (a === b) continue;
-                    const pa = handle.locate(a.id), pb = handle.locate(b.id);
-                    if (!pa || !pb) continue;
-                    const d = Math.hypot(pa.x - pb.x, pa.z - pb.z);
-                    if (d >= 18 && d <= 300 && (!best || d > best.d)) best = {mover: a, partner: b, d, way};
+        /** One trip per way of moving: a real pair of one kind when the read has one far apart, else (marked) the nearest animal of the same way 40-200 m off as the far end. */
+        pairs: () => {
+            const located = wild().map((a) => ({a, at: handle.locate(a.id), sheet: sheetOf(atlas, a.model_slug, "wild")})).filter((x) => x.at && x.sheet && x.sheet.move !== "sessile");
+            const wayOf = (sh: NonNullable<ReturnType<typeof sheetOf>>): Pair["way"] => (sh.flies ? "air" : sh.aquatic && !sh.amphibious ? "water" : "ground");
+            chosen = [];
+            const info: Array<{name: string; way: string; d: number; sameKind: boolean}> = [];
+            for (const way of ["ground", "air", "water"] as const) {
+                const mine = located.filter((x) => wayOf(x.sheet!) === way).sort((x, y) => displayLength(y.a.model_slug, null) - displayLength(x.a.model_slug, null));
+                let best: (Pair & {same: boolean}) | null = null;
+                for (const x of mine) for (const y of mine) {
+                    if (x === y) continue;
+                    const d = Math.hypot(x.at!.x - y.at!.x, x.at!.z - y.at!.z);
+                    if (d < 40 || d > 200) continue;
+                    const same = x.a.species_profile_id === y.a.species_profile_id;
+                    const score = (same ? 1000 : 0) + displayLength(x.a.model_slug, null) * 10;
+                    const was = best ? (best.same ? 1000 : 0) + displayLength(best.mover.model_slug, null) * 10 : -1;
+                    if (score > was) best = {mover: x.a, partner: y.a, d, way, same};
                 }
-                if (best) out.push(best);
+                if (best) {
+                    chosen.push(best);
+                    info.push({name: best.mover.name, way, d: Math.round(best.d), sameKind: best.same});
+                }
             }
-            // (A flier and walkers first, the biggest bodies: what a picture shows.)
-            out.sort((x, y) => (x.way === "air" ? 0 : 1) - (y.way === "air" ? 0 : 1) || displayLength(y.mover.model_slug, null) - displayLength(x.mover.model_slug, null));
-            const air = out.filter((p) => p.way === "air").slice(0, 1), rest = out.filter((p) => p.way === "ground").slice(0, Math.max(n - 1, 1));
-            chosen = [...air, ...rest].slice(0, n);
-            const located = wild().filter((a) => handle.locate(a.id)).length;
-            const sheets = wild().filter((a) => sheetOf(atlas, a.model_slug, "wild")).length;
-            console.log(`[journey] wild ${wild().length} located ${located} sheets ${sheets} kinds ${by.size} candidates ${out.length}`);
-            return chosen.map((p) => ({name: p.mover.name, way: p.way, d: Math.round(p.d)}));
+            return info;
         },
         start: (i: number) => {
             current = chosen[i];
@@ -84,7 +81,15 @@ async function main() {
             const to = {x: a.x + (b.x - a.x) * k, z: a.z + (b.z - a.z) * k};
             handle.addJourneys?.([{key: `harness:${i}`, id: current.mover.id, from: {x: a.x, z: a.z}, to, distance: current.d, way: current.way, t0: epoch + 0.5}]);
             handle.follow(current.mover.id);
+            // The record's row, as the public log hands it to the seen layer (its card line).
+            seen.note([{id: 990000 + i, kind: "mate_found", at: new Date(epoch * 1000).toISOString(), animal: {id: current.mover.id, species_profile_id: current.mover.species_profile_id, name: current.mover.name}, other: {id: current.partner.id}, journey: {distance: Math.round(current.d), way: current.way}}], real);
             return {name: current.mover.name, partner: current.partner.name, d: Math.round(current.d), way: current.way};
+        },
+        /** The traveller selected, close: its card with the line. */
+        card: () => {
+            if (current) handle.select(current.mover.id, true);
+            for (let s = 0; s < 40; s++) clock.tick(50);
+            return canvas()?.toDataURL("image/jpeg", 0.9) ?? "";
         },
         frame: (seconds: number) => {
             const steps = Math.max(1, Math.round(seconds * 10));

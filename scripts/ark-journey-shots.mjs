@@ -4,7 +4,7 @@
  * over a saved read of the real Ark. Per pair, frames along the trip (the camera following the traveller), and a contact
  * sheet (`sheet.jpg`, needs ImageMagick's `montage`). The saved reads hold usernames: keep them out of the repository.
  *
- *   node scripts/ark-journey-shots.mjs --data <dir with voyage.json> --out <dir> [--pairs 3]
+ *   node scripts/ark-journey-shots.mjs --data <dir with voyage.json> --out <dir>
  */
 import {execFileSync} from "node:child_process";
 import {createServer} from "node:http";
@@ -51,31 +51,37 @@ try {
     browser = await chromium.launch({executablePath: path.join(cache, dir, "chrome-mac-arm64", "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing"), headless: true, args: flags});
 }
 const summary = [];
+const views = {desktop: {width: 1280, height: 800}, phone: {width: 390, height: 844}};
 try {
-    const page = await browser.newPage({viewport: {width: 720, height: 960}});
-    page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 300)));
-    page.on("console", (m) => m.text().startsWith("[journey]") && console.log(m.text()));
-    await page.goto(base, {waitUntil: "domcontentloaded", timeout: 180000});
-    await page.waitForFunction(() => window.__journey?.ready || window.__journeyError, null, {timeout: 600000, polling: 500});
-    const failed = await page.evaluate(() => window.__journeyError ?? null);
-    if (failed) throw new Error(failed);
-    for (let i = 0; i < 240 && (await page.evaluate(() => window.__journey.loading())); i++) await page.waitForTimeout(500);
-    const list = await page.evaluate((n) => window.__journey.pairs(n), pairs);
-    console.log("pairs", JSON.stringify(list));
-    for (let i = 0; i < list.length; i++) {
-        const info = await page.evaluate((k) => window.__journey.start(k), i);
-        const frames = [];
-        // (Settle, then along the trip; a frame every few seconds until the trip is surely over.)
-        await page.evaluate(() => window.__journey.frame(1.5));
-        for (let f = 0; f < 8; f++) {
-            for (let w = 0; w < 6 && (await page.evaluate(() => window.__journey.loading())); w++) await page.waitForTimeout(400);
-            const shot = await page.evaluate((s) => window.__journey.frame(s), f === 0 ? 0.1 : 11);
-            const file = path.join(out, `pair${i}-f${f}.jpg`);
-            writeFileSync(file, Buffer.from(shot.image.split(",")[1] ?? "", "base64"));
-            frames.push({file, at: shot.at && {x: +shot.at.x.toFixed(1), z: +shot.at.z.toFixed(1), act: shot.at.act ?? null}, partner: shot.partner && {x: +shot.partner.x.toFixed(1), z: +shot.partner.z.toFixed(1)}});
+    for (const [view, viewport] of Object.entries(views)) {
+        const page = await browser.newPage({viewport, deviceScaleFactor: view === "phone" ? 2 : 1});
+        page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 300)));
+        page.on("console", (m) => m.text().startsWith("[journey]") && console.log(m.text()));
+        await page.goto(base, {waitUntil: "domcontentloaded", timeout: 180000});
+        await page.waitForFunction(() => window.__journey?.ready || window.__journeyError, null, {timeout: 600000, polling: 500});
+        const failed = await page.evaluate(() => window.__journeyError ?? null);
+        if (failed) throw new Error(failed);
+        for (let i = 0; i < 240 && (await page.evaluate(() => window.__journey.loading())); i++) await page.waitForTimeout(500);
+        const list = await page.evaluate(() => window.__journey.pairs());
+        console.log(view, "pairs", JSON.stringify(list));
+        for (let i = 0; i < list.length; i++) {
+            const info = await page.evaluate((k) => window.__journey.start(k), i);
+            const frames = [];
+            await page.evaluate(() => window.__journey.frame(1.5));
+            for (let f = 0; f < 6; f++) {
+                for (let w = 0; w < 6 && (await page.evaluate(() => window.__journey.loading())); w++) await page.waitForTimeout(400);
+                const shot = await page.evaluate((s) => window.__journey.frame(s), f === 0 ? 0.1 : info.way === "air" ? 4 : 9);
+                const file = path.join(out, `${view}-${info.way}-f${f}.jpg`);
+                await page.screenshot({path: file, type: "jpeg", quality: 85});
+                frames.push({file, at: shot.at && {x: +shot.at.x.toFixed(1), y: +shot.at.y.toFixed(1), z: +shot.at.z.toFixed(1), act: shot.at.act ?? null}});
+            }
+            await page.evaluate(() => window.__journey.card());
+            const card = path.join(out, `${view}-${info.way}-card.jpg`);
+            await page.screenshot({path: card, type: "jpeg", quality: 90});
+            summary.push({view, ...info, frames, card});
+            console.log(JSON.stringify(summary[summary.length - 1]).slice(0, 900));
         }
-        summary.push({...info, frames});
-        console.log(JSON.stringify(summary[summary.length - 1]));
+        await page.close();
     }
 } finally {
     await browser.close();
@@ -83,7 +89,10 @@ try {
 }
 writeFileSync(path.join(out, "summary.json"), JSON.stringify(summary, null, 1));
 try {
-    execFileSync("montage", [...readdirSync(out).filter((f) => f.endsWith(".jpg") && f.startsWith("pair")).sort().map((f) => path.join(out, f)), "-tile", "8x", "-geometry", "270x360+4+4", path.join(out, "sheet.jpg")]);
+    for (const view of Object.keys(views)) {
+        const files = readdirSync(out).filter((f) => f.startsWith(`${view}-`) && f.endsWith(".jpg")).sort().map((f) => path.join(out, f));
+        if (files.length) execFileSync("montage", [...files, "-tile", "7x", "-geometry", view === "phone" ? "195x422+3+3" : "400x250+3+3", path.join(out, `sheet-${view}.jpg`)]);
+    }
 } catch (e) {
     console.log("no contact sheet:", String(e).slice(0, 120));
 }
