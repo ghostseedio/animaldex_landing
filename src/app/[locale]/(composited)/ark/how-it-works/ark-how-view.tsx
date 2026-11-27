@@ -25,10 +25,9 @@ const SECTIONS = ["captures", "islands", "condition", "food", "breeding", "seaso
  * is a survived attack, so with the switch off it is exactly what it was.
  */
 function sectionsFor(fair: boolean, hearts: boolean): readonly string[] {
-    const list: string[] = SECTIONS.slice(0, -1).flatMap((id) => (id === "seasons" && hearts ? [id, "hearts"] : [id]));
-    if (fair) list.push("fair");
-    list.push(SECTIONS[SECTIONS.length - 1]);
-    return list;
+    const after = SECTIONS.indexOf("seasons") + 1;
+    const base: readonly string[] = hearts ? [...SECTIONS.slice(0, after), "hearts", ...SECTIONS.slice(after)] : SECTIONS;
+    return fair ? [...base.slice(0, -1), "fair", base[base.length - 1]] : base;
 }
 
 /** The page, its pictures' captions in `lang` (one of the Ark's 45 languages: `lang/[lang]/page.tsx`) or the site's. */
