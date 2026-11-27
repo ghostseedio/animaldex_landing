@@ -4860,7 +4860,7 @@
     },
     "seo": {
       "metaTitle": "AnimalDex Ark: a live 3D world of real animals",
-      "metaDescription": "Every animal has a lesson. The AnimalDex Ark is a live, shared 3D world: each animal came aboard with a real catch and lives by its field guide.",
+      "metaDescription": "Every animal has a lesson. The AnimalDex Ark is a live 3D animal simulation: each animal came aboard with a real catch and lives by its field guide.",
       "metaFocusTitle": "The {animal} in the Ark",
       "metaFocusDescription": "See the {animal} in the Ark, a live, shared 3D animal world where each animal's life follows rules based on its field guide.",
       "aboutEyebrow": "About the Ark",
@@ -5813,7 +5813,8 @@
       "trendSeparator": ", ",
       "arkEats": "On the Ark it can eat",
       "arkEatenBy": "On the Ark it can be eaten by",
-      "foodChain": "See who eats whom in the Ark"
+      "foodChain": "See who eats whom in the Ark",
+      "simulation": "About this animal simulation"
     }
   },
   "battleTier": {
