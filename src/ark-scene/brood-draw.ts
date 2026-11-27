@@ -189,8 +189,14 @@ export class BroodDraw implements BroodSink {
         const matte = () => new MeshStandardMaterial({roughness: 0.9, metalness: 0});
         const egg = new SphereGeometry(0.5, 8, 6);
         egg.scale(0.8, 1, 0.8);
-        const ring = new TorusGeometry(0.5, 0.16, 5, 14);
-        ring.rotateX(Math.PI / 2);
+        const rim = new TorusGeometry(0.5, 0.16, 5, 14);
+        rim.rotateX(Math.PI / 2);
+        // (The cup's floor: a nest up a tree is seen from below and through, not only from above.)
+        const floor = new CylinderGeometry(0.4, 0.3, 0.08, 14, 1);
+        floor.translate(0, -0.1, 0);
+        const ring = mergeGeometries([rim, floor]);
+        rim.dispose();
+        floor.dispose();
         const bead = new SphereGeometry(0.5, 6, 4);
         const oval = new SphereGeometry(0.5, 7, 5);
         const grub = new SphereGeometry(0.5, 6, 4);
@@ -204,7 +210,8 @@ export class BroodDraw implements BroodSink {
             fry: new Pool(tailed(0.62, 0.42), matte(), caps.specks, false),
             tadpole: new Pool(tailed(0.45, 0.7), matte(), caps.specks, false),
             grub: new Pool(unitBox(grub), matte(), caps.specks, false),
-            scaly: new Pool(unitBox(new SphereGeometry(0.5, 6, 4)), matte(), caps.specks, false),
+            // (A hatchling reptile from above: a body and a long tapering tail, lying flat.)
+            scaly: new Pool(tailed(0.5, 0.62), matte(), caps.specks, false),
             nestBody: new Pool(nestlingBody(), new MeshStandardMaterial({roughness: 0.95, metalness: 0, vertexColors: true}), caps.nestlings, false),
             nestHead: new Pool(nestlingHead(), new MeshStandardMaterial({roughness: 0.7, metalness: 0, vertexColors: true}), caps.nestlings, false)
         };
@@ -265,7 +272,7 @@ export class BroodDraw implements BroodSink {
         if (k <= 0.01) return;
         const l = length * k;
         // (Its body's proportions by its shape: wide and tall as a share of its length.)
-        const wide = look === "four" ? 0.36 : look === "oval" ? 0.5 : look === "tadpole" ? 0.36 : look === "fry" ? 0.2 : look === "scaly" ? 0.2 : 0.34;
+        const wide = look === "four" ? 0.36 : look === "oval" ? 0.5 : look === "tadpole" ? 0.36 : look === "fry" ? 0.2 : look === "scaly" ? 0.24 : 0.34;
         const tall = look === "four" ? 0.62 : look === "oval" ? 0.58 : look === "tadpole" ? 0.3 : look === "fry" ? 0.26 : look === "scaly" ? 0.11 : 0.3;
         this.quaternion.setFromAxisAngle(this.up, yaw);
         this.matrix.compose(this.position.set(x, y, z), this.quaternion, this.scale.set(l * wide, l * tall, l));

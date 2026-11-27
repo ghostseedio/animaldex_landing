@@ -6,11 +6,12 @@
  * has its nest drawn where it would build, within reach of the parent's home:
  *
  *   1. the pair's own nest as the props already draw it in season (`props/homes.ts`): the brood's eggs go in it;
- *   2. else a site found the way the props find one (`props/nest-sites.ts` `nestSpots`: a branch 1.4 to 7 m up in the
- *      nearest tree for a cup, the highest leaf of a crown for a crow's or a heron's platform, a tree hollow or a bark
- *      point for a hole, the sampler's ledges, a house's eaves);
- *   3. else, for a kind that nests in a fork or at a twig tip, the nearest shrub, half way up its crown (a robin, a
- *      thrush or a finch builds in a shrub as readily as in a tree);
+ *   2. for a cup in a fork or at a twig's tip (a robin, a thrush, a finch): the nearest limb of a tree 1.4 to 7 m up
+ *      that holds it, on the limb's top and open to the sky (the attach lane's `open`: not buried in the wood by the
+ *      trunk or in the crown, where it would be drawn inside the tree), else the nearest shrub, in the top of its crown;
+ *   3. for any other raised kind, a site found the way the props find one (`props/nest-sites.ts` `nestSpots`: the
+ *      highest leaf of a crown for a crow's or a heron's platform, a tree hollow or a bark point for a hole, the
+ *      sampler's ledges, a house's eaves);
  *   4. else nothing: no nest of such a kind is drawn on the open ground.
  *
  * A kind that nests on the ground or the water keeps its home as its place (`live-broods.ts`). Loaded with the brood
@@ -21,6 +22,8 @@ import type {ArkBrood} from "@/lib/ark-broods";
 import type {ArkZone} from "@/ark-scene/types";
 import type {Placement} from "@/ark-scene/placement";
 import {worldDecor} from "@/ark-scene/decor";
+import {allAttachPoints} from "@/ark-scene/sampler";
+import {heightAt} from "@/ark-scene/world";
 import {nestProfile, nestRadius, type NestSite} from "@/ark-scene/props/nest-kinds";
 import {nestSites} from "@/ark-scene/props/nest-growth";
 import {nestSpots} from "@/ark-scene/props/nest-sites";
@@ -29,6 +32,8 @@ import {nestSpots} from "@/ark-scene/props/nest-sites";
 export const BROOD_NEST_REACH = 60;
 /** A decor shrub's height at scale 1 (m): `vegetation.ts` shrub(), blobs to about 1.1 m. */
 const SHRUB_HEIGHT = 1.1;
+/** How much of the sky a limb must see (the attach lane's `open`, 0..1) for a nest on it to be drawn in the open, not inside the tree. */
+const LIMB_OPEN = 0.75;
 
 const RAISED: ReadonlySet<NestSite> = new Set<NestSite>(["tree_fork", "tree_top", "branch_tip", "trunk_hole", "eaves", "barn", "cliff_ledge", "bank"]);
 const SHRUB_OK: ReadonlySet<NestSite> = new Set<NestSite>(["tree_fork", "branch_tip"]);
@@ -55,22 +60,34 @@ export function broodNestSite(brood: Pick<ArkBrood, "model_slug" | "name" | "zon
     const kind = brood.kind || brood.species_profile_id;
     const own = nestSites().find((site) => site.speciesId === kind && site.sitter !== null && brood.parents.includes(site.sitter) && within(site.position));
     if (own) return {x: own.position.x, y: own.position.y, z: own.position.z, props: true, hidden};
-    const sitter = brood.carer ?? brood.parents[0] ?? null;
     const radius = nestRadius(profile, Math.max(drawn, 0.05));
-    const spot = nestSpots({key: `${kind}|${zone}`, speciesId: kind, slug: brood.model_slug, name: brood.name, zone, profile, sitter, eggs: 0, chicks: 0, season: 1}, radius, placeOf, new Set())[0];
-    if (spot && within(spot)) return {x: spot.x, y: spot.y, z: spot.z, props: false, hidden};
     if (SHRUB_OK.has(profile.site)) {
+        // A limb that holds the cup, on its top, open to the sky, 1.4 to 7 m up; the nearest.
         let best: {x: number; y: number; z: number} | null = null;
         let near = BROOD_NEST_REACH;
+        for (const point of allAttachPoints()) {
+            if (point.tag !== "branch" || !((point.open ?? 0) >= LIMB_OPEN) || point.normal.y < 0.75 || point.size[1] < radius * 0.8) continue;
+            const d = Math.hypot(point.position.x - home.x, point.position.z - home.z);
+            if (d >= near) continue;
+            const up = point.position.y - heightAt(point.position.x, point.position.z);
+            if (up < 1.4 || up > 7) continue;
+            near = d;
+            best = {x: point.position.x, y: point.position.y - radius * 0.08, z: point.position.z};
+        }
+        if (best) return {...best, props: false, hidden: false};
+        // Else a shrub's crown, near its top (a shrub is drawn about 1.1 m tall at scale 1).
         for (const item of worldDecor()) {
             if (item.kind !== "shrub" || !(item.scale > 0.3)) continue;
             const d = Math.hypot(item.x - home.x, item.z - home.z);
             if (d < near) {
                 near = d;
-                best = {x: item.x, y: item.y + SHRUB_HEIGHT * item.scale * 0.5, z: item.z};
+                best = {x: item.x, y: item.y + SHRUB_HEIGHT * item.scale * 0.8, z: item.z};
             }
         }
-        if (best) return {...best, props: false, hidden: false};
+        return best ? {...best, props: false, hidden: false} : null;
     }
+    const sitter = brood.carer ?? brood.parents[0] ?? null;
+    const spot = nestSpots({key: `${kind}|${zone}`, speciesId: kind, slug: brood.model_slug, name: brood.name, zone, profile, sitter, eggs: 0, chicks: 0, season: 1}, radius, placeOf, new Set())[0];
+    if (spot && within(spot)) return {x: spot.x, y: spot.y, z: spot.z, props: false, hidden};
     return null;
 }

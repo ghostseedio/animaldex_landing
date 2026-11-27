@@ -67,8 +67,8 @@ const BROOD_ID = "b100d000-0000-4000-8000-000000000001";
 const SCENES: Record<string, Scene> = {
     // A songbird's nest: laid, sat on, raided by a crow (the parent gives way), hatched, a nestling lost with no cause, failed: the nest stands empty.
     broodnest: {
-        // (The nest is in a tree's fork, as a robin builds (`brood-sites.ts`): filmed from above, into the crotch.)
-        zone: "farm_garden", hours: 10, distance: 1.5, polar: 0.5,
+        // (The nest is up a tree on an open limb, as a robin builds (`brood-sites.ts`): filmed from a little above.)
+        zone: "farm_garden", hours: 10, distance: 1.5, polar: 0.75,
         cast: [{slug: "american-robin", name: "American Robin", n: 2, sexes: ["f", "m"]}, {slug: "american-crow", name: "American Crow", n: 1}],
         brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "American Robin", model_slug: "american-robin", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 4, start: 4, zone: "farm_garden", care: "nest", hold: "sit", laid_ark_day: day, stage_ark_day: day, next_ark_day: day + 13}),
         steps: [
@@ -79,8 +79,8 @@ const SCENES: Record<string, Scene> = {
         ],
         shots: [
             {s: 0.9, label: "laid: the eggs come one by one"}, {s: 8, label: "4 eggs; the parent settles on them"}, {s: 30, label: "THE NEST: in the tree, as a robin builds", distance: 7, polar: 1.0}, {s: 40, label: "sitting"},
-            {s: 141, label: "RAID: the crow on its way (+6 s)", distance: 5, polar: 0.8}, {s: 149.5, label: "SCALE: the crow at the nest beside the robin", distance: 2.4, polar: 0.7}, {s: 150.5, label: "RAID: at the nest, the parent gives way"}, {s: 151.6, label: "RAID: one egg gone"}, {s: 154, label: "RAID: 2 taken, 2 left"}, {s: 175, label: "the crow gone; back on 2 eggs"},
-            {s: 200.6, label: "HATCH: the eggs rock"}, {s: 203, label: "HATCH: the young out"}, {s: 222, label: "2 nestlings in the nest"}, {s: 224, label: "2 nestlings: heads and gapes over the rim", distance: 0.7, polar: 0.45}, {s: 230, label: "nestlings, closer", distance: 0.5, polar: 0.6},
+            {s: 141, label: "RAID: the crow on its way (+6 s)", distance: 5, polar: 0.8}, {s: 149.5, label: "SCALE: the crow at the nest beside the robin", distance: 2.4, polar: 0.95}, {s: 150.5, label: "RAID: at the nest, the parent gives way"}, {s: 151.6, label: "RAID: one egg gone"}, {s: 154, label: "RAID: 2 taken, 2 left"}, {s: 175, label: "the crow gone; back on 2 eggs"},
+            {s: 200.6, label: "HATCH: the eggs rock"}, {s: 203, label: "HATCH: the young out"}, {s: 222, label: "2 nestlings in the nest"}, {s: 224, label: "2 nestlings: heads and gapes over the rim", distance: 0.7, polar: 0.55}, {s: 230, label: "nestlings, closer", distance: 0.5, polar: 0.7},
             {s: 261.5, label: "DID NOT SURVIVE: one fades"}, {s: 268, label: "1 nestling left"},
             {s: 322, label: "FAILED: the last fades"}, {s: 340, label: "the nest stands empty"}, {s: 925, label: "…and fades (10 min on)"}, {s: 935, label: "gone"}
         ]

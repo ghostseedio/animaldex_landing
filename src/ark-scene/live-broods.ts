@@ -1245,7 +1245,10 @@ export class LiveBroods<E> {
         const water = !apartAt && (nest.water || WATER_PLAN.test(plan ?? ""));
         const look = broodSpeck(plan, nest.water || WATER_PLAN.test(plan ?? ""));
         // (A member's drawn length: a newborn's share of the adult's, as the young's own scale has it, with a floor so it is seen.)
-        const length = Math.max(live.adult * (look === "tadpole" || look === "grub" || look === "scaly" ? 0.22 : 0.3), Math.min(0.025, live.adult * 0.45));
+        // (Where its kind's young are drawn with models too, a speck is as long as they are drawn: one brood, one size.)
+        const standIn = live.models > 0 ? h.find(arkBroodMemberId(brood.id, 0)) : null;
+        const modelled = standIn ? h.body(standIn).length : 0;
+        const length = modelled > 0 ? modelled : Math.max(live.adult * (look === "tadpole" || look === "grub" || look === "scaly" ? 0.22 : 0.3), Math.min(0.025, live.adult * 0.45));
         const leader = !apartAt && (brood.care === "follow" || brood.care === "carry" || brood.care === "guard") ? this.attendant(live) : null;
         const carerEntry = leader ? h.find(leader) : null;
         const anchor = carerEntry ? h.body(carerEntry) : null;
