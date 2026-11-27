@@ -5,7 +5,7 @@ import TextPage, {TextSection} from "@/components/seo/text-page";
 import {arkFoodChainSpeciesList, readArkFoodChainAboard, readArkFoodChainFeatured} from "@/data/ark-food-chain";
 import {readPublicArk} from "@/data/ark-public";
 import {localeConfig} from "@/i18n";
-import {ARK_FOOD_CHAIN_PATH, ARK_PAGES_UPDATED, arkCountsLine, arkPageImage} from "@/lib/seo/ark-pages";
+import {ARK_FOOD_CHAIN_PATH, ARK_PAGES_UPDATED, ECOSYSTEM_SIMULATION_PATH, arkCountsLine, arkPageImage} from "@/lib/seo/ark-pages";
 import {buildPageMetadata} from "@/lib/seo/page-metadata";
 import {breadcrumbJsonLd, webPageJsonLd, type JsonLd} from "@/lib/seo/structured-data";
 import {getLocalePath} from "@/lib/site";
@@ -113,9 +113,12 @@ export default async function ArkFoodChainPage({params}: Props) {
             <TextSection id="how-links-are-made" title={word(page, "howTitle")}>
                 <p className="max-w-3xl text-base leading-7 text-ink-200 md:text-lg md:leading-8">{word(page, "howBody")}</p>
                 <p className="text-[13px] text-ink-400">{word(page, "note")}</p>
-                <p>
+                <p className="flex flex-wrap gap-x-6 gap-y-1">
                     <Link href="/ark/how-it-works#food" className="inline-flex min-h-11 items-center gap-2 font-bold text-primary-200 underline-offset-4 hover:underline">
                         {word(page, "howLink")} <span aria-hidden="true">→</span>
+                    </Link>
+                    <Link href={ECOSYSTEM_SIMULATION_PATH} className="inline-flex min-h-11 items-center gap-2 font-bold text-primary-200 underline-offset-4 hover:underline">
+                        {word(page, "simulationLink")} <span aria-hidden="true">→</span>
                     </Link>
                 </p>
             </TextSection>

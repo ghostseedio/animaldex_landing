@@ -5447,7 +5447,7 @@
   "pages": {
     "howItWorks": {
       "metaTitle": "Cara Kerja Ark: Rantai Makanan, Anak, dan Musim",
-      "metaDescription": "Bagaimana hewan naik ke Ark bersama AnimalDex saat orang menangkapnya, lalu makan, berkembang biak, menua, dan melewati musim dengan aturan dari panduan lapangannya.",
+      "metaDescription": "Cara kerja Ark, simulasi hewan langsung AnimalDex: tangkapan membawa hewan naik, lalu mereka makan, berbiak, menua, dan melewati musim menurut panduan lapangan.",
       "breadcrumb": "Cara kerja",
       "eyebrow": "Ark",
       "title": "Cara kerja Ark",
@@ -5563,7 +5563,8 @@
       "compactIntro": "Tautan makanan dari panduan lapangan setiap hewan, antara hewan-hewan yang ada di Ark saat ini. Ketuk salah satunya.",
       "compactMore": "Lihat seluruh rantai makanan",
       "chooseLabel": "Pilih seekor hewan",
-      "andMore": "dan {count} lainnya"
+      "andMore": "dan {count} lainnya",
+      "simulationLink": "Simulasi ekosistem"
     },
     "about": {
       "metaTitle": "Tentang AnimalDex: Dunia Riset Hewan yang Hidup",
@@ -5603,7 +5604,161 @@
       "linkArk": "Buka Ark",
       "linkHow": "Cara kerja Ark",
       "linkFood": "Siapa memangsa siapa",
-      "linkTalk": "Bicara dengan hewan"
+      "linkTalk": "Bicara dengan hewan",
+      "linkSimulation": "Simulasi hewan"
+    },
+    "animalSimulation": {
+      "metaTitle": "Simulasi Hewan: Tonton Hewan Nyata Hidup dalam 3D",
+      "metaDescription": "Simulasi hewan gratis di peramban: hewan nyata makan, berburu, berbiak, dan menua di satu dunia 3D yang hidup. Tanpa unduhan. Bawa hewanmu dengan satu foto.",
+      "breadcrumb": "Simulasi hewan",
+      "eyebrow": "Simulasi hewan",
+      "title": "Simulasi hewan yang hidup, dengan spesies nyata",
+      "intro": "Ark milik AnimalDex adalah simulasi hewan yang tidak pernah berhenti. Spesies nyata berbagi satu dunia 3D: mereka makan, berburu, membesarkan anak, tidur, dan menua dengan aturan dari panduan lapangan setiap hewan. Buka di peramban dan tonton, gratis, tanpa mengunduh apa pun.",
+      "live": "Saat ini {animals} dari {species} hidup di simulasi ini.",
+      "unavailable": "Angka langsung simulasi tidak dapat dibaca saat ini.",
+      "statsTitle": "Simulasinya saat ini",
+      "statAnimals": "hewan hidup",
+      "statSpecies": "spesies",
+      "statPeople": "orang yang membawanya",
+      "dayTitle": "Dalam 24 jam terakhir",
+      "statBorn": "lahir",
+      "statArrived": "naik ke Ark",
+      "statMeals": "buruan dimakan",
+      "statDied": "mati",
+      "heroCaption": "Dua pulau Ark, digambar dari dunia yang sedang berjalan. Tidak ada yang diatur.",
+      "openArk": "Buka simulasi langsung",
+      "howLink": "Cara kerja Ark",
+      "foodLink": "Siapa memangsa siapa",
+      "survivalLink": "Siapa yang bertahan",
+      "breedersLink": "Yang paling cepat berbiak",
+      "linksTitle": "Lihat sendiri",
+      "linksBody": "Buka Ark di peramban, atau tangkap seekor hewan di aplikasi untuk membawa satu dari jenisnya naik ke Ark.",
+      "otherLink": "Simulasi ekosistem",
+      "topTitle": "Yang paling banyak di Ark saat ini",
+      "sections": {
+        "what": {
+          "title": "Simulator hewan tanpa pemain yang menjadi hewan",
+          "p1": "Kebanyakan game simulator hewan menaruhmu di dalam satu hewan: kamu serigalanya, dan dunianya hanya latar. Ark bekerja sebaliknya. Tidak ada yang memainkan hewan. Setiap hewan di Ark menjalani hidupnya sendiri, dan yang kamu tonton adalah apa yang terjadi: siapa yang menemukan makanan, pasangan mana yang membesarkan anak, pemburu mana yang kelaparan.",
+          "p2": "Ini satu dunia, sama untuk semua orang, dan tetap berjalan saat kamu menutup tab. Satu tahun Ark berlalu setiap 14 hari nyata, jadi kunjungan minggu depan menunjukkan dunia yang berbeda dari hari ini."
+        },
+        "runs": {
+          "title": "Apa yang dijalankan simulasi ini",
+          "foodTitle": "Makanan dan perburuan",
+          "foodBody": "Mangsa seekor pemangsa berasal dari panduan lapangannya: spesies dan kelompok yang disebut dalam makanannya. Pemburu yang lapar mencari mangsa di wilayahnya sendiri dan mengambil yang paling lemah lebih dulu. Perburuan bisa gagal, dan pemburu yang terlalu lama kelaparan akan mati kelaparan.",
+          "breedingTitle": "Berbiak dan anak",
+          "breedingBody": "Dua hewan dewasa dari satu spesies yang tinggal di tempat yang sama membesarkan anak saat ada makanan. Berapa banyak anaknya, dan berapa lama sampai lahir atau menetas, berasal dari panduan lapangan.",
+          "lifeTitle": "Umur",
+          "lifeBody": "Hewan tumbuh, menua, dan mati karena usia tua menurut jam Ark: spesies yang hidup dua tahun di alam liar hidup sekitar empat minggu nyata di Ark. Saat hewan terakhir dari suatu spesies mati, spesies itu hilang sampai seseorang membawa yang lain.",
+          "seasonsTitle": "Musim, siang, dan malam",
+          "seasonsBody": "Spesies yang punya musim kawin hanya berbiak pada musim itu. Hewan nokturnal keluar pada malam hari, hewan diurnal pada siang hari, dan hewan krepuskular saat fajar dan senja.",
+          "islandsTitle": "Dua pulau",
+          "islandsBody": "Pulau liar membentang dari laut lepas dan terumbu karang hingga hutan hujan, padang rumput, gurun, pegunungan, dan es kutub. Pulau kota punya rumah, peternakan, dan kebun binatang, tempat hewan peliharaan, ternak, dan hewan kebun binatang diberi makan oleh perawatnya dan tidak pernah diburu."
+        },
+        "real": {
+          "title": "Hewan nyata, dibawa oleh foto nyata",
+          "p1": "Tidak ada hewan karangan di simulasi ini. Seekor hewan naik ke Ark hanya saat seseorang memotret hewan sungguhan dengan aplikasi AnimalDex dan tangkapan itu mengenali spesiesnya. Setiap orang bisa punya hingga sepasang hewan hidup dari tiap spesies di Ark.",
+          "p2": "Jadi campurannya adalah apa yang ditemui orang, bukan campuran alam: ada jauh lebih banyak kucing dan anjing di Ark daripada macan tutul salju."
+        },
+        "watch": {
+          "title": "Apa yang bisa kamu lakukan di dalamnya",
+          "p1": "Lihat kedua pulau dalam 3D. Ketuk seekor hewan untuk mengenalnya, mengikutinya, atau membaca kisah hidupnya: dari mana ia datang, di mana ia tinggal, anak yang dibesarkannya, dan bagaimana hidupnya berjalan.",
+          "p2": "Untuk ikut serta, tangkap seekor hewan dengan aplikasi. Satu dari jenisnya naik ke Ark, dan ia juga menjadi teman AI yang bisa kamu ajak bicara."
+        },
+        "honest": {
+          "title": "Simulasi, bukan model ilmiah",
+          "p1": "Aturannya disederhanakan agar satu dunia bersama bisa berjalan untuk semua orang. Angka Ark menunjukkan bagaimana aturan itu berjalan di Ark, bukan berapa banyak suatu hewan hidup di alam liar.",
+          "p2": "Semua yang menentukan hidup dan mati berjalan di server AnimalDex, sama untuk semua orang. Tidak ada yang menaruh hewan, memilih siapa memangsa siapa, atau menentukan siapa yang hidup."
+        }
+      },
+      "faqTitle": "Pertanyaan tentang simulasi hewan",
+      "faq": {
+        "q1": "Apakah simulasi hewan ini gratis?",
+        "a1": "Ya. Ark gratis dibuka di web, dan aplikasi AnimalDex gratis diunduh di iPhone dan Android.",
+        "q2": "Bisakah dipakai online tanpa mengunduh apa pun?",
+        "a2": "Bisa. Ark berjalan di peramban web, di ponsel atau komputer. Aplikasi hanya diperlukan untuk membawa hewan naik ke Ark.",
+        "q3": "Apakah ini game simulator hewan tempat saya bermain sebagai hewan?",
+        "a3": "Bukan. Kamu tidak mengendalikan hewan dan tidak ada yang harus dimenangkan. Setiap hewan menjalani hidupnya sendiri menurut aturan spesiesnya, dan kamu menonton, mengikuti, dan belajar dari apa yang terjadi.",
+        "q4": "Hewan apa saja yang ada di simulasi ini?",
+        "a4": "Spesies apa pun yang sudah difoto orang dengan AnimalDex dan punya model 3D: hewan peliharaan, ternak, hewan kebun binatang, dan spesies liar di darat, di udara, dan di laut. Halaman Ark mencantumkan semua yang ada di sana.",
+        "q5": "Seberapa realistis simulasinya?",
+        "a5": "Makanan, jumlah anak, umur, musim kawin, dan waktu aktif berasal dari panduan lapangan setiap spesies, dan perkiraan diberi label. Aturannya disederhanakan, jadi ini bukan model ilmiah.",
+        "q6": "Bagaimana cara menambahkan hewan saya sendiri?",
+        "a6": "Potret hewan sungguhan dengan aplikasi AnimalDex. Saat tangkapan itu mengenali spesiesnya, satu dari jenisnya naik ke Ark, hingga sepasang untuk tiap orang."
+      }
+    },
+    "ecosystemSimulation": {
+      "metaTitle": "Simulasi Ekosistem: Spesies Nyata, Jaring Makanan",
+      "metaDescription": "Tonton simulasi ekosistem langsung di peramban: pemangsa nyata memburu mangsa nyata, populasi naik turun, dan tiap tautan makanan berasal dari panduan lapangan.",
+      "breadcrumb": "Simulasi ekosistem",
+      "eyebrow": "Simulasi ekosistem",
+      "title": "Simulasi ekosistem yang hidup, dengan spesies nyata",
+      "intro": "Kebanyakan simulator ekosistem dimulai dengan makhluk karangan dan sederet penggeser. Simulasi ekosistem ini berjalan dengan spesies nyata. Di Ark milik AnimalDex, pemangsa memburu mangsa yang disebut panduan lapangannya, hewan berbiak saat ada makanan, dan populasi naik turun. Ini satu simulasi bersama yang bisa dibuka siapa pun di peramban.",
+      "live": "Saat ini {animals} dari {species} hidup di dalamnya.",
+      "unavailable": "Angka langsung simulasi tidak dapat dibaca saat ini.",
+      "statsTitle": "Ekosistemnya saat ini",
+      "statAnimals": "hewan hidup",
+      "statSpecies": "spesies",
+      "statPeople": "orang yang membawanya",
+      "dayTitle": "Dalam 24 jam terakhir",
+      "statBorn": "lahir",
+      "statArrived": "naik ke Ark",
+      "statMeals": "buruan dimakan",
+      "statDied": "mati",
+      "heroCaption": "Dua pulau Ark, digambar dari dunia yang sedang berjalan. Tidak ada yang diatur.",
+      "openArk": "Buka simulasi langsung",
+      "howLink": "Cara kerja Ark",
+      "foodLink": "Siapa memangsa siapa",
+      "survivalLink": "Siapa yang bertahan",
+      "breedersLink": "Yang paling cepat berbiak",
+      "linksTitle": "Lihat sendiri",
+      "linksBody": "Buka Ark di peramban, atau tangkap seekor hewan di aplikasi untuk membawa satu dari jenisnya naik ke Ark.",
+      "otherLink": "Simulasi hewan",
+      "sections": {
+        "food": {
+          "title": "Jaring makanan dari panduan lapangan",
+          "p1": "Siapa memangsa siapa berasal dari panduan lapangan setiap pemangsa. Makanannya menyebut spesies tertentu, atau kelompok seperti burung, ikan, atau serangga. Spesies yang disebut menjadi tautan makanan. Sebuah kelompok menjangkau setiap spesies dari kelompok itu di Ark, dengan tiga pemeriksaan: hewan tidak pernah memakan spesies atau genusnya sendiri, mangsa dari sebuah kelompok tidak boleh lebih besar dari pemangsanya, dan keduanya harus berbagi alam yang sama: laut, air tawar, darat, atau udara.",
+          "p2": "Setiap tautan menyimpan kata-kata persis dari panduan lapangan asalnya, jadi kamu bisa melihat mengapa tautan itu ada."
+        },
+        "predators": {
+          "title": "Pemangsa dan mangsa",
+          "p1": "Pemangsa hanya berburu di pulaunya sendiri dan di wilayahnya sendiri. Seberapa sering ia perlu makan bergantung pada massa tubuhnya, dan pemburu berdarah dingin bertahan lebih lama di antara waktu makan daripada yang berdarah panas. Yang lapar mengambil mangsa paling lemah lebih dulu, perburuan bisa gagal, dan pemburu yang terlalu lama kelaparan akan mati kelaparan.",
+          "p2": "Hewan peliharaan, ternak, dan hewan kebun binatang diberi makan oleh perawatnya: mereka tidak berburu dan tidak pernah diburu."
+        },
+        "populations": {
+          "title": "Populasi yang naik turun",
+          "p1": "Dua hewan dewasa dari satu spesies di tempat yang sama membesarkan anak saat ada makanan. Setiap spesies punya batas yang ditentukan oleh ukurannya, jadi hewan kecil bisa menjadi lebih banyak daripada hewan besar, dan perkembangbiakan berhenti pada batas itu.",
+          "p2": "Usia tua, kelaparan, dan pemburu mengambil hewan. Saat hewan terakhir dari suatu spesies mati, spesies itu hilang dari Ark sampai seseorang menangkap yang lain."
+        },
+        "background": {
+          "title": "Tumbuhan dan makanan latar lainnya",
+          "p1": "Tumbuhan, biji, buah, nektar, serangga, cacing, dan makanan kecil lain di setiap wilayah adalah makanan latar. Makanan ini memberi makan hewan tanpa dihitung di Ark. Pemburu yang tidak punya apa pun untuk dimakan dan tidak punya makanan latar akan kelaparan."
+        },
+        "controls": {
+          "title": "Sengaja tanpa penggeser",
+          "p1": "Kamu tidak bisa mengatur berapa banyak serigalanya, mempercepat waktu, atau mengulang simulasi. Satu-satunya cara mengubah ekosistem ini adalah cara seekor hewan masuk ke dalamnya: seseorang memotret hewan sungguhan, dan satu dari jenisnya naik ke Ark. Setelah itu, aturan yang menjalankannya.",
+          "p2": "Peluang harian Ark diundi dengan angka rahasia yang dibuat untuk setiap tahun Ark. Sidik jarinya diterbitkan saat tahun dimulai dan angkanya dibuka saat tahun berakhir, jadi siapa pun bisa memeriksa bahwa tidak ada yang ditukar."
+        },
+        "honest": {
+          "title": "Bukan model ilmiah",
+          "p1": "Aturannya disederhanakan agar satu dunia bersama bisa berjalan untuk semua orang. Angkanya menunjukkan bagaimana aturan itu berjalan di Ark, bukan berapa banyak suatu hewan hidup di alam liar, dan siapa yang ada di Ark adalah apa pun yang difoto orang, jadi campurannya bukan campuran alam.",
+          "p2": "Untuk model pemangsa dan mangsa di kelas yang punya pengatur, pakailah alat pemodelan yang dibuat untuk itu. Ark adalah tempat menonton apa yang dilakukan aturan spesies nyata saat mereka berbagi satu dunia."
+        }
+      },
+      "faqTitle": "Pertanyaan tentang simulasi ekosistem",
+      "faq": {
+        "q1": "Bisakah simulasi ekosistem ini dijalankan online?",
+        "a1": "Bisa. Simulasi ini berjalan di peramban web, di ponsel atau komputer, gratis dan tanpa mengunduh apa pun. Hanya ada satu simulasi, dipakai bersama semua orang, dan sudah berjalan.",
+        "q2": "Bisakah saya mengubah populasi atau menambahkan spesies sendiri?",
+        "a2": "Tidak dengan penggeser. Sebuah spesies bergabung saat seseorang memotret hewan sungguhan dengan aplikasi AnimalDex. Sejak itu aturan yang menjalankan hidupnya.",
+        "q3": "Dari mana rantai makanannya berasal?",
+        "a3": "Dari panduan lapangan setiap pemangsa di AnimalDex. Setiap tautan makanan menampilkan kata-kata panduan asalnya.",
+        "q4": "Apakah tumbuhan dan serangga ikut disimulasikan?",
+        "a4": "Tumbuhan, biji, buah, nektar, serangga, cacing, dan makanan kecil lain adalah makanan latar di setiap wilayah: memberi makan hewan tanpa dihitung di Ark.",
+        "q5": "Apakah ini akurat secara ilmiah?",
+        "a5": "Tidak. Simulasi ini dibangun dari panduan lapangan dengan aturan yang disederhanakan, dan mengatakannya dengan jujur. Angkanya menggambarkan Ark, bukan alam liar.",
+        "q6": "Seberapa cepat waktu berlalu?",
+        "a6": "Satu tahun Ark berlalu setiap 14 hari nyata, jadi hewan yang hidup dua tahun di alam liar hidup sekitar empat minggu nyata di Ark."
+      }
     }
   },
   "species": {

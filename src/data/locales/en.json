@@ -5462,7 +5462,7 @@
   "pages": {
     "howItWorks": {
       "metaTitle": "How the Ark Works: Food Chains, Breeding, Seasons",
-      "metaDescription": "How animals come aboard AnimalDex's shared Ark when people capture them, then eat, breed, age and live through seasons by rules from their field guides.",
+      "metaDescription": "How the Ark, AnimalDex's live animal simulation, works: captures bring animals aboard, then they eat, breed, age and live through seasons by field-guide rules.",
       "breadcrumb": "How it works",
       "eyebrow": "The Ark",
       "title": "How the Ark works",
@@ -5578,7 +5578,8 @@
       "compactIntro": "Food links from each animal's field guide, between the animals aboard right now. Tap one.",
       "compactMore": "See the whole food chain",
       "chooseLabel": "Choose an animal",
-      "andMore": "and {count} more"
+      "andMore": "and {count} more",
+      "simulationLink": "The ecosystem simulation"
     },
     "about": {
       "metaTitle": "About AnimalDex: A Living Research World of Animals",
@@ -5618,7 +5619,161 @@
       "linkArk": "Open the Ark",
       "linkHow": "How the Ark works",
       "linkFood": "Who eats whom",
-      "linkTalk": "Talk to an animal"
+      "linkTalk": "Talk to an animal",
+      "linkSimulation": "The animal simulation"
+    },
+    "animalSimulation": {
+      "metaTitle": "Animal Simulation: Watch Real Animals Live in 3D",
+      "metaDescription": "A free animal simulation in your browser: real animals eat, hunt, breed and grow old in one live 3D world. No download. Bring your own with a photo.",
+      "breadcrumb": "Animal simulation",
+      "eyebrow": "Animal simulation",
+      "title": "A live animal simulation of real species",
+      "intro": "The AnimalDex Ark is an animal simulation that never stops. Real species share one 3D world, where they eat, hunt, raise young, sleep and grow old by rules drawn from each animal's field guide. Open it in a browser and watch, free, with nothing to download.",
+      "live": "Right now {animals} of {species} live in the simulation.",
+      "unavailable": "The simulation's live numbers can't be read right now.",
+      "statsTitle": "The simulation right now",
+      "statAnimals": "animals alive",
+      "statSpecies": "species",
+      "statPeople": "people who brought them",
+      "dayTitle": "In the last 24 hours",
+      "statBorn": "born",
+      "statArrived": "came aboard",
+      "statMeals": "meals hunted",
+      "statDied": "died",
+      "heroCaption": "The Ark's two islands, rendered from the live world. Nothing is staged.",
+      "openArk": "Open the live simulation",
+      "howLink": "How the Ark works",
+      "foodLink": "Who eats whom",
+      "survivalLink": "Who survives",
+      "breedersLink": "Fastest breeders",
+      "linksTitle": "See it for yourself",
+      "linksBody": "Open the Ark in your browser, or capture an animal in the app to bring one of its kind aboard.",
+      "otherLink": "The ecosystem simulation",
+      "topTitle": "Most numerous aboard right now",
+      "sections": {
+        "what": {
+          "title": "An animal simulator where nobody plays the animal",
+          "p1": "Most animal simulator games put you inside one animal: you are the wolf, and the world is scenery. The Ark works the other way round. Nobody plays an animal. Every animal aboard runs its own life, and what you watch is what happened: who found food, which pair raised young, which hunter went hungry.",
+          "p2": "It is one world, the same for everyone, and it keeps running when you close the tab. One Ark year passes every 14 real days, so a visit next week shows a different world from today's."
+        },
+        "runs": {
+          "title": "What the simulation runs",
+          "foodTitle": "Food and hunting",
+          "foodBody": "A predator's prey comes from its field guide: the species and the groups its diet names. A hungry hunter looks for prey in its own region and takes the weakest first. A hunt can fail, and a hunter that stays hungry too long starves.",
+          "breedingTitle": "Breeding and young",
+          "breedingBody": "Two adults of a species living in the same place raise young when there is food. How many young, and how long they take to be born or to hatch, come from the field guide.",
+          "lifeTitle": "Lifespans",
+          "lifeBody": "Animals grow up, grow old and die of old age on the Ark's clock: a species that lives two years in the wild lives about four real weeks aboard. When the last of a species dies, it is gone until someone brings another.",
+          "seasonsTitle": "Seasons, day and night",
+          "seasonsBody": "A species with a breeding season breeds only then. Nocturnal animals are out at night, diurnal ones by day, and crepuscular ones at dawn and dusk.",
+          "islandsTitle": "Two islands",
+          "islandsBody": "The wild island runs from open ocean and coral reef to rainforest, grassland, desert, mountains and polar ice. The town island has houses, farms and a zoo, where pets, livestock and zoo animals are fed by their keepers and are never hunted."
+        },
+        "real": {
+          "title": "Real animals, brought by real photos",
+          "p1": "No animal in the simulation is made up. One comes aboard only when someone photographs a real animal with the AnimalDex app and the capture identifies its species. Each person can keep up to a pair of each species alive aboard.",
+          "p2": "So the mix is what people meet, not what nature holds: there are far more cats and dogs aboard than snow leopards."
+        },
+        "watch": {
+          "title": "What you can do in it",
+          "p1": "Look around both islands in 3D. Tap an animal to meet it, follow it, or read its life story: where it came from, where it lives, the young it raised and how its life went.",
+          "p2": "To take part, capture an animal with the app. One of its kind comes aboard, and it also becomes an AI companion you can talk to."
+        },
+        "honest": {
+          "title": "A simulation, not a scientific model",
+          "p1": "The rules are simplified so that one shared world can run for everyone. The Ark's numbers show how those rules play out aboard, not how many of any animal live in the wild.",
+          "p2": "Everything that decides life and death runs on AnimalDex's servers, the same for everyone. Nobody places an animal, picks who eats whom, or decides who lives."
+        }
+      },
+      "faqTitle": "Questions about the animal simulation",
+      "faq": {
+        "q1": "Is the animal simulation free?",
+        "a1": "Yes. The Ark is free to open on the web, and the AnimalDex app is free to download on iPhone and Android.",
+        "q2": "Can I use it online without downloading anything?",
+        "a2": "Yes. The Ark runs in a web browser, on a phone or a computer. You only need the app to bring an animal aboard.",
+        "q3": "Is it an animal simulator game where I play as an animal?",
+        "a3": "No. You don't control an animal and there is nothing to win. Every animal runs its own life by its species' rules, and you watch, follow and learn from what happens.",
+        "q4": "Which animals are in the simulation?",
+        "a4": "Whichever species people have photographed with AnimalDex and that have a 3D model: pets, farm animals, zoo animals and wild species on land, in the air and in the sea. The Ark's page lists everyone aboard.",
+        "q5": "How realistic is it?",
+        "a5": "Diets, numbers of young, lifespans, breeding seasons and activity times come from each species' field guide, and estimates are labelled. The rules are simplified, so it is not a scientific model.",
+        "q6": "How do I add my own animal?",
+        "a6": "Photograph a real animal with the AnimalDex app. When the capture identifies its species, one of its kind comes aboard, up to a pair for each person."
+      }
+    },
+    "ecosystemSimulation": {
+      "metaTitle": "Ecosystem Simulation: Real Species, Live Food Web",
+      "metaDescription": "Watch a live ecosystem simulation in your browser: real predators hunt real prey, populations rise and fall, and every food link comes from a field guide. Free.",
+      "breadcrumb": "Ecosystem simulation",
+      "eyebrow": "Ecosystem simulation",
+      "title": "A live ecosystem simulation with real species",
+      "intro": "Most ecosystem simulators start with made-up creatures and a row of sliders. This ecosystem simulation runs on real species. On the AnimalDex Ark, predators hunt the prey their field guides name, animals breed when there is food, and populations rise and fall. It is one shared run that anyone can open in a browser.",
+      "live": "Right now {animals} of {species} live in it.",
+      "unavailable": "The simulation's live numbers can't be read right now.",
+      "statsTitle": "The ecosystem right now",
+      "statAnimals": "animals alive",
+      "statSpecies": "species",
+      "statPeople": "people who brought them",
+      "dayTitle": "In the last 24 hours",
+      "statBorn": "born",
+      "statArrived": "came aboard",
+      "statMeals": "meals hunted",
+      "statDied": "died",
+      "heroCaption": "The Ark's two islands, rendered from the live world. Nothing is staged.",
+      "openArk": "Open the live simulation",
+      "howLink": "How the Ark works",
+      "foodLink": "Who eats whom",
+      "survivalLink": "Who survives",
+      "breedersLink": "Fastest breeders",
+      "linksTitle": "See it for yourself",
+      "linksBody": "Open the Ark in your browser, or capture an animal in the app to bring one of its kind aboard.",
+      "otherLink": "The animal simulation",
+      "sections": {
+        "food": {
+          "title": "A food web built from field guides",
+          "p1": "Who eats whom comes from each predator's field guide. Its diet names particular species, or groups such as birds, fish or insects. A named species becomes a food link. A group reaches every species of that group aboard, with three checks: an animal never eats its own species or genus, prey from a group must be no larger than the predator, and the two must share a realm: sea, fresh water, land or air.",
+          "p2": "Every link keeps the exact words of the field guide it came from, so you can see why it exists."
+        },
+        "predators": {
+          "title": "Predators and prey",
+          "p1": "A predator hunts only on its own island and in its own region. How often it needs a meal depends on its body mass, and cold-blooded hunters go longer between meals than warm-blooded ones. A hungry one takes the weakest prey first, a hunt can fail, and a hunter that stays hungry too long starves.",
+          "p2": "Pets, farm animals and the zoo's animals are fed by their keepers: they don't hunt and are never hunted."
+        },
+        "populations": {
+          "title": "Populations that rise and fall",
+          "p1": "Two adults of a species in the same place raise young when there is food. Each species has a limit set by its size, so small animals can become more numerous than large ones, and breeding stops at that limit.",
+          "p2": "Old age, hunger and hunters take animals away. When the last animal of a species dies, that species is gone from the Ark until someone captures another."
+        },
+        "background": {
+          "title": "Plants and other background food",
+          "p1": "Plants, seeds, fruit, nectar, insects, worms and other small food in each region are background food. They feed animals without being counted aboard. A hunter with nothing it can eat and no background food goes hungry."
+        },
+        "controls": {
+          "title": "No sliders, on purpose",
+          "p1": "You can't set how many wolves there are, speed up time or reset the run. The only way to change this ecosystem is the way an animal gets into it: someone photographs a real one, and one of its kind comes aboard. After that, the rules run it.",
+          "p2": "The Ark's day-by-day chances are rolled with a secret number made for each Ark year. Its fingerprint is published when the year starts and the number is revealed when the year is over, so anyone can check that nothing was swapped."
+        },
+        "honest": {
+          "title": "Not a scientific model",
+          "p1": "The rules are simplified so that one shared world can run for everyone. Its numbers show how those rules play out aboard, not how many of any animal live in the wild, and who is aboard is whoever people have photographed, so the mix is not nature's.",
+          "p2": "For a classroom predator and prey model with controls, use a modelling tool built for that. The Ark is for watching what real species' rules do when they share one world."
+        }
+      },
+      "faqTitle": "Questions about the ecosystem simulation",
+      "faq": {
+        "q1": "Can I run the ecosystem simulation online?",
+        "a1": "Yes. It runs in a web browser, on a phone or a computer, free and with nothing to download. There is one run, shared by everyone, and it is already going.",
+        "q2": "Can I change the populations or add species myself?",
+        "a2": "Not with sliders. A species joins when someone photographs a real animal with the AnimalDex app. From then on the rules run its life.",
+        "q3": "Where do the food chains come from?",
+        "a3": "From each predator's field guide in AnimalDex. Every food link shows the words of the guide it came from.",
+        "q4": "Does it include plants and insects?",
+        "a4": "Plants, seeds, fruit, nectar, insects, worms and other small food are background food in each region: they feed animals without being counted aboard.",
+        "q5": "Is it scientifically accurate?",
+        "a5": "No. It is built from field guides with simplified rules, and it says so. Its numbers describe the Ark, not the wild.",
+        "q6": "How fast does time pass?",
+        "a6": "One Ark year passes every 14 real days, so an animal that lives two years in the wild lives about four real weeks aboard."
+      }
     }
   },
   "species": {

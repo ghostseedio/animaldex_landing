@@ -12,7 +12,7 @@ export type SitemapSection = (typeof SITEMAP_SECTIONS)[number];
 
 const PREFIXES: Array<[SitemapSection, RegExp]> = [
     ["id", /^\/id(\/|$)/],
-    ["ark", /^\/(ark|about)(\/|$)/],
+    ["ark", /^\/(ark|about|animal-simulation|ecosystem-simulation)(\/|$)/],
     ["species", /^\/animals\//],
     ["powers", /^\/(animal-powers|qualities)\//],
     ["comparisons", /^\/comparisons\//],

@@ -231,7 +231,7 @@ export function talkJsonLd(input: {locale: string; name: string; description: st
 }
 
 /** What the Ark is about, for search: said as topics, never as claims. */
-export const ARK_TOPICS = ["Ecosystem simulation", "Food chain", "Animal behaviour", "Wildlife", "Population dynamics"];
+export const ARK_TOPICS = ["Animal simulation", "Ecosystem simulation", "Food chain", "Animal behaviour", "Wildlife", "Population dynamics"];
 
 /**
  * The home page's structured data (S1's audit: one app entity, no invalid

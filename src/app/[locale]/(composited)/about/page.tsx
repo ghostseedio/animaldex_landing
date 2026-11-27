@@ -4,7 +4,7 @@ import TextPage, {LinkRow, Paragraphs, TextSection} from "@/components/seo/text-
 import {readPublicArk} from "@/data/ark-public";
 import {localeConfig} from "@/i18n";
 import {formatAnimalCount} from "@/lib/animal-count";
-import {ABOUT_PATH, ARK_PAGES_UPDATED, arkPageImage} from "@/lib/seo/ark-pages";
+import {ABOUT_PATH, ANIMAL_SIMULATION_PATH, ARK_PAGES_UPDATED, arkPageImage} from "@/lib/seo/ark-pages";
 import {buildPageMetadata} from "@/lib/seo/page-metadata";
 import {animalDexAppJsonLd, breadcrumbJsonLd, organizationJsonLd, webPageJsonLd, type JsonLd} from "@/lib/seo/structured-data";
 import {getArkWords} from "@/loaders/ark-words";
@@ -107,6 +107,7 @@ export default async function AboutPage({params}: Props) {
                         {href: "/ark", label: word(page, "linkArk"), primary: true},
                         {href: "/ark/how-it-works", label: word(page, "linkHow")},
                         {href: "/ark/food-chain", label: word(page, "linkFood")},
+                        {href: ANIMAL_SIMULATION_PATH, label: word(page, "linkSimulation")},
                         {href: "/talk", label: word(page, "linkTalk")}
                     ]}
                 />

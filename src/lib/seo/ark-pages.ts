@@ -10,6 +10,15 @@ export const ARK_PATH = "/ark";
 export const ARK_HOW_IT_WORKS_PATH = "/ark/how-it-works";
 export const ARK_FOOD_CHAIN_PATH = "/ark/food-chain";
 export const ABOUT_PATH = "/about";
+/**
+ * The search pages for the Ark as a simulation (SEO audit 2026-11-27: no page said "animal simulation" or
+ * "ecosystem simulation", the words people search and the App Store listing's own name). Text lives here, never on
+ * the home page or /ark, which stay visual.
+ */
+export const ANIMAL_SIMULATION_PATH = "/animal-simulation";
+export const ECOSYSTEM_SIMULATION_PATH = "/ecosystem-simulation";
+/** When the simulation pages' words last changed. */
+export const SIMULATION_PAGES_UPDATED = "2026-11-27";
 
 /** When the pages' words last changed. */
 export const ARK_PAGES_UPDATED = "2026-11-12";
