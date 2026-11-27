@@ -17,8 +17,10 @@ export const ABOUT_PATH = "/about";
  */
 export const ANIMAL_SIMULATION_PATH = "/animal-simulation";
 export const ECOSYSTEM_SIMULATION_PATH = "/ecosystem-simulation";
+export const ANIMAL_SURVIVAL_PATH = "/animal-survival";
 /** When the simulation pages' words last changed. */
 export const SIMULATION_PAGES_UPDATED = "2026-11-27";
+export const SURVIVAL_PAGE_UPDATED = "2026-11-27";
 
 /** When the pages' words last changed. */
 export const ARK_PAGES_UPDATED = "2026-11-12";

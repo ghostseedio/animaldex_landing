@@ -5404,8 +5404,8 @@
         "other": "Other invertebrates"
       },
       "survival": {
-        "metaTitle": "Ark Survival: Who Lives and Who Dies in the Ark",
-        "metaDescription": "Which places in the Ark keep their animals alive, which animals and kinds are most at risk, and what is taking them: old age, hunger or hunters. Live from the Ark's record.",
+        "metaTitle": "Animal Survival Tier List: Who Lives, Who Dies",
+        "metaDescription": "Animal survival rates, live from the AnimalDex Ark: which real species are most at risk, which places keep animals alive, and what kills them.",
         "title": "Ark Survival: Who Lives and Who Doesn't",
         "description": "Live from the Ark's record: how many animals are still alive in the zoo, on the farms, at home, in the town and on the wild island, who is most at risk, and what is taking them.",
         "intro": "An animal in the Ark can fall to old age, hunger or a predator. Some come back, some do not. These are the numbers, place by place, with the animals and kinds closest to the end.",
@@ -5879,7 +5879,8 @@
         "a5": "Diets, numbers of young, lifespans, breeding seasons and activity times come from each species' field guide, and estimates are labelled. The rules are simplified, so it is not a scientific model.",
         "q6": "How do I add my own animal?",
         "a6": "Photograph a real animal with the AnimalDex app. When the capture identifies its species, one of its kind comes aboard, up to a pair for each person."
-      }
+      },
+      "survivalPageLink": "Animal survival"
     },
     "ecosystemSimulation": {
       "metaTitle": "Ecosystem Simulation: Real Species, Live Food Web",
@@ -5953,7 +5954,106 @@
         "a5": "No. It is built from field guides with simplified rules, and it says so. Its numbers describe the Ark, not the wild.",
         "q6": "How fast does time pass?",
         "a6": "One Ark year passes every 14 real days, so an animal that lives two years in the wild lives about four real weeks aboard."
-      }
+      },
+      "survivalPageLink": "Animal survival"
+    },
+    "animalSurvival": {
+      "metaTitle": "Animal Survival: Watch Real Species Live or Die",
+      "metaDescription": "Animal survival you can watch: which real species survive in the AnimalDex Ark, and what takes the rest: old age, hunger or predators. Updated hourly.",
+      "breadcrumb": "Animal survival",
+      "eyebrow": "The Ark",
+      "title": "Animal survival in a live world of real species",
+      "intro": "This is animal survival you can watch. Every animal in the AnimalDex Ark is a real species, and nothing keeps it alive but the rules from its field guide: it has to eat, get away from hunters and breed before old age takes it.",
+      "live": "Right now {animals} of {species} are alive in it.",
+      "unavailable": "The Ark's live numbers can't be read right now.",
+      "heroCaption": "The Ark's two islands, rendered from the live world. Nothing is staged.",
+      "openArk": "Open the Ark",
+      "howLink": "How the Ark works",
+      "foodLink": "Who eats whom",
+      "rankingLink": "The full survival ranking",
+      "otherLink": "The animal simulation",
+      "statsTitle": "The Ark right now",
+      "statAnimals": "animals alive",
+      "statSpecies": "species",
+      "statPeople": "people who brought them",
+      "weekTitle": "Survival in the last 7 days",
+      "statShare": "of the animals aboard this week are alive or recovering",
+      "statOld": "deaths from old age",
+      "statEaten": "deaths to predators",
+      "statStarved": "deaths from hunger",
+      "weekNote": "A death is not always the end: an animal with a heart left recovers and comes back, so these deaths include animals that are back already.",
+      "safest": "Safest place this week: {place}, where {percent} are still alive.",
+      "riskTitle": "Closest to the end",
+      "riskNote": "The vertebrate species least likely to still have one aboard in an Ark year if none are born, with how many are aboard.",
+      "posts": {
+        "rates": "What a week of survival data shows",
+        "resilient": "What is the most resilient animal?",
+        "tigers": "How tigers survive as solo apex hunters",
+        "wolves": "How wolves hunt, survive and shape ecosystems",
+        "orangutans": "How orangutans think and survive in the canopy",
+        "cobras": "How king cobras survive and hunt other snakes",
+        "eagles": "How eagles use height, vision and timing to survive",
+        "crocodiles": "How crocodiles dominate the water's edge"
+      },
+      "sections": {
+        "decides": {
+          "title": "What decides who survives",
+          "p1": "Four things decide whether an animal in the Ark lives another day: food, predators, age and care. Each comes from its species' field guide: what it eats, what hunts it, and how long its kind lives in the wild.",
+          "p2": "Pets, farm animals and the zoo's animals are fed by their keepers and never hunted. Wild animals and the wildlife living around the town have to find food and keep away from hunters, which is why far fewer of them survive a week."
+        },
+        "hunts": {
+          "title": "Predators, hunger and hunts that fail",
+          "p1": "A predator hunts only in its own region, and only when it is hungry. It takes the weakest prey first, and a hunt can fail: the prey gets away, and the Ark's record says so.",
+          "p2": "A hunter that finds nothing it can eat, and no background food such as plants, seeds or insects, goes hungry. One that stays hungry too long starves."
+        },
+        "age": {
+          "title": "Old age takes the most",
+          "p1": "Every species with a known wild lifespan grows old and dies when it reaches it. Lifespans run on the Ark's clock: one Ark year passes every 14 real days, so a fly that lives a month in the wild lives about a day aboard.",
+          "p2": "That is why most deaths in the Ark are of old age, and why a short-lived species survives as a kind only by breeding faster than it dies."
+        },
+        "falls": {
+          "title": "A fall is not always the end",
+          "p1": "An animal with a heart left can recover from a fall and come back. Only the animals that do not come back count as lost for good.",
+          "p2": "Tap any animal in the Ark and its card shows its chance of surviving the next Ark year, counting its age, its hunger and the predators near it."
+        },
+        "kinds": {
+          "title": "When a species is nearly gone",
+          "p1": "A species is in danger when only two, or only one, of it still live free in the wild. When the last one dies, the species is gone from the Ark.",
+          "p2": "It comes back only one way: someone photographs a real one with the AnimalDex app, and one of its kind comes aboard. A live camera photo of a species in danger counts as a rescue."
+        },
+        "strategies": {
+          "title": "How real animals survive",
+          "p1": "Every animal in AnimalDex has a Power: a lesson from how its kind survives, such as the red fox's Cunning or the common octopus's Flexible Intelligence.",
+          "p2": "These articles look at how particular animals survive in the wild."
+        },
+        "watch": {
+          "title": "Watched, not played",
+          "p1": "Nobody plays as an animal in the Ark, steers one or feeds one by hand. There is no level to beat and no reset: the rules run it, for everyone at once.",
+          "p2": "What people do happens outside it. A capture brings one of its kind aboard, and when a step your animal suggested works in your own life, your animals aboard gain condition: animals in better condition breed more, and hunters take the weakest first."
+        },
+        "honest": {
+          "title": "Not a scientific model",
+          "p1": "The rules are simplified so that one shared world can run for everyone. The survival figures here describe the Ark, not how many animals of any kind survive in the wild.",
+          "p2": "Who is aboard is whoever people have photographed, so the mix is not nature's: more pets and garden insects than lions. Eggs lost and animals left without a carer are not in the record yet."
+        }
+      },
+      "faqTitle": "Questions about animal survival in the Ark",
+      "faq": {
+        "q1": "Is there an animal survival game with real animals?",
+        "a1": "The Ark is not a game you steer, but every animal in it is a real species surviving by the rules of its own field guide. It runs in a web browser, free and with nothing to download.",
+        "q2": "What kills animals in the Ark?",
+        "a2": "Old age, hunger and predators. Old age takes the most, because short-lived species such as insects reach the end of their lives within days. The figures above count this week's deaths by cause.",
+        "q3": "Which animals survive best?",
+        "a3": "Animals that people keep: pets, farm animals and zoo animals are fed by their keepers and never hunted, so nearly all of them survive a week. Wild animals have to find food and get away from hunters.",
+        "q4": "Can an animal come back after it dies?",
+        "a4": "Sometimes. An animal with a heart left recovers and comes back. When the last of a species is lost for good, that species is gone until someone photographs another.",
+        "q5": "Can I keep my animals alive?",
+        "a5": "Not by steering them. Talk to your animal in AnimalDex about something real, try the step it suggests, and when the step works your animals aboard gain condition, which helps them breed and survive hunters.",
+        "q6": "Are these real survival rates?",
+        "a6": "They are the Ark's, not the wild's. The rules are simplified from field guides, and who is aboard is whoever people have photographed."
+      },
+      "linksTitle": "See it for yourself",
+      "linksBody": "Open the Ark in your browser and follow an animal, or capture one in the app to bring its kind aboard."
     }
   },
   "species": {

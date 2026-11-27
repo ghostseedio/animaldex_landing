@@ -4,19 +4,21 @@ import TextPage, {LinkRow, Paragraphs, TextSection} from "@/components/seo/text-
 import {arkFoodChainPage} from "@/data/ark-food-chain";
 import {readArkLandingSummary} from "@/data/ark-landing";
 import {readPublicArk} from "@/data/ark-public";
+import {readArkSurvivalReport} from "@/data/ark-rankings";
+import {arkFocusPath, arkPercent, arkSafestPlace} from "@/lib/ark-rankings-text";
 import {arkSpeciesCounts} from "@/lib/ark-seo";
 import {
-    ANIMAL_SIMULATION_PATH,
+    ANIMAL_SURVIVAL_PATH,
     ARK_FOOD_CHAIN_PATH,
     ARK_HOW_IT_WORKS_PATH,
     ARK_PATH,
     ARK_RENDER_IMAGE,
-    ECOSYSTEM_SIMULATION_PATH,
     SIMULATION_PAGES_UPDATED,
+    SURVIVAL_PAGE_UPDATED,
     arkCountsLine,
     arkPageImage
 } from "@/lib/seo/ark-pages";
-import {SIMULATION_PAGES, simulationFaq, type SimulationPageId} from "@/lib/seo/simulation-pages";
+import {SIMULATION_PAGES, simulationFaq, survivalAtRisk, survivalSummary, type SimulationPageId} from "@/lib/seo/simulation-pages";
 import {isSeoSsgRemoteForbidden} from "@/lib/seo-ssg-remote-guard";
 import {breadcrumbJsonLd, webPageJsonLd, type JsonLd} from "@/lib/seo/structured-data";
 import {getAbsoluteUrl} from "@/lib/site";
@@ -30,6 +32,10 @@ import {getPageWords, word} from "@/loaders/page-words";
  * simulation is, what it runs, and what it is not, with the Ark's live figures (the public read and the public event
  * log, the same reads the home page uses; the log is never read during the build), a real render of the world that opens it, and the questions people ask.
  *
+ * /animal-survival (the "animal survival" audit, same day) adds the week's survival from the survival ranking's own
+ * report (`readArkSurvivalReport`, built once an hour per process): the share still alive, deaths by cause, the safest
+ * place and the vertebrate species closest to the end. That route is rendered on its first request, never in the build.
+ *
  * Every rule stated here is one /ark/how-it-works states; nothing is claimed that the Ark does not do. English and
  * Indonesian. Server-rendered, cached an hour.
  */
@@ -37,6 +43,7 @@ import {getPageWords, word} from "@/loaders/page-words";
 const SECTION_PARAGRAPHS = ["p1", "p2"] as const;
 const RUNS = ["food", "breeding", "life", "seasons", "islands"] as const;
 const TOP_SPECIES = 12;
+const SURVIVAL_RANKING_PATH = "/tier-list/ark-survival";
 
 function count(value: number, locale: string) {
     return value.toLocaleString(locale === "id" ? "id-ID" : "en-US");
@@ -53,16 +60,23 @@ function Stat({value, label}: {value: string; label: string}) {
 
 export default async function SimulationPage({locale, id}: {locale: string; id: SimulationPageId}) {
     const config = SIMULATION_PAGES[id];
-    const [page, seo, {words: ark}, snapshot, summary] = await Promise.all([
+    const remote = !isSeoSsgRemoteForbidden();
+    const [page, seo, {words: ark}, snapshot, summary, report] = await Promise.all([
         getPageWords(locale, `pages.${id}`),
         getPageWords(locale, "seo"),
         getArkWords(locale),
         readPublicArk(3600),
         // The last day's figures come from the Ark's event log, a long read on a cold process: never during the build
         // (the page then shows the counts alone, and gains the day's figures at its first hourly refresh on the server).
-        isSeoSsgRemoteForbidden() ? null : readArkLandingSummary().catch(() => null)
+        config.day && remote ? readArkLandingSummary().catch(() => null) : null,
+        config.survival && remote ? readArkSurvivalReport().catch(() => null) : null
     ]);
-    const other = id === "animalSimulation" ? ECOSYSTEM_SIMULATION_PATH : ANIMAL_SIMULATION_PATH;
+    const other = config.other;
+    const week = survivalSummary(report?.survival ?? null);
+    const safest = report?.survival ? arkSafestPlace(report.survival) : null;
+    const atRisk = survivalAtRisk(report?.risk ?? null);
+    const places = (ark.rankings?.places ?? {}) as Record<string, string>;
+    const posts = Object.entries(config.posts ?? {});
     const crumbs = [
         {name: word(seo, "breadcrumbHome"), href: "/"},
         {name: word(seo, "breadcrumbArk"), href: ARK_PATH},
@@ -80,7 +94,7 @@ export default async function SimulationPage({locale, id}: {locale: string; id: 
             name: word(page, "title"),
             description: word(page, "metaDescription"),
             image: arkPageImage(),
-            dateModified: SIMULATION_PAGES_UPDATED,
+            dateModified: config.survival ? SURVIVAL_PAGE_UPDATED : SIMULATION_PAGES_UPDATED,
             about: config.topics.map((name) => ({"@type": "Thing", name})),
             // The simulation itself is the Ark: the same entity /ark declares.
             mainEntity: {"@type": "WebApplication", "@id": `${getAbsoluteUrl("en", ARK_PATH)}#ark`, name: "AnimalDex Ark", url: getAbsoluteUrl(locale, ARK_PATH)}
@@ -137,6 +151,48 @@ export default async function SimulationPage({locale, id}: {locale: string; id: 
                 </TextSection>
             ) : null}
 
+            {week ? (
+                <TextSection id="week" title={word(page, "weekTitle")}>
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
+                        <Stat value={arkPercent(week.share, locale === "id" ? "id-ID" : "en-US", 1)} label={word(page, "statShare")} />
+                        <Stat value={count(week.old, locale)} label={word(page, "statOld")} />
+                        <Stat value={count(week.eaten, locale)} label={word(page, "statEaten")} />
+                        <Stat value={count(week.starved, locale)} label={word(page, "statStarved")} />
+                    </dl>
+                    <p className="max-w-3xl text-base leading-7 text-ink-200">{word(page, "weekNote")}</p>
+                    {safest && safest.share !== null && places[safest.place] ? (
+                        <p className="max-w-3xl text-base leading-7 text-ink-200">
+                            {word(page, "safest", {place: places[safest.place], percent: arkPercent(safest.share, locale === "id" ? "id-ID" : "en-US", 1)})}
+                        </p>
+                    ) : null}
+                    {atRisk.length ? (
+                        <>
+                            <h3 className="mt-2 text-sm font-bold uppercase tracking-[0.16em] text-primary-200">{word(page, "riskTitle")}</h3>
+                            <p className="max-w-3xl text-sm leading-6 text-ink-300">{word(page, "riskNote")}</p>
+                            <ul className="flex flex-wrap gap-2">
+                                {atRisk.map((kind) => (
+                                    <li key={kind.kindId}>
+                                        <Link href={arkFocusPath(kind.slug)} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line-300 px-4 text-sm font-semibold text-white transition-colors hover:border-primary-200">
+                                            {kind.name} <span className="tabular-nums text-ink-300">{count(kind.aboard, locale)}</span>
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </>
+                    ) : null}
+                    <p className="flex flex-wrap gap-x-6 gap-y-1">
+                        {[
+                            {href: SURVIVAL_RANKING_PATH, label: word(page, "rankingLink")},
+                            ...(config.posts?.rates ? [{href: config.posts.rates, label: word(page, "posts.rates")}] : [])
+                        ].map((link) => (
+                            <Link key={link.href} href={link.href} className="inline-flex min-h-11 items-center gap-2 font-bold text-primary-200 underline-offset-4 hover:underline">
+                                {link.label} <span aria-hidden="true">→</span>
+                            </Link>
+                        ))}
+                    </p>
+                </TextSection>
+            ) : null}
+
             {config.sections.map((section) => (
                 <TextSection key={section} id={section} title={word(page, `sections.${section}.title`)}>
                     {section === "runs" ? (
@@ -182,10 +238,22 @@ export default async function SimulationPage({locale, id}: {locale: string; id: 
                             </Link>
                         </p>
                     ) : null}
+                    {section === "strategies" && posts.length ? (
+                        <ul className="flex flex-col gap-1">
+                            {posts.filter(([key]) => key !== "rates").map(([key, href]) => (
+                                <li key={key}>
+                                    <Link href={href} className="inline-flex min-h-11 items-center gap-2 font-bold text-primary-200 underline-offset-4 hover:underline">
+                                        {word(page, `posts.${key}`)} <span aria-hidden="true">→</span>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : null}
                     {section === "populations" ? (
                         <p className="flex flex-wrap gap-x-6 gap-y-1">
                             {[
-                                {href: "/tier-list/ark-survival", label: word(page, "survivalLink")},
+                                {href: ANIMAL_SURVIVAL_PATH, label: word(page, "survivalPageLink")},
+                                {href: SURVIVAL_RANKING_PATH, label: word(page, "survivalLink")},
                                 {href: "/tier-list/ark-fastest-breeders", label: word(page, "breedersLink")}
                             ].map((link) => (
                                 <Link key={link.href} href={link.href} className="inline-flex min-h-11 items-center gap-2 font-bold text-primary-200 underline-offset-4 hover:underline">
@@ -215,6 +283,9 @@ export default async function SimulationPage({locale, id}: {locale: string; id: 
                     links={[
                         {href: ARK_PATH, label: word(page, "openArk"), primary: true},
                         {href: other, label: word(page, "otherLink")},
+                        ...(config.survival
+                            ? [{href: SURVIVAL_RANKING_PATH, label: word(page, "rankingLink")}]
+                            : [{href: ANIMAL_SURVIVAL_PATH, label: word(page, "survivalPageLink")}]),
                         {href: ARK_HOW_IT_WORKS_PATH, label: word(page, "howLink")},
                         {href: ARK_FOOD_CHAIN_PATH, label: word(page, "foodLink")}
                     ]}

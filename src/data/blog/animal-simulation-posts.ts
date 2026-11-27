@@ -258,6 +258,7 @@ export const foodWebSimulationPost: BlogPost = {
                 "Two species lost their last animal in those hours: the autumn leaf butterfly and the rove beetle. Each is gone from the Ark until someone photographs another."
             ],
             inlineLinks: [
+                {text: "Animal survival, live", slug: "animal-survival", href: "/animal-survival"},
                 {text: "Who survives in the Ark", slug: "ark-survival", href: "/tier-list/ark-survival"},
                 {text: "Fastest breeders", slug: "ark-fastest-breeders", href: "/tier-list/ark-fastest-breeders"}
             ]

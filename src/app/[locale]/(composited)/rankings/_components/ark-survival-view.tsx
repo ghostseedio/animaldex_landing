@@ -50,7 +50,7 @@ export async function arkSurvivalMetadata(props: ArkRankingProps): Promise<Metad
         slug: SLUG,
         title: rankings.survival.metaTitle,
         description: rankings.survival.metaDescription,
-        keywords: ["ark survival", "animal survival rate", "animals most at risk", "what kills animals", "animal lifespan simulation", "AnimalDex Ark"],
+        keywords: ["animal survival tier list", "animal survival rate", "animal survival", "animals most at risk", "what kills animals", "animal lifespan simulation", "AnimalDex Ark"],
         updatedAt: ARK_RANKING_UPDATED
     });
 }

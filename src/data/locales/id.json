@@ -5406,8 +5406,8 @@
         "other": "Invertebrata lain"
       },
       "survival": {
-        "metaTitle": "Kelangsungan Hidup di Ark: Siapa yang Hidup dan Siapa yang Mati",
-        "metaDescription": "Tempat mana di Ark yang menjaga hewannya tetap hidup, hewan dan jenis mana yang paling berisiko, dan apa penyebabnya: usia tua, kelaparan, atau pemangsa. Langsung dari catatan Ark.",
+        "metaTitle": "Tier List Kelangsungan Hidup Hewan di Ark",
+        "metaDescription": "Tingkat kelangsungan hidup hewan, langsung dari AnimalDex Ark: spesies nyata mana yang paling berisiko, tempat mana yang aman, dan apa penyebab kematiannya.",
         "title": "Kelangsungan Hidup di Ark: Siapa yang Hidup dan Siapa yang Tidak",
         "description": "Langsung dari catatan Ark: berapa hewan yang masih hidup di kebun binatang, peternakan, rumah, kota, dan pulau liar, siapa yang paling berisiko, dan apa yang merenggut mereka.",
         "intro": "Hewan di Ark bisa mati karena usia tua, kelaparan, atau pemangsa. Ada yang kembali, ada yang tidak. Inilah angkanya, tempat demi tempat, bersama hewan dan jenis yang paling dekat dengan akhir.",
@@ -5881,7 +5881,8 @@
         "a5": "Makanan, jumlah anak, umur, musim kawin, dan waktu aktif berasal dari panduan lapangan setiap spesies, dan perkiraan diberi label. Aturannya disederhanakan, jadi ini bukan model ilmiah.",
         "q6": "Bagaimana cara menambahkan hewan saya sendiri?",
         "a6": "Potret hewan sungguhan dengan aplikasi AnimalDex. Saat tangkapan itu mengenali spesiesnya, satu dari jenisnya naik ke Ark, hingga sepasang untuk tiap orang."
-      }
+      },
+      "survivalPageLink": "Kelangsungan hidup hewan"
     },
     "ecosystemSimulation": {
       "metaTitle": "Simulasi Ekosistem: Spesies Nyata, Jaring Makanan",
@@ -5955,7 +5956,106 @@
         "a5": "Tidak. Simulasi ini dibangun dari panduan lapangan dengan aturan yang disederhanakan, dan mengatakannya dengan jujur. Angkanya menggambarkan Ark, bukan alam liar.",
         "q6": "Seberapa cepat waktu berlalu?",
         "a6": "Satu tahun Ark berlalu setiap 14 hari nyata, jadi hewan yang hidup dua tahun di alam liar hidup sekitar empat minggu nyata di Ark."
-      }
+      },
+      "survivalPageLink": "Kelangsungan hidup hewan"
+    },
+    "animalSurvival": {
+      "metaTitle": "Kelangsungan Hidup Hewan: Tonton Spesies Nyata",
+      "metaDescription": "Kelangsungan hidup hewan yang bisa kamu tonton: spesies nyata mana yang bertahan di AnimalDex Ark, dan apa yang membunuh sisanya. Diperbarui tiap jam.",
+      "breadcrumb": "Kelangsungan hidup hewan",
+      "eyebrow": "Ark",
+      "title": "Kelangsungan hidup hewan di dunia hidup berisi spesies nyata",
+      "intro": "Inilah kelangsungan hidup hewan yang bisa kamu tonton. Setiap hewan di AnimalDex Ark adalah spesies nyata, dan yang menjaganya tetap hidup hanyalah aturan dari panduan lapangannya: ia harus makan, lolos dari pemburu, dan berkembang biak sebelum usia tua menjemputnya.",
+      "live": "Saat ini {animals} dari {species} hidup di dalamnya.",
+      "unavailable": "Angka langsung Ark tidak dapat dibaca saat ini.",
+      "heroCaption": "Dua pulau Ark, dirender dari dunia yang sedang berjalan. Tidak ada yang diatur.",
+      "openArk": "Buka Ark",
+      "howLink": "Cara kerja Ark",
+      "foodLink": "Siapa memakan siapa",
+      "rankingLink": "Peringkat kelangsungan hidup lengkap",
+      "otherLink": "Simulasi hewan",
+      "statsTitle": "Ark saat ini",
+      "statAnimals": "hewan hidup",
+      "statSpecies": "spesies",
+      "statPeople": "orang yang membawa mereka",
+      "weekTitle": "Kelangsungan hidup dalam 7 hari terakhir",
+      "statShare": "hewan di kapal minggu ini masih hidup atau sedang pulih",
+      "statOld": "kematian karena usia tua",
+      "statEaten": "kematian karena pemangsa",
+      "statStarved": "kematian karena kelaparan",
+      "weekNote": "Kematian tidak selalu akhir: hewan yang masih punya hati akan pulih dan kembali, jadi kematian ini termasuk hewan yang sudah kembali.",
+      "safest": "Tempat teraman minggu ini: {place}, dengan {percent} masih hidup.",
+      "riskTitle": "Paling dekat dengan akhir",
+      "riskNote": "Spesies vertebrata yang paling kecil kemungkinannya masih ada di kapal dalam satu tahun Ark jika tidak ada yang lahir, dengan jumlah yang ada di kapal.",
+      "posts": {
+        "rates": "Apa yang ditunjukkan data kelangsungan hidup seminggu",
+        "resilient": "Hewan apa yang paling tangguh?",
+        "tigers": "Cara harimau bertahan sebagai pemburu puncak yang soliter",
+        "wolves": "Cara serigala berburu, bertahan, dan membentuk ekosistem",
+        "orangutans": "Cara orangutan berpikir dan bertahan di kanopi",
+        "cobras": "Cara king kobra bertahan dan memburu ular lain",
+        "eagles": "Cara elang memakai ketinggian, penglihatan, dan waktu untuk bertahan",
+        "crocodiles": "Cara buaya menguasai tepi air"
+      },
+      "sections": {
+        "decides": {
+          "title": "Apa yang menentukan siapa yang bertahan",
+          "p1": "Empat hal menentukan apakah seekor hewan di Ark hidup sehari lagi: makanan, pemangsa, usia, dan perawatan. Semuanya berasal dari panduan lapangan spesiesnya: apa yang dimakannya, apa yang memburunya, dan berapa lama jenisnya hidup di alam liar.",
+          "p2": "Hewan peliharaan, hewan ternak, dan hewan kebun binatang diberi makan oleh perawatnya dan tidak pernah diburu. Hewan liar dan satwa yang hidup di sekitar kota harus mencari makan dan menjauh dari pemburu, itulah sebabnya jauh lebih sedikit dari mereka yang bertahan seminggu."
+        },
+        "hunts": {
+          "title": "Pemangsa, kelaparan, dan perburuan yang gagal",
+          "p1": "Pemangsa hanya berburu di wilayahnya sendiri, dan hanya saat lapar. Ia mengambil mangsa terlemah lebih dulu, dan perburuan bisa gagal: mangsanya lolos, dan catatan Ark mencatatnya.",
+          "p2": "Pemburu yang tidak menemukan apa pun yang bisa dimakannya, dan tidak ada makanan latar seperti tumbuhan, biji, atau serangga, akan kelaparan. Yang terlalu lama kelaparan akan mati."
+        },
+        "age": {
+          "title": "Usia tua merenggut paling banyak",
+          "p1": "Setiap spesies dengan umur alami yang diketahui akan menua dan mati saat mencapainya. Umur berjalan menurut jam Ark: satu tahun Ark berlalu setiap 14 hari nyata, jadi lalat yang hidup sebulan di alam liar hidup sekitar sehari di kapal.",
+          "p2": "Itulah sebabnya sebagian besar kematian di Ark karena usia tua, dan mengapa spesies berumur pendek hanya bertahan sebagai jenis jika berkembang biak lebih cepat daripada matinya."
+        },
+        "falls": {
+          "title": "Jatuh tidak selalu berarti akhir",
+          "p1": "Hewan yang masih punya hati bisa pulih dari kejatuhan dan kembali. Hanya hewan yang tidak kembali yang dihitung hilang selamanya.",
+          "p2": "Ketuk hewan mana pun di Ark dan kartunya menunjukkan peluangnya bertahan hidup di tahun Ark berikutnya, dengan menghitung usianya, rasa laparnya, dan pemangsa di dekatnya."
+        },
+        "kinds": {
+          "title": "Saat sebuah spesies hampir hilang",
+          "p1": "Sebuah spesies dalam bahaya saat hanya dua, atau hanya satu, yang masih hidup bebas di alam liar. Saat yang terakhir mati, spesies itu hilang dari Ark.",
+          "p2": "Ia hanya bisa kembali dengan satu cara: seseorang memotret hewan nyatanya dengan aplikasi AnimalDex, lalu satu dari jenisnya naik ke kapal. Foto kamera langsung dari spesies yang dalam bahaya dihitung sebagai penyelamatan."
+        },
+        "strategies": {
+          "title": "Cara hewan nyata bertahan hidup",
+          "p1": "Setiap hewan di AnimalDex punya Power: pelajaran dari cara jenisnya bertahan hidup, seperti Cunning milik rubah merah atau Flexible Intelligence milik gurita biasa.",
+          "p2": "Artikel-artikel ini membahas cara hewan tertentu bertahan hidup di alam liar."
+        },
+        "watch": {
+          "title": "Ditonton, bukan dimainkan",
+          "p1": "Tidak ada yang bermain sebagai hewan di Ark, mengendalikannya, atau memberinya makan dengan tangan. Tidak ada level untuk dikalahkan dan tidak ada reset: aturanlah yang menjalankannya, untuk semua orang sekaligus.",
+          "p2": "Yang dilakukan orang terjadi di luarnya. Sebuah tangkapan membawa satu dari jenisnya ke kapal, dan saat langkah yang disarankan hewanmu berhasil dalam hidupmu, hewan-hewanmu di kapal naik kondisinya: hewan dengan kondisi lebih baik lebih sering berkembang biak, dan pemburu mengambil yang terlemah lebih dulu."
+        },
+        "honest": {
+          "title": "Bukan model ilmiah",
+          "p1": "Aturannya disederhanakan agar satu dunia bersama bisa berjalan untuk semua orang. Angka kelangsungan hidup di sini menggambarkan Ark, bukan berapa banyak hewan dari jenis apa pun yang bertahan di alam liar.",
+          "p2": "Siapa yang ada di kapal adalah siapa saja yang dipotret orang, jadi campurannya bukan campuran alam: lebih banyak hewan peliharaan dan serangga kebun daripada singa. Telur yang hilang dan hewan yang ditinggal perawatnya belum masuk catatan."
+        }
+      },
+      "faqTitle": "Pertanyaan tentang kelangsungan hidup hewan di Ark",
+      "faq": {
+        "q1": "Adakah game bertahan hidup hewan dengan hewan nyata?",
+        "a1": "Ark bukan game yang kamu kendalikan, tetapi setiap hewan di dalamnya adalah spesies nyata yang bertahan menurut aturan panduan lapangannya sendiri. Ark berjalan di peramban web, gratis dan tanpa unduhan.",
+        "q2": "Apa yang membunuh hewan di Ark?",
+        "a2": "Usia tua, kelaparan, dan pemangsa. Usia tua merenggut paling banyak, karena spesies berumur pendek seperti serangga mencapai akhir hidupnya dalam hitungan hari. Angka di atas menghitung kematian minggu ini menurut penyebabnya.",
+        "q3": "Hewan mana yang paling bisa bertahan?",
+        "a3": "Hewan yang dipelihara orang: hewan peliharaan, ternak, dan hewan kebun binatang diberi makan oleh perawatnya dan tidak pernah diburu, jadi hampir semuanya bertahan seminggu. Hewan liar harus mencari makan dan lolos dari pemburu.",
+        "q4": "Bisakah hewan kembali setelah mati?",
+        "a4": "Kadang-kadang. Hewan yang masih punya hati akan pulih dan kembali. Saat spesies terakhir hilang selamanya, spesies itu lenyap sampai seseorang memotret yang lain.",
+        "q5": "Bisakah aku menjaga hewanku tetap hidup?",
+        "a5": "Tidak dengan mengendalikannya. Bicaralah dengan hewanmu di AnimalDex tentang sesuatu yang nyata, coba langkah yang disarankannya, dan saat langkah itu berhasil, hewan-hewanmu di kapal naik kondisinya, yang membantu mereka berkembang biak dan lolos dari pemburu.",
+        "q6": "Apakah ini tingkat kelangsungan hidup yang sebenarnya?",
+        "a6": "Ini milik Ark, bukan alam liar. Aturannya disederhanakan dari panduan lapangan, dan siapa yang ada di kapal adalah siapa saja yang dipotret orang."
+      },
+      "linksTitle": "Lihat sendiri",
+      "linksBody": "Buka Ark di peramban dan ikuti seekor hewan, atau tangkap satu di aplikasi untuk membawa jenisnya ke kapal."
     }
   },
   "species": {

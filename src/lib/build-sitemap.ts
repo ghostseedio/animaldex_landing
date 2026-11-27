@@ -38,7 +38,7 @@ import {getAllPublicWildlifeGuides} from "@/data/virtual-wildlife-guides";
 import {locationsWithGuides} from "@/data/wildlife-guide-locations";
 import {MIN_INDEXABLE_GUIDE_LIST, guidePath} from "@/lib/virtual-wildlife-guides";
 import {listSupportArticles, getSupportArticlePath} from "@/lib/support-articles";
-import {ABOUT_PATH, ANIMAL_SIMULATION_PATH, ARK_FOOD_CHAIN_PATH, ARK_HOW_IT_WORKS_PATH, ARK_PAGES_UPDATED, ECOSYSTEM_SIMULATION_PATH, SIMULATION_PAGES_UPDATED} from "@/lib/seo/ark-pages";
+import {ABOUT_PATH, ANIMAL_SIMULATION_PATH, ANIMAL_SURVIVAL_PATH, ARK_FOOD_CHAIN_PATH, ARK_HOW_IT_WORKS_PATH, ARK_PAGES_UPDATED, ECOSYSTEM_SIMULATION_PATH, SIMULATION_PAGES_UPDATED, SURVIVAL_PAGE_UPDATED} from "@/lib/seo/ark-pages";
 import {getTalkLandingPages} from "@/data/talk-landing-pages";
 
 /** The Ark changes all day (an hourly world tick): its lastmod is the day the sitemap was built. */
@@ -159,6 +159,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
                 // The Ark as a simulation (SEO audit 2026-11-27), written in Indonesian too.
                 {url: getAbsoluteUrl(locale, ANIMAL_SIMULATION_PATH), lastModified: new Date(SIMULATION_PAGES_UPDATED)},
                 {url: getAbsoluteUrl(locale, ECOSYSTEM_SIMULATION_PATH), lastModified: new Date(SIMULATION_PAGES_UPDATED)},
+                {url: getAbsoluteUrl(locale, ANIMAL_SURVIVAL_PATH), lastModified: new Date(SURVIVAL_PAGE_UPDATED)},
                 ...getLocalPrincipleSlugs().map((slug) => ({
                     url: getAbsoluteUrl(locale, `/qualities/${slug}`)
                 }))
@@ -181,6 +182,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             // The Ark as a simulation (SEO audit 2026-11-27): the pages for "animal simulation" and "ecosystem simulation".
             {url: getAbsoluteUrl(locale, ANIMAL_SIMULATION_PATH), lastModified: new Date(SIMULATION_PAGES_UPDATED)},
             {url: getAbsoluteUrl(locale, ECOSYSTEM_SIMULATION_PATH), lastModified: new Date(SIMULATION_PAGES_UPDATED)},
+            {url: getAbsoluteUrl(locale, ANIMAL_SURVIVAL_PATH), lastModified: new Date(SURVIVAL_PAGE_UPDATED)},
             {url: getAbsoluteUrl(locale, "/how-it-works"), lastModified: new Date(HOW_IT_WORKS_UPDATED)},
             {url: getAbsoluteUrl(locale, "/advice-fatigue"), lastModified: new Date(ADVICE_FATIGUE_UPDATED)},
             {url: getAbsoluteUrl(locale, "/what-animal-am-i"), lastModified: new Date(WHAT_ANIMAL_AM_I_UPDATED_AT)},
