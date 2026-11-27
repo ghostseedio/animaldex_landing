@@ -363,11 +363,21 @@ const compare = (a: Map<string, Record<string, string>>, b: Map<string, Record<s
 };
 
 // ---- Poses: tripFor as index.ts:2209 asks it for a wild animal (the trip held for its slot, the previous handed on) ----
+/** (`--diagnose`: each new trip and each sample written down per animal, during the very pass that hashes it.) */
+let TRACE: Map<string, Array<{t: number; line: string; x?: number; z?: number}>> | null = null;
+const {slotOffset} = sched as unknown as {slotOffset: (id: string) => number};
+const offGrid = (id: string, trip: Trip) => (trip.start + slotOffset(id)) % 80 !== 0 || trip.end - trip.start !== 80;
 const tripOf = (holder: Sched, e: Entry, epoch: number): Trip => {
     let trip = holder.trip;
     if (!trip || epoch < trip.start || epoch >= trip.end) {
         const previous = trip;
         holder.trip = trip = tripAt(worldOf(e.animal), holder.profile, holder.animal, epoch, hours, e.animal.activity, previous);
+        if (TRACE) {
+            let list = TRACE.get(e.animal.id);
+            if (!list) TRACE.set(e.animal.id, (list = []));
+            const f = (trip as unknown as {finish?: {x: number; z: number}}).finish;
+            list.push({t: epoch, line: `trip asked t=${(epoch - T).toFixed(3)} slot=${trip.slot} [${trip.start - T},${trip.end - T}) prev=${previous ? previous.slot : "-"}${previous && previous.slot !== trip.slot - 1 ? "(not slot-1)" : ""} doing=${trip.doing} offGrid=${offGrid(e.animal.id, trip)} finish=${f ? `${f.x},${f.z}` : "?"}`});
+        }
     }
     return trip;
 };
@@ -411,6 +421,11 @@ const fingerprint = (state: State, ids: string[], step: number, stress = false) 
             if (!sample) continue;
             const pose = poseOnTrip(worldOf(e.animal), trip, t) as unknown as Record<string, unknown>;
             h.update(`${trip.slot}|${trip.doing}|${trip.start}|${trip.end}|${poseKey(pose)}\n`);
+            if (TRACE) {
+                let list = TRACE.get(id);
+                if (!list) TRACE.set(id, (list = []));
+                list.push({t, line: `sample t=${(t - T).toFixed(0)} slot=${trip.slot} doing=${trip.doing} x=${pose.x} z=${pose.z} yaw=${pose.yaw}`, x: pose.x as number, z: pose.z as number});
+            }
         }
         out.set(id, h.digest("hex"));
     }
@@ -561,6 +576,83 @@ if (argv.includes("--cadence-high")) {
     const c = fingerprint(HIGH, highWild, 1 / 60);
     const s = fingerprint(HIGH, highWild.slice(0, Number(arg("stress", "150"))), 2, true);
     cadenceHigh = {wildScheduledEntries: highWild.length, vs7fps: diffCount(a, b), vs60fps: diffCount(a, c), evictionStress: diffCount(a, s)};
+    if (argv.includes("--diagnose")) {
+        type Tr = NonNullable<typeof TRACE>;
+        const traced = (step: number, stress: boolean, ids: string[]): {h: Map<string, string>; tr: Tr} => {
+            TRACE = new Map();
+            const h = fingerprint(HIGH, ids, step, stress);
+            const tr = TRACE;
+            TRACE = null;
+            return {h, tr};
+        };
+        const report = (label: string, A: {h: Map<string, string>; tr: Tr}, B: {h: Map<string, string>; tr: Tr}) => {
+            const rows: unknown[] = [];
+            A.h.forEach((v, id) => {
+                if (B.h.get(id) === undefined || B.h.get(id) === v) return;
+                const la = A.tr.get(id) ?? [], lb = B.tr.get(id) ?? [];
+                // The samples side by side: how far apart, from when.
+                const sa = la.filter((r) => r.x !== undefined), sb = lb.filter((r) => r.x !== undefined);
+                let most = 0, firstApart: number | null = null, apartSamples = 0;
+                sa.forEach((r, k) => {
+                    const q = sb[k];
+                    if (!q) return;
+                    const d = Math.hypot(r.x! - q.x!, r.z! - q.z!);
+                    if (d > 0) {
+                        apartSamples++;
+                        if (firstApart === null) firstApart = r.t - T;
+                    }
+                    most = Math.max(most, d);
+                });
+                // The trips asked (not the samples), in order, for both: the first that differs.
+                const ta = la.filter((r) => r.x === undefined).map((r) => r.line.replace(/ t=[-0-9.]+/, ""));
+                const tb = lb.filter((r) => r.x === undefined).map((r) => r.line.replace(/ t=[-0-9.]+/, ""));
+                let k = 0;
+                while (k < ta.length && k < tb.length && ta[k] === tb[k]) k++;
+                rows.push({id, slug: snapshotById.get(id)!.model_slug, group: (HIGH.entryById.get(id)!.sched!.animal as {group?: unknown}).group ? "follower" : "own", mostApartMetres: +most.toFixed(3), firstApartAtS: firstApart, apartSamples, samples: sa.length, tripsA: la.filter((r) => r.x === undefined).map((r) => r.line), tripsB: lb.filter((r) => r.x === undefined).map((r) => r.line), firstTripDiffIndex: k});
+            });
+            return {label, rows};
+        };
+        // A fresh wiring of the high roster: its FIRST pass (nothing asked yet since `wire`) against its second.
+        const HIGH2 = newState("HIGH2");
+        wire(HIGH2, Rh);
+        const highWild2 = Array.from(HIGH2.entryById.keys()).filter((id) => !townIds.has(id) && HIGH2.entryById.get(id)!.sched).sort();
+        const tracedOn = (state: State, ids: string[]) => {
+            TRACE = new Map();
+            const h = fingerprint(state, ids, 2);
+            const tr = TRACE;
+            TRACE = null;
+            return {h, tr};
+        };
+        const P1 = tracedOn(HIGH2, highWild2);
+        const P2 = tracedOn(HIGH2, highWild2);
+        const P3 = tracedOn(HIGH2, highWild2);
+        const firstVsSecond = report("fresh wiring: first pass vs second pass", P1, P2);
+        const secondVsThird = report("fresh wiring: second pass vs third pass", P2, P3);
+        // (Which animals differ, and their kinds' profiles: what they are, what they did.)
+        const who = firstVsSecond.rows.map((row) => {
+            const id = (row as {id: string}).id;
+            const e = HIGH2.entryById.get(id)!;
+            const p = e.sched!.profile as unknown as Record<string, unknown>;
+            return {id, slug: e.animal.model_slug, zone: e.animal.zone, move: p.move, social: p.social, roost: p.roost, activity: e.animal.activity, threats: ((e.sched!.animal as {threats?: unknown[] | null}).threats ?? []).length, group: Boolean((e.sched!.animal as {group?: unknown}).group), led: (e.sched!.animal as {led?: number}).led};
+        });
+        writeFileSync(arg("diag-first", "/Users/lennybeadle/AnimalDex-work/ark-perf-web/scratch/frameloop-verify-frame3-identity/diagnose-first.json"), JSON.stringify({firstVsSecond, secondVsThird, who}, null, 1));
+        (cadenceHigh as Record<string, unknown>).firstPass = {entries: highWild2.length, firstVsSecond: diffCount(P1.h, P2.h), secondVsThird: diffCount(P2.h, P3.h), who};
+        const A2 = traced(2, false, highWild);
+        const A60 = traced(1 / 60, false, highWild);
+        const sIds = highWild.slice(0, Number(arg("stress", "150")));
+        const S2 = traced(2, false, sIds);
+        const Sx = traced(2, true, sIds);
+        const diag = [report("cadence 2s vs 60fps", A2, A60), report("eviction plain vs stress", S2, Sx)];
+        writeFileSync(arg("diag", "/Users/lennybeadle/AnimalDex-work/ark-perf-web/scratch/frameloop-verify-frame3-identity/diagnose.json"), JSON.stringify(diag, null, 1));
+        // How many trips of the high roster's wild entries are off the slot grid at all (2 s pass).
+        let trips = 0, off = 0;
+        A2.tr.forEach((list) => list.forEach((r) => {
+            if (r.x !== undefined) return;
+            trips++;
+            if (r.line.includes("offGrid=true")) off++;
+        }));
+        (cadenceHigh as Record<string, unknown>).diagnose = {tripsAsked: trips, offGrid: off, cadenceDiffering: diag[0].rows.length, evictionDiffering: diag[1].rows.length};
+    }
 }
 const fpMs = performance.now() - tf0;
 

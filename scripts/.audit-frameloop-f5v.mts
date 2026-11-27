@@ -495,7 +495,7 @@ const poseOf = (e: Entry, epoch: number): {x: number; z: number} => {
 };
 const ABORT = {abort: true};
 let abortAt = Infinity;
-let stats = {asks: 0, poses: 0, poseMs: [] as number[], tickMs: [] as number[], aborts: 0, askedIds: new Set<string>()};
+let stats = {asks: 0, poses: 0, poseMs: [] as number[], tickMs: [] as number[], aborts: 0, askedIds: new Set<string>(), dear: [] as Array<Record<string, unknown>>};
 const trafficPoses = {at: Number.NaN, poses: new Map<Entry, TA>()};
 const sceneQuery = (x: number, z: number, radius: number, epoch: number): TA[] => {
     stats.asks++;
@@ -519,7 +519,9 @@ const sceneQuery = (x: number, z: number, radius: number, epoch: number): TA[] =
                     }
                     const t = performance.now();
                     const pose = poseOf(e, epoch);
-                    stats.poseMs.push(performance.now() - t);
+                    const took = performance.now() - t;
+                    stats.poseMs.push(took);
+                    if (took > 20) stats.dear.push({ms: +took.toFixed(1), slug: e.animal.model_slug, id: e.animal.id.slice(0, 8), area: towned.get(e.animal.id)?.area ?? "?", where: towned.get(e.animal.id)?.where ?? "?", at: +(epoch - Math.floor(epoch0 / TRAFFIC_WINDOW) * TRAFFIC_WINDOW).toFixed(2)});
                     stats.poses++;
                     stats.askedIds.add(e.animal.id);
                     const body = bodyShape(e.animal.model_slug, e.length);
@@ -607,7 +609,7 @@ const resetAll = () => {
     trafficPoses.poses.clear();
     rangeErrors = 0;
     tripLines = new Map();
-    stats = {asks: 0, poses: 0, poseMs: [], tickMs: [], aborts: 0, askedIds: new Set()};
+    stats = {asks: 0, poses: 0, poseMs: [], tickMs: [], aborts: 0, askedIds: new Set(), dear: []};
 };
 const q = (list: number[], p: number) => {
     if (!list.length) return 0;
@@ -619,7 +621,7 @@ const summ = (list: number[]) => ({n: list.length, sum: Math.round(list.reduce((
 // One run: the page opens at epoch0; each emulated frame the town's cars run (policy), then the frame steps the town
 // entries at its epoch (index.ts updateInstances: a fresh or due trip only while the frame's warm time is under 6 ms).
 type Policy = "inf" | "today" | "every" | "txn";
-const run = (policy: Policy, mode: Mode, maxFrames = 6000) => {
+const run = (policy: Policy, mode: Mode, steps = true, maxFrames = 6000) => {
     resetAll();
     holderMode = mode;
     const record: string[] = [];
@@ -647,7 +649,7 @@ const run = (policy: Policy, mode: Mode, maxFrames = 6000) => {
             // The frame's own steps of the town's scheduled entries (WARM_MS 6).
             const s0 = performance.now();
             let warm = 0;
-            for (const e of townEntries) {
+            for (const e of steps ? townEntries : []) {
                 if (!e.sched) continue;
                 const own = e.sched;
                 const covers = own.trip && epochNow >= own.trip.start && epochNow < own.trip.end;
@@ -669,17 +671,40 @@ const run = (policy: Policy, mode: Mode, maxFrames = 6000) => {
             }
         }
     }
-    return {policy, mode, frames, drawnAtFrame: drawnAt, drawnAfterWorldS: drawnAt >= 0 ? +(drawnAt / fpsFrames).toFixed(1) : null, wallMs: Math.round(performance.now() - wall0), ticks: record.length, record, traffic: summ(trafficFrameMs), frameSteps: summ(stepFrameMs), tick: summ(stats.tickMs), pose: summ(stats.poseMs), asks: stats.asks, poses: stats.poses, aborts: stats.aborts, askedAnimals: stats.askedIds.size, rangeErrors, trips: tripLines};
+    const dear = [...stats.dear].sort((a, b) => (b.ms as number) - (a.ms as number)).slice(0, 12);
+    return {policy, mode, steps, dear, frames, drawnAtFrame: drawnAt, drawnAfterWorldS: drawnAt >= 0 ? +(drawnAt / fpsFrames).toFixed(1) : null, wallMs: Math.round(performance.now() - wall0), ticks: record.length, record, traffic: summ(trafficFrameMs), frameSteps: summ(stepFrameMs), tick: summ(stats.tickMs), pose: summ(stats.poseMs), asks: stats.asks, poses: stats.poses, aborts: stats.aborts, askedAnimals: stats.askedIds.size, rangeErrors, trips: tripLines};
 };
-const policies = arg("policies", "inf:shared,today:shared,every:shared,txn:shared,txn:past,txn:restore,inf:past").split(",").map((p) => p.split(":") as [Policy, Mode]);
+const policies = arg("policies", "inf:shared,today:shared,every:shared,txn:shared,txn:past,txn:restore,inf:past").split(",").map((p) => p.split(":") as [Policy, Mode, string?]);
 const results: Array<ReturnType<typeof run>> = [];
-for (const [p, m] of policies) {
-    const r = run(p, m);
+for (const [p, m, st] of policies) {
+    const r = run(p, m, st !== "nosteps");
     results.push(r);
     const {record, trips, ...rest} = r;
     console.log(JSON.stringify({...rest, trips: trips.size}));
 }
 // Identity: car states tick by tick against the first run; trips (id, slot) against the first run.
+const firstDiffField = (a: string, b: string) => {
+    const x = a.split("|"), y = b.split("|");
+    const names = ["slot", "doing", "start", "end", "from", "to", "finish", "arrive", "legs", "stay"];
+    for (let i = 0; i < Math.max(x.length, y.length); i++) if (x[i] !== y[i]) return `${names[i] ?? i}: ${String(x[i]).slice(0, 120)} <> ${String(y[i]).slice(0, 120)}`;
+    return "";
+};
+const slugOf = (id: string) => snapshotById.get(id)?.model_slug ?? "?";
+for (let k = 1; k < results.length; k++) {
+    const a = results[k - 1], b = results[k];
+    let same = 0, diff = 0;
+    let example = "";
+    b.trips.forEach((line, key) => {
+        const other = a.trips.get(key);
+        if (other === undefined) return;
+        if (other === line) same++;
+        else {
+            diff++;
+            if (!example) example = `${slugOf(key.split("|")[0])} ${key} ${firstDiffField(other, line)}`;
+        }
+    });
+    console.log(JSON.stringify({consecutive: `${a.policy}:${a.mode}${a.steps ? "" : ":nosteps"} -> ${b.policy}:${b.mode}${b.steps ? "" : ":nosteps"}`, tripsSame: same, tripsDiff: diff, example}));
+}
 const ref = results[0];
 for (const r of results.slice(1)) {
     const n = Math.min(ref.record.length, r.record.length);
@@ -699,7 +724,7 @@ for (const r of results.slice(1)) {
             if (diffs.length < 6) diffs.push(key);
         }
     });
-    console.log(JSON.stringify({vs: `${ref.policy}:${ref.mode}`, run: `${r.policy}:${r.mode}`, ticksCompared: n, carsFirstDiffTick: firstDiff, tripsSame: same, tripsDiff: diff, tripsOnlyHere: only, diffKeys: diffs}));
+    console.log(JSON.stringify({vs: `${ref.policy}:${ref.mode}`, run: `${r.policy}:${r.mode}${r.steps ? "" : ":nosteps"}`, ticksCompared: n, carsFirstDiffTick: firstDiff, tripsSame: same, tripsDiff: diff, tripsOnlyHere: only, diffKeys: diffs.map((k) => `${slugOf(k.split("|")[0])}@${k}`)}));
 }
 
 // The `previous` handed on: each asked animal's trips over the window's slots worked out three ways from a cold memo.
