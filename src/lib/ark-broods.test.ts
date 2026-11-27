@@ -215,6 +215,7 @@ function world(tier: "high" | "medium" | "low" = "high", chases = true, plans: R
     let relayouts = 0;
     const host: LiveBroodsHost<E> = {
         find: (id) => entries.get(id) ?? null,
+        out: (id) => entries.has(id),
         plan: (slug) => plans[slug] ?? null,
         place: (animals) => new Map(animals.map((a) => [a.id, {...NEST, y: 0, top: 0}])),
         adultLength: () => 0.5,

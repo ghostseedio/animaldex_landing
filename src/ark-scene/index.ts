@@ -11239,6 +11239,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                         const e = entryById.get(id);
                         return e && !e.held && !e.visitor ? e : null;
                     },
+                    out: (id) => entryById.has(id),
                     plan: (slug) => library.get(slug)?.behaviour?.plan ?? null,
                     place: (animals) => {
                         const out = new Map<string, {x: number; z: number; y: number; top: number; yaw: number; water: boolean}>();
@@ -11250,7 +11251,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                         });
                         return out;
                     },
-                    shore: (x, z) => waterEdgeNear(x, z, 14),
+                    // (The nearest dry ground to a point in the water, a step inland: ring by ring outward.)
+                    shore: (x, z) => {
+                        for (let r = 1; r <= 45; r += 1) {
+                            for (let i = 0; i < 16; i++) {
+                                const a = (i / 16) * Math.PI * 2 + r * 0.37;
+                                const px = x + Math.sin(a) * (r + 0.7);
+                                const pz = z + Math.cos(a) * (r + 0.7);
+                                const ground = heightAt(px, pz);
+                                if (ground >= 0.03 && waterTopAt(px, pz) <= ground + 0.02 && heightAt(x + Math.sin(a) * r, z + Math.cos(a) * r) >= 0.02) return {x: px, z: pz};
+                            }
+                        }
+                        return null;
+                    },
                     adultLength: (brood) => {
                         const parent = entryById.get(brood.carer ?? brood.parents[0] ?? "") ?? entryById.get(brood.parents[1] ?? "");
                         return parent ? parent.full : arkBody({model_slug: brood.model_slug, species_profile_id: brood.species_profile_id} as ArkAnimal, library.get(brood.model_slug)?.behaviour?.plan).display;

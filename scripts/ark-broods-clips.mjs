@@ -102,7 +102,7 @@ for (const name of scenes) {
         }
         writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
         const cols = 4;
-        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(plan.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-${mode === "on" ? "after" : mode === "none" ? "before" : "off"}-strip.jpg`)]);
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(plan.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-${mode === "on" ? "after" : mode === "none" ? "before" : mode}-strip.jpg`)]);
         summary[name][mode] = {errors: errors.slice(0, 10), shots: labels, hashes};
         console.log(name, mode, "\n" + labels.join("\n"));
         if (errors.length) console.log(name, mode, "errors:", errors.slice(0, 5));
@@ -113,6 +113,12 @@ for (const name of scenes) {
         const same = s.off.hashes.filter((h, i) => h === s.none.hashes[i]).length;
         s.offSameAsNone = `${same}/${s.off.hashes.length}`;
         console.log(name, "off vs none: identical frames", s.offSameAsNone);
+    }
+    // (The control: the same scene with no read, loaded twice.)
+    if (s.none2 && s.none) {
+        const same = s.none2.hashes.filter((h, i) => h === s.none.hashes[i]).length;
+        s.noneSameAsNone = `${same}/${s.none2.hashes.length}`;
+        console.log(name, "none vs none again (control): identical frames", s.noneSameAsNone);
     }
 }
 writeFileSync(path.join(out, "summary.json"), JSON.stringify(summary, null, 1));

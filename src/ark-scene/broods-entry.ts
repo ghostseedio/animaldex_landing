@@ -195,12 +195,14 @@ async function main() {
     const scene = SCENES[name];
     if (!scene) throw new Error(`no scene ${name}`);
     /** `on`: the fixture's read along the timeline. `off`: a read that says `on: false`. `none`: no read at all (today's scene). */
-    const mode = (params.get("broods") ?? "on") as "on" | "off" | "none";
+    // (`none2`: `none` again, the control for the comparison: how alike two loads of the very same scene are.)
+    const asked = params.get("broods") ?? "on";
+    const mode = (asked === "on" || asked === "off" ? asked : "none") as "on" | "off" | "none";
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
     if (params.get("grass") === "0") (globalThis as {__arkNoGrass?: boolean}).__arkNoGrass = true;
     const template = fixture.animals[0];
     // (The scene's own Ark day at the scene's clock: from the voyage's start, as the live page has it.)
-    const day0 = (Date.UTC(2026, 10, 20, scene.hours) + 60_000 - Date.parse(fixture.voyage.started_at)) / (FIXTURE_ARK_DAY_SECONDS * 1000);
+    let day0 = (Date.UTC(2026, 10, 20, scene.hours) + 60_000 - Date.parse(fixture.voyage.started_at)) / (FIXTURE_ARK_DAY_SECONDS * 1000);
     const animals: Raw[] = [];
     scene.cast.forEach((c, k) => {
         for (let i = 0; i < c.n; i++) animals.push({...template, id: castId(k, i), species_profile_id: speciesId(k), name: c.name, scientific_name: c.name, model_slug: c.slug, zone: scene.zone, activity: c.activity ?? "diurnal", sociality: k === 0 ? "pair" : "solitary", slot: 90 + k, slot_rank: i, origin: "arrived", born_ark_day: 0} as Raw);
@@ -239,6 +241,10 @@ async function main() {
     debug.controls.minDistance = Math.min(debug.controls.minDistance, 0.2);
     debug.camera.near = 0.03;
     debug.camera.updateProjectionMatrix();
+    // (The scene's own Ark day: the harness pins the island's hour, and the scene's day with it. The live page's is the voyage's.)
+    const sceneDay = (debug as unknown as {liveliness?: {arkDayNow?: number}}).liveliness?.arkDayNow;
+    if (typeof sceneDay === "number" && sceneDay > 0) day0 = sceneDay;
+    console.log("[broods] ark day", day0);
     const hunter = (k: number) => ({id: castId(k, 0), species_profile_id: speciesId(k), name: scene.cast[k].name, model_slug: scene.cast[k].slug});
     const live: RawBrood[] = [scene.brood({id: castId, day: day0, hunter})];
     const ended: RawBrood[] = [];
@@ -322,7 +328,12 @@ async function main() {
                 const at = handle.locate(id);
                 return at ? `${at.x.toFixed(2)},${at.y.toFixed(2)},${at.z.toFixed(2)}` : "-";
             };
-            const trace = `nest ${row?.place ? `${row.place.x.toFixed(2)},${row.place.y.toFixed(2)},${row.place.z.toFixed(2)}` : "-"} home ${home.x.toFixed(2)},${home.ground.toFixed(2)},${home.z.toFixed(2)} a ${where(a)} b ${where(castId(0, 1))} c ${scene.cast[1] ? where(castId(1, 0)) : "-"} view ${JSON.stringify(handle.view?.() ?? null).slice(0, 160)}`;
+            const actOf = debug.entries().find((e) => e.animal.id === a)?.act as {base?: number; state?: string} | null | undefined;
+            const sizes = debug.entries().filter((e) => e.animal.id.startsWith("brood:") || e.animal.id === a).map((e) => `${e.animal.id.slice(-2)}:${e.length.toFixed(3)}/${String((e.animal as {born_ark_day?: number}).born_ark_day ?? "-").slice(0, 8)}/${(e.animal as {origin?: string}).origin}`).join(" ");
+            const arkNow = (debug as unknown as {liveliness?: {arkDayNow?: number; ageOf?: (e: unknown) => {stage?: string; scale?: number} | null}}).liveliness;
+            const firstStandIn = debug.entries().find((e) => e.animal.id.startsWith("brood:"));
+            const age = firstStandIn && arkNow?.ageOf ? arkNow.ageOf(firstStandIn) : null;
+            const trace = `ark day ${arkNow?.arkDayNow} lengths ${sizes} age ${JSON.stringify(age ? {stage: age.stage, scale: age.scale} : null)} ground ${row?.place ? handle.heightAt(row.place.x, row.place.z).toFixed(2) : "-"} a.act ${actOf ? `${Number(actOf.base).toFixed(2)} ${actOf.state}` : "-"} nest ${row?.place ? `${row.place.x.toFixed(2)},${row.place.y.toFixed(2)},${row.place.z.toFixed(2)}` : "-"} home ${home.x.toFixed(2)},${home.ground.toFixed(2)},${home.z.toFixed(2)} a ${where(a)} b ${where(castId(0, 1))} c ${scene.cast[1] ? where(castId(1, 0)) : "-"} view ${JSON.stringify(handle.view?.() ?? null).slice(0, 160)}`;
             return [`${name} [${mode}] +${shot.s} s  ${shot.label}`, row ? `record: ${row.stage}${row.ended ? " (ended)" : ""} count ${row.count} · drawn: eggs ${row.eggs.toFixed(0)} young ${row.young.toFixed(1)} models ${row.models} (entries ${standIns}) sitter ${row.sitter ? "yes" : "no"} · instances ${JSON.stringify(state!.drawn)}` : "no brood layer", line ? `card: ${line.head}${line.notes.length ? ` — ${line.notes.join("; ")}` : ""}` : "", row ? `acts: ${row.acts.map((x) => `${x.kind}${x.acted ? "*" : ""}${x.over ? " over" : ` t0 ${(x.t0 - t0).toFixed(0)} → ${(x.effectAt - t0).toFixed(0)}`}`).join(", ")}` : "", acts.join(" | "), trace].filter(Boolean).join("\n");
         },
         handle

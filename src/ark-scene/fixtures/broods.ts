@@ -75,3 +75,52 @@ export function rawBroodsRead(epoch: number, arkDay: number, broods: RawBrood[],
 export function rawLoss(id: number, epoch: number, arkDay: number, cause: RawBroodLoss["cause"], count: number, left: number, hunter: RawBroodLoss["hunter"] = null, encounter?: RawBroodLoss["encounter"]): RawBroodLoss {
     return {id, at: new Date(epoch * 1000).toISOString(), ark_day: arkDay, cause, count, left, hunter, ...(encounter ? {encounter} : {})};
 }
+
+/**
+ * DEVELOPMENT ONLY (the runtime measure's `--broods <n>`): up to `n` broods made from a snapshot's own free wildlife, one
+ * a pair of a kind, at the first parent's home slot: eggs, young and (every seventh) a spawn of hundreds in turn, so a
+ * measured run carries the nests, the stand-ins and the instanced young a switched-on Ark of that size would. Not a
+ * forecast of the engine's numbers: only a load of the right order (the contract's estimate is a few hundred broods).
+ */
+export function rawBroodsFromSnapshot(animals: ReadonlyArray<{id: string; species_profile_id: string; kind_species_profile_id?: string | null; name: string; model_slug: string; zone: string; slot?: number | null; slot_rank?: number | null; area?: string | null; island?: string | null; origin?: string}>, n: number, epoch: number, arkDay: number): ReturnType<typeof rawBroodsRead> {
+    const kinds = new Map<string, typeof animals[number][]>();
+    for (const animal of animals) {
+        if (animal.area || animal.model_slug === "human" || animal.slot == null || animal.origin === "born") continue;
+        const key = `${animal.kind_species_profile_id || animal.species_profile_id}|${animal.zone}|${animal.island ?? ""}`;
+        kinds.set(key, [...(kinds.get(key) ?? []), animal]);
+    }
+    const broods: RawBrood[] = [];
+    let k = 0;
+    for (const group of Array.from(kinds.values())) {
+        if (broods.length >= n) break;
+        if (group.length < 2) continue;
+        const [a, b] = group;
+        const young = k % 2 === 1;
+        const many = k % 7 === 6;
+        const start = many ? 800 : 3 + (k % 8);
+        const count = Math.max(start - (k % 3), 1);
+        broods.push(rawBrood({
+            id: `b100d000-0000-4000-8000-${k.toString(16).padStart(12, "0")}`,
+            species_profile_id: a.species_profile_id,
+            kind: a.kind_species_profile_id || a.species_profile_id,
+            name: a.name,
+            model_slug: a.model_slug,
+            parents: [a.id, b.id],
+            carer: k % 5 === 4 ? null : a.id,
+            care: (["nest", "follow", "none", "guard", "carry"] as const)[k % 5],
+            hold: young || k % 5 === 2 ? null : k % 5 === 3 ? "guard" : "sit",
+            stage: young ? "young" : "egg",
+            count,
+            start,
+            stage_count: young ? count : start,
+            zone: a.zone,
+            island: a.island === "town" ? "town" : "wild",
+            nest: {slot: a.slot ?? 0, slot_rank: a.slot_rank ?? 0},
+            laid_ark_day: arkDay - 6,
+            stage_ark_day: young ? arkDay - 2 : arkDay - 6,
+            next_ark_day: arkDay + 8
+        }));
+        k++;
+    }
+    return rawBroodsRead(epoch, arkDay, broods);
+}

@@ -93,8 +93,10 @@ export type BroodSink = {
 };
 
 export type LiveBroodsHost<E> = {
-    /** A drawn living animal's entry (a stand-in's too), or null: not out, or not aboard. */
+    /** A drawn living animal's entry (a stand-in's too), or null: not out, held by another act's stand-in, or not aboard. */
     find: (id: string) => E | null;
+    /** Whether the live set has it at all (out, even if another act's stand-in holds it now). */
+    out: (id: string) => boolean;
     /** The model's body plan (`ark.json` behaviour.plan: mammal, bird, reptile, snake, frog, fish, arthropod...), or null: not in yet. */
     plan: (slug: string) => string | null;
     /** Where the scene's home function puts each of these (a nest's slot as an animal's): from the record alone. */
@@ -179,6 +181,14 @@ function unit(key: string): number {
     let h = 2166136261;
     for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
     return ((h >>> 0) % 100000) / 100000;
+}
+
+/**
+ * A pose on a raised surface (a nest on a limb, a perch, a rock's top): the scene stands an act on the ground unless it
+ * is given the surface it is on (`acts.ts` ActPose.surface, as a perched bird's own place has).
+ */
+export function onSurface(pose: ActPose): ActPose {
+    return {...pose, pitch: 0, surface: {nx: 0, ny: 1, nz: 0, tx: Math.sin(pose.yaw), ty: 0, tz: Math.cos(pose.yaw)}};
 }
 
 const WATER_PLAN = /^(fish|eel|ray|shark|cetacean|jellyfish|cephalopod)$/;
@@ -525,6 +535,11 @@ export class LiveBroods<E> {
                 if (shore) place = {...place, x: shore.x, z: shore.z, y: Math.max(this.host.ground(shore.x, shore.z), 0), water: false};
                 else place = {...place, y: Math.max(place.y, place.top)};
             }
+            // A ground-nester whose home is up on a perch or a limb (a plover, a duck): its scrape on the ground beneath.
+            if (place && !place.water && broodEggLook(live.brood, plan, false)?.nest === "scrape") {
+                const ground = this.host.ground(place.x, place.z);
+                if (place.y > ground + 0.3) place = {...place, y: Math.max(ground, 0)};
+            }
             live.place = place;
             live.adult = this.host.adultLength(live.brood);
             live.size = clamp(live.adult * 0.7, 0.1, 1.6);
@@ -659,6 +674,9 @@ export class LiveBroods<E> {
             if (!nest) return;
             const plan = h.plan(brood.model_slug);
             const near = !view || Math.hypot(nest.x - view.x, nest.z - view.z) < reach;
+            // (Up off the ground: whoever is posed at the nest is posed on its surface.)
+            const raised = !nest.water && nest.y > h.ground(nest.x, nest.z) + 0.2;
+            const seat = (p: ActPose | null): ActPose | null => (p && raised && Math.abs(p.base - nest.y) < 0.15 && p.state !== "walk" && p.state !== "fly" ? onSurface(p) : p);
             // The takes: a chase handed to `live-meals`, or a raid acted here.
             let raided: LossAct | null = null;
             live.acts.forEach((act) => {
@@ -714,7 +732,7 @@ export class LiveBroods<E> {
                     const body = h.body(hunter);
                     const p = raidPose(s, act.effectAt - act.t0 - RAID_WALK, act.from, h.scheduleAt(hunter, epoch), act.at, body.length, live.size, h.walk(hunter), h.flies(hunter), h.ground);
                     if (p) {
-                        if (pose(hunter, p)) act.acted = true;
+                        if (pose(hunter, act.at === nest ? seat(p) : p)) act.acted = true;
                     } else if (s > RAID_WALK) act.over = true;
                 }
                 if (epoch >= act.effectAt + RAID_BACK) act.over = true;
@@ -749,7 +767,7 @@ export class LiveBroods<E> {
                         const d = Math.hypot(to.x - from.x, to.z - from.z);
                         to = {...to, x: from.x + (to.x - from.x) * e, z: from.z + (to.z - from.z) * e, base: from.base + (to.base - from.base) * e, yaw: d > 0.05 ? Math.atan2(to.x - from.x, to.z - from.z) : to.yaw, pitch: 0, state: d > 0.05 ? (water ? "swim" : "walk") : to.state, speed: d / SETTLE};
                     }
-                    pose(entry, to, false);
+                    pose(entry, seat(to), false);
                 } else {
                     live.sitter = null;
                     // Resting out of sight by the live budget: a figure of it on its eggs, as the resting are drawn.
@@ -774,7 +792,7 @@ export class LiveBroods<E> {
                 const entry = h.find(id);
                 if (!entry) continue;
                 if (hatch < HATCH_STAY && wasEgg) {
-                    pose(entry, hatchPose(hatch, i, live.models, nest, live.size));
+                    pose(entry, seat(hatchPose(hatch, i, live.models, nest, live.size)));
                     continue;
                 }
                 // (The last ones are the ones that go: a raid's are gone one by one, the others fade together.)
@@ -790,7 +808,7 @@ export class LiveBroods<E> {
                     const r = live.models > 1 ? live.size * 0.2 : 0;
                     const at: BroodBody = {x: nest.x + Math.sin(angle) * r, z: nest.z + Math.cos(angle) * r, base: nest.y + (look?.nest === "nest" && wasEgg ? live.size * 0.06 : 0), yaw: angle, length: 0};
                     // (Each lifts its head now and then, in its own time.)
-                    pose(entry, {x: at.x, z: at.z, base: at.base, yaw: at.yaw + (still ? 0 : Math.sin(epoch * 0.8 + i * 2.1) * 0.25), pitch: still ? 0 : Math.max(Math.sin(epoch * 1.1 + i * 1.7), 0) * 0.18, roll: 0, scale: 1, dim: 0, hidden: false, state: "rest", speed: 0}, false);
+                    pose(entry, seat({x: at.x, z: at.z, base: at.base, yaw: at.yaw + (still ? 0 : Math.sin(epoch * 0.8 + i * 2.1) * 0.25), pitch: still ? 0 : Math.max(Math.sin(epoch * 1.1 + i * 1.7), 0) * 0.18, roll: 0, scale: 1, dim: 0, hidden: false, state: "rest", speed: 0}), false);
                     live.last.set(id, at);
                     continue;
                 }
@@ -824,7 +842,7 @@ export class LiveBroods<E> {
             if (live.ended || !near) return;
             // The specks: whoever of the count is not drawn with a model (a model stand-in the budget rests is a speck too).
             let models = 0;
-            for (let i = 0; i < live.models; i++) if (h.find(arkBroodMemberId(brood.id, i))) models++;
+            for (let i = 0; i < live.models; i++) if (h.out(arkBroodMemberId(brood.id, i))) models++;
             const rest = Math.max(shown - going - models, 0);
             const drawn = Math.min(broodDrawn(Math.ceil(rest), Math.max(brood.stage_count - models, 1), speckCap), Math.ceil(rest));
             if (drawn > 0) this.drawSpecks(live, plan, drawn, rest, wasEgg && !still ? hatch : Infinity, still ? 0 : epoch, sink);
