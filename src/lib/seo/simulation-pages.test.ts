@@ -130,7 +130,7 @@ test("survivalSummary counts recovering animals as alive, across every place, an
     const week: ArkSurvival = {
         windowDays: 7,
         places: [place("zoo", 641, 2, 9), place("farm", 169, 0, 0), place("house", 1362, 6, 28), place("town", 860, 26, 505), place("wild", 945, 19, 253)],
-        causes: {falls: {old: 1318, starved: 6, eaten: 81}, lostForGood: {old: 778, starved: 2, eaten: 15}}
+        causes: {falls: {old: 1318, starved: 6, eaten: 81, unknown: 0}, lostForGood: {old: 778, starved: 2, eaten: 15, unknown: 0}}
     };
     const summary = survivalSummary(week)!;
     assert.equal(summary.everThere, 4825);
