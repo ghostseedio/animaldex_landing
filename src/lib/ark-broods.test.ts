@@ -70,6 +70,51 @@ test("the read: never more than it started with, a carer only among its parents,
     for (const key of ["user_id", "bringers", "fate"]) assert.equal(key in b, false);
 });
 
+test("the read as the engine builds it (voyage_brood_public): an ended brood has no stage, a census loss no id; both still drawn", () => {
+    // (Field for field as jsonb_strip_nulls leaves them: hold, way_detail, nest, young_mass_g, outcome dropped when null; census rows' event id null.)
+    const at = (m: number) => new Date((T0 + m * 60) * 1000).toISOString().replace(/\.\d+Z$/, "Z");
+    const raw = {
+        on: true, as_of: at(0), ark_day: DAY,
+        broods: [{
+            id: ID, kind: "k", species_profile_id: "s", name: "Mallard", model_slug: "mallard", way: "mating", care: "follow", stage: "young", island: "wild", zone: "wetland",
+            parents: [A, B], carer: null, count: 5, start: 9, stage_count: 7, taken: 2, lost: 2, recruited: 0, unsettled: 0, laid_ark_day: DAY - 40, stage_ark_day: DAY - 12, next_ark_day: DAY + 30, unguarded: true,
+            losses: [
+                {at: at(-1), ark_day: DAY - 0.2, cause: "did_not_survive", count: 2, left: 5, stage: "young"},
+                {id: 991, at: at(-30), ark_day: DAY - 5, cause: "taken", count: 2, left: 7, stage: "egg", egg: true, hunter: HUNTER}
+            ]
+        }],
+        ended: [
+            // A nest that failed in its eggs.
+            {id: "e1", kind: "k", species_profile_id: "s", name: "American Robin", model_slug: "american-robin", way: "mating", care: "nest", hold: "sit", outcome: "failed", ended_ark_day: DAY - 0.1, island: "wild", zone: "farm_garden", nest: {slot: 4, slot_rank: 0},
+                parents: [A, A], carer: A, count: 0, start: 4, stage_count: 4, taken: 0, lost: 4, recruited: 0, unsettled: 0, laid_ark_day: DAY - 5, stage_ark_day: DAY - 5, next_ark_day: DAY + 8, unguarded: false,
+                losses: [{id: 995, at: at(-2), ark_day: DAY - 0.1, cause: "failed", count: 4, left: 0, stage: "egg"}]},
+            // Young on their own: 3 recruited (each `birth` took one off the count), 2 did not settle.
+            {id: "e2", kind: "k", species_profile_id: "s", name: "Mallard", model_slug: "mallard", way: "mating", care: "follow", outcome: "independent", ended_ark_day: DAY, island: "wild", zone: "wetland",
+                parents: [A, B], carer: A, count: 0, start: 9, stage_count: 5, taken: 2, lost: 2, recruited: 3, unsettled: 2, laid_ark_day: DAY - 60, stage_ark_day: DAY - 32, next_ark_day: DAY, unguarded: false,
+                losses: [{id: 996, at: at(-1), ark_day: DAY, cause: "unsettled", count: 2, left: 3, stage: "young"}]},
+            // Ended with no loss that says its stage (closed): a stage change after laying made it young.
+            {id: "e3", kind: "k", species_profile_id: "s", name: "Mallard", model_slug: "mallard", outcome: "closed", ended_ark_day: DAY, parents: [A, B], carer: null, count: 4, start: 4, stage_count: 4, taken: 0, lost: 0, recruited: 0, unsettled: 0, laid_ark_day: DAY - 30, stage_ark_day: DAY - 2, next_ark_day: DAY + 9, unguarded: false, losses: []}
+        ]
+    };
+    const got = decodeArkBroods(raw);
+    assert.equal(got.broods.length, 1);
+    assert.equal(got.ended.length, 3, "no ended brood is dropped for having no stage");
+    const live = got.broods[0];
+    assert.equal(live.losses.length, 2, "the census loss is kept");
+    assert.match(live.losses[0].id, /^census:/);
+    assert.equal(decodeArkBroods(JSON.parse(JSON.stringify(raw))).broods[0].losses[0].id, live.losses[0].id, "the same census loss has the same id in the next read: acted once");
+    assert.equal(live.losses[1].stage, "egg");
+    assert.deepEqual({unguarded: live.unguarded, recruited: live.recruited, carer: live.carer, hold: live.hold, nest: live.nest}, {unguarded: true, recruited: 0, carer: null, hold: null, nest: null});
+    const [failed, independent, closed] = got.ended;
+    assert.deepEqual([failed.stage, independent.stage, closed.stage], ["egg", "young", "young"]);
+    assert.equal(failed.outcome, "failed");
+    assert.deepEqual(failed.parents, [A, A], "a solo breeder names itself twice");
+    assert.deepEqual(arkBroodCardLine(failed, null, "en", an).notes, ["The nest failed"]);
+    const line = arkBroodCardLine(independent, null, "en", an);
+    assert.equal(line.head, "5 young · 3 left", "its recruits are what is left of it, not the read's count of 0");
+    assert.deepEqual(line.notes.slice(0, 2), ["3 now on their own", "2 did not settle"]);
+});
+
 test("a loss's stage: the read's own word, else from the days (eggs of a brood since hatched)", () => {
     const young = {stage: "young" as const, laid_ark_day: 460, stage_ark_day: 470};
     assert.equal(arkBroodLossStage(young, {stage: null, ark_day: 465}), "egg");
@@ -156,6 +201,20 @@ test("the looks follow the MODEL's plan (ark.json behaviour.plan), never a rig c
     assert.equal(broodFlees({care: "follow"}, "bird"), true);
     assert.equal(broodFlees({care: "nest"}, "bird"), false, "nestlings are taken where they are: a raid, not a chase");
     assert.deepEqual([broodSpeck("frog", true), broodSpeck("fish", true), broodSpeck("bird", true), broodSpeck("mammal", false), broodSpeck("arthropod", false), broodSpeck("reptile", true)], ["tadpole", "fry", "oval", "four", "grub", "grub"], "a duckling on the water is still a duckling");
+    // Every plan the models carry (2,632 local ark.json, 2026-11-27) draws its young somehow, and its eggs unless they drift.
+    const every: Record<string, {models: boolean; speck: string; egg: string | null}> = {
+        mammal: {models: true, speck: "four", egg: "shell"}, bird: {models: true, speck: "oval", egg: "speckled"}, arthropod: {models: false, speck: "grub", egg: "shell"},
+        fish: {models: true, speck: "fry", egg: "spawn"}, reptile: {models: true, speck: "grub", egg: "shell"}, butterfly: {models: false, speck: "grub", egg: "shell"},
+        turtle: {models: true, speck: "grub", egg: "shell"}, snake: {models: true, speck: "grub", egg: "shell"}, slow_invertebrate: {models: false, speck: "grub", egg: "shell"},
+        frog: {models: false, speck: "tadpole", egg: "spawn"}, cetacean: {models: true, speck: "fry", egg: "spawn"}, sessile: {models: false, speck: "fry", egg: "spawn"},
+        cephalopod: {models: false, speck: "fry", egg: "spawn"}, eel: {models: true, speck: "fry", egg: "spawn"}, ray: {models: true, speck: "fry", egg: "spawn"},
+        jellyfish: {models: false, speck: "fry", egg: "spawn"}, worm: {models: false, speck: "grub", egg: "shell"}, flatfish: {models: true, speck: "fry", egg: "spawn"}
+    };
+    for (const [plan, want] of Object.entries(every)) {
+        const water = want.speck === "fry";
+        const got = {models: broodModels({care: "none"}, plan), speck: broodSpeck(plan, water), egg: broodEggLook({...brood, model_slug: `x-${plan}`, care: "none", hold: null}, plan, water)?.egg ?? null};
+        assert.deepEqual(got, want, plan);
+    }
 });
 
 test("eggs keep their places as the clutch thins (the k-th egg does not move when another goes)", () => {
@@ -209,7 +268,7 @@ test("a raid: the hunter comes to the brood, feeds there, and goes back to its d
 
 type E = {id: string; act: ActPose | null; x: number; z: number};
 
-function world(tier: "high" | "medium" | "low" = "high", chases = true, plans: Record<string, string> = {mallard: "bird", "grey-heron": "bird", "common-frog": "frog", "red-fox": "mammal", "american-robin": "bird"}) {
+function world(tier: "high" | "medium" | "low" = "high", chases = true, plans: Record<string, string> = {mallard: "bird", "grey-heron": "bird", "common-frog": "frog", "red-fox": "mammal", "american-robin": "bird"}, waterTop: (x: number, z: number) => number = () => 0) {
     const entries = new Map<string, E>();
     const meals: Array<{predator: string; prey: string; at: string}> = [];
     const dropped: string[] = [];
@@ -223,7 +282,7 @@ function world(tier: "high" | "medium" | "low" = "high", chases = true, plans: R
         body: (e) => ({x: e.act?.x ?? e.x, z: e.act?.z ?? e.z, base: 0, yaw: 0, length: 0.5}),
         scheduleAt: (e) => ({x: e.x, z: e.z, y: 0, yaw: 0}),
         ground: () => 0,
-        waterTop: () => 0,
+        waterTop,
         walk: () => 1,
         flies: () => false,
         setAct: (e, pose) => void (e.act = pose),
@@ -417,6 +476,43 @@ test("a chase live-meals cannot act (a fox and ducklings on the water) becomes a
     w.layout();
     assert.equal(w.step(start + 121).specks + w.layer.roster(w.base).animals.filter((a) => a.id.startsWith("brood:")).length, 7, "the two are gone");
     assert.equal(w.entries.get(HUNTER.id)!.act, null);
+});
+
+test("a take of young out on the water by a hunter that cannot go there: acted at the record's place on dry ground, the taken ones come to it", () => {
+    // (The pond from x 30 on; the duck and her young are out on it; the record has the take at the nest, on the bank.)
+    const w = world("high", false, undefined, (x) => (x > 30 ? 0.4 : 0));
+    w.layer.set(read(T0, [mallard({stage: "young", count: 9, stage_count: 9, stage_ark_day: DAY - 1, hold: null})]), T0);
+    w.layout();
+    w.entries.get(A)!.x = 40;
+    for (let i = 0; i < 6; i++) w.entries.get(arkBroodMemberId(ID, i))!.x = 41 + i * 0.3;
+    w.step(T0 + 30);
+    const b = mallard({stage: "young", count: 7, stage_count: 9, taken: 2, stage_ark_day: DAY - 1, hold: null});
+    b.losses = [rawLoss(993, T0 + 60, DAY, "taken", 2, 7, HUNTER, {t: T0 + 60, predator: {x: 0, z: 20}, prey: {x: 10, z: 20, r: 2.5}})];
+    w.layer.set(read(T0 + 61, [b]), T0 + 61);
+    w.layout();
+    const start = T0 + 60 + ARK_ACT_HOLD_SECONDS;
+    w.step(start - 10);
+    w.step(start + 1.5);
+    assert.equal(w.dropped.length, 1, "no chase onto the water");
+    w.step(start + 3);
+    const coming = w.entries.get(arkBroodMemberId(ID, 5))!.act!;
+    assert.ok(coming && !coming.hidden && coming.x < 47, "the last stand-in leaves the brood for the take's place");
+    w.step(start + 1.5 + RAID_WALK + 0.5);
+    const feeding = w.entries.get(HUNTER.id)!.act!;
+    assert.equal(feeding.state, "eat");
+    assert.ok(Math.hypot(feeding.x - 10, feeding.z - 20) < 2, `at the record's place on the bank, never on the pond: ${feeding.x},${feeding.z}`);
+    for (const i of [4, 5]) {
+        const member = w.entries.get(arkBroodMemberId(ID, i))!.act!;
+        assert.ok(Math.hypot(member.x - 10, member.z - 20) < 1.5 && member.state !== "swim", `the taken one is at the take: ${member.x},${member.z}`);
+    }
+    assert.equal(w.entries.get(arkBroodMemberId(ID, 0))!.act, null, "the others stay with their parent");
+    // (Two members: four seconds of feeding; the first is gone halfway.)
+    w.step(start + 1.5 + RAID_WALK + 2.5);
+    assert.equal(w.entries.get(arkBroodMemberId(ID, 5))!.act!.hidden, true, "taken one by one as it feeds");
+    assert.equal(w.entries.get(arkBroodMemberId(ID, 4))!.act!.hidden, false);
+    w.step(start + 120);
+    w.layout();
+    assert.equal(w.step(start + 121).specks + w.layer.roster(w.base).animals.filter((a) => a.id.startsWith("brood:")).length, 7, "seven left");
 });
 
 test("losses with no cause: the members fade where they are; no hunter, no act, no pin", () => {

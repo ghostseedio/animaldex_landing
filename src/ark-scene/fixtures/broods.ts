@@ -6,7 +6,8 @@
  * It is the raw answer, as the server would send it: every consumer still goes through `decodeArkBroods`.
  */
 
-export type RawBroodLoss = {id: number; at: string; ark_day: number; cause: "taken" | "did_not_survive" | "failed" | "parent_lost" | "unsettled"; count: number; left: number; hunter: {id: string; species_profile_id: string; name: string; model_slug: string} | null; encounter?: {t: number; predator: {x: number; z: number}; prey: {x: number; z: number; r: number}}};
+/** A loss as the read sends it. A census loss ("did not survive") has no `id`: it is not a log row (7.1 as built). */
+export type RawBroodLoss = {id?: number; at: string; ark_day: number; cause: "taken" | "did_not_survive" | "failed" | "parent_lost" | "unsettled"; count: number; left: number; stage?: "carried" | "egg" | "young"; egg?: true; hunter: {id: string; species_profile_id: string; name: string; model_slug: string} | null; encounter?: {t: number; predator: {x: number; z: number}; prey: {x: number; z: number; r: number}}};
 
 export type RawBrood = {
     id: string;
@@ -20,12 +21,16 @@ export type RawBrood = {
     hold: "sit" | "guard" | null;
     way: string;
     way_detail: string | null;
-    stage: "carried" | "egg" | "young";
+    /** Absent on an ended brood (the read strips it: 7.1 as built). */
+    stage?: "carried" | "egg" | "young";
     count: number;
     start: number;
     stage_count: number;
     taken: number;
     lost: number;
+    recruited?: number;
+    unsettled?: number;
+    unguarded?: boolean;
     laid_ark_day: number;
     stage_ark_day: number;
     next_ark_day: number;
@@ -72,8 +77,9 @@ export function rawBroodsRead(epoch: number, arkDay: number, broods: RawBrood[],
 }
 
 /** A loss row. `epoch`: when it was recorded; newest first in a brood's `losses`. */
-export function rawLoss(id: number, epoch: number, arkDay: number, cause: RawBroodLoss["cause"], count: number, left: number, hunter: RawBroodLoss["hunter"] = null, encounter?: RawBroodLoss["encounter"]): RawBroodLoss {
-    return {id, at: new Date(epoch * 1000).toISOString(), ark_day: arkDay, cause, count, left, hunter, ...(encounter ? {encounter} : {})};
+export function rawLoss(id: number, epoch: number, arkDay: number, cause: RawBroodLoss["cause"], count: number, left: number, hunter: RawBroodLoss["hunter"] = null, encounter?: RawBroodLoss["encounter"], stage?: RawBroodLoss["stage"]): RawBroodLoss {
+    // (As the engine's read has it: a census cut is no log row and has no id; every loss says its stage; a raid says `egg`.)
+    return {...(cause === "did_not_survive" ? {} : {id}), at: new Date(epoch * 1000).toISOString(), ark_day: arkDay, cause, count, left, ...(stage ? {stage} : {}), ...(stage === "egg" && cause === "taken" ? {egg: true as const} : {}), hunter, ...(encounter ? {encounter} : {})};
 }
 
 /**

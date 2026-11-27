@@ -29,7 +29,10 @@ export type ArkBroodHunter = {id: string; species_profile_id: string; name: stri
 export type ArkBroodEncounter = {t?: number; predator: {x: number; z: number}; prey: {x: number; z: number; r: number}};
 
 export type ArkBroodLoss = {
-    /** The event's id. */
+    /**
+     * The event's id. A loss the engine records only on the brood (a census cut, "did not survive": no log row, so the
+     * read sends no id, broods.md 7.1 as built) gets one made from what it is: its brood, day, cause and counts.
+     */
     id: string;
     /** When it was recorded (ISO) and the same in ms. */
     at: string;
@@ -40,7 +43,7 @@ export type ArkBroodLoss = {
     count: number;
     left: number;
     /** The stage it fell in, when the read says (else `arkBroodLossStage` works it out from the days). */
-    stage: "egg" | "young" | null;
+    stage: "carried" | "egg" | "young" | null;
     hunter: ArkBroodHunter | null;
     encounter: ArkBroodEncounter | null;
 };
@@ -66,8 +69,11 @@ export type ArkBrood = {
     stage_count: number;
     taken: number;
     lost: number;
-    /** On an ended brood, when the read says: how many of it became animals of their own. */
+    /** How many of it became animals of their own, and how many did not settle, when the read says. */
     recruited: number | null;
+    unsettled: number | null;
+    /** Its last carer is gone and it carries on (the read's `unguarded`). */
+    unguarded: boolean;
     laid_ark_day: number | null;
     stage_ark_day: number | null;
     /** The hatch, or independence, due (Ark day). */
@@ -118,19 +124,42 @@ function decodeEncounter(raw: unknown): ArkBroodEncounter | null {
     return {...(t !== null ? {t} : {}), predator: {x: px, z: pz}, prey: {x: qx, z: qz, r: Math.max(num(e.prey?.r) ?? 0, 0)}};
 }
 
-function decodeLoss(raw: unknown): ArkBroodLoss | null {
+function decodeLoss(raw: unknown, broodId: string): ArkBroodLoss | null {
     if (!raw || typeof raw !== "object") return null;
     const row = raw as Record<string, unknown>;
-    const id = typeof row.id === "number" || typeof row.id === "string" ? String(row.id).slice(0, 64) : "";
+    const given = typeof row.id === "number" || typeof row.id === "string" ? String(row.id).slice(0, 64) : "";
     const at = str(row.at, 40);
     const atMs = Date.parse(at);
     const cause = oneOf(row.cause, CAUSES);
     const n = count(row.count);
     const left = count(row.left);
-    if (!id || !Number.isFinite(atMs) || !cause || n === null || n < 1 || left === null) return null;
+    if (!Number.isFinite(atMs) || !cause || n === null || n < 1 || left === null) return null;
+    // (A census loss has no id: the same loss in the next read gets the same one, so it is acted once.)
+    const id = given || `census:${broodId}:${num(row.ark_day) ?? atMs}:${cause}:${n}:${left}`;
     const h = row.hunter as Record<string, unknown> | null | undefined;
     const hunter = cause === "taken" && h && typeof h === "object" && str(h.id) && str(h.model_slug) ? {id: str(h.id), species_profile_id: str(h.species_profile_id), name: str(h.name, 120), model_slug: str(h.model_slug)} : null;
-    return {id, at, atMs, ark_day: num(row.ark_day), cause, count: n, left, stage: oneOf(row.stage, ["egg", "young"] as const), hunter, encounter: cause === "taken" ? decodeEncounter(row.encounter) : null};
+    // (A nest raid says `egg: true`; its stage is the egg's whatever else it says.)
+    const stage = row.egg === true ? "egg" : oneOf(row.stage, ["carried", "egg", "young"] as const);
+    return {id, at, atMs, ark_day: num(row.ark_day), cause, count: n, left, stage, hunter, encounter: cause === "taken" ? decodeEncounter(row.encounter) : null};
+}
+
+/**
+ * An ended brood's last stage: the read leaves `stage` out of an ended one (broods.md 7.1 as built), so it is the stage
+ * of its last loss where it says (the engine's losses always do); else independence (or young that did not settle)
+ * ended it young; else a stage change after its laying made it young; else it ended in its first stage (closed with no
+ * loss): eggs, unless carried in a pouch.
+ */
+function endedStage(row: Record<string, unknown>, losses: ArkBroodLoss[]): ArkBroodStage {
+    const said = oneOf(row.stage, STAGES);
+    if (said) return said;
+    const last = losses.find((loss) => loss.stage !== null)?.stage ?? null;
+    if (last) return last;
+    const outcome = oneOf(row.outcome, OUTCOMES);
+    if (outcome === "independent" || outcome === "unsettled") return "young";
+    const laid = num(row.laid_ark_day);
+    const stageDay = num(row.stage_ark_day);
+    if (laid !== null && stageDay !== null && stageDay > laid + 1e-6) return "young";
+    return str(row.way, 40) === "male_pregnancy" ? "carried" : "egg";
 }
 
 function decodeBrood(raw: unknown, ended: boolean): ArkBrood | null {
@@ -139,16 +168,16 @@ function decodeBrood(raw: unknown, ended: boolean): ArkBrood | null {
     const id = str(row.id, 64);
     const species = str(row.species_profile_id, 64);
     const model = str(row.model_slug);
-    const stage = oneOf(row.stage, STAGES);
     const now = count(row.count);
     const start = count(row.start);
+    const losses = (Array.isArray(row.losses) ? row.losses : []).map((loss) => decodeLoss(loss, id)).filter((l): l is ArkBroodLoss => l !== null).sort((a, b) => b.atMs - a.atMs).slice(0, 12);
+    const stage = ended ? endedStage(row, losses) : oneOf(row.stage, STAGES);
     if (!id || !model || !stage || now === null || start === null) return null;
     const nestRaw = row.nest as {slot?: unknown; slot_rank?: unknown} | null | undefined;
     const slot = num(nestRaw?.slot);
     const parents = Array.isArray(row.parents) ? row.parents.filter((p): p is string => typeof p === "string" && p.length > 0 && p.length <= 64).slice(0, 2) : [];
     const carer = str(row.carer, 64);
     const island = oneOf(row.island, ["wild", "town"] as const);
-    const losses = (Array.isArray(row.losses) ? row.losses : []).map(decodeLoss).filter((l): l is ArkBroodLoss => l !== null).sort((a, b) => b.atMs - a.atMs).slice(0, 12);
     return {
         id,
         kind: str(row.kind, 64) || species,
@@ -169,7 +198,9 @@ function decodeBrood(raw: unknown, ended: boolean): ArkBrood | null {
         stage_count: Math.max(count(row.stage_count) ?? start, Math.min(now, start)),
         taken: count(row.taken) ?? 0,
         lost: count(row.lost) ?? 0,
-        recruited: ended ? count(row.recruited) : null,
+        recruited: count(row.recruited),
+        unsettled: count(row.unsettled),
+        unguarded: row.unguarded === true,
         laid_ark_day: num(row.laid_ark_day),
         stage_ark_day: num(row.stage_ark_day),
         next_ark_day: num(row.next_ark_day),
@@ -201,7 +232,8 @@ export function decodeArkBroods(raw: unknown): ArkBroodsRead {
  * stage began was in the stage before: the eggs of a brood that has since hatched). A `carried` brood has no losses.
  */
 export function arkBroodLossStage(brood: Pick<ArkBrood, "stage" | "stage_ark_day" | "laid_ark_day">, loss: Pick<ArkBroodLoss, "stage" | "ark_day">): "egg" | "young" {
-    if (loss.stage) return loss.stage;
+    // (A carried brood draws nothing; its loss is said as its young's.)
+    if (loss.stage) return loss.stage === "carried" ? "young" : loss.stage;
     if (brood.stage === "egg") return "egg";
     // (A young-stage brood that was never an egg (a live birth) has no laying day apart from its stage's.)
     const wasEgg = brood.laid_ark_day !== null && brood.stage_ark_day !== null && brood.laid_ark_day < brood.stage_ark_day;
@@ -294,15 +326,18 @@ export function arkBroodCardLine(brood: ArkBrood, words: ArkBroodWords | null | 
     const w = arkBroodWords(words);
     const n = (v: number) => v.toLocaleString(locale);
     const egg = brood.stage === "egg";
-    const whole = brood.count >= brood.start;
+    // (On its own now: the read's count of a brood that became animals is 0 as each recruit leaves it; its recruits are what is left of it.)
+    const independent = brood.outcome === "independent" ? brood.recruited ?? brood.count : null;
+    const left = independent ?? brood.count;
+    const whole = left >= brood.start;
     const head =
         brood.stage === "carried"
             ? fill(w.carried, {start: n(brood.start)})
             : egg
               ? brood.start === 1 && whole
                   ? w.eggOne
-                  : fill(whole ? w.eggsAll : w.eggs, {start: n(brood.start), left: n(brood.count)})
-              : fill(brood.count >= brood.stage_count ? w.youngAll : w.young, {start: n(brood.stage_count), left: n(brood.count)});
+                  : fill(whole ? w.eggsAll : w.eggs, {start: n(brood.start), left: n(left)})
+              : fill(left >= brood.stage_count ? w.youngAll : w.young, {start: n(brood.stage_count), left: n(left)});
     const notes: string[] = [];
     if (brood.outcome === "failed" || brood.outcome === "eaten") notes.push(arkBroodLossStage(brood, brood.losses[0] ?? {stage: null, ark_day: null}) === "egg" ? w.nestFailed : w.failed);
     else if (brood.outcome === "parent_lost") notes.push(w.parentLost);
@@ -315,7 +350,7 @@ export function arkBroodCardLine(brood: ArkBrood, words: ArkBroodWords | null | 
     }
     taken.forEach((c, name) => notes.push(fill(w.takenBy, {count: n(c), aPredator: article(name)})));
     quiet.forEach((c, cause) => notes.push(fill(cause === "unsettled" ? w.unsettled : w.didNotSurvive, {count: n(c)})));
-    if (brood.outcome === "independent" && brood.count > 0) notes.unshift(fill(w.independent, {count: n(brood.count)}));
+    if (independent !== null && independent > 0) notes.unshift(fill(w.independent, {count: n(independent)}));
     // (A line that begins with the hunter's name in its language begins with a capital all the same.)
     const cap = (text: string) => (text ? text.charAt(0).toLocaleUpperCase(locale) + text.slice(1) : text);
     return {head: cap(head), notes: notes.slice(0, 3).map(cap)};

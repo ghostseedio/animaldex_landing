@@ -153,6 +153,8 @@ export class BroodDraw implements BroodSink {
             pool.mesh.receiveShadow = pool === this.pools.nest || pool === this.pools.scrape;
             this.root.add(pool.mesh);
         }
+        // (Spawn floats at the water's top: drawn after the water's surfaces (2), as the wakes on it are, so it is seen from above.)
+        this.pools.spawn.mesh.renderOrder = 3;
     }
 
     begin() {

@@ -11316,6 +11316,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     waterTop: waterTopAt,
                     walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
                     flies: (entry) => entry.sched?.profile.move === "fly",
+                    swims: (entry) => entry.sched?.profile.move === "swim" || Boolean(entry.sched?.profile.moves.includes("swim")),
                     setAct: (entry, pose) => {
                         entry.act = pose;
                     },

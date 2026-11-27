@@ -39,6 +39,10 @@
  *                                    share that may be grossly off (by more than `gross` metres, inside a solid, with
  *                                    nothing under them); default: none off at all
  *        [--label after]
+ *        [--broods 300]              BROODS (docs/ark/broods.md 7): once the scene is up, a development brood read of up to
+ *                                    n broods made from the snapshot's own wildlife (`src/ark-scene/fixtures/broods.ts`),
+ *                                    as the record's read would be: the sitting parents and the stand-ins are then measured
+ *                                    too. Needs the TypeScript loader: `npx tsx scripts/ark-seat-audit.mjs ... --broods 300`.
  *
  * Writes <out>/<label>.json (every row) and <out>/<label>.md (the tables). Nothing is uploaded; the models are read
  * from the public bucket.
@@ -177,6 +181,19 @@ const calm = (hour) =>
 // through in a run's time. `--unbudgeted`: every animal seated each frame; the seats are the same, only sooner.)
 if (has("unbudgeted")) await page.evaluate(() => { window.__arkSeat.force = true; });
 await calm(hours[0]);
+const broodCount = parseInt(arg("broods", "0"), 10);
+if (broodCount > 0) {
+    // (Development only: the fixture is read here, in Node, and the decoded read handed to the page; nothing of it is in the bundle.)
+    const snapshotRaw = snapshotFile ? readFileSync(snapshotFile) : null;
+    if (!snapshotRaw) throw new Error("--broods needs --snapshot-file");
+    const snap = JSON.parse(String(snapshotFile.endsWith(".gz") ? gunzipSync(snapshotRaw) : snapshotRaw));
+    const [{rawBroodsFromSnapshot}, {decodeArkBroods}] = await Promise.all([import("../src/ark-scene/fixtures/broods.ts"), import("../src/lib/ark-broods.ts")]);
+    const day = await page.evaluate(() => window.__arkDebug?.liveliness?.arkDayNow ?? null);
+    const epoch = await page.evaluate(() => Date.now() / 1000);
+    const read = decodeArkBroods(rawBroodsFromSnapshot(snap.animals, broodCount, epoch, typeof day === "number" && day > 0 ? day : 480));
+    await page.evaluate((r) => window.__arkScene.setBroods(r), read);
+    console.log("broods", read.broods.length, "at ark day", day);
+}
 await wait(6000);
 /** Each island's whole view, as the page opens on it (taken when the audit first stands on that island). */
 const wideView = () => page.evaluate(() => { const c = window.__arkDebug.controls; return {target: {x: c.target.x, y: c.target.y, z: c.target.z}, distance: c.getDistance(), polar: c.getPolarAngle(), azimuth: c.getAzimuthalAngle()}; });

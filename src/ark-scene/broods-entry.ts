@@ -44,18 +44,20 @@ const lose = (ctx: Ctx, cause: "taken" | "did_not_survive" | "failed" | "parent_
     const b = ctx.b;
     b.count = Math.max(b.count - count, 0);
     if (cause === "taken") b.taken += count;
+    else if (cause === "unsettled") b.unsettled = (b.unsettled ?? 0) + count;
     else b.lost += count;
-    b.losses.unshift(rawLoss(++lossId, ctx.epoch, ctx.day, cause, count, b.count, hunterRow === undefined ? null : ctx.hunter(hunterRow), hunterRow !== undefined && withEncounter ? ctx.encounter(hunterRow) : undefined));
+    b.losses.unshift(rawLoss(++lossId, ctx.epoch, ctx.day, cause, count, b.count, hunterRow === undefined ? null : ctx.hunter(hunterRow), hunterRow !== undefined && withEncounter ? ctx.encounter(hunterRow) : undefined, b.stage));
     b.losses = b.losses.slice(0, 12);
 };
 /** The stage's change: the young start from what is left. */
 const hatch = (ctx: Ctx, change: Partial<RawBrood> = {}) => {
     Object.assign(ctx.b, {stage: "young", stage_count: ctx.b.count, stage_ark_day: ctx.day, next_ark_day: ctx.day + 30, hold: null, ...change});
 };
-/** The brood ends: out of the live list, into the ended one. */
+/** The brood ends: out of the live list, into the ended one, with no `stage` (as the engine's read has an ended brood). */
 const end = (ctx: Ctx, outcome: NonNullable<RawBrood["outcome"]>) => {
     ctx.b.outcome = outcome;
     ctx.b.ended_ark_day = ctx.day;
+    delete ctx.b.stage;
     ctx.live.splice(ctx.live.indexOf(ctx.b), 1);
     ctx.ended.push(ctx.b);
 };
@@ -91,12 +93,12 @@ const SCENES: Record<string, Scene> = {
             [30, (c) => hatch(c)],
             [120, (c) => lose(c, "taken", 2, 1, true)],
             [300, (c) => lose(c, "did_not_survive", 2)],
-            [360, (c) => { c.recruit(3); lose(c, "unsettled", 2); c.b.count = 3; end(c, "independent"); }]
+            [360, (c) => { c.recruit(3); lose(c, "unsettled", 2); c.b.recruited = 3; c.b.count = 0; end(c, "independent"); }]
         ],
         shots: [
             {s: 12, label: "9 eggs in a scrape, sat on", distance: 2}, {s: 30.7, label: "HATCH: the eggs rock", distance: 2}, {s: 33.5, label: "HATCH: ducklings out", distance: 2}, {s: 40, label: "round the nest", distance: 3},
             {s: 70, label: "9 ducklings: 6 models + 3 instanced, with her", follow: 0}, {s: 100, label: "following", follow: 0},
-            {s: 188, label: "TAKE: before (the brood with her)", distance: 7, follow: 0}, {s: 199, label: "TAKE: no chase onto the water: the fox comes to the brood (a raid)", distance: 7, follow: 1}, {s: 206, label: "TAKE: on its way", distance: 7, follow: 1}, {s: 212, label: "TAKE: at the brood, feeding", distance: 6, follow: 1}, {s: 214.5, label: "TAKE: 2 taken", distance: 6, follow: 1}, {s: 222, label: "TAKE: the fox leaves", distance: 7, follow: 1},
+            {s: 188, label: "TAKE: before (the brood with her)", distance: 7, follow: 0}, {s: 199, label: "TAKE: no chase onto the water: a raid at the record's place, the bank", distance: 7, follow: 1}, {s: 206, label: "TAKE: the fox on its way; two ducklings come to the bank", distance: 7, follow: 1}, {s: 212.5, label: "TAKE: at the two, feeding", distance: 4, follow: 1}, {s: 214.5, label: "TAKE: one taken", distance: 4, follow: 1}, {s: 216.5, label: "TAKE: 2 taken", distance: 4, follow: 1}, {s: 222, label: "TAKE: the fox leaves", distance: 7, follow: 1},
             {s: 250, label: "7 left with her", follow: 0}, {s: 301.5, label: "DID NOT SURVIVE: 2 fade", follow: 0}, {s: 310, label: "5 left", follow: 0},
             {s: 361, label: "RECRUITED: 3 hand over (0.8 s)", follow: 0}, {s: 363, label: "RECRUITED: +3 s", follow: 0}, {s: 375, label: "3 new animals; 2 did not settle", follow: 0}
         ]
