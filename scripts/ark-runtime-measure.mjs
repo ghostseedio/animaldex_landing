@@ -523,6 +523,16 @@ for (const deviceName of devices) {
             const wait = gcSteadyMs - (Date.now() - navigated);
             if (wait > 0) await page.waitForTimeout(wait);
             gc = {firstFrame, steady: await forcedGc(page, cdp, navigated)};
+            // `--heap-snapshot`: the steady heap written as `<out>/heap-<device>-<run>.heapsnapshot` (DevTools), to diff two builds.
+            if (flag("heap-snapshot")) {
+                const parts = [];
+                const onChunk = (event) => parts.push(event.chunk);
+                cdp.on("HeapProfiler.addHeapSnapshotChunk", onChunk);
+                await cdp.send("HeapProfiler.takeHeapSnapshot", {reportProgress: false});
+                cdp.off("HeapProfiler.addHeapSnapshotChunk", onChunk);
+                mkdirSync(out, {recursive: true});
+                writeFileSync(path.join(out, `heap-${deviceName}-${run}.heapsnapshot`), parts.join(""));
+            }
             log(deviceName, `run ${run}: forced GC at the first frame (${firstFrame.t} s) ${firstFrame.beforeGcMB} -> ${firstFrame.afterGcMB} MB, in steady play (${gc.steady.t} s) ${gc.steady.beforeGcMB} -> ${gc.steady.afterGcMB} MB`);
         }
         // The scene's own profiler (`--perf`): its rolling report every 5 s from 20 s after the first frame, averaged.
