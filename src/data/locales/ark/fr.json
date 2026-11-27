@@ -293,7 +293,8 @@
                 "hiding": "se cacher",
                 "climb": "fuite vers le haut",
                 "mimicry": "mimétisme"
-            }
+            },
+            "endedUnknown": "Mort, cause inconnue"
         },
         "replay": {
             "title": "Pendant votre absence",
@@ -736,7 +737,8 @@
             "speciesBack": "De retour à bord : éteinte au jour {day} de l'Ark · {date}.",
             "notAboard": "{animal} : aucun à bord en ce moment.",
             "bringBack": "Capturez-en un pour le faire revenir",
-            "listLabel": "Espèces disparues de l'Ark, les plus récentes d'abord"
+            "listLabel": "Espèces disparues de l'Ark, les plus récentes d'abord",
+            "diedUnknown": "Le dernier est mort, cause inconnue"
         },
         "endangered": {
             "title": "En danger maintenant",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Un animal de l'Ark peut tomber de vieillesse, de faim ou sous la dent d'un prédateur. Certains s'en tirent, d'autres non. Voici les chiffres, lieu par lieu, avec les animaux et les espèces les plus proches de la fin.",
                 "placesDescriptionEscape": "Parmi les animaux présents dans chaque lieu au cours des {days} derniers jours, la part encore en vie. Un animal qui se terre après une attaque ou une période de faim compte comme vivant : il revient.",
                 "recoverNoteEscape": "Une attaque n'est pas toujours la fin : un animal qui a encore un cœur s'en sort blessé et revient, et un animal qui meurt de faim est pris en charge et revient, donc seuls ceux qui ne sont pas revenus comptent comme perdus pour de bon. La vieillesse est définitive.",
-                "recoverNoteEscapeOld": "Une attaque n'est pas toujours la fin : un animal qui a encore un cœur s'en sort blessé et revient, et un animal qui meurt de faim est pris en charge et revient. Celui qui meurt de vieillesse avec un cœur restant revient en jeune adulte, donc seuls ceux qui ne sont pas revenus comptent comme perdus pour de bon."
+                "recoverNoteEscapeOld": "Une attaque n'est pas toujours la fin : un animal qui a encore un cœur s'en sort blessé et revient, et un animal qui meurt de faim est pris en charge et revient. Celui qui meurt de vieillesse avec un cœur restant revient en jeune adulte, donc seuls ceux qui ne sont pas revenus comptent comme perdus pour de bon.",
+                "causeUnknown": "Cause inconnue",
+                "faqA2Unknown": "Ces {days} derniers jours, le registre montre {old} morts de vieillesse, {unknown} d'une cause que l'Ark ignore, {starved} de faim et {eaten} dévorés. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Les reproducteurs les plus rapides de l'Ark : quels animaux ont le plus de petits",
@@ -1173,7 +1177,8 @@
             "bar": "Barre pleine : la vie vécue jusqu'ici, colorée selon son état (vert bien, ambre vieux ou en danger, rouge affamé)",
             "now": "Trait blanc : maintenant",
             "end": "Fin rayée : quand il risque de mourir de vieillesse, sous forme de fourchette, pas de promesse",
-            "heart": "Cœur % : sa chance de survivre à la prochaine année de l'Arche (environ 2 semaines réelles), en comptant les prédateurs proches, la faim, l'âge et la remise en liberté"
+            "heart": "Cœur % : sa chance de survivre à la prochaine année de l'Arche (environ 2 semaines réelles), en comptant les prédateurs proches, la faim, l'âge et la remise en liberté",
+            "endRisk": "Fin rayée : sa durée de vie habituelle. Un animal sauvage peut mourir plus tôt, ou vivre plus longtemps"
         },
         "flow": {
             "sleep": "Dort",

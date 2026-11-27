@@ -293,7 +293,8 @@
                 "hiding": "verstoppen",
                 "climb": "vlucht omhoog",
                 "mimicry": "mimicry"
-            }
+            },
+            "endedUnknown": "Gestorven, oorzaak onbekend"
         },
         "replay": {
             "title": "Terwijl je weg was",
@@ -736,7 +737,8 @@
             "speciesBack": "Weer aan boord: stierf uit op Ark-dag {day} · {date}.",
             "notAboard": "Er is nu geen {animal} aan boord.",
             "bringBack": "Vang er één om hem terug te brengen",
-            "listLabel": "Soorten verdwenen uit de Ark, nieuwste eerst"
+            "listLabel": "Soorten verdwenen uit de Ark, nieuwste eerst",
+            "diedUnknown": "De laatste stierf, oorzaak onbekend"
         },
         "endangered": {
             "title": "Nu bedreigd",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Een dier in de Ark kan sterven aan ouderdom, honger of een roofdier. Sommige ontsnappen, andere niet. Dit zijn de cijfers, plek voor plek, met de dieren en soorten die het dichtst bij het einde zijn.",
                 "placesDescriptionEscape": "Van de dieren die de afgelopen {days} dagen op elke plek waren, het aandeel dat nog leeft. Een dier dat na een aanval of een hongerperiode schuilligt, telt als levend: het komt terug.",
                 "recoverNoteEscape": "Een aanval is niet altijd het einde: een dier met nog een hart ontsnapt gewond en komt terug, en een uitgehongerd dier wordt in de zorg genomen en komt terug, dus alleen dieren die niet terugkwamen tellen als definitief verloren. Ouderdom is definitief.",
-                "recoverNoteEscapeOld": "Een aanval is niet altijd het einde: een dier met nog een hart ontsnapt gewond en komt terug, en een uitgehongerd dier wordt in de zorg genomen en komt terug. Een dier dat van ouderdom sterft met nog een hart komt terug als jong volwassene, dus alleen dieren die niet terugkwamen tellen als definitief verloren."
+                "recoverNoteEscapeOld": "Een aanval is niet altijd het einde: een dier met nog een hart ontsnapt gewond en komt terug, en een uitgehongerd dier wordt in de zorg genomen en komt terug. Een dier dat van ouderdom sterft met nog een hart komt terug als jong volwassene, dus alleen dieren die niet terugkwamen tellen als definitief verloren.",
+                "causeUnknown": "Oorzaak onbekend",
+                "faqA2Unknown": "In de afgelopen {days} dagen laat het logboek {old} sterfgevallen door ouderdom, {unknown} door een oorzaak die de Ark niet kent, {starved} door honger en {eaten} opgegeten zien. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Snelste fokkers van de Ark: welke dieren hebben de meeste jongen",
@@ -1173,7 +1177,8 @@
             "bar": "Volle balk: het leven tot nu toe, gekleurd naar hoe het gaat (groen goed, amber oud of in gevaar, rood hongerig)",
             "now": "Wit streepje: nu",
             "end": "Gestreept einde: wanneer hij waarschijnlijk van ouderdom sterft, als bereik, geen belofte",
-            "heart": "Hart %: de kans dat hij het volgende Arkjaar overleeft (ongeveer 2 weken echte tijd), met roofdieren in de buurt, honger, leeftijd en vrijlating meegeteld"
+            "heart": "Hart %: de kans dat hij het volgende Arkjaar overleeft (ongeveer 2 weken echte tijd), met roofdieren in de buurt, honger, leeftijd en vrijlating meegeteld",
+            "endRisk": "Gestreept einde: zijn gebruikelijke levensduur. Een wild dier kan eerder doodgaan of langer leven"
         },
         "flow": {
             "sleep": "Slaapt",

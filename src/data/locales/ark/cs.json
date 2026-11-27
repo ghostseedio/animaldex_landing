@@ -293,7 +293,8 @@
                 "hiding": "ukrývání",
                 "climb": "únik vzhůru",
                 "mimicry": "mimikry"
-            }
+            },
+            "endedUnknown": "Zemřelo, příčina neznámá"
         },
         "replay": {
             "title": "Během tvé nepřítomnosti",
@@ -736,7 +737,8 @@
             "speciesBack": "Zpět na palubě: vyhynul v den Ark {day} · {date}.",
             "notAboard": "Druh {animal} teď na palubě není.",
             "bringBack": "Ulovte jedno a vraťte ho",
-            "listLabel": "Druhy ztracené z Ark, nejnovější první"
+            "listLabel": "Druhy ztracené z Ark, nejnovější první",
+            "diedUnknown": "Poslední zemřel, příčina neznámá"
         },
         "endangered": {
             "title": "Ohrožené teď",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Zvíře v Arku může padnout stářím, hladem nebo predátorem. Některá uniknou, jiná ne. Tady jsou čísla, místo po místě, se zvířaty a druhy nejblíže konci.",
                 "placesDescriptionEscape": "Ze zvířat, která byla v každém místě za posledních {days} dní, podíl těch, která stále žijí. Zvíře, které se ukrývá po útoku nebo po období hladu, se počítá jako živé, protože se vrátí.",
                 "recoverNoteEscape": "Útok není vždy konec: zvíře, kterému zbývá srdce, unikne zraněné a vrátí se, hladovějící zvíře se vezme do péče a vrátí se, takže za navždy ztracená se počítají jen ta, která se nevrátila. Stáří je konečné.",
-                "recoverNoteEscapeOld": "Útok není vždy konec: zvíře, kterému zbývá srdce, unikne zraněné a vrátí se, hladovějící zvíře se vezme do péče a vrátí se. Zvíře, které zemře stářím a zbývá mu srdce, se vrátí jako mladé dospělé, takže za navždy ztracená se počítají jen ta, která se nevrátila."
+                "recoverNoteEscapeOld": "Útok není vždy konec: zvíře, kterému zbývá srdce, unikne zraněné a vrátí se, hladovějící zvíře se vezme do péče a vrátí se. Zvíře, které zemře stářím a zbývá mu srdce, se vrátí jako mladé dospělé, takže za navždy ztracená se počítají jen ta, která se nevrátila.",
+                "causeUnknown": "Příčina neznámá",
+                "faqA2Unknown": "Za posledních {days} dní záznam ukazuje {old} úmrtí stářím, {unknown} z příčiny, kterou Ark nezná, {starved} hladem a {eaten} sežráno. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Nejrychlejší plemenitelé v Ark: která zvířata mají nejvíc mláďat",
@@ -1173,7 +1177,8 @@
             "bar": "Plný pruh: dosud prožitý život, zbarvený podle toho, jak se mu daří (zelená dobře, jantarová stáří nebo ohrožení, červená hlad)",
             "now": "Bílá značka: teď",
             "end": "Šrafovaný konec: kdy pravděpodobně zemře stářím, jako rozmezí, ne slib",
-            "heart": "Srdce %: jeho šance přežít další rok Archy (asi 2 týdny reálného času), se započtením blízkých predátorů, hladu, věku a vypuštění"
+            "heart": "Srdce %: jeho šance přežít další rok Archy (asi 2 týdny reálného času), se započtením blízkých predátorů, hladu, věku a vypuštění",
+            "endRisk": "Šrafovaný konec: jeho typická délka života. Divoké zvíře může zemřít dříve, nebo žít déle"
         },
         "flow": {
             "sleep": "Spí",

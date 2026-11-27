@@ -293,7 +293,8 @@
                 "hiding": "amagar-se",
                 "climb": "fugida cap amunt",
                 "mimicry": "mimetisme"
-            }
+            },
+            "endedUnknown": "Va morir, causa desconeguda"
         },
         "replay": {
             "title": "Mentre no hi eres",
@@ -736,7 +737,8 @@
             "speciesBack": "De nou a bord: es va extingir el dia {day} de l'Ark · {date}.",
             "notAboard": "Ara no hi ha cap exemplar de {animal} a bord.",
             "bringBack": "Captura'n un per fer-lo tornar",
-            "listLabel": "Espècies perdudes de l'Ark, les més recents primer"
+            "listLabel": "Espècies perdudes de l'Ark, les més recents primer",
+            "diedUnknown": "L'últim va morir, causa desconeguda"
         },
         "endangered": {
             "title": "En perill ara",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Un animal de l'Ark pot caure per vellesa, per fam o per un depredador. Alguns se n'escapen, d'altres no. Aquestes són les xifres, lloc per lloc, amb els animals i les espècies més a prop del final.",
                 "placesDescriptionEscape": "Dels animals que han estat a cada lloc en els últims {days} dies, la proporció que encara és viva. Un animal amagat després d'un atac o d'un període de fam compta com a viu, perquè torna.",
                 "recoverNoteEscape": "Un atac no sempre és el final: un animal al qual queden cors s'escapa ferit i torna, i un de famèlic és acollit i torna, així que només compten com a perduts per sempre els que no han tornat. La vellesa és definitiva.",
-                "recoverNoteEscapeOld": "Un atac no sempre és el final: un animal al qual queden cors s'escapa ferit i torna, i un de famèlic és acollit i torna. Un que mor de vellesa quan encara li queden cors torna com a jove adult, així que només compten com a perduts per sempre els que no han tornat."
+                "recoverNoteEscapeOld": "Un atac no sempre és el final: un animal al qual queden cors s'escapa ferit i torna, i un de famèlic és acollit i torna. Un que mor de vellesa quan encara li queden cors torna com a jove adult, així que només compten com a perduts per sempre els que no han tornat.",
+                "causeUnknown": "Causa desconeguda",
+                "faqA2Unknown": "En els últims {days} dies el registre mostra {old} morts de vellesa, {unknown} d'una causa que l'Ark no coneix, {starved} de fam i {eaten} devorats. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Els criadors més ràpids de l'Ark: quins animals tenen més cries",
@@ -1173,7 +1177,8 @@
             "bar": "Barra plena: la vida viscuda fins ara, del color de com està (verd bé, ambre vell o en risc, vermell famolenc)",
             "now": "Marca blanca: ara",
             "end": "Final ratllat: quan és probable que mori de vell, com a interval, no com a promesa",
-            "heart": "Cor %: la seva probabilitat de sobreviure el pròxim any de l'Arca (unes 2 setmanes reals), tenint en compte depredadors propers, gana, edat i alliberament"
+            "heart": "Cor %: la seva probabilitat de sobreviure el pròxim any de l'Arca (unes 2 setmanes reals), tenint en compte depredadors propers, gana, edat i alliberament",
+            "endRisk": "Final ratllat: la seva longevitat típica. Un animal salvatge pot morir abans, o viure més temps"
         },
         "flow": {
             "sleep": "Dorm",

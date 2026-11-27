@@ -128,6 +128,8 @@ export type ArkLifeWords = {
     endedOld: string;
     /** A human's old-age death (decision 442): gentle, it is someone's own photo. */
     endedOldPeaceful?: string;
+    /** AGE-RISK (docs/ark/age-risk.md): the Ark does not know what ended it (`died.unknown`): "Died, cause not known". */
+    endedUnknown?: string;
     /** Life v2: a predator dead of long hunger. */
     starved: string;
     breeding: string;
@@ -544,12 +546,13 @@ export type ArkWords = {
 export type ArkSimpleWords = {power: string; number: string; age: string; left: string; ticker: string; talk: string; tier: string; tierHint: string};
 export const ARK_SIMPLE_ENGLISH: ArkSimpleWords = {power: "Animal Power", number: "AnimalDex number", age: "Age", left: "{time} left", ticker: "Thriving and declining this week", talk: "Talk", tier: "Tier", tierHint: "Tier {tier}: battle power grade of the photo that brought it aboard"};
 
-export type ArkLifeHelpWords = {button: string; bar: string; now: string; end: string; heart: string};
+export type ArkLifeHelpWords = {button: string; bar: string; now: string; end: string; /** AGE-RISK: the striped end while a free animal's end is a risk, not a date (`ageRisk`). */ endRisk?: string; heart: string};
 export const ARK_LIFE_HELP_ENGLISH: ArkLifeHelpWords = {
     button: "What the life bar means",
     bar: "Solid bar: life lived so far, coloured by how it's doing (green well, amber old or at risk, red hungry)",
     now: "White tick: now",
     end: "Striped end: when it's likely to die of old age, as a range, not a promise",
+    endRisk: "Striped end: its typical lifespan. A wild animal can die sooner, or live on past it",
     heart: "Heart %: its chance of surviving the next Ark year (about 2 weeks real time), counting predators nearby, hunger, age and release"
 };
 

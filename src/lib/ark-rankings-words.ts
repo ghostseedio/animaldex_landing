@@ -65,6 +65,9 @@ export type ArkRankingsWords = {
         causeOld: string;
         causeStarved: string;
         causeEaten: string;
+        /** AGE-RISK (docs/ark/age-risk.md): deaths whose cause the Ark does not know, and the FAQ line that counts them. */
+        causeUnknown?: string;
+        faqA2Unknown?: string;
         causeLine: string;
         huntingProtected: string;
         huntingCounted: string;

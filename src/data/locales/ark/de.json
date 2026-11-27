@@ -293,7 +293,8 @@
                 "hiding": "Verstecken",
                 "climb": "Flucht nach oben",
                 "mimicry": "Mimikry"
-            }
+            },
+            "endedUnknown": "Gestorben, Ursache unbekannt"
         },
         "replay": {
             "title": "Während du weg warst",
@@ -736,7 +737,8 @@
             "speciesBack": "Wieder an Bord: ausgestorben an Ark-Tag {day} · {date}.",
             "notAboard": "Gerade ist kein Tier der Art {animal} an Bord.",
             "bringBack": "Fang eins, um es zurückzuholen",
-            "listLabel": "Aus der Ark verschwundene Arten, neueste zuerst"
+            "listLabel": "Aus der Ark verschwundene Arten, neueste zuerst",
+            "diedUnknown": "Das letzte starb, Ursache unbekannt"
         },
         "endangered": {
             "title": "Jetzt gefährdet",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Ein Tier in der Ark kann an Alter, Hunger oder einem Raubtier sterben. Manche entkommen, manche nicht. Das sind die Zahlen, Ort für Ort, mit den Tieren und Arten, die dem Ende am nächsten sind.",
                 "placesDescriptionEscape": "Von den Tieren, die in den letzten {days} Tagen an einem Ort waren, der Anteil, der noch lebt. Ein Tier, das nach einem Angriff oder einer Hungerphase im Versteck liegt, zählt als lebendig, weil es zurückkommt.",
                 "recoverNoteEscape": "Ein Angriff ist nicht immer das Ende: Ein Tier mit einem verbleibenden Herz entkommt verletzt und kommt zurück, und ein hungerndes Tier wird in Obhut genommen und kommt zurück, also zählen nur Tiere, die nicht zurückgekommen sind, als endgültig verloren. Das Alter ist endgültig.",
-                "recoverNoteEscapeOld": "Ein Angriff ist nicht immer das Ende: Ein Tier mit einem verbleibenden Herz entkommt verletzt und kommt zurück, und ein hungerndes Tier wird in Obhut genommen und kommt zurück. Ein Tier, das mit einem Herz übrig an Altersschwäche stirbt, kommt als junges erwachsenes Tier zurück, also zählen nur Tiere, die nicht zurückgekommen sind, als endgültig verloren."
+                "recoverNoteEscapeOld": "Ein Angriff ist nicht immer das Ende: Ein Tier mit einem verbleibenden Herz entkommt verletzt und kommt zurück, und ein hungerndes Tier wird in Obhut genommen und kommt zurück. Ein Tier, das mit einem Herz übrig an Altersschwäche stirbt, kommt als junges erwachsenes Tier zurück, also zählen nur Tiere, die nicht zurückgekommen sind, als endgültig verloren.",
+                "causeUnknown": "Ursache unbekannt",
+                "faqA2Unknown": "In den letzten {days} Tagen zeigt die Aufzeichnung {old} Todesfälle durch Alter, {unknown} durch eine der Ark unbekannte Ursache, {starved} durch Hunger und {eaten} durch Raubtiere. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Die schnellsten Züchter der Ark: Welche Tiere haben die meisten Jungen",
@@ -1173,7 +1177,8 @@
             "bar": "Voller Balken: bisher gelebtes Leben, gefärbt nach seinem Zustand (grün gut, bernstein alt oder gefährdet, rot hungrig)",
             "now": "Weißer Strich: jetzt",
             "end": "Gestreiftes Ende: wann es wahrscheinlich an Altersschwäche stirbt, als Spanne, kein Versprechen",
-            "heart": "Herz %: seine Chance, das nächste Arche-Jahr zu überleben (etwa 2 Wochen echte Zeit), mit Raubtieren in der Nähe, Hunger, Alter und Auswilderung"
+            "heart": "Herz %: seine Chance, das nächste Arche-Jahr zu überleben (etwa 2 Wochen echte Zeit), mit Raubtieren in der Nähe, Hunger, Alter und Auswilderung",
+            "endRisk": "Gestreiftes Ende: seine typische Lebensspanne. Ein wildes Tier kann früher sterben oder länger leben"
         },
         "flow": {
             "sleep": "Schläft",

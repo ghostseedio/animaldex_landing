@@ -4518,7 +4518,8 @@
         "hiding": "hiding",
         "climb": "escape upward",
         "mimicry": "mimicry"
-      }
+      },
+      "endedUnknown": "Died, cause not known"
     },
     "replay": {
       "title": "While you were away",
@@ -4961,7 +4962,8 @@
       "speciesBack": "Back aboard: it died out on Ark day {day} · {date}.",
       "notAboard": "No {animal} is aboard now.",
       "bringBack": "Catch one to bring it back",
-      "listLabel": "Species lost from the Ark, newest first"
+      "listLabel": "Species lost from the Ark, newest first",
+      "diedUnknown": "Last one died, cause not known"
     },
     "endangered": {
       "title": "Endangered now",
@@ -5295,7 +5297,9 @@
         "introEscape": "An animal in the Ark can fall to old age, hunger or a predator. Some get away, some do not. These are the numbers, place by place, with the animals and kinds closest to the end.",
         "placesDescriptionEscape": "Of the animals that were in each place in the last {days} days, the share still alive. An animal lying up after an attack or a hungry spell counts as alive: it returns.",
         "recoverNoteEscape": "An attack is not always the end: an animal with a heart left gets away wounded and returns, and a starving one is taken into care and returns, so only animals that did not return count as lost for good. Old age is final.",
-        "recoverNoteEscapeOld": "An attack is not always the end: an animal with a heart left gets away wounded and returns, and a starving one is taken into care and returns. One that dies of old age with a heart left returns as a young adult, so only animals that did not return count as lost for good."
+        "recoverNoteEscapeOld": "An attack is not always the end: an animal with a heart left gets away wounded and returns, and a starving one is taken into care and returns. One that dies of old age with a heart left returns as a young adult, so only animals that did not return count as lost for good.",
+        "causeUnknown": "Cause not known",
+        "faqA2Unknown": "In the last {days} days the record shows {old} deaths of old age, {unknown} of a cause the Ark does not know, {starved} of hunger and {eaten} by predators. {hunting}"
       },
       "breeders": {
         "metaTitle": "Ark Fastest Breeders: Which Animals Have the Most Young",
@@ -5398,7 +5402,8 @@
       "bar": "Solid bar: life lived so far, coloured by how it's doing (green well, amber old or at risk, red hungry)",
       "now": "White tick: now",
       "end": "Striped end: when it's likely to die of old age, as a range, not a promise",
-      "heart": "Heart %: its chance of surviving the next Ark year (about 2 weeks real time), counting predators nearby, hunger, age and release"
+      "heart": "Heart %: its chance of surviving the next Ark year (about 2 weeks real time), counting predators nearby, hunger, age and release",
+      "endRisk": "Striped end: its typical lifespan. A wild animal can die sooner, or live on past it"
     },
     "flow": {
       "sleep": "Sleeping",
@@ -5535,7 +5540,8 @@
         "title": "Seasons, days and lifespans",
         "p1": "The Ark keeps its own calendar: one Ark year passes every 14 real days, each starting on 1 January, and the world moves on once an hour, so it has changed between your visits. A species whose field guide names breeding months or seasons breeds only then. One with no named season, or one that breeds all year, can breed at any time.",
         "p2": "In the 3D world, animals the field guide calls nocturnal are out at night, diurnal ones by day, and crepuscular ones at dawn and dusk.",
-        "p3": "Animals with a known wild lifespan grow old and die of old age when they reach it. Lifespans run on the Ark's clock, so an animal that lives two years in the wild lives about four real weeks aboard. When the last animal of a species dies, that species is gone from the Ark until someone captures another."
+        "p3": "Animals with a known wild lifespan grow old and die of old age when they reach it. Lifespans run on the Ark's clock, so an animal that lives two years in the wild lives about four real weeks aboard. When the last animal of a species dies, that species is gone from the Ark until someone captures another.",
+        "p3Risk": "Kept animals grow old and die of old age. Wild ones mostly die sooner, and the Ark does not always know of what. Lifespans run on the Ark's clock, so an animal that lives two years in the wild lives about four real weeks aboard. When the last animal of a species dies, that species is gone from the Ark until someone captures another."
       },
       "hearts": {
         "title": "Hearts: a survived attack",
@@ -5819,6 +5825,7 @@
       "trendBorn": "{count} born",
       "trendEaten": "{count} eaten",
       "trendDiedOld": "{count} died of old age",
+      "trendDiedUnknown": "{count} died, cause not known",
       "trendStarved": "{count} starved",
       "trendSeparator": ", ",
       "arkEats": "On the Ark it can eat",

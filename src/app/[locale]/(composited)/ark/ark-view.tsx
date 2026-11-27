@@ -44,6 +44,7 @@ import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
 import {noteArkArrivalsSeen, startArkSession, trackArk} from "@/lib/ark-measure-client";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 import {ArkRecoveringCard} from "@/app/[locale]/(composited)/ark/ark-lives";
+import {arkAgeRisk, decodeArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {arkHeartsForScene, arkHeartsWords, arkRecoveringAnimals, arkTrueArrivals, arkWithHearts, decodeArkOwnerHearts, type ArkOwnerHearts} from "@/lib/ark-hearts";
 
 export type {ArkWords} from "@/lib/ark-words";
@@ -242,8 +243,25 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, summary: pageSummary = null, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, follow: followAsked = false, arrival: arrivalAsked = false, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false, newest: newestAboard = null, fixtureHearts = null}: Props) {
+export default function ArkView({locale, initial, summary: pageSummary = null, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words: wordsGiven, talkTitles, modelBase, rigBase, focus: focusOn = null, follow: followAsked = false, arrival: arrivalAsked = false, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false, newest: newestAboard = null, fixtureHearts = null}: Props) {
     arkPerfCountRender();
+    // AGE-RISK (the server's `age_risk`, read with the hearts rule from /api/ark/rules): while a free animal's end is a risk, not a date,
+    // the life bar's help says so. Off, or until the rule is read, the words are the page's own, untouched.
+    const [ageRisk, setAgeRisk] = useState(false);
+    const words = useMemo(() => (ageRisk && wordsGiven.lifeHelp?.endRisk ? {...wordsGiven, lifeHelp: {...wordsGiven.lifeHelp, end: wordsGiven.lifeHelp.endRisk}} : wordsGiven), [wordsGiven, ageRisk]);
+    useEffect(() => {
+        if (fixture || local) return;
+        let stopped = false;
+        void fetch("/api/ark/rules")
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: {rules?: unknown} | null) => {
+                if (!stopped) setAgeRisk(arkAgeRisk(decodeArkHeartsRules(body?.rules)));
+            })
+            .catch(() => undefined);
+        return () => {
+            stopped = true;
+        };
+    }, [fixture, local]);
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<ArkSceneHandle | null>(null);

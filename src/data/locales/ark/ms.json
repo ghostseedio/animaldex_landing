@@ -293,7 +293,8 @@
                 "hiding": "bersembunyi",
                 "climb": "melarikan diri ke atas",
                 "mimicry": "mimikri"
-            }
+            },
+            "endedUnknown": "Mati, punca tidak diketahui"
         },
         "replay": {
             "title": "Semasa anda tiada",
@@ -736,7 +737,8 @@
             "speciesBack": "Kembali di atas kapal: pernah pupus pada hari Ark {day} · {date}.",
             "notAboard": "Tiada {animal} di atas kapal sekarang.",
             "bringBack": "Tangkap satu untuk membawanya kembali",
-            "listLabel": "Spesies yang hilang dari Ark, terbaharu dahulu"
+            "listLabel": "Spesies yang hilang dari Ark, terbaharu dahulu",
+            "diedUnknown": "Yang terakhir mati, punca tidak diketahui"
         },
         "endangered": {
             "title": "Terancam sekarang",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Haiwan di Ark boleh gugur kerana usia tua, kelaparan atau pemangsa. Ada yang terlepas, ada yang tidak. Inilah angkanya, tempat demi tempat, bersama haiwan dan jenis yang paling hampir ke penghujung.",
                 "placesDescriptionEscape": "Daripada haiwan yang berada di setiap tempat dalam {days} hari lepas, bahagian yang masih hidup. Haiwan yang berehat bersembunyi selepas serangan atau tempoh kelaparan dikira hidup: ia akan kembali.",
                 "recoverNoteEscape": "Serangan bukan sentiasa pengakhiran: haiwan yang masih ada hati terlepas dalam keadaan cedera dan kembali, dan yang kelaparan dibawa untuk dijaga lalu kembali, jadi hanya haiwan yang tidak kembali dikira hilang selama-lamanya. Usia tua bersifat muktamad.",
-                "recoverNoteEscapeOld": "Serangan bukan sentiasa pengakhiran: haiwan yang masih ada hati terlepas dalam keadaan cedera dan kembali, dan yang kelaparan dibawa untuk dijaga lalu kembali. Yang mati kerana usia tua dengan hati yang masih tinggal kembali sebagai dewasa muda, jadi hanya haiwan yang tidak kembali dikira hilang selama-lamanya."
+                "recoverNoteEscapeOld": "Serangan bukan sentiasa pengakhiran: haiwan yang masih ada hati terlepas dalam keadaan cedera dan kembali, dan yang kelaparan dibawa untuk dijaga lalu kembali. Yang mati kerana usia tua dengan hati yang masih tinggal kembali sebagai dewasa muda, jadi hanya haiwan yang tidak kembali dikira hilang selama-lamanya.",
+                "causeUnknown": "Punca tidak diketahui",
+                "faqA2Unknown": "Dalam {days} hari lepas rekod menunjukkan {old} kematian kerana usia tua, {unknown} kerana punca yang tidak diketahui Ark, {starved} kerana kelaparan dan {eaten} dimakan. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Pembiak terpantas di Ark: haiwan mana mempunyai anak paling banyak",
@@ -1173,7 +1177,8 @@
             "bar": "Bar penuh: hayat yang telah dilalui, diwarnakan mengikut keadaannya (hijau baik, ambar tua atau berisiko, merah lapar)",
             "now": "Tanda putih: sekarang",
             "end": "Hujung berjalur: bila ia mungkin mati kerana tua, sebagai julat, bukan janji",
-            "heart": "Hati %: peluangnya untuk terus hidup tahun Bahtera seterusnya (kira-kira 2 minggu masa sebenar), mengambil kira pemangsa berdekatan, lapar, umur dan pelepasan"
+            "heart": "Hati %: peluangnya untuk terus hidup tahun Bahtera seterusnya (kira-kira 2 minggu masa sebenar), mengambil kira pemangsa berdekatan, lapar, umur dan pelepasan",
+            "endRisk": "Hujung berjalur: jangka hayatnya yang lazim. Haiwan liar boleh mati lebih awal, atau hidup melebihinya"
         },
         "flow": {
             "sleep": "Tidur",

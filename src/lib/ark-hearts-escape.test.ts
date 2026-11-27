@@ -3,11 +3,16 @@ import {readFileSync, readdirSync} from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import {ARK_HEARTS_ENGLISH, arkHeartsWords, arkLivesText, arkRecoveringText, decodeArkOwnerHearts} from "./ark-hearts";
-import {arkHeartsEscape, arkHeartsVariant, arkOldAgeFinal, decodeArkHeartsRules, type ArkHeartsRules} from "./ark-hearts-rules";
+import {arkAgeRisk, arkHeartsEscape, arkHeartsVariant, arkOldAgeFinal, decodeArkHeartsRules, type ArkHeartsRules} from "./ark-hearts-rules";
 import {arkLiveLineText, arkLiveServerItems, type ArkLiveText} from "./ark-live-log";
 import {ARK_LIVE_ENGLISH} from "./ark-live-words";
 import {decodeArkEvents, planArkReplay} from "./ark-life";
 import {arkReadEvents} from "./ark-rankings";
+import {arkCauseBars} from "./ark-rankings-text";
+import {arkSpeciesTrendLine, arkSpeciesTrends} from "./ark-species-trend";
+import {ARK_LOST_WORDS_EN, arkExtinctHow, decodeArkExtinctions} from "./ark-extinct";
+import {decodeArkLife} from "./ark-life";
+import {arkCompactHistory, arkKindSeries, arkRebucketDays, decodeArkHistory} from "./ark-population-history";
 import {arkReleaseWords, ARK_RELEASE_ENGLISH} from "./ark-release";
 import {arkSurvivalHeartsWords} from "./ark-rankings-words";
 import {companionWords, companionWordsForHearts} from "./companion-bond";
@@ -407,4 +412,93 @@ test("every Ark language has the age-risk words, with the same placeholders", ()
     }
     assert.equal(ARK_LIVE_ENGLISH.deathUnknownOther, english.ark.live.deathUnknownOther);
     assert.equal(ARK_LIVE_ENGLISH.closeCall, english.ark.live.closeCall);
+});
+
+test("the population history counts an animal lying up as leaving, so its return is not an extra animal", () => {
+    const H = 3_600_000;
+    const T0 = Date.parse("2026-11-16T00:00:00Z");
+    const iso = (ms: number) => new Date(ms).toISOString();
+    // The server's shape (migration 20270104120000): a 12th number on a step with an animal lying up (a wounded escape, a rescue).
+    const answer = {
+        available: true, bucket: "hour", bucket_seconds: 3600, t0: iso(T0), since: iso(T0), as_of: iso(T0 + 5.5 * H), first_at: iso(T0 - 48 * H), started_at: iso(T0 - 48 * H),
+        base: [["vole", 0, 3]],
+        steps: [
+            ["vole", 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1], // one wounded, lying up
+            ["vole", 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1], // one rescued, lying up
+            ["vole", 0, 3, 0, 0, 1, 0, 0], // one back
+            ["vole", 0, 4, 0, 0, 1, 0, 0] // the other back
+        ],
+        gone: {}
+    };
+    const history = decodeArkHistory(arkCompactHistory(answer))!;
+    const series = arkKindSeries(history, "vole", "both");
+    assert.deepEqual(series.counts, [3, 3, 2, 1, 2, 3, 3], "3 aboard, 2 lie up, both return: 3 again, never 5");
+    assert.deepEqual(series.revived, [0, 0, 0, 0, 1, 1, 0]);
+    // A step without the 12th number, as the server sends it today: as before.
+    const old = decodeArkHistory(arkCompactHistory({...answer, steps: [["vole", 0, 3, 0, 0, 1, 0, 0]]}))!;
+    assert.deepEqual(arkKindSeries(old, "vole", "both").counts, [3, 3, 3, 3, 4, 4, 4], "(an old answer with a return and no departure: as it always counted)");
+    // Local days keep the departures.
+    const days = arkRebucketDays(history, "UTC");
+    assert.equal(arkKindSeries(days, "vole", "both").counts.at(-1), 3);
+});
+
+test("age risk on the rule read: ageRisk is read, absent means off", () => {
+    assert.equal(arkAgeRisk(decodeArkHeartsRules({hearts: true, escape: false, oldAge: "return", ageRisk: true})), true);
+    assert.equal(arkAgeRisk(decodeArkHeartsRules({hearts: true, escape: false, oldAge: "return"})), false);
+    assert.equal(arkAgeRisk(decodeArkHeartsRules({hearts: false, escape: false, oldAge: "final", ageRisk: true})), true, "it does not need hearts");
+    assert.equal(arkAgeRisk(null), false);
+    assert.deepEqual(decodeArkHeartsRules({hearts: true, escape: true, oldAge: "final", ageRisk: "yes"}), FINAL, "only a real true");
+});
+
+test("age risk: the survival record keeps a death of unknown cause apart, and a close call is no death", () => {
+    const read = arkReadEvents({events: [unknownDeath, oldAgeDeath, closeCall, row(40, "eaten", {animal: vole(40), other: fox(9)})]});
+    assert.deepEqual(read.falls.map((f) => f.cause), ["unknown", "old", "eaten"], "the close call is in no cause");
+    assert.deepEqual(read.flows.map((f) => f.delta), [-1, -1, -1, -1], "but it is a -1 for the population record, as its return is a +1");
+    const falls = {old: 1, starved: 0, eaten: 1, unknown: 1};
+    const survival = {causes: {falls, lostForGood: {old: 1, starved: 0, eaten: 1, unknown: 1}}} as never;
+    const bars = arkCauseBars(survival, english.ark.rankings as never, "en");
+    assert.deepEqual(bars.map((b) => [b.cause, b.name, b.falls]), [["old", "Old age", 1], ["starved", "Starved", 0], ["eaten", "Eaten", 1], ["unknown", "Cause not known", 1]]);
+    // Until the record holds one, the bars are as they were.
+    const none = arkCauseBars({causes: {falls: {...falls, unknown: 0}, lostForGood: {old: 1, starved: 0, eaten: 1, unknown: 0}}} as never, english.ark.rankings as never, "en");
+    assert.deepEqual(none.map((b) => b.cause), ["old", "starved", "eaten"]);
+});
+
+test("age risk: a species' trend counts a death of unknown cause apart", () => {
+    const trends = arkSpeciesTrends({events: [unknownDeath, unknownDeath2, oldAgeDeath, closeCall]}, () => "k");
+    const trend = trends.get("k")!;
+    assert.deepEqual([trend.diedOld, trend.diedUnknown, trend.net], [1, 2, -3]);
+    const words = {line: "In the 7 days to {date}: {changes}.", none: "n", arrived: "{count} came aboard", born: "{count} born", eaten: "{count} eaten", diedOld: "{count} died of old age", diedUnknown: "{count} died, cause not known", starved: "{count} starved", separator: ", "};
+    assert.equal(arkSpeciesTrendLine(trend, words, "Nov 27", "en"), "In the 7 days to Nov 27: 1 died of old age, 2 died, cause not known.");
+});
+
+test("age risk: Lost from the Ark says the last one died, cause not known, and the card's ended row can", () => {
+    const base = {species_profile_id: "11111111-1111-4111-8111-111111111111", name: "Wood Mouse", at, ark_day: 100, aboard: 0};
+    const list = decodeArkExtinctions([{...base, cause: null, cause_unknown: true}, {...base, species_profile_id: "22222222-2222-4222-8222-222222222222", cause: "died_old"}, {...base, species_profile_id: "33333333-3333-4333-8333-333333333333", cause: null}])!;
+    const how = list.map((one) => arkExtinctHow(ARK_LOST_WORDS_EN, one));
+    assert.deepEqual(how.sort(), [null, "Last one died of old age", "Last one died, cause not known"].sort());
+    const life = (died: unknown) => decodeArkLife({id: "a", origin: {kind: "arrived"}, died})!;
+    assert.equal(life({at, kind: "died_old", unknown: true}).died?.unknown, true);
+    assert.equal(life({at, kind: "died_old"}).died?.unknown, undefined);
+    assert.equal(life({at, kind: "eaten", unknown: true}).died?.unknown, undefined, "only an old-age end can be unknown");
+});
+
+test("every Ark language has the age-risk follow-up words, with the same placeholders", () => {
+    const dir = path.join(locales, "ark");
+    const all = [path.join(locales, "en.json"), path.join(locales, "id.json"), ...readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => path.join(dir, f))];
+    assert.equal(all.length, 45);
+    const holes = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort().join(",");
+    const spec: Array<[string[], string]> = [[["life"], "endedUnknown"], [["lost"], "diedUnknown"], [["rankings", "survival"], "causeUnknown"], [["rankings", "survival"], "faqA2Unknown"], [["lifeHelp"], "endRisk"]];
+    for (const file of all) {
+        const ark = JSON.parse(readFileSync(file, "utf8")).ark;
+        const at = (o: Record<string, unknown>, keys: string[]) => keys.reduce((x, k) => x?.[k] as Record<string, unknown>, o as Record<string, unknown>) as Record<string, string>;
+        for (const [group, key] of spec) {
+            assert.equal(typeof at(ark, group)?.[key], "string", `${file} ark.${group.join(".")}.${key}`);
+            assert.equal(holes(at(ark, group)[key]), holes(at(english.ark, group)[key]), `${file} ark.${group.join(".")}.${key} placeholders`);
+        }
+    }
+    for (const lang of ["en", "id"]) {
+        const file = JSON.parse(readFileSync(path.join(locales, `${lang}.json`), "utf8"));
+        assert.ok(file.species.inTheArk.trendDiedUnknown.includes("{count}"), `${lang} trendDiedUnknown`);
+        assert.ok(file.pages.howItWorks.seasons.p3Risk.length > 60, `${lang} seasons.p3Risk`);
+    }
 });

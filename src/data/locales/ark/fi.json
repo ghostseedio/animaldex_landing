@@ -293,7 +293,8 @@
                 "hiding": "piiloutuminen",
                 "climb": "pako ylöspäin",
                 "mimicry": "mimikry"
-            }
+            },
+            "endedUnknown": "Kuoli, syy tuntematon"
         },
         "replay": {
             "title": "Sillä aikaa kun olit poissa",
@@ -736,7 +737,8 @@
             "speciesBack": "Taas kyydissä: kuoli sukupuuttoon Ark-päivänä {day} · {date}.",
             "notAboard": "{animal} ei ole nyt kyydissä.",
             "bringBack": "Nappaa yksi ja tuo se takaisin",
-            "listLabel": "Arkista kadonneet lajit, uusimmat ensin"
+            "listLabel": "Arkista kadonneet lajit, uusimmat ensin",
+            "diedUnknown": "Viimeinen kuoli, syy tuntematon"
         },
         "endangered": {
             "title": "Uhanalaiset nyt",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Arkin eläin voi kuolla vanhuuteen, nälkään tai petoon. Jotkut selviävät, jotkut eivät. Tässä ovat luvut paikka paikalta, lähimpänä loppua olevien eläinten ja lajien kanssa.",
                 "placesDescriptionEscape": "Niistä eläimistä, jotka olivat kussakin paikassa viimeisten {days} päivän aikana, osuus, joka on yhä hengissä. Hyökkäyksen tai nälkäjakson jälkeen piilossa oleva eläin lasketaan eläväksi, koska se palaa.",
                 "recoverNoteEscape": "Hyökkäys ei aina ole loppu: eläin, jolla on sydän jäljellä, pääsee pakoon loukkaantuneena ja palaa, ja nälkiintynyt eläin otetaan hoitoon ja palaa, joten vain palaamatta jääneet lasketaan lopullisesti menetetyiksi. Vanhuus on lopullista.",
-                "recoverNoteEscapeOld": "Hyökkäys ei aina ole loppu: eläin, jolla on sydän jäljellä, pääsee pakoon loukkaantuneena ja palaa, ja nälkiintynyt eläin otetaan hoitoon ja palaa. Vanhuuteen kuoleva eläin, jolla on sydän jäljellä, palaa nuorena aikuisena, joten vain palaamatta jääneet lasketaan lopullisesti menetetyiksi."
+                "recoverNoteEscapeOld": "Hyökkäys ei aina ole loppu: eläin, jolla on sydän jäljellä, pääsee pakoon loukkaantuneena ja palaa, ja nälkiintynyt eläin otetaan hoitoon ja palaa. Vanhuuteen kuoleva eläin, jolla on sydän jäljellä, palaa nuorena aikuisena, joten vain palaamatta jääneet lasketaan lopullisesti menetetyiksi.",
+                "causeUnknown": "Syy tuntematon",
+                "faqA2Unknown": "Viimeisten {days} päivän aikana kirjaus näyttää {old} kuolemaa vanhuuteen, {unknown} syystä, jota Ark ei tunne, {starved} nälkään ja {eaten} syötyä. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Arkin nopeimmat lisääntyjät: millä eläimillä on eniten poikasia",
@@ -1173,7 +1177,8 @@
             "bar": "Täysi palkki: tähän asti eletty elämä, värjättynä voinnin mukaan (vihreä hyvin, meripihka vanha tai vaarassa, punainen nälkäinen)",
             "now": "Valkoinen viiva: nyt",
             "end": "Raidallinen pää: milloin se todennäköisesti kuolee vanhuuteen, välinä, ei lupauksena",
-            "heart": "Sydän %: sen mahdollisuus selvitä seuraava Arkin vuosi (noin 2 viikkoa oikeaa aikaa), huomioiden lähellä olevat pedot, nälkä, ikä ja vapautus"
+            "heart": "Sydän %: sen mahdollisuus selvitä seuraava Arkin vuosi (noin 2 viikkoa oikeaa aikaa), huomioiden lähellä olevat pedot, nälkä, ikä ja vapautus",
+            "endRisk": "Raidallinen pää: sen tyypillinen elinikä. Luonnonvarainen eläin voi kuolla aiemmin tai elää sitä pidempään"
         },
         "flow": {
             "sleep": "Nukkuu",

@@ -13,7 +13,7 @@
  * is missing, or says nothing about `escape`, is today's rule: the words are exactly as they were.
  */
 
-export type ArkHeartsRules = {hearts: boolean; escape: boolean; oldAge: "return" | "final"};
+export type ArkHeartsRules = {hearts: boolean; escape: boolean; oldAge: "return" | "final"; /** AGE-RISK (`age_risk` on): a free animal's end is mostly not old age, and the Ark does not always know what ended it. Absent from a server that does not say. */ ageRisk?: boolean};
 
 /** The server's `hearts_rules`, checked; null when it is absent or not an object. */
 export function decodeArkHeartsRules(raw: unknown): ArkHeartsRules | null {
@@ -21,7 +21,7 @@ export function decodeArkHeartsRules(raw: unknown): ArkHeartsRules | null {
     const row = raw as Record<string, unknown>;
     if (typeof row.hearts !== "boolean") return null;
     const escape = row.hearts && row.escape === true;
-    return {hearts: row.hearts, escape, oldAge: escape && row.oldAge !== "return" ? "final" : "return"};
+    return {hearts: row.hearts, escape, oldAge: escape && row.oldAge !== "return" ? "final" : "return", ...(row.ageRisk === true ? {ageRisk: true} : {})};
 }
 
 /** A heart is a survived attack now (the switch is on, with hearts). */
@@ -42,4 +42,9 @@ export function arkOldAgeFinal(rules: ArkHeartsRules | null | undefined): boolea
 export function arkHeartsVariant<T>(rules: ArkHeartsRules | null | undefined, plain: T, escapeFinal: T | undefined | null, escapeReturn?: T | undefined | null): T {
     if (!arkHeartsEscape(rules)) return plain;
     return (rules!.oldAge === "return" ? escapeReturn : escapeFinal) ?? plain;
+}
+
+/** The server's `age_risk` is on (the rule read's `ageRisk`): the words about an old animal's end say so. */
+export function arkAgeRisk(rules: ArkHeartsRules | null | undefined): boolean {
+    return rules?.ageRisk === true;
 }

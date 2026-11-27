@@ -293,7 +293,8 @@
                 "hiding": "saklanma",
                 "climb": "yukarı kaçış",
                 "mimicry": "taklit"
-            }
+            },
+            "endedUnknown": "Öldü, neden bilinmiyor"
         },
         "replay": {
             "title": "Sen yokken",
@@ -736,7 +737,8 @@
             "speciesBack": "Yeniden gemide: Ark'ın {day}. gününde nesli tükenmişti · {date}.",
             "notAboard": "Şu an gemide hiç {animal} yok.",
             "bringBack": "Geri getirmek için birini yakala",
-            "listLabel": "Ark'tan kaybolan türler, en yeni önce"
+            "listLabel": "Ark'tan kaybolan türler, en yeni önce",
+            "diedUnknown": "Sonuncusu öldü, neden bilinmiyor"
         },
         "endangered": {
             "title": "Şu an tehlikede",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Ark'taki bir hayvan yaşlılıktan, açlıktan ya da bir avcıdan düşebilir. Bazıları kurtulur, bazıları kurtulamaz. İşte yer yer rakamlar, sona en yakın hayvanlar ve türlerle birlikte.",
                 "placesDescriptionEscape": "Son {days} günde her yerde bulunan hayvanlardan hâlâ hayatta olanların payı. Saldırıdan ya da aç kalma döneminden sonra saklanıp dinlenen hayvan, geri döneceği için yaşıyor sayılır.",
                 "recoverNoteEscape": "Saldırı her zaman son değildir: kalbi kalan hayvan yaralı kaçıp kurtulur ve geri döner, açlıktan ölmek üzere olan da bakıma alınır ve geri döner, bu yüzden yalnızca geri dönmeyenler kalıcı olarak kayıp sayılır. Yaşlılık son demektir.",
-                "recoverNoteEscapeOld": "Saldırı her zaman son değildir: kalbi kalan hayvan yaralı kaçıp kurtulur ve geri döner, açlıktan ölmek üzere olan da bakıma alınır ve geri döner. Kalbi kalmışken yaşlılıktan ölen genç bir yetişkin olarak geri döner, bu yüzden yalnızca geri dönmeyenler kalıcı olarak kayıp sayılır."
+                "recoverNoteEscapeOld": "Saldırı her zaman son değildir: kalbi kalan hayvan yaralı kaçıp kurtulur ve geri döner, açlıktan ölmek üzere olan da bakıma alınır ve geri döner. Kalbi kalmışken yaşlılıktan ölen genç bir yetişkin olarak geri döner, bu yüzden yalnızca geri dönmeyenler kalıcı olarak kayıp sayılır.",
+                "causeUnknown": "Neden bilinmiyor",
+                "faqA2Unknown": "Son {days} günde kayıtta {old} yaşlılıktan, {unknown} Ark'ın bilmediği bir nedenden, {starved} açlıktan ölüm ve {eaten} yenen var. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Ark'ın en hızlı üreyenleri: hangi hayvanların en çok yavrusu var",
@@ -1173,7 +1177,8 @@
             "bar": "Dolu çubuk: şimdiye dek yaşanan hayat, durumuna göre renkli (yeşil iyi, kehribar yaşlı ya da risk altında, kırmızı aç)",
             "now": "Beyaz çizgi: şimdi",
             "end": "Çizgili uç: yaşlılıktan ne zaman ölebileceği, söz değil bir aralık olarak",
-            "heart": "Kalp %: gelecek Gemi yılını (gerçek zamanla yaklaşık 2 hafta) atlatma şansı; yakındaki avcılar, açlık, yaş ve salıverme hesaba katılır"
+            "heart": "Kalp %: gelecek Gemi yılını (gerçek zamanla yaklaşık 2 hafta) atlatma şansı; yakındaki avcılar, açlık, yaş ve salıverme hesaba katılır",
+            "endRisk": "Çizgili uç: olağan ömrü. Yabani bir hayvan bundan erken ölebilir ya da daha uzun yaşayabilir"
         },
         "flow": {
             "sleep": "Uyuyor",

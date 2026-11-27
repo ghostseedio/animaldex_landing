@@ -293,7 +293,8 @@
                 "hiding": "ukrywanie się",
                 "climb": "ucieczka w górę",
                 "mimicry": "mimikra"
-            }
+            },
+            "endedUnknown": "Zmarło, przyczyna nieznana"
         },
         "replay": {
             "title": "Gdy Cię nie było",
@@ -736,7 +737,8 @@
             "speciesBack": "Znów na pokładzie: wymarł w dniu Ark {day} · {date}.",
             "notAboard": "{animal}: teraz nie ma żadnego na pokładzie.",
             "bringBack": "Złap jednego, by go przywrócić",
-            "listLabel": "Gatunki utracone z Ark, najnowsze najpierw"
+            "listLabel": "Gatunki utracone z Ark, najnowsze najpierw",
+            "diedUnknown": "Ostatni umarł, przyczyna nieznana"
         },
         "endangered": {
             "title": "Zagrożone teraz",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Zwierzę w Ark może paść ze starości, z głodu albo ofiarą drapieżnika. Niektórym udaje się uciec, innym nie. Oto liczby, miejsce po miejscu, ze zwierzętami i gatunkami najbliższymi końca.",
                 "placesDescriptionEscape": "Spośród zwierząt, które w ostatnich {days} dniach były w danym miejscu, odsetek wciąż żywych. Zwierzę ukrywające się po ataku lub okresie głodu liczy się jako żywe: wróci.",
                 "recoverNoteEscape": "Atak nie zawsze jest końcem: zwierzę z pozostałym sercem ucieka z raną i wraca, a to, które głoduje, trafia pod opiekę i wraca, więc jako utracone na stałe liczą się tylko te, które nie wróciły. Starość jest ostateczna.",
-                "recoverNoteEscapeOld": "Atak nie zawsze jest końcem: zwierzę z pozostałym sercem ucieka z raną i wraca, a to, które głoduje, trafia pod opiekę i wraca. Zwierzę, które umiera ze starości z pozostałym sercem, wraca jako młode dorosłe, więc jako utracone na stałe liczą się tylko te, które nie wróciły."
+                "recoverNoteEscapeOld": "Atak nie zawsze jest końcem: zwierzę z pozostałym sercem ucieka z raną i wraca, a to, które głoduje, trafia pod opiekę i wraca. Zwierzę, które umiera ze starości z pozostałym sercem, wraca jako młode dorosłe, więc jako utracone na stałe liczą się tylko te, które nie wróciły.",
+                "causeUnknown": "Przyczyna nieznana",
+                "faqA2Unknown": "W ostatnich {days} dniach rejestr pokazuje {old} zgonów ze starości, {unknown} z przyczyny, której Ark nie zna, {starved} z głodu i {eaten} zjedzonych. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Najszybciej rozmnażające się w Ark: które zwierzęta mają najwięcej młodych",
@@ -1173,7 +1177,8 @@
             "bar": "Pełny pasek: dotychczas przeżyte życie, w kolorze jego stanu (zielony dobrze, bursztynowy stary lub zagrożony, czerwony głodny)",
             "now": "Biała kreska: teraz",
             "end": "Kreskowany koniec: kiedy prawdopodobnie umrze ze starości, jako przedział, nie obietnica",
-            "heart": "Serce %: szansa, że przeżyje kolejny rok Arki (około 2 tygodni realnego czasu), z uwzględnieniem drapieżników w pobliżu, głodu, wieku i wypuszczenia"
+            "heart": "Serce %: szansa, że przeżyje kolejny rok Arki (około 2 tygodni realnego czasu), z uwzględnieniem drapieżników w pobliżu, głodu, wieku i wypuszczenia",
+            "endRisk": "Kreskowany koniec: typowa długość jego życia. Dzikie zwierzę może umrzeć wcześniej albo żyć dłużej"
         },
         "flow": {
             "sleep": "Śpi",

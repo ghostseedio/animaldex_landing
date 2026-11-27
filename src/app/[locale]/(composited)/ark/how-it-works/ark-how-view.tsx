@@ -7,7 +7,7 @@ import {arkDirection} from "@/lib/ark-languages";
 import {readPublicArk} from "@/data/ark-public";
 import {readArkSeeds} from "@/data/ark-seeds";
 import {readArkHeartsRules} from "@/data/ark-hearts-rules";
-import {arkHeartsEscape, arkHeartsVariant} from "@/lib/ark-hearts-rules";
+import {arkAgeRisk, arkHeartsEscape, arkHeartsVariant} from "@/lib/ark-hearts-rules";
 import ArkFairSeeds from "@/app/[locale]/(composited)/ark/how-it-works/ark-fair-seeds";
 import {ARK_HOW_IT_WORKS_PATH, ARK_PAGES_UPDATED, ARK_RENDER_IMAGE, arkCountsLine, arkPageImage} from "@/lib/seo/ark-pages";
 import {getArkWords} from "@/loaders/ark-words";
@@ -56,7 +56,9 @@ export default async function ArkHowItWorksView({locale, lang}: {locale: string;
         }),
         breadcrumbJsonLd(locale, crumbs.map((crumb) => ({name: crumb.name, path: crumb.href})))
     ];
-    const paragraphs = (id: string) => ["p1", "p2", "p3", "p4"].map((key) => word(page, `${id}.${key === "p2" && id === "hearts" ? arkHeartsVariant(heartsRules, "p2", "p2", "p2Old") : key}`));
+    // (AGE-RISK, the server's `age_risk`: a free animal's end is mostly not old age, and the Ark does not always know of what.)
+    const lifespans = (key: string) => (id: string) => (key === "p3" && id === "seasons" && arkAgeRisk(heartsRules) && word(page, "seasons.p3Risk") ? "p3Risk" : key);
+    const paragraphs = (id: string) => ["p1", "p2", "p3", "p4"].map((key) => word(page, `${id}.${key === "p2" && id === "hearts" ? arkHeartsVariant(heartsRules, "p2", "p2", "p2Old") : lifespans(key)(id)}`));
     const how = arkHowWords(ark.how);
     const steps = arkHowSteps(how, arkHumanYear(wordsLocale));
     const counts = snapshot?.counts ?? null;

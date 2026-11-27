@@ -293,7 +293,8 @@
                 "hiding": "ukrývanie",
                 "climb": "únik nahor",
                 "mimicry": "mimikry"
-            }
+            },
+            "endedUnknown": "Zomrelo, príčina neznáma"
         },
         "replay": {
             "title": "Počas tvojej neprítomnosti",
@@ -736,7 +737,8 @@
             "speciesBack": "Späť na palube: vyhynul v deň Ark {day} · {date}.",
             "notAboard": "{animal}: teraz nie na palube.",
             "bringBack": "Ulovte jedno a vráťte ho",
-            "listLabel": "Druhy stratené z Ark, najnovšie prvé"
+            "listLabel": "Druhy stratené z Ark, najnovšie prvé",
+            "diedUnknown": "Posledný zomrel, príčina neznáma"
         },
         "endangered": {
             "title": "Ohrozené teraz",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Zviera v Arku môže padnúť od staroby, hladu alebo predátora. Niektorým sa podarí ujsť, iným nie. Tu sú čísla, miesto po mieste, so zvieratami a druhmi najbližšie ku koncu.",
                 "placesDescriptionEscape": "Zo zvierat, ktoré boli v každom mieste za posledných {days} dní, podiel tých, ktoré stále žijú. Zviera, ktoré sa po útoku alebo období hladu ukrýva, sa počíta ako živé: vráti sa.",
                 "recoverNoteEscape": "Útok nie je vždy koniec: zviera so zostávajúcim srdcom unikne so zranením a vráti sa, a hladujúce zviera vezmú do opatery a vráti sa, takže za navždy stratené sa počítajú len tie, ktoré sa nevrátili. Staroba je konečná.",
-                "recoverNoteEscapeOld": "Útok nie je vždy koniec: zviera so zostávajúcim srdcom unikne so zranením a vráti sa, a hladujúce zviera vezmú do opatery a vráti sa. Zviera, ktoré zomrie na starobu so zostávajúcim srdcom, sa vráti ako mladé dospelé, takže za navždy stratené sa počítajú len tie, ktoré sa nevrátili."
+                "recoverNoteEscapeOld": "Útok nie je vždy koniec: zviera so zostávajúcim srdcom unikne so zranením a vráti sa, a hladujúce zviera vezmú do opatery a vráti sa. Zviera, ktoré zomrie na starobu so zostávajúcim srdcom, sa vráti ako mladé dospelé, takže za navždy stratené sa počítajú len tie, ktoré sa nevrátili.",
+                "causeUnknown": "Príčina neznáma",
+                "faqA2Unknown": "Za posledných {days} dní záznam ukazuje {old} úmrtí od staroby, {unknown} z príčiny, ktorú Ark nepozná, {starved} od hladu a {eaten} zožratých. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Najrýchlejší chovatelia v Ark: ktoré zvieratá majú najviac mláďat",
@@ -1173,7 +1177,8 @@
             "bar": "Plný pruh: doteraz prežitý život, zafarbený podľa toho, ako sa mu darí (zelená dobre, jantárová staroba alebo ohrozenie, červená hlad)",
             "now": "Biela značka: teraz",
             "end": "Šrafovaný koniec: kedy pravdepodobne zomrie od staroby, ako rozpätie, nie sľub",
-            "heart": "Srdce %: jeho šanca prežiť ďalší rok Archy (asi 2 týždne reálneho času), so započítaním blízkych predátorov, hladu, veku a vypustenia"
+            "heart": "Srdce %: jeho šanca prežiť ďalší rok Archy (asi 2 týždne reálneho času), so započítaním blízkych predátorov, hladu, veku a vypustenia",
+            "endRisk": "Šrafovaný koniec: jeho typická dĺžka života. Divoké zviera môže zomrieť skôr, alebo žiť dlhšie"
         },
         "flow": {
             "sleep": "Spí",

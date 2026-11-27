@@ -293,7 +293,8 @@
                 "hiding": "ẩn nấp",
                 "climb": "thoát lên cao",
                 "mimicry": "bắt chước"
-            }
+            },
+            "endedUnknown": "Chết, không rõ nguyên nhân"
         },
         "replay": {
             "title": "Trong lúc bạn vắng mặt",
@@ -736,7 +737,8 @@
             "speciesBack": "Đã trở lại tàu: từng tuyệt chủng vào ngày {day} của Ark · {date}.",
             "notAboard": "Hiện không có con {animal} nào trên tàu.",
             "bringBack": "Bắt một con để đưa nó trở lại",
-            "listLabel": "Các loài đã mất khỏi Ark, mới nhất trước"
+            "listLabel": "Các loài đã mất khỏi Ark, mới nhất trước",
+            "diedUnknown": "Con cuối cùng chết, không rõ nguyên nhân"
         },
         "endangered": {
             "title": "Đang bị đe dọa",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Một con vật trong Ark có thể gục ngã vì tuổi già, cái đói hoặc thú săn mồi. Có con thoát được, có con không. Đây là các con số, từng nơi một, cùng những con vật và loài gần cuối đường nhất.",
                 "placesDescriptionEscape": "Trong số những con vật đã ở mỗi nơi trong {days} ngày qua, tỷ lệ còn sống. Con vật đang ẩn mình nghỉ ngơi sau một lần bị tấn công hay một đợt đói được tính là còn sống, vì nó sẽ trở lại.",
                 "recoverNoteEscape": "Bị tấn công không phải lúc nào cũng là kết thúc: con vật còn trái tim sẽ thoát đi trong tình trạng bị thương rồi trở lại, còn con đang đói lả sẽ được đưa đi chăm sóc rồi trở lại, nên chỉ những con không trở lại mới tính là mất vĩnh viễn. Tuổi già là dấu chấm hết.",
-                "recoverNoteEscapeOld": "Bị tấn công không phải lúc nào cũng là kết thúc: con vật còn trái tim sẽ thoát đi trong tình trạng bị thương rồi trở lại, còn con đang đói lả sẽ được đưa đi chăm sóc rồi trở lại. Con chết vì tuổi già khi còn trái tim sẽ trở lại thành con trưởng thành trẻ, nên chỉ những con không trở lại mới tính là mất vĩnh viễn."
+                "recoverNoteEscapeOld": "Bị tấn công không phải lúc nào cũng là kết thúc: con vật còn trái tim sẽ thoát đi trong tình trạng bị thương rồi trở lại, còn con đang đói lả sẽ được đưa đi chăm sóc rồi trở lại. Con chết vì tuổi già khi còn trái tim sẽ trở lại thành con trưởng thành trẻ, nên chỉ những con không trở lại mới tính là mất vĩnh viễn.",
+                "causeUnknown": "Không rõ nguyên nhân",
+                "faqA2Unknown": "Trong {days} ngày qua, ghi chép cho thấy {old} ca chết vì tuổi già, {unknown} vì nguyên nhân Ark không biết, {starved} vì đói và {eaten} bị ăn thịt. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Những loài sinh sản nhanh nhất trong Ark: con vật nào có nhiều con non nhất",
@@ -1173,7 +1177,8 @@
             "bar": "Thanh đặc: quãng đời đã sống, tô màu theo tình trạng (xanh lá khỏe, hổ phách già hoặc gặp nguy, đỏ đói)",
             "now": "Vạch trắng: bây giờ",
             "end": "Đầu sọc: khi nào nó có thể chết vì già, là một khoảng, không phải lời hứa",
-            "heart": "Trái tim %: khả năng sống qua năm Tàu tới (khoảng 2 tuần thời gian thật), tính cả kẻ săn mồi gần đó, cơn đói, tuổi và việc thả về tự nhiên"
+            "heart": "Trái tim %: khả năng sống qua năm Tàu tới (khoảng 2 tuần thời gian thật), tính cả kẻ săn mồi gần đó, cơn đói, tuổi và việc thả về tự nhiên",
+            "endRisk": "Đầu sọc: tuổi thọ điển hình của nó. Động vật hoang dã có thể chết sớm hơn, hoặc sống lâu hơn"
         },
         "flow": {
             "sleep": "Đang ngủ",

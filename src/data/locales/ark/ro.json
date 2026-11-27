@@ -293,7 +293,8 @@
                 "hiding": "ascundere",
                 "climb": "fugă în sus",
                 "mimicry": "mimetism"
-            }
+            },
+            "endedUnknown": "A murit, cauză necunoscută"
         },
         "replay": {
             "title": "Cât timp ai lipsit",
@@ -736,7 +737,8 @@
             "speciesBack": "Din nou la bord: dispăruse în ziua Ark {day} · {date}.",
             "notAboard": "{animal}: niciunul la bord acum.",
             "bringBack": "Prinde unul ca să-l aduci înapoi",
-            "listLabel": "Specii pierdute din Ark, cele mai noi întâi"
+            "listLabel": "Specii pierdute din Ark, cele mai noi întâi",
+            "diedUnknown": "Ultimul a murit, cauză necunoscută"
         },
         "endangered": {
             "title": "În pericol acum",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Un animal din Ark poate cădea din cauza bătrâneții, a foamei sau a unui prădător. Unele scapă, altele nu. Iată cifrele, loc cu loc, cu animalele și speciile cele mai aproape de sfârșit.",
                 "placesDescriptionEscape": "Dintre animalele care au fost în fiecare loc în ultimele {days} zile, partea care mai trăiește. Un animal ascuns după un atac sau o perioadă de foame se numără ca viu: se întoarce.",
                 "recoverNoteEscape": "Un atac nu e mereu sfârșitul: un animal cu o inimă rămasă scapă rănit și se întoarce, iar unul înfometat e luat în grijă și se întoarce, așa că doar cele care nu s-au întors se numără ca pierdute definitiv. Bătrânețea e definitivă.",
-                "recoverNoteEscapeOld": "Un atac nu e mereu sfârșitul: un animal cu o inimă rămasă scapă rănit și se întoarce, iar unul înfometat e luat în grijă și se întoarce. Unul care moare de bătrânețe cu o inimă rămasă se întoarce ca adult tânăr, așa că doar cele care nu s-au întors se numără ca pierdute definitiv."
+                "recoverNoteEscapeOld": "Un atac nu e mereu sfârșitul: un animal cu o inimă rămasă scapă rănit și se întoarce, iar unul înfometat e luat în grijă și se întoarce. Unul care moare de bătrânețe cu o inimă rămasă se întoarce ca adult tânăr, așa că doar cele care nu s-au întors se numără ca pierdute definitiv.",
+                "causeUnknown": "Cauză necunoscută",
+                "faqA2Unknown": "În ultimele {days} zile registrul arată {old} decese de bătrânețe, {unknown} dintr-o cauză pe care Ark nu o cunoaște, {starved} de foame și {eaten} mâncați. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Cei mai rapizi crescători din Ark: ce animale au cei mai mulți pui",
@@ -1173,7 +1177,8 @@
             "bar": "Bara plină: viața trăită până acum, colorată după cum îi merge (verde bine, chihlimbar bătrân sau în pericol, roșu flămând)",
             "now": "Linia albă: acum",
             "end": "Capătul dungat: când e probabil să moară de bătrânețe, ca interval, nu ca promisiune",
-            "heart": "Inimă %: șansa de a supraviețui următorului an al Arcei (circa 2 săptămâni reale), socotind prădătorii din apropiere, foamea, vârsta și eliberarea"
+            "heart": "Inimă %: șansa de a supraviețui următorului an al Arcei (circa 2 săptămâni reale), socotind prădătorii din apropiere, foamea, vârsta și eliberarea",
+            "endRisk": "Capătul dungat: durata lui obișnuită de viață. Un animal sălbatic poate muri mai devreme sau poate trăi mai mult"
         },
         "flow": {
             "sleep": "Doarme",

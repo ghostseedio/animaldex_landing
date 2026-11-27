@@ -535,7 +535,7 @@ function ArkLifeStory({animal, life, state, facts, words, locale, rest = null, l
         const k = life.died.kind;
         rows.push(isArkLeftKind(k)
             ? [w.left, k === "rehomed" ? w.endedRehomed : k === "to_market" ? w.endedMarket : w.endedMovedZoo]
-            : [w.ended, k === "starved" ? w.starved : k === "eaten" ? w.endedEaten : arkIsHuman(animal) ? w.endedOldPeaceful ?? "Died peacefully of old age" : w.endedOld]);
+            : [w.ended, k === "starved" ? w.starved : k === "eaten" ? w.endedEaten : life.died.unknown ? w.endedUnknown ?? "Died, cause not known" : arkIsHuman(animal) ? w.endedOldPeaceful ?? "Died peacefully of old age" : w.endedOld]);
     }
     // A young one whose breeding the server estimated (its record gives none, or only part): said so.
     if (life?.origin.kind === "born" && (life.origin.breeding_source === "estimate" || life.origin.breeding_source === "partial")) {

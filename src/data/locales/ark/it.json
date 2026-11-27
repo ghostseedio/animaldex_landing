@@ -293,7 +293,8 @@
                 "hiding": "nascondersi",
                 "climb": "fuga verso l'alto",
                 "mimicry": "imitazione"
-            }
+            },
+            "endedUnknown": "Morto, causa sconosciuta"
         },
         "replay": {
             "title": "Mentre eri via",
@@ -736,7 +737,8 @@
             "speciesBack": "Di nuovo a bordo: si era estinta il giorno {day} dell'Ark · {date}.",
             "notAboard": "{animal}: nessuno a bordo adesso.",
             "bringBack": "Catturane uno per riportarlo",
-            "listLabel": "Specie perse dall'Ark, le più recenti prima"
+            "listLabel": "Specie perse dall'Ark, le più recenti prima",
+            "diedUnknown": "L'ultimo è morto, causa sconosciuta"
         },
         "endangered": {
             "title": "In pericolo ora",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Un animale nell'Ark può cadere per vecchiaia, fame o per un predatore. Alcuni sfuggono, altri no. Ecco i numeri, luogo per luogo, con gli animali e le specie più vicini alla fine.",
                 "placesDescriptionEscape": "Tra gli animali che negli ultimi {days} giorni sono stati in ciascun luogo, la quota ancora viva. Un animale che si nasconde dopo un attacco o un periodo di fame conta come vivo, perché torna.",
                 "recoverNoteEscape": "Un attacco non è sempre la fine: un animale con un cuore rimasto sfugge ferito e torna, e uno che soffre la fame viene preso in cura e torna, quindi contano come persi per sempre solo quelli che non sono tornati. La vecchiaia è definitiva.",
-                "recoverNoteEscapeOld": "Un attacco non è sempre la fine: un animale con un cuore rimasto sfugge ferito e torna, e uno che soffre la fame viene preso in cura e torna. Chi muore di vecchiaia con un cuore rimasto torna da giovane adulto, quindi contano come persi per sempre solo quelli che non sono tornati."
+                "recoverNoteEscapeOld": "Un attacco non è sempre la fine: un animale con un cuore rimasto sfugge ferito e torna, e uno che soffre la fame viene preso in cura e torna. Chi muore di vecchiaia con un cuore rimasto torna da giovane adulto, quindi contano come persi per sempre solo quelli che non sono tornati.",
+                "causeUnknown": "Causa sconosciuta",
+                "faqA2Unknown": "Negli ultimi {days} giorni il registro mostra {old} morti per vecchiaia, {unknown} per una causa che l'Ark non conosce, {starved} per fame e {eaten} divorati. {hunting}"
             },
             "breeders": {
                 "metaTitle": "I riproduttori più veloci dell'Ark: quali animali hanno più cuccioli",
@@ -1173,7 +1177,8 @@
             "bar": "Barra piena: la vita vissuta finora, colorata in base a come sta (verde bene, ambra vecchio o a rischio, rosso affamato)",
             "now": "Tacca bianca: adesso",
             "end": "Fine a righe: quando è probabile che muoia di vecchiaia, come intervallo, non come promessa",
-            "heart": "Cuore %: la sua probabilità di sopravvivere al prossimo anno dell'Arca (circa 2 settimane reali), contando predatori vicini, fame, età e liberazione"
+            "heart": "Cuore %: la sua probabilità di sopravvivere al prossimo anno dell'Arca (circa 2 settimane reali), contando predatori vicini, fame, età e liberazione",
+            "endRisk": "Fine a righe: la sua durata di vita tipica. Un animale selvatico può morire prima, o vivere oltre"
         },
         "flow": {
             "sleep": "Dorme",

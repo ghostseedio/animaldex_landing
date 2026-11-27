@@ -293,7 +293,8 @@
                 "hiding": "elbújás",
                 "climb": "menekülés felfelé",
                 "mimicry": "mimikri"
-            }
+            },
+            "endedUnknown": "Elpusztult, az ok ismeretlen"
         },
         "replay": {
             "title": "Amíg távol voltál",
@@ -736,7 +737,8 @@
             "speciesBack": "Újra a fedélzeten: kihalt az Ark {day}. napján · {date}.",
             "notAboard": "{animal}: most egy sincs a fedélzeten.",
             "bringBack": "Fogj egyet, hogy visszahozd",
-            "listLabel": "Az Arkról eltűnt fajok, a legújabb elöl"
+            "listLabel": "Az Arkról eltűnt fajok, a legújabb elöl",
+            "diedUnknown": "Az utolsó elpusztult, az ok ismeretlen"
         },
         "endangered": {
             "title": "Most veszélyben",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Az Ark egy állata elesik öregségtől, éhségtől vagy ragadozótól. Némelyik megmenekül, némelyik nem. Itt vannak a számok, helyenként, a véghez legközelebb álló állatokkal és fajokkal.",
                 "placesDescriptionEscape": "Az elmúlt {days} napban az egyes helyeken lévő állatok közül a még élők aránya. A támadás vagy éhezés után rejtőzködő állat élőnek számít, mert visszatér.",
                 "recoverNoteEscape": "A támadás nem mindig a vég: a megmaradt szívű állat sebesülten elmenekül és visszatér, az éhező állatot pedig gondozásba veszik, és az is visszatér, ezért csak azok számítanak végleg elveszettnek, amelyek nem tértek vissza. Az öregség végleges.",
-                "recoverNoteEscapeOld": "A támadás nem mindig a vég: a megmaradt szívű állat sebesülten elmenekül és visszatér, az éhező állatot pedig gondozásba veszik, és az is visszatér. Az az állat, amelyik megmaradt szívvel hal meg öregségben, fiatal felnőttként tér vissza, ezért csak azok számítanak végleg elveszettnek, amelyek nem tértek vissza."
+                "recoverNoteEscapeOld": "A támadás nem mindig a vég: a megmaradt szívű állat sebesülten elmenekül és visszatér, az éhező állatot pedig gondozásba veszik, és az is visszatér. Az az állat, amelyik megmaradt szívvel hal meg öregségben, fiatal felnőttként tér vissza, ezért csak azok számítanak végleg elveszettnek, amelyek nem tértek vissza.",
+                "causeUnknown": "Ismeretlen ok",
+                "faqA2Unknown": "Az elmúlt {days} napban a nyilvántartás {old} öregségi, {unknown} az Ark számára ismeretlen okú, {starved} éhség okozta és {eaten} felfalt halálesetet mutat. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Az Ark leggyorsabb szaporodói: mely állatoknak van a legtöbb kölyke",
@@ -1173,7 +1177,8 @@
             "bar": "Teli sáv: az eddig leélt élet, az állapota szerint színezve (zöld jól van, borostyán idős vagy veszélyben, piros éhes)",
             "now": "Fehér jel: most",
             "end": "Csíkos vég: mikor hal meg valószínűleg végelgyengülésben, sávként, nem ígéretként",
-            "heart": "Szív %: az esélye, hogy túléli a következő bárkaévet (kb. 2 hét valós idő), a közeli ragadozókat, az éhséget, a kort és a szabadon engedést is számolva"
+            "heart": "Szív %: az esélye, hogy túléli a következő bárkaévet (kb. 2 hét valós idő), a közeli ragadozókat, az éhséget, a kort és a szabadon engedést is számolva",
+            "endRisk": "Csíkos vég: a szokásos élettartama. Egy vadon élő állat előbb is elpusztulhat, vagy tovább is élhet"
         },
         "flow": {
             "sleep": "Alszik",

@@ -110,8 +110,9 @@ export async function ArkSurvivalView(props: ArkRankingProps) {
               {
                   question: s.faqQ2,
                   answer: survival
-                      ? fillArkWords(s.faqA2, {
+                      ? fillArkWords(survival.causes.falls.unknown > 0 && s.faqA2Unknown ? s.faqA2Unknown : s.faqA2, {
                             days,
+                            unknown: arkNumber(survival.causes.falls.unknown, readerLocale),
                             old: arkNumber(survival.causes.falls.old, readerLocale),
                             starved: arkNumber(survival.causes.falls.starved, readerLocale),
                             eaten: arkNumber(survival.causes.falls.eaten, readerLocale),

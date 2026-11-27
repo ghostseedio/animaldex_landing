@@ -562,7 +562,8 @@ export type ArkLife = {
     /** The first arrival in its line: who brought its ancestors (a label, anonymous by default). */
     ancestor_brought_by: string | null;
     /** How it ended, when it has. */
-    died: {at: string | null; kind: "eaten" | "died_old" | "starved" | ArkLeftKind} | null;
+    /** `unknown`: AGE-RISK (docs/ark/age-risk.md, migration 20270104120000): a clock death the Ark cannot call old age. */
+    died: {at: string | null; kind: "eaten" | "died_old" | "starved" | ArkLeftKind; unknown?: true} | null;
     /** A3: the latest revision of the step that brought it (`worked`: it reads "worked" again). The animal stays. */
     revision: {at: string | null; worked: boolean} | null;
     /** The public debate it came from: only when the server's `public_story` flag is on. */
@@ -655,7 +656,7 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
         milestones: {count: count(milestones?.count), latest_at: text(milestones?.latest_at, 40)},
         ancestor_brought_by: label(row.ancestor_brought_by),
         // (Kept populations, decision 444: an animal born aboard that left alive, rehomed, to market or to another zoo.)
-        died: died && (died.kind === "eaten" || died.kind === "died_old" || died.kind === "starved" || isArkLeftKind(died.kind)) ? {at: text(died.at, 40), kind: died.kind} : null,
+        died: died && (died.kind === "eaten" || died.kind === "died_old" || died.kind === "starved" || isArkLeftKind(died.kind)) ? {at: text(died.at, 40), kind: died.kind, ...(died.kind === "died_old" && died.unknown === true ? {unknown: true as const} : {})} : null,
         revision: revision ? {at: text(revision.at, 40), worked: revision.worked === true} : null,
         story_public: decodeArkStory(row.story_public),
         founders: {

@@ -293,7 +293,8 @@
                 "hiding": "gjemmer seg",
                 "climb": "flukt oppover",
                 "mimicry": "mimikry"
-            }
+            },
+            "endedUnknown": "Døde, årsak ukjent"
         },
         "replay": {
             "title": "Mens du var borte",
@@ -736,7 +737,8 @@
             "speciesBack": "Om bord igjen: døde ut på Ark-dag {day} · {date}.",
             "notAboard": "Ingen {animal} er om bord nå.",
             "bringBack": "Fang en for å bringe den tilbake",
-            "listLabel": "Arter borte fra Ark, nyeste først"
+            "listLabel": "Arter borte fra Ark, nyeste først",
+            "diedUnknown": "Det siste døde, årsak ukjent"
         },
         "endangered": {
             "title": "Truet nå",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Et dyr i Ark kan dø av alderdom, sult eller et rovdyr. Noen kommer seg unna, andre ikke. Her er tallene, sted for sted, med dyrene og artene som er nærmest slutten.",
                 "placesDescriptionEscape": "Av dyrene som var på hvert sted de siste {days} dagene, andelen som fortsatt lever. Et dyr som ligger skjult etter et angrep eller en sultperiode, regnes som levende: det kommer tilbake.",
                 "recoverNoteEscape": "Et angrep er ikke alltid slutten: et dyr med et hjerte igjen kommer seg unna såret og vender tilbake, og et sultent dyr tas i omsorg og vender tilbake, så bare dyr som ikke kom tilbake, regnes som tapt for godt. Alderdom er endelig.",
-                "recoverNoteEscapeOld": "Et angrep er ikke alltid slutten: et dyr med et hjerte igjen kommer seg unna såret og vender tilbake, og et sultent dyr tas i omsorg og vender tilbake. Et dyr som dør av alderdom med et hjerte igjen, vender tilbake som ung voksen, så bare dyr som ikke kom tilbake, regnes som tapt for godt."
+                "recoverNoteEscapeOld": "Et angrep er ikke alltid slutten: et dyr med et hjerte igjen kommer seg unna såret og vender tilbake, og et sultent dyr tas i omsorg og vender tilbake. Et dyr som dør av alderdom med et hjerte igjen, vender tilbake som ung voksen, så bare dyr som ikke kom tilbake, regnes som tapt for godt.",
+                "causeUnknown": "Ukjent årsak",
+                "faqA2Unknown": "De siste {days} dagene viser registreringen {old} dødsfall av alderdom, {unknown} av en årsak Ark ikke kjenner, {starved} av sult og {eaten} spist. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Arks raskeste formerere: hvilke dyr har flest unger",
@@ -1173,7 +1177,8 @@
             "bar": "Fylt linje: livet levd så langt, farget etter hvordan den har det (grønn bra, rav gammel eller i fare, rød sulten)",
             "now": "Hvitt merke: nå",
             "end": "Stripete ende: når den sannsynligvis dør av alderdom, som et spenn, ikke et løfte",
-            "heart": "Hjerte %: sjansen for å overleve det neste Arkåret (omtrent 2 uker i virkeligheten), med rovdyr i nærheten, sult, alder og utsetting regnet med"
+            "heart": "Hjerte %: sjansen for å overleve det neste Arkåret (omtrent 2 uker i virkeligheten), med rovdyr i nærheten, sult, alder og utsetting regnet med",
+            "endRisk": "Stripete ende: dens typiske levetid. Et vilt dyr kan dø tidligere, eller leve lenger"
         },
         "flow": {
             "sleep": "Sover",

@@ -293,7 +293,8 @@
                 "hiding": "esconder-se",
                 "climb": "fuga para cima",
                 "mimicry": "mimetismo"
-            }
+            },
+            "endedUnknown": "Morreu, causa desconhecida"
         },
         "replay": {
             "title": "Enquanto você estava fora",
@@ -736,7 +737,8 @@
             "speciesBack": "De volta a bordo: foi extinta no dia {day} da Ark · {date}.",
             "notAboard": "Nenhum {animal} está a bordo agora.",
             "bringBack": "Capture um para trazê-lo de volta",
-            "listLabel": "Espécies perdidas da Ark, as mais recentes primeiro"
+            "listLabel": "Espécies perdidas da Ark, as mais recentes primeiro",
+            "diedUnknown": "O último morreu, causa desconhecida"
         },
         "endangered": {
             "title": "Em perigo agora",
@@ -1070,7 +1072,9 @@
                 "introEscape": "Um animal na Ark pode cair por velhice, fome ou um predador. Alguns escapam, outros não. Estes são os números, lugar por lugar, com os animais e espécies mais perto do fim.",
                 "placesDescriptionEscape": "Dos animais que estiveram em cada lugar nos últimos {days} dias, a parcela que ainda está viva. Um animal escondido após um ataque ou um período de fome conta como vivo, porque volta.",
                 "recoverNoteEscape": "Um ataque nem sempre é o fim: um animal com coração restante escapa ferido e volta, e um que passa fome é acolhido e volta, então só contam como perdidos para sempre os que não voltaram. A velhice é definitiva.",
-                "recoverNoteEscapeOld": "Um ataque nem sempre é o fim: um animal com coração restante escapa ferido e volta, e um que passa fome é acolhido e volta. Um que morre de velhice com coração restante volta como jovem adulto, então só contam como perdidos para sempre os que não voltaram."
+                "recoverNoteEscapeOld": "Um ataque nem sempre é o fim: um animal com coração restante escapa ferido e volta, e um que passa fome é acolhido e volta. Um que morre de velhice com coração restante volta como jovem adulto, então só contam como perdidos para sempre os que não voltaram.",
+                "causeUnknown": "Causa desconhecida",
+                "faqA2Unknown": "Nos últimos {days} dias o registro mostra {old} mortes por velhice, {unknown} por uma causa que a Ark não conhece, {starved} por fome e {eaten} devorados. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Reprodutores mais rápidos da Ark: quais animais têm mais filhotes",
@@ -1173,7 +1177,8 @@
             "bar": "Barra cheia: a vida vivida até agora, colorida conforme está (verde bem, âmbar velho ou em risco, vermelho com fome)",
             "now": "Traço branco: agora",
             "end": "Fim listrado: quando é provável que morra de velhice, como intervalo, não promessa",
-            "heart": "Coração %: a chance de sobreviver ao próximo ano da Arca (cerca de 2 semanas reais), contando predadores próximos, fome, idade e soltura"
+            "heart": "Coração %: a chance de sobreviver ao próximo ano da Arca (cerca de 2 semanas reais), contando predadores próximos, fome, idade e soltura",
+            "endRisk": "Fim listrado: o tempo de vida típico dele. Um animal selvagem pode morrer antes, ou viver além disso"
         },
         "flow": {
             "sleep": "Dormindo",

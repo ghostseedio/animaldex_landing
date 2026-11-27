@@ -4503,7 +4503,8 @@
         "hiding": "bersembunyi",
         "climb": "kabur ke atas",
         "mimicry": "mimikri"
-      }
+      },
+      "endedUnknown": "Mati, penyebab tidak diketahui"
     },
     "replay": {
       "title": "Selama kamu pergi",
@@ -4946,7 +4947,8 @@
       "speciesBack": "Kembali di Ark: sempat punah pada hari Ark {day} · {date}.",
       "notAboard": "Saat ini tidak ada {animal} di Ark.",
       "bringBack": "Tangkap satu untuk membawanya kembali",
-      "listLabel": "Spesies yang hilang dari Ark, terbaru dulu"
+      "listLabel": "Spesies yang hilang dari Ark, terbaru dulu",
+      "diedUnknown": "Yang terakhir mati, penyebab tidak diketahui"
     },
     "endangered": {
       "title": "Terancam saat ini",
@@ -5280,7 +5282,9 @@
         "introEscape": "Hewan di Ark bisa mati karena usia tua, kelaparan, atau pemangsa. Ada yang lolos, ada yang tidak. Inilah angkanya, tempat demi tempat, bersama hewan dan jenis yang paling dekat dengan akhir.",
         "placesDescriptionEscape": "Dari hewan yang berada di setiap tempat dalam {days} hari terakhir, bagian yang masih hidup. Hewan yang sedang beristirahat setelah serangan atau masa kelaparan dihitung hidup: ia akan kembali.",
         "recoverNoteEscape": "Serangan tidak selalu akhir: hewan yang masih punya hati lolos dalam keadaan terluka dan kembali, dan hewan yang kelaparan dibawa ke perawatan lalu kembali, jadi hanya hewan yang tidak kembali yang dihitung hilang selamanya. Usia tua adalah akhir.",
-        "recoverNoteEscapeOld": "Serangan tidak selalu akhir: hewan yang masih punya hati lolos dalam keadaan terluka dan kembali, dan hewan yang kelaparan dibawa ke perawatan lalu kembali. Hewan yang mati karena usia tua saat masih punya hati kembali sebagai hewan dewasa muda, jadi hanya hewan yang tidak kembali yang dihitung hilang selamanya."
+        "recoverNoteEscapeOld": "Serangan tidak selalu akhir: hewan yang masih punya hati lolos dalam keadaan terluka dan kembali, dan hewan yang kelaparan dibawa ke perawatan lalu kembali. Hewan yang mati karena usia tua saat masih punya hati kembali sebagai hewan dewasa muda, jadi hanya hewan yang tidak kembali yang dihitung hilang selamanya.",
+        "causeUnknown": "Penyebab tidak diketahui",
+        "faqA2Unknown": "Dalam {days} hari terakhir catatan menunjukkan {old} kematian karena usia tua, {unknown} karena sebab yang tidak diketahui Ark, {starved} karena kelaparan, dan {eaten} dimangsa. {hunting}"
       },
       "breeders": {
         "metaTitle": "Pembiak Tercepat di Ark: Hewan Mana yang Punya Anak Terbanyak",
@@ -5383,7 +5387,8 @@
       "bar": "Bilah penuh: hidup yang sudah dijalani, diwarnai menurut keadaannya (hijau baik, kuning tua atau berisiko, merah lapar)",
       "now": "Garis putih: sekarang",
       "end": "Ujung bergaris: kapan kemungkinan ia mati karena usia tua, sebagai rentang, bukan janji",
-      "heart": "Hati %: peluangnya bertahan satu tahun Bahtera berikutnya (sekitar 2 minggu waktu nyata), dengan menghitung pemangsa di dekatnya, rasa lapar, usia, dan pelepasan"
+      "heart": "Hati %: peluangnya bertahan satu tahun Bahtera berikutnya (sekitar 2 minggu waktu nyata), dengan menghitung pemangsa di dekatnya, rasa lapar, usia, dan pelepasan",
+      "endRisk": "Ujung bergaris: masa hidup tipikalnya. Hewan liar bisa mati lebih cepat, atau hidup lebih lama dari itu"
     },
     "flow": {
       "sleep": "Tidur",
@@ -5520,7 +5525,8 @@
         "title": "Musim, hari, dan masa hidup",
         "p1": "Ark punya kalendernya sendiri: satu tahun Ark berlalu setiap 14 hari nyata, masing-masing dimulai pada 1 Januari, dan dunianya bergerak maju sekali setiap jam, jadi ia sudah berubah di antara kunjunganmu. Spesies yang panduan lapangannya menyebut bulan atau musim kawin hanya berkembang biak saat itu. Spesies tanpa musim yang disebut, atau yang berkembang biak sepanjang tahun, bisa berkembang biak kapan saja.",
         "p2": "Di dunia 3D, hewan yang disebut nokturnal oleh panduan lapangannya keluar pada malam hari, yang diurnal pada siang hari, dan yang krepuskular saat fajar dan senja.",
-        "p3": "Hewan dengan masa hidup liar yang diketahui menjadi tua dan mati karena usia saat mencapainya. Masa hidup berjalan menurut jam Ark, jadi hewan yang hidup dua tahun di alam liar hidup sekitar empat minggu nyata di Ark. Saat hewan terakhir dari suatu spesies mati, spesies itu hilang dari Ark sampai seseorang menangkap yang lain."
+        "p3": "Hewan dengan masa hidup liar yang diketahui menjadi tua dan mati karena usia saat mencapainya. Masa hidup berjalan menurut jam Ark, jadi hewan yang hidup dua tahun di alam liar hidup sekitar empat minggu nyata di Ark. Saat hewan terakhir dari suatu spesies mati, spesies itu hilang dari Ark sampai seseorang menangkap yang lain.",
+        "p3Risk": "Hewan yang dipelihara menua dan mati karena usia tua. Hewan liar kebanyakan mati lebih cepat, dan Ark tidak selalu tahu sebabnya. Masa hidup berjalan menurut jam Ark, jadi hewan yang hidup dua tahun di alam liar hidup sekitar empat minggu nyata di Ark. Saat hewan terakhir dari suatu spesies mati, spesies itu hilang dari Ark sampai seseorang menangkap yang lain."
       },
       "hearts": {
         "title": "Hati: serangan yang berhasil dilewati",
@@ -5804,6 +5810,7 @@
       "trendBorn": "{count} lahir",
       "trendEaten": "{count} dimangsa",
       "trendDiedOld": "{count} mati karena usia",
+      "trendDiedUnknown": "{count} mati, penyebab tidak diketahui",
       "trendStarved": "{count} mati kelaparan",
       "trendSeparator": ", ",
       "arkEats": "Di Ark ia bisa memakan",
