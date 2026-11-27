@@ -103,7 +103,7 @@ import {arkPageSummary} from "@/lib/ark-page-summary";
  * The page stays dynamic for its query (`?focus=` cards, `?lang=`), but its render is cheap.
  */
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; follow?: string; arrival?: string; hour?: string; since?: string; publicStory?: string; record?: string; replay?: string; lite?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; lifespans?: string; feed?: string; hearts?: string}};
+type Props = {params: {locale: string}; searchParams: {rules?: string; fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; follow?: string; arrival?: string; hour?: string; since?: string; publicStory?: string; record?: string; replay?: string; lite?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; lifespans?: string; feed?: string; hearts?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -524,7 +524,7 @@ export default async function ArkPage({params, searchParams}: Props) {
     // Handed to the client as props only in development's modes: the live Ark is read by the client after the first paint.
     const handedRead = local || mode ? snapshot : null;
     // Development's hearts (`&hearts=1` with a fixture): an owner's hearts read in the contract's shapes.
-    const heartsFixture = mode && development && searchParams.hearts === "1" && handedRead ? (await import("@/lib/ark-hearts-fixture")).arkHeartsFixture(handedRead) : null;
+    const heartsFixture = mode && development && searchParams.hearts === "1" && handedRead ? (await import("@/lib/ark-hearts-fixture")).arkHeartsFixture(handedRead, Date.now(), searchParams.rules === "final" ? {hearts: true, escape: true, oldAge: "final"} : searchParams.rules === "return" ? {hearts: true, escape: true, oldAge: "return"} : searchParams.rules === "off" ? {hearts: true, escape: false, oldAge: "return"} : null) : null;
     const handed = heartsFixture?.snapshot ?? handedRead;
     const fixtureLife = mode ? await loadFixtureLife(mode, fixtureFounders) : null;
     const founders = local?.founders ?? data.fixture?.founders ?? (data.read?.available ? data.read.founders : ARK_NO_FOUNDERS);
