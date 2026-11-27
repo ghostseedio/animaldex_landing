@@ -73,9 +73,25 @@ export type KeepBox = {x: number; z: number; cos: number; sin: number; hx: numbe
  */
 export const KEEP_GIVE = 0.25;
 
-/** The give (m) for this body in this keep box (`KEEP_GIVE`): the same for the collisions and the scene's bound. */
+/** The give (m) for this body in this keep box (`KEEP_GIVE`), whichever way it faces. */
 export function keepGive(k: KeepBox, body: {half: number; radius: number}): number {
     return Math.min(Math.max(KEEP_GIVE, k.margin - body.half - body.radius - 0.05), k.margin);
+}
+
+/**
+ * The give along each of the box's own axes for this body facing `yaw` (`keepGive`): the margin less how far its body
+ * reaches that way as it faces, 5 cm short. Lane ELEPHANTS: a giraffe walking along its paddock's side, between a rock
+ * and the box's edge (0.2 m between them, its body 0.54 m to each side), took the give its full length would need
+ * facing the rails (0.30 m) and stayed wedged. The ring search round it then swapped sides as it turned, 3–5 m in a
+ * frame. Lengthwise along the rails it reaches only its width that way. The same for the collisions and the scene's bound.
+ */
+export function keepGrow(k: KeepBox, body: {half: number; radius: number}, yaw: number): {x: number; z: number} {
+    const fx = Math.sin(yaw);
+    const fz = Math.cos(yaw);
+    const alongX = Math.abs(fx * k.cos + fz * k.sin);
+    const alongZ = Math.abs(-fx * k.sin + fz * k.cos);
+    const give = (along: number) => Math.min(Math.max(KEEP_GIVE, k.margin - body.half * along - body.radius - 0.05), k.margin);
+    return {x: give(alongX), z: give(alongZ)};
 }
 
 /** A pen's keep box: `pen` (its middle, size and turn, in the frame `ox`, `oz` is the world's origin in), `margin` in from its rails. */
@@ -84,13 +100,13 @@ export function keepBoxOf(pen: {x: number; z: number; w: number; d: number; rot:
 }
 
 /** The nearest point of a keep box (grown by `grow`) to (x, z) (itself when inside). */
-export function intoKeep(k: KeepBox, x: number, z: number, grow = 0): {x: number; z: number} {
+export function intoKeep(k: KeepBox, x: number, z: number, grow: number | {x: number; z: number} = 0): {x: number; z: number} {
     const dx = x - k.x;
     const dz = z - k.z;
     const lx = dx * k.cos + dz * k.sin;
     const lz = -dx * k.sin + dz * k.cos;
-    const hx = k.hx + grow;
-    const hz = k.hz + grow;
+    const hx = k.hx + (typeof grow === "number" ? grow : grow.x);
+    const hz = k.hz + (typeof grow === "number" ? grow : grow.z);
     if (Math.abs(lx) <= hx && Math.abs(lz) <= hz) return {x, z};
     const qx = Math.min(Math.max(lx, -hx), hx);
     const qz = Math.min(Math.max(lz, -hz), hz);
@@ -98,10 +114,12 @@ export function intoKeep(k: KeepBox, x: number, z: number, grow = 0): {x: number
 }
 
 /** Whether (x, z) is inside a keep box (grown by `grow`; a millimetre's give). */
-export function inKeep(k: KeepBox, x: number, z: number, grow = 0): boolean {
+export function inKeep(k: KeepBox, x: number, z: number, grow: number | {x: number; z: number} = 0): boolean {
     const dx = x - k.x;
     const dz = z - k.z;
-    return Math.abs(dx * k.cos + dz * k.sin) <= k.hx + grow + 1e-3 && Math.abs(-dx * k.sin + dz * k.cos) <= k.hz + grow + 1e-3;
+    const gx = typeof grow === "number" ? grow : grow.x;
+    const gz = typeof grow === "number" ? grow : grow.z;
+    return Math.abs(dx * k.cos + dz * k.sin) <= k.hx + gx + 1e-3 && Math.abs(-dx * k.sin + dz * k.cos) <= k.hz + gz + 1e-3;
 }
 
 /** Whether its body, as it faces at (x, z), stands in nothing solid (what `pushOut` would leave where it is). */
@@ -196,8 +214,8 @@ export function pushOut(set: ColliderSet, body: ResolveBody, pose: ResolvePose, 
         if (keep) ({x, z} = intoKeep(keep, x, z));
     }
     // (Wedged between its keep box and something solid: out of it by the overlap, up to KEEP_GIVE past the box.)
-    const give = keep ? keepGive(keep, body) : 0;
-    if (stuck && keep && give > 0) {
+    const give = keep ? keepGrow(keep, body, pose.yaw) : null;
+    if (stuck && keep && give) {
         let wx = x;
         let wz = z;
         for (let step = 0; step < 6; step++) {
@@ -241,12 +259,15 @@ export function clipMove(set: ColliderSet, body: ResolveBody, from: {x: number; 
     const steps = Math.min(Math.ceil(length / Math.max(body.radius * 0.25, 0.01)), 24);
     let x = from.x;
     let z = from.z;
+    const grow = keep && !inKeep(keep, from.x, from.z) ? keepGrow(keep, body, pose.yaw) : 0;
     for (let s = 1; s <= steps; s++) {
         const t = s / steps;
         let px = from.x + (to.x - from.x) * t;
         let pz = from.z + (to.z - from.z) * t;
-        // (Penned: the way taken inside its keep box, along the inset where the move would leave it.)
-        if (keep) ({x: px, z: pz} = intoKeep(keep, px, pz));
+        // (Penned: the way taken inside its keep box, along the inset where the move would leave it; from a place in its
+        // give, wedged by the inset against something (`pushOut`), within that give: clamped back onto the inset, a
+        // giraffe beside a rock stood in the rock, its push dropped for a frame, 1.1 m.)
+        if (keep) ({x: px, z: pz} = intoKeep(keep, px, pz, grow));
         const normal = blockerNormal(set, body, px, pz, pose);
         if (normal) {
             if (!slide) break;

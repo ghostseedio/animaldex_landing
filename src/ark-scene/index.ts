@@ -2178,8 +2178,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // sliced mount may have found it already, `mapRoostOf`'s memo.)
             // (Part C: a town animal's range is its garden, paddock or enclosure; it finds its roost among the town's places.)
             animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), sleep: arkSleepOf(animal), condition: animal.condition ?? null, ...(inTown ? {range: island!.rangeOf(animal.id), kept: true, keep: island!.keep?.(animal.id) ?? null, bed: island!.bed?.(animal.id) ?? null, mates: () => (island!.mates?.(animal.id) ?? []).flatMap((id) => {
-                const s = entryById.get(id)?.sched;
-                return s ? [{animal: s.animal, profile: s.profile}] : [];
+                const e = entryById.get(id);
+                return e?.sched ? [{animal: e.sched.animal, profile: e.sched.profile, activity: e.animal.activity}] : [];
             })} : {})}, () => (inTown ? null : mapRoostOf(place, animal.zone))),
             profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
             trip: null,

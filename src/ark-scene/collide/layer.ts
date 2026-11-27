@@ -11,7 +11,7 @@
  */
 
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
-import {clipKept, inContact, pushOut, separateCluster, separationMoments, SEPARATION_EASE, type KeepBox, type ResolveBody, type ResolvePose} from "@/ark-scene/collide/resolve";
+import {bodyClear, clipKept, inContact, inKeep, pushOut, separateCluster, separationMoments, SEPARATION_EASE, type KeepBox, type ResolveBody, type ResolvePose} from "@/ark-scene/collide/resolve";
 
 export type CollideHooks<E> = {
     colliders(): ColliderSet | null;
@@ -262,7 +262,12 @@ export class CollideLayer<E> {
         const dz = a.dz + (b.dz - a.dz) * s;
         let out = {x: self.x, z: self.z};
         if (Math.abs(dx) > 1e-6 || Math.abs(dz) > 1e-6) {
-            out = clipKept(set, this.bodyOf(e), self, {x: self.x + dx, z: self.z + dz}, self, this.keepOf(e));
+            const to = {x: self.x + dx, z: self.z + dz};
+            const keep = this.keepOf(e);
+            out = clipKept(set, this.bodyOf(e), self, to, self, keep);
+            // (Lane ELEPHANTS: no way there in a straight line, a long body turning by a rock, and the push's own place
+            // clear and kept: that place. Dropped to nothing for a frame, a giraffe's push stepped 1.1 m out and back.)
+            if (out.x === self.x && out.z === self.z && (!keep || inKeep(keep, to.x, to.z)) && bodyClear(set, this.bodyOf(e), self, to.x, to.z)) out = to;
             if (out.x !== self.x || out.z !== self.z) this.eased++;
         }
         this.resolvedNow.set(e, out);

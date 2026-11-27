@@ -24,7 +24,7 @@ import {townWorldOrigin} from "@/ark-scene/islands";
 import {RURAL_TROUGHS, ruralPen} from "@/ark-scene/islands/town/rural";
 import {bodyShape} from "@/ark-scene/collide/bodies";
 import {townHeight} from "@/ark-scene/islands/town/ground";
-import {bodyClear, inKeep, keepGive, overlapOf, pushOut, separateCluster, type ResolveBody, type ResolvePose} from "@/ark-scene/collide/resolve";
+import {bodyClear, inKeep, keepGrow, overlapOf, pushOut, separateCluster, type ResolveBody, type ResolvePose} from "@/ark-scene/collide/resolve";
 import {colliderDistance} from "@/ark-scene/collide/colliders";
 import {townWorldSampler} from "@/ark-scene/islands/town/sampler";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
@@ -66,7 +66,7 @@ test("the bound leaves what the collisions placed as it is: one keep box, one bo
                 const bound = {x: placedOut.x, z: placedOut.z};
                 keepInPen(pen, margin, bound, origin.x, origin.z, set, {...body, yaw, y: ground(x, z)});
                 moved = Math.max(moved, Math.hypot(bound.x - placedOut.x, bound.z - placedOut.z));
-                assert.ok(inKeep(keep, placedOut.x, placedOut.z, keepGive(keep, body)), `(${x.toFixed(1)}, ${z.toFixed(1)}) yaw ${yaw}: placed outside its keep`);
+                assert.ok(inKeep(keep, placedOut.x, placedOut.z, keepGrow(keep, body, yaw)), `(${x.toFixed(1)}, ${z.toFixed(1)}) yaw ${yaw}: placed outside its keep`);
                 n++;
             }
         }
