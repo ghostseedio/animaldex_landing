@@ -39,6 +39,8 @@ export type ArkMoment = {
     predator?: string;
     predatorId?: string;
     shelter?: boolean;
+    /** A heart a survived attack (migration 20270104120000): an `escaped` moment that was a wounded escape. */
+    wounded?: boolean;
     food?: "meat" | "seeds";
     role?: "thief" | "victim";
     other?: ArkMomentRef;
@@ -52,7 +54,7 @@ export type ArkMoment = {
 export const ARK_MOMENT_KINDS = [
     "arrived", "born", "young", "mated", "dated", "moved_in", "parted", "went_to_mate", "meal", "ate_cache", "ate_dung",
     "cache_stolen", "cache_rehidden", "escaped", "signature", "eggs_collected", "grown_up", "grew_old", "returned_to_care",
-    "moved_zoo", "rehomed", "revived", "close_call", "died"
+    "moved_zoo", "rehomed", "revived", "close_call", "rescued", "died"
 ] as const;
 export type ArkMomentKind = (typeof ARK_MOMENT_KINDS)[number];
 
@@ -113,6 +115,7 @@ function decodeMoment(value: unknown): ArkMoment | null {
         predator: text(value.predator),
         predatorId: uuid(value.predator_id),
         shelter: yes(value.shelter),
+        wounded: yes(value.wounded),
         food: value.food === "meat" || value.food === "seeds" ? value.food : undefined,
         role: value.role === "thief" || value.role === "victim" ? value.role : undefined,
         other: ref(value.other),
@@ -188,6 +191,10 @@ export const ARK_LIFE_SO_FAR_ENGLISH = {
     escaped: "Escaped {predator}",
     escapedShelter: "Escaped {predator} in a shelter",
     escapedSome: "Escaped a hunt",
+    /** A heart a survived attack (the server's `hearts_escape`): the escape was a wounded one, and a rescue from starving. */
+    escapedWounded: "Escaped {predator}, wounded",
+    escapedSomeWounded: "Escaped a hunt, wounded",
+    rescued: "Found starving and taken into care",
     toolUse: "Used a tool",
     foodCache: "Stored food away",
     huntTechnique: "Hunted its own way",
@@ -280,8 +287,10 @@ export function arkMomentText(moment: ArkMoment, options: {self?: string | null;
         case "cache_rehidden":
             return w.cacheRehidden;
         case "escaped":
-            if (!moment.predator) return w.escapedSome;
-            return fill(moment.shelter ? w.escapedShelter : w.escaped, {predator: arkWithArticle(moment.predator)});
+            if (!moment.predator) return moment.wounded ? w.escapedSomeWounded : w.escapedSome;
+            return fill(moment.shelter ? w.escapedShelter : moment.wounded ? w.escapedWounded : w.escaped, {predator: arkWithArticle(moment.predator)});
+        case "rescued":
+            return w.rescued;
         case "signature":
             return moment.move === "tool_use" ? w.toolUse : moment.move === "food_cache" ? w.foodCache : moment.move === "hunt_technique" ? w.huntTechnique
                 : moment.move === "display" ? w.display : moment.move === "courtship" ? w.courtship : w.huntTechnique;
@@ -332,6 +341,7 @@ export function arkMomentTone(moment: ArkMoment): "start" | "family" | "food" | 
             return "food";
         case "escaped":
         case "close_call":
+        case "rescued":
             return "danger";
         case "died":
         case "rehomed":

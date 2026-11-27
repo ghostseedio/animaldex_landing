@@ -16,7 +16,7 @@ import {arkCompactHistory, arkKindSeries, arkRebucketDays, decodeArkHistory} fro
 import {arkReleaseWords, ARK_RELEASE_ENGLISH} from "./ark-release";
 import {arkSurvivalHeartsWords} from "./ark-rankings-words";
 import {companionWords, companionWordsForHearts} from "./companion-bond";
-import {arkMomentText} from "./ark-life-so-far";
+import {arkMomentText, decodeArkMoments} from "./ark-life-so-far";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
 import {forestItems, forestText} from "@/ark-scene/live/forest-lines";
 import {closeCallRow, closeCallText, heartsNotes, rescueItems, rescueText} from "@/ark-scene/live/hearts-lines";
@@ -394,6 +394,13 @@ test("Life so far: a survived close call and a death of unknown cause are said a
     assert.equal(arkMomentText({...base, kind: "close_call"}), "Came close to dying, and pulled through");
     assert.equal(arkMomentText({...base, kind: "died", way: "unknown"}), "Died, cause not known");
     assert.equal(arkMomentText({...base, kind: "died", way: "death_old"}), "Died of old age");
+    // A heart a survived attack (migration 20270104120000): a wounded escape and a rescue.
+    assert.equal(arkMomentText({...base, kind: "escaped", predator: "Red Fox", wounded: true}), "Escaped a Red Fox, wounded");
+    assert.equal(arkMomentText({...base, kind: "escaped", predator: "Red Fox"}), "Escaped a Red Fox");
+    assert.equal(arkMomentText({...base, kind: "escaped", wounded: true}), "Escaped a hunt, wounded");
+    assert.equal(arkMomentText({...base, kind: "rescued"}), "Found starving and taken into care");
+    const read = decodeArkMoments({moments: [{id: "e1", kind: "escaped", at, wounded: true, predator: "Red Fox"}, {id: "e2", kind: "rescued", at}], total: 2, more: false});
+    assert.deepEqual(read?.moments.map((m) => [m.kind, m.wounded]), [["escaped", true], ["rescued", undefined]]);
 });
 
 test("every Ark language has the age-risk words, with the same placeholders", () => {
