@@ -200,6 +200,9 @@ type Live = {
     handing?: number;
     /** Which sex of its kind attends it (`broodCareSex`), worked out once; null: either. */
     careSex?: "male" | "female" | null;
+    /** The attending parent as worked out this frame (`attendant`). */
+    attendFrame?: number;
+    attendId?: string | null;
     /** Its nest's contents are out of sight (a hole in a trunk, a burrow, a barn's gable): the eggs and nestlings are not drawn. */
     hidden?: boolean;
     /** Its nest is the props' own (`props/homes.ts` draws it in season): its eggs and young go in it, no ring of this layer's. */
@@ -439,6 +442,8 @@ export class LiveBroods<E> {
     private now = 0;
     /** A brood waits to be placed (its kind's model not in yet), and when it was last tried (s). */
     private unplaced = false;
+    /** The frame (counted by `step`), for what is worked out once a frame (`attendant`). */
+    private frame = 0;
     private placeTried = -Infinity;
     tier: QualityTier = "high";
 
@@ -581,6 +586,15 @@ export class LiveBroods<E> {
      * drawn on its eggs or leading its young: never a drake sitting where a duck sits. Null: unattended.
      */
     private attendant(live: Live): string | null {
+        // (Once a frame: who is out changes between frames, not within one.)
+        if (live.attendFrame === this.frame) return live.attendId ?? null;
+        const id = this.attendantNow(live);
+        live.attendFrame = this.frame;
+        live.attendId = id;
+        return id;
+    }
+
+    private attendantNow(live: Live): string | null {
         const brood = live.brood;
         if (!brood.carer) return null;
         // (Kept once its model's plan is in: until then by the slug alone.)
@@ -841,6 +855,7 @@ export class LiveBroods<E> {
     step(epoch: number, sink: BroodSink, view: Point | null, reach: number, still = false): void {
         const h = this.host;
         this.now = epoch;
+        this.frame++;
         if (this.unplaced && epoch - this.placeTried > 2) {
             this.placeTried = epoch;
             this.unplaced = false;
