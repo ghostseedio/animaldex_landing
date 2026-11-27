@@ -62,6 +62,8 @@ const CATCH_GUESS = 8;
 /** Members that go with no cause fade over this long (s); a taken one over this. */
 const QUIET_FADE = 4;
 const TAKEN_FADE = 0.7;
+/** The deepest water a clump of frog spawn is laid in (m): the margin's warm shallows. */
+const SPAWN_SHALLOW = 0.08;
 /** A failed nest stands empty this long (s), then fades over this. */
 export const NEST_EMPTY_SECONDS = 600;
 const NEST_FADE = 8;
@@ -575,6 +577,23 @@ export class LiveBroods<E> {
                 const wet = this.host.wet?.(place.x, place.z) ?? null;
                 if (wet) place = {...place, x: wet.x, z: wet.z, y: this.host.ground(wet.x, wet.z), top: this.host.waterTop(wet.x, wet.z), water: true};
             }
+            // A clump of frog spawn lies in the shallowest margin, a few centimetres deep, where the sun warms it (and clear of
+            // the lily pads, which keep to water a hand deep and more: `decor.ts`, `decor-v2.ts`): from the spot toward the shore.
+            const laid = place ? broodEggLook(live.brood, plan, place.water) : null;
+            if (place?.water && laid?.egg === "spawn" && laid.layout === "clump") {
+                const h = this.host;
+                const depth = (x: number, z: number) => h.waterTop(x, z) - h.ground(x, z);
+                const shore = depth(place.x, place.z) > SPAWN_SHALLOW ? h.shore?.(place.x, place.z) ?? null : null;
+                const d = shore ? Math.hypot(shore.x - place.x, shore.z - place.z) : 0;
+                for (let t = 0.1; shore && t <= d; t += 0.1) {
+                    const x = place.x + ((shore.x - place.x) * t) / d;
+                    const z = place.z + ((shore.z - place.z) * t) / d;
+                    const deep = depth(x, z);
+                    if (deep > SPAWN_SHALLOW) continue;
+                    if (deep >= 0.03) place = {...place, x, z, y: h.ground(x, z), top: h.waterTop(x, z)};
+                    break;
+                }
+            }
             // A ground-nester whose home is up on a perch or a limb (a plover, a duck): its scrape on the ground beneath.
             if (place && !place.water && broodEggLook(live.brood, plan, false)?.nest === "scrape") {
                 const ground = this.host.ground(place.x, place.z);
@@ -870,14 +889,18 @@ export class LiveBroods<E> {
                     const at = away.at!;
                     if (!away.apart!.from.has(id)) away.apart!.from.set(id, live.last.get(id) ?? h.body(entry));
                     const from = away.apart!.from.get(id)!;
-                    const spot = {x: at.x + Math.sin(j * 2.4 + 0.5) * live.size * 0.35, z: at.z + Math.cos(j * 2.4 + 0.5) * live.size * 0.35};
+                    // (Just past the place, as the hunter faces it (`raidPose`: its head is over the place): in front of it, side by side.)
+                    const dir = away.from && Math.hypot(at.x - away.from.x, at.z - away.from.z) > 0.05 ? Math.atan2(at.x - away.from.x, at.z - away.from.z) : at.yaw;
+                    const ahead = live.size * (0.45 + 0.2 * (j % 2));
+                    const side = (j - (awayModels - 1) / 2) * live.size * 0.4;
+                    const spot = {x: at.x + Math.sin(dir) * ahead + Math.cos(dir) * side, z: at.z + Math.cos(dir) * ahead - Math.sin(dir) * side};
                     const far = Math.hypot(spot.x - from.x, spot.z - from.z);
                     const u = far > 40 ? 1 : clamp((epoch - away.t0) / (RAID_WALK * 0.8), 0, 1);
                     const e = ease(u);
                     const x = from.x + (spot.x - from.x) * e;
                     const z = from.z + (spot.z - from.z) * e;
                     const swim = h.waterTop(x, z) > h.ground(x, z) + 0.05;
-                    const body: BroodBody = {x, z, base: swim ? Math.max(h.waterTop(x, z), from.base) : h.ground(x, z), yaw: u < 1 && far > 0.05 ? Math.atan2(spot.x - from.x, spot.z - from.z) : j * 2.4, length: 0};
+                    const body: BroodBody = {x, z, base: swim ? Math.max(h.waterTop(x, z), from.base) : h.ground(x, z), yaw: u < 1 && far > 0.05 ? Math.atan2(spot.x - from.x, spot.z - from.z) : dir + Math.PI * (0.6 + 0.8 * (j % 2)), length: 0};
                     live.last.set(id, body);
                     const gone = j < awayTaken;
                     const pop = far > 40 ? ease((epoch - away.t0) / 0.8) : 1;
@@ -1065,8 +1088,7 @@ export class LiveBroods<E> {
                 z = cz + Math.sin(phase) * r * 0.7;
                 const top = h.waterTop(x, z);
                 const bed = h.ground(x, z);
-                // (Tadpoles and fry keep to the warm top of the shallows, where they are seen.)
-                y = Math.min(Math.max(top - length * (0.7 + b * 2.2), bed + length * 0.6, bed + 0.01), Math.max(top - length * 0.5, bed + 0.01));
+                y = Math.min(Math.max(bed + length * (0.6 + b * 2.5), bed + 0.01), Math.max(top - length * 0.8, bed + 0.01));
                 yaw = turn + Math.PI / 2 + Math.sin(phase) * 0.5;
             } else if (anchor) {
                 // A trail behind the carer: rows of three, each wobbling in its place.
