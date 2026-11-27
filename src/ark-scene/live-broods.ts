@@ -503,7 +503,8 @@ export function driveGuardPose(d: number, style: DriveStyle, home: Being, hunter
     if (d < 0) return mk(home.x, home.z, home.base, toward, "scan");
     const L = Math.max(home.length, 0.05);
     // (Just short of it, on its side: where a stand is made.)
-    const gap = Math.max((L + hunter.length) * 0.55, 0.15);
+    // (Centre to centre: half their lengths each and a third again, so face to face they meet nose to nose, not through.)
+    const gap = Math.max((L + hunter.length) * 0.65, 0.15);
     const near = {x: hunter.x - Math.sin(toward) * gap, z: hunter.z - Math.cos(toward) * gap};
     const after = d - DRIVE_SECONDS;
     // Then back to its brood, as the hunter goes.
