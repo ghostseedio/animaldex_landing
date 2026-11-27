@@ -10,6 +10,7 @@ import {arkSpeciesAboard} from "@/lib/ark-population";
 import {arkSpeciesTrendLine, arkSpeciesTrendOf} from "@/lib/ark-species-trend";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
+import {ANIMAL_SIMULATION_PATH} from "@/lib/seo/ark-pages";
 import {getArkWords} from "@/loaders/ark-words";
 import {getPageWords, word} from "@/loaders/page-words";
 
@@ -29,6 +30,8 @@ import {getPageWords, word} from "@/loaders/page-words";
  *   `readArkSpeciesTrends`), what it can eat and be eaten by among the animals
  *   aboard (the food chain's own rules, `src/lib/ark-food-chain.ts`), and a
  *   link to it in /ark/food-chain. All from reads shared by every species page.
+ * - One small link to /animal-simulation, the page for people searching for an
+ *   animal simulation (SEO audit 2026-11-27): the words stay on that page.
  * - Counts and species only: never who brought one.
  */
 
@@ -37,7 +40,7 @@ const REVALIDATE_SECONDS = 86400;
 
 /** What the section shows, read on the server with the page (null: say nothing about the Ark). */
 /** The section's own words beyond the Ark's (`species.inTheArk.*`: species pages are English only). */
-export type SpeciesArkExtraWords = {arkEats: string; arkEatenBy: string; foodChain: string};
+export type SpeciesArkExtraWords = {arkEats: string; arkEatenBy: string; foodChain: string; simulation?: string};
 
 export type SpeciesArk = {
     words: ArkWords;
@@ -94,7 +97,7 @@ export async function loadSpeciesArk({slug, speciesProfileId}: {slug: string; sp
             separator: word(inTheArk, "trendSeparator") || ", "
         }, trendDate(trends.since), "en")
         : null;
-    const extra = {arkEats: word(inTheArk, "arkEats"), arkEatenBy: word(inTheArk, "arkEatenBy"), foodChain: word(inTheArk, "foodChain")};
+    const extra = {arkEats: word(inTheArk, "arkEats"), arkEatenBy: word(inTheArk, "arkEatenBy"), foodChain: word(inTheArk, "foodChain"), simulation: word(inTheArk, "simulation")};
     const lost = arkExtinctionOf(extinctions, {speciesProfileId, slug});
     return {words, extra, count: aboard.count, focusSlug: aboard.animals[0]?.model_slug ?? slug, canBoard, links: links ?? [], foodChain, trend, lost, lostWords: arkLostWords(words.lost)};
 }
@@ -152,7 +155,7 @@ export default function SpeciesArkSection({slug, speciesProfileId, name, ark}: P
     const copy = words.species;
     const eats = ark.links.filter((link) => link.direction === "eats");
     const eatenBy = ark.links.filter((link) => link.direction === "eatenBy");
-    const extra = ark.extra ?? {arkEats: "", arkEatenBy: "", foodChain: ""};
+    const extra: SpeciesArkExtraWords = ark.extra ?? {arkEats: "", arkEatenBy: "", foodChain: ""};
     const chain = ark.foodChain && !ark.foodChain.kept ? ark.foodChain : null;
     const arkPrey = chain ? uniqueSpecies(chain.eats.flatMap((rule) => rule.prey)) : [];
     const arkPredators = chain ? uniqueSpecies(chain.eatenBy.map((item) => item.predator)) : [];
@@ -214,6 +217,12 @@ export default function SpeciesArkSection({slug, speciesProfileId, name, ark}: P
             {ark.foodChain && extra.foodChain ? (
                 <Link href={`/ark/food-chain?species=${encodeURIComponent(ark.foodChain.species.slug)}`} className="text-sm font-bold text-primary-200 underline-offset-4 hover:underline">
                     {extra.foodChain} <span aria-hidden="true">→</span>
+                </Link>
+            ) : null}
+            {/* The one sitewide way to the page for people searching for an animal simulation (owner, 2026-11-27). */}
+            {extra.simulation ? (
+                <Link href={ANIMAL_SIMULATION_PATH} className="text-sm font-bold text-primary-200 underline-offset-4 hover:underline">
+                    {extra.simulation} <span aria-hidden="true">→</span>
                 </Link>
             ) : null}
             </div>

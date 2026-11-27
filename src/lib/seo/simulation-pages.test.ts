@@ -81,3 +81,38 @@ test("simulationFaq skips a pair a locale lacks", () => {
     const faq = simulationFaq((key) => ({q1: "A?", a1: "Yes.", q2: "B?", a2: " "} as Record<string, string>)[key] ?? "");
     assert.deepEqual(faq, [{question: "A?", answer: "Yes."}]);
 });
+
+test("the Ark's search description says what it is, in both languages, and keeps the slogan", () => {
+    const seo = (locale: string) => (JSON.parse(readFileSync(join(repoRoot, `src/data/locales/${locale}.json`), "utf8")) as {ark: {seo: {metaDescription: string}}}).ark.seo.metaDescription;
+    assert.match(seo("en"), /^Every animal has a lesson\. .*animal simulation/);
+    assert.match(seo("id"), /^Setiap hewan punya pelajaran\. .*simulasi hewan/);
+    for (const locale of ["en", "id"]) assert.ok(seo(locale).length <= META_DESCRIPTION_MAX, `${locale} is ${seo(locale).length}`);
+});
+
+test("species pages carry one small link to the animal simulation page, and no more words than that", () => {
+    const section = readFileSync(join(repoRoot, "src/app/[locale]/(composited)/animals/[slug]/species-ark-section.tsx"), "utf8");
+    assert.equal(section.split("href={ANIMAL_SIMULATION_PATH}").length - 1, 1);
+    const label = (JSON.parse(readFileSync(join(repoRoot, "src/data/locales/en.json"), "utf8")) as {species: {inTheArk: {simulation: string}}}).species.inTheArk.simulation;
+    assert.match(label, /animal simulation/);
+    assert.ok(label.length <= 32, `the link is ${label.length} characters`);
+});
+
+test("the two supporting articles link to the pages they support, and say when their figures were read", async () => {
+    const {animalSimulationPosts} = await import("@/data/blog/animal-simulation-posts");
+    const {blogPosts} = await import("@/data/blog");
+    assert.equal(animalSimulationPosts.length, 2);
+    for (const post of animalSimulationPosts) {
+        assert.ok(blogPosts.some((entry) => entry.slug === post.slug), `${post.slug} is published`);
+        const hrefs = post.sections.flatMap((section) => (section.inlineLinks ?? []).map((link) => link.href));
+        for (const path of [ANIMAL_SIMULATION_PATH, ECOSYSTEM_SIMULATION_PATH, "/ark"]) assert.ok(hrefs.includes(path), `${post.slug} links to ${path}`);
+        assert.ok(`${post.title} | AnimalDex`.length <= 72, `${post.slug} title`);
+        assert.ok(post.description.length <= META_DESCRIPTION_MAX, `${post.slug} description is ${post.description.length}`);
+        const text = JSON.stringify(post);
+        // A figure from the live Ark is dated, so it stays true after the Ark moves on.
+        assert.match(text, /2[67] November 2026/);
+        assert.match(text, /not nature's/);
+        assert.doesNotMatch(text, /—/);
+        for (const title of post.tableOfContents ?? []) assert.ok(post.sections.some((section) => section.title === title), `${post.slug} contents: ${title}`);
+        for (const slug of post.relatedSlugs ?? []) assert.ok(blogPosts.some((entry) => entry.slug === slug), `${post.slug} related: ${slug}`);
+    }
+});

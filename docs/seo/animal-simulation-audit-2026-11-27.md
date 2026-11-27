@@ -109,6 +109,10 @@ scientific model and that nobody plays or controls an animal.
 | S4 | Add a footer link? | No | The footer is capped at 16 links by test, by the owner's cut on 1 Nov. See 7.2 |
 | S5 | Show the population chart? | No | The event-log series ended at 3,623 while the live count said 3,986 on the same page |
 | S6 | Read the event log during the build? | No | It is a long read on a cold process; the pages gain the last-day figures at their first hourly refresh |
+| S7 | Which sitewide link (owner: "do whatever you recommend", 27 Nov)? | One small text link, "About this animal simulation", in the species pages' "In the Ark" block | It reaches about 2,300 pages that already talk about the Ark, adds four words, and leaves the footer cap and the home page alone |
+| S8 | `/ark` search description? | "...is a live 3D animal simulation: ..." (en), "...adalah simulasi hewan 3D yang hidup: ..." (id), slogan kept first | Invisible on the page; the brand title "AnimalDex Ark" stays as it is |
+| S9 | Supporting articles: how many, from what? | Two: simulation vs simulator, and a food web simulation read from 14 hours of the Ark's public log (26 Nov 2026) | Each figure is dated, so it stays true after the Ark moves on. A third (a real-species browser simulation) would repeat `/animal-simulation` |
+| S10 | Make the blog's tables fit a phone? | No | All 72 blog tables share one style that scrolls sideways inside its box; changing it is a layout change for every post, not this ticket |
 
 ## 7. Still to do
 
@@ -116,15 +120,10 @@ scientific model and that nobody plays or controls an animal.
    `simulat|ecosystem|food (chain|web)|predator|virtual (zoo|world)|wildlife sim`, for 28 days and 16 months, with
    the page beside each query. Inspect `/ark` for its index status and Google's chosen canonical. Request indexing of
    the two new URLs.
-2. **One sitewide link (owner decides).** The new pages are linked from two text pages and the sitemap only. A footer
-   link "Animal simulation" in the Ark column (raising the cap from 16 to 17), or one small link in the species
-   pages' "In the Ark" block (2,308 pages), would carry far more weight.
-3. **`/ark` meta description (owner decides).** It leads with the slogan and never says "simulation". Suggested:
-   "The AnimalDex Ark is a live animal simulation in 3D: each animal came aboard with a real catch and lives by its
-   field guide." Invisible on the page.
-4. **Supporting articles.** Two or three blog posts that link to the new pages, for the weak results pages in
-   section 3: a real-species ecosystem simulation you can watch in a browser; animal simulation against animal
-   simulator games; what a food web simulation shows.
+2. ~~One sitewide link~~ **Done 27 Nov (S7):** "About this animal simulation" in the species pages' "In the Ark" block.
+3. ~~`/ark` meta description~~ **Done 27 Nov (S8):** it now says "live 3D animal simulation" in English and Indonesian.
+4. ~~Supporting articles~~ **Done 27 Nov (S9):** `/blog/animal-simulation-vs-animal-simulator-games` and
+   `/blog/food-web-simulation-real-species`, both linking to the two pages and to `/ark`.
 5. **A short clip of the Ark** on both pages, listed in the video sitemap. Game searches show video results.
 6. **Google Play name** does not match the App Store's (store matter, owner decides).
 7. **The public repo** (owner decides): make it private, or accept that its pull requests are indexed.
