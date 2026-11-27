@@ -153,8 +153,10 @@ export class BroodDraw implements BroodSink {
             pool.mesh.receiveShadow = pool === this.pools.nest || pool === this.pools.scrape;
             this.root.add(pool.mesh);
         }
-        // (Spawn floats at the water's top: drawn after the water's surfaces (2), as the wakes on it are, so it is seen from above.)
+        // (Spawn floats at the water's top, and tadpoles keep to the top of the warm shallows: drawn after the water's
+        // surfaces (2), as the wakes on it are, so they are seen from above through a hand's depth of clear water.)
         this.pools.spawn.mesh.renderOrder = 3;
+        this.pools.tadpole.mesh.renderOrder = 3;
     }
 
     begin() {
