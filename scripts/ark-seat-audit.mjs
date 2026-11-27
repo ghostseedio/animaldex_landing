@@ -188,9 +188,11 @@ if (broodCount > 0) {
     if (!snapshotRaw) throw new Error("--broods needs --snapshot-file");
     const snap = JSON.parse(String(snapshotFile.endsWith(".gz") ? gunzipSync(snapshotRaw) : snapshotRaw));
     const [{rawBroodsFromSnapshot}, {decodeArkBroods}] = await Promise.all([import("../src/ark-scene/fixtures/broods.ts"), import("../src/lib/ark-broods.ts")]);
-    const day = await page.evaluate(() => window.__arkDebug?.liveliness?.arkDayNow ?? null);
+    // (The Ark day as the measure page reckons it: a year in fourteen days since the voyage began.)
     const epoch = await page.evaluate(() => Date.now() / 1000);
-    const read = decodeArkBroods(rawBroodsFromSnapshot(snap.animals, broodCount, epoch, typeof day === "number" && day > 0 ? day : 480));
+    const started = Date.parse(snap.voyage?.started_at ?? "") || epoch * 1000 - 86_400_000 * 20;
+    const day = ((epoch * 1000 - started) * 365) / (14 * 86_400_000);
+    const read = decodeArkBroods(rawBroodsFromSnapshot(snap.animals, broodCount, epoch, day));
     await page.evaluate((r) => window.__arkScene.setBroods(r), read);
     console.log("broods", read.broods.length, "at ark day", day);
 }
