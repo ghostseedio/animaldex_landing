@@ -150,7 +150,9 @@ test("the grade sheet explains how grades are built and shows no arithmetic tota
     for (let match = weightPattern.exec(sheet); match; match = weightPattern.exec(sheet)) weights.push(Number(match[1]));
     assert.deepEqual(weights, [24, 20, 18, 16, 8, 8, 6]);
     assert.equal(weights.reduce((sum, weight) => sum + weight, 0), 100);
-    assert.match(sheet, /endorsements and community star ratings never change a grade/);
+    // Its words live with the app shell's (lib/app-shell-words, `appShell.grade*`).
+    assert.match(sheet, /words\.gradeIntro/);
+    assert.match(read("./app-shell-words.ts"), /endorsements and community star ratings never change a grade/);
 });
 
 test("no grade copy says endorsements or community stars lift a grade", () => {

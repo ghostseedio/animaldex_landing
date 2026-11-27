@@ -1,3 +1,4 @@
+import {CATALOG_WORDS_EN, collectionCatalogWords} from "@/lib/collection-catalog-words";
 import {Suspense} from "react";
 import {AppPage, AppPageHeader, AppPrimaryLink, AppProgress, AppSecondaryLink, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import CollectionPageClient from "@/app/[locale]/(authenticated)/app/collection/collection-page-client";
@@ -142,12 +143,7 @@ export default async function CollectionPage({params}: {params: {locale: string}
                             discoveryStats={discoveryStats}
                             binders={binderData.binders}
                             binderSummary={binderData.summary}
-                            catalogWords={{
-                                noMatchesEyebrow: t("noMatchesEyebrow"),
-                                noMatchesTitle: t("noMatchesTitle"),
-                                noMatchesDetail: t("noMatchesDetail"),
-                                resetView: t("resetView")
-                            }}
+                            catalogWords={collectionCatalogWords(Object.fromEntries(Object.keys(CATALOG_WORDS_EN).map((key) => [key, t(key)]).filter(([key, value]) => value !== key)))}
                         />
                     </Suspense>
                 </>

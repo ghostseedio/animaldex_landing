@@ -15,6 +15,9 @@ type AccountLoginFormProps = {
         downloadPrompt: string;
         downloadApp: string;
         loginFormTitle: string;
+        /** The small word over the form's title. */
+        loginFormEyebrow?: string;
+        emailPlaceholder?: string;
         /** "By creating an account, you agree to AnimalDex's {terms} and {privacy}." */
         termsLine: string;
         termsLink: string;
@@ -169,7 +172,7 @@ export default function AccountLoginForm({labels, redirectTo}: AccountLoginFormP
         <div className="mx-auto w-full max-w-[28rem]">
             <form onSubmit={handleSubmit} className="flex flex-col border border-line-300 bg-canvas-950">
                 <div className="border-b border-line-300 px-6 py-6 sm:px-8">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-400">Account</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-400">{labels.loginFormEyebrow ?? "Account"}</p>
                     <h2 className="mt-2 font-display text-3xl leading-tight text-white">{labels.loginFormTitle}</h2>
                 </div>
 
@@ -209,7 +212,7 @@ export default function AccountLoginForm({labels, redirectTo}: AccountLoginFormP
                                 required
                                 value={email}
                                 onChange={(event) => setEmail(event.target.value)}
-                                placeholder="you@example.com"
+                                placeholder={labels.emailPlaceholder ?? "you@example.com"}
                                 className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-400"
                             />
                         </span>

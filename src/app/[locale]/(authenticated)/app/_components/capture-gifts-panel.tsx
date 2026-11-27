@@ -12,6 +12,7 @@
 import {useCallback, useEffect, useState} from "react";
 import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import CaptureGiftSheet, {GiftGlyph, GiftImage} from "@/app/[locale]/(authenticated)/app/_components/capture-gift-sheet";
+import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import {
     offeredGifts,
     parseGiftCatalog,
@@ -31,6 +32,7 @@ export default function CaptureGiftsPanel({captureId, canSend = false}: CaptureG
     const [gifts, setGifts] = useState<CaptureGiftItem[]>([]);
     const [giftCount, setGiftCount] = useState(0);
     const [open, setOpen] = useState(false);
+    const {words} = useAppShellChrome();
 
     const refreshGifts = useCallback(async () => {
         const response = await fetch(`/api/app/gifts?captureId=${encodeURIComponent(captureId)}`, {cache: "no-store"});
@@ -69,8 +71,8 @@ export default function CaptureGiftsPanel({captureId, canSend = false}: CaptureG
                 >
                     <GiftGlyph className="h-4 w-4 shrink-0 text-white/80" />
                     <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-white">Send a Gift</span>
-                        <span className="mt-0.5 block text-xs text-white/55">For this animal on the Ark. Gifts do not change stats or Grade{SHOWS_BATTLE_TIER_AND_POWER ? " or battle power" : ""}.</span>
+                        <span className="block text-sm font-semibold text-white">{words.giftSend}</span>
+                        <span className="mt-0.5 block text-xs text-white/55">{SHOWS_BATTLE_TIER_AND_POWER ? words.giftPanelNoteBattle : words.giftPanelNote}</span>
                     </span>
                     <span className="flex shrink-0 -space-x-2" aria-hidden="true">
                         {offered.slice(0, 3).map((definition) => (
@@ -81,8 +83,8 @@ export default function CaptureGiftsPanel({captureId, canSend = false}: CaptureG
             ) : null}
 
             {giftCount > 0 ? (
-                <div className="flex flex-col gap-2" aria-label="Gifts on this capture">
-                    <p className="text-xs font-semibold text-white/45">{giftCount === 1 ? "1 Gift" : `${giftCount} Gifts`}</p>
+                <div className="flex flex-col gap-2" aria-label={words.giftsOnCapture}>
+                    <p className="text-xs font-semibold text-white/45">{giftCount === 1 ? words.giftCountOne : words.giftCountOther.replace("{count}", String(giftCount))}</p>
                     {gifts.length > 0 ? (
                         <ul className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                             {gifts.slice(0, 3).map((gift) => (

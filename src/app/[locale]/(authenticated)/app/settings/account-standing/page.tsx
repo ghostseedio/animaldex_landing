@@ -4,10 +4,11 @@ import {getSettingsOverview} from "@/data/account-settings";
 import {
     accountStandingStatusLine,
     accountStandingValue,
-    STRIKE_LADDER,
-    STRIKE_LADDER_FOOTNOTE,
+    strikeLadder,
     type AccountStanding
 } from "@/lib/account-settings";
+import {fillSettingsWords} from "@/lib/settings-words";
+import {getSettingsWords} from "@/loaders/settings-words";
 import {getLocalePath} from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -61,33 +62,34 @@ export default async function AccountStandingPage({params}: {params: {locale: st
     const overview = await getSettingsOverview();
     if (!overview) redirect(getLocalePath(params.locale, "/account"));
     const {standing} = overview;
+    const w = await getSettingsWords(params.locale);
     const valueColor = standing.strikeCount === 0 ? "#FFFFFF" : meterColor(standing.strikeCount, standing.maxStrikes);
 
     return (
-        <SettingsScreen title="Account standing">
+        <SettingsScreen title={w.accountStanding} backLabel={w.settings} backAriaLabel={fillSettingsWords(w.backTo, {label: w.settings})}>
             <header className="pb-2 pt-3">
-                <h2 className="font-display text-4xl font-black leading-tight" style={{color: valueColor}}>{accountStandingValue(standing)}</h2>
+                <h2 className="font-display text-4xl font-black leading-tight" style={{color: valueColor}}>{accountStandingValue(standing, w)}</h2>
                 <div className="mt-3.5"><StrikeMeter count={standing.strikeCount} max={standing.maxStrikes} /></div>
-                <p className="mt-4 text-[15px] leading-6 text-white/60">{accountStandingStatusLine(standing)}</p>
+                <p className="mt-4 text-[15px] leading-6 text-white/60">{accountStandingStatusLine(standing, w)}</p>
             </header>
 
             {standing.strikes.length ? (
                 <section>
-                    <BandHeader title="Strikes" />
+                    <BandHeader title={w.strikes} />
                     <StrikeRows strikes={standing.strikes} locale={params.locale} />
                 </section>
             ) : null}
             {standing.removedStrikes.length ? (
                 <section>
-                    <BandHeader title="Removed after review" />
+                    <BandHeader title={w.removedAfterReview} />
                     <StrikeRows strikes={standing.removedStrikes} locale={params.locale} removed />
                 </section>
             ) : null}
 
             <section>
-                <BandHeader title="How strikes work" />
+                <BandHeader title={w.howStrikesWork} />
                 <ul className="-mx-4 divide-y divide-white/[0.08] border-y border-white/[0.08] bg-[#141414] md:mx-0 md:border">
-                    {STRIKE_LADDER.map((rung) => (
+                    {strikeLadder(w).map((rung) => (
                         <li key={rung.count} className="flex items-start gap-3 px-4 py-3">
                             <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-black ${standing.strikeCount >= rung.count ? "text-black" : "text-white/60"}`} style={{background: standing.strikeCount >= rung.count ? meterColor(rung.count, standing.maxStrikes) : "rgba(255,255,255,0.08)"}}>
                                 {rung.count}
@@ -99,8 +101,8 @@ export default async function AccountStandingPage({params}: {params: {locale: st
                         </li>
                     ))}
                 </ul>
-                <p className="mt-4 text-[15px] font-semibold text-white">If we get it wrong</p>
-                <p className="mt-1 text-[13px] leading-5 text-white/50">{STRIKE_LADDER_FOOTNOTE}</p>
+                <p className="mt-4 text-[15px] font-semibold text-white">{w.ifWeGetItWrong}</p>
+                <p className="mt-1 text-[13px] leading-5 text-white/50">{w.strikeFootnote}</p>
             </section>
         </SettingsScreen>
     );

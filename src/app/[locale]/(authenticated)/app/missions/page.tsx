@@ -10,11 +10,11 @@ import {formatEarningsMinor} from "@/lib/earnings";
 
 /** iOS `MissionShelf`, word for word. */
 const shelves = [
-    {key: "starter", title: "Starter", detail: "Fast wins to teach the capture loop.", accent: "green" as const},
-    {key: "progression", title: "Progression", detail: "Build species depth, stat quality, and variety.", accent: "blue" as const},
-    {key: "trade", title: "Advanced", detail: "Trade-era goals and harder competitive steps.", accent: "violet" as const},
-    {key: "collector", title: "Legendary", detail: "Collector hunts and the hardest animal objectives.", accent: "gold" as const}
-];
+    {key: "starter", title: "shelfStarter", detail: "shelfStarterNote", accent: "green" as const},
+    {key: "progression", title: "shelfProgression", detail: "shelfProgressionNote", accent: "blue" as const},
+    {key: "trade", title: "shelfAdvanced", detail: "shelfAdvancedNote", accent: "violet" as const},
+    {key: "collector", title: "shelfLegendary", detail: "shelfLegendaryNote", accent: "gold" as const}
+] satisfies Array<{key: string; title: keyof AppShellWords; detail: keyof AppShellWords; accent: string}>;
 
 function campaignObjective(campaign: AppSponsoredCampaign) {
     if (campaign.objectiveType === "unique_indexed_entries") return `Capture ${campaign.targetCount} different indexed animals`;
@@ -156,12 +156,12 @@ export default async function MissionsPage({params}: {params: {locale: string}})
             <div className="-mb-2 -ml-2">
                 <PageCloseButton />
             </div>
-            <AppPageHeader eyebrow="MISSION BOARD" title="Credits & milestones" />
+            <AppPageHeader eyebrow={words.missionBoard} title={words.missionsTitle} />
 
             <section className="grid grid-cols-3 gap-3">
-                <AppMetric label="Active" value={active} accent="violet" />
-                <AppMetric label="Completed" value={completed} />
-                <AppMetric label="Referrals" value={progression.qualifiedReferrals} accent="gold" />
+                <AppMetric label={words.missionsActive} value={active} accent="violet" />
+                <AppMetric label={words.missionsCompleted} value={completed} />
+                <AppMetric label={words.missionsReferrals} value={progression.qualifiedReferrals} accent="gold" />
             </section>
 
             {/* No trading milestone (Life Sim, contract section 9: trading is paused). Missions unlock on collection points (Ark 3.3, contract A.4), not Ark Score. */}
@@ -172,7 +172,7 @@ export default async function MissionsPage({params}: {params: {locale: string}})
 
                 return (
                     <section key={shelf.key} className="space-y-4">
-                        <AppSectionTitle icon="mission" title={shelf.title} detail={shelf.detail} />
+                        <AppSectionTitle icon="mission" title={words[shelf.title]} detail={words[shelf.detail]} />
                         <div className="grid gap-4 lg:grid-cols-2">
                             {missions.map((mission) => {
                                 const percent = mission.completedCount ? 100 : Math.round(mission.progressCount / Math.max(1, mission.targetCount) * 100);
@@ -197,11 +197,11 @@ export default async function MissionsPage({params}: {params: {locale: string}})
                                             <span data-testid={`mission-state-${mission.slug}`}>
                                                 {mission.isLocked
                                                     ? mission.unlockCollectionPoints !== null && progression.overallScore < mission.unlockCollectionPoints
-                                                        ? `Unlocks at ${mission.unlockCollectionPoints.toLocaleString()} collection points (${progression.overallScore.toLocaleString()} now)`
-                                                        : "Locked"
-                                                    : mission.completedCount ? "Complete" : `${mission.progressCount}/${mission.targetCount}`}
+                                                        ? words.missionUnlocksAt.replace("{points}", mission.unlockCollectionPoints.toLocaleString(params.locale)).replace("{now}", progression.overallScore.toLocaleString(params.locale))
+                                                        : words.missionLocked
+                                                    : mission.completedCount ? words.missionComplete : `${mission.progressCount}/${mission.targetCount}`}
                                             </span>
-                                            {mission.isRepeatable ? <span>Repeatable</span> : null}
+                                            {mission.isRepeatable ? <span>{words.missionRepeatable}</span> : null}
                                         </div>
                                     </AppSurface>
                                 );

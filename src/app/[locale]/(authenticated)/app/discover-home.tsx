@@ -81,11 +81,12 @@ function CountBadge({count}: {count: number}) {
 
 /** Collectors (the leaderboards), and back to the feed from there: right of the lesson videos button. */
 function CollectorsButton({active, onToggle, className = ""}: {active: boolean; onToggle: () => void; className?: string}) {
+    const {words} = useAppShellChrome();
     return (
         <button
             type="button"
             onClick={onToggle}
-            aria-label={active ? "Back to timeline" : "Collectors"}
+            aria-label={active ? words.exploreBackToTimeline : words.exploreCollectors}
             className={`grid place-items-center rounded-[2px] text-white ${className}`}
         >
             {active ? (
@@ -103,11 +104,12 @@ function CollectorsButton({active, onToggle, className = ""}: {active: boolean; 
 
 /** iOS `DiscoverTopBar.lessonVideosButton`: switches the feed to lesson videos, and back. */
 function LessonVideosButton({active, onToggle, className = ""}: {active: boolean; onToggle: () => void; className?: string}) {
+    const {words} = useAppShellChrome();
     return (
         <button
             type="button"
             onClick={onToggle}
-            aria-label={active ? "Show posts" : "Animal lesson videos"}
+            aria-label={active ? words.exploreShowPosts : words.exploreLessonVideos}
             aria-pressed={active}
             className={`grid place-items-center rounded-[2px] ${active ? "text-primary-400" : "text-white"} ${className}`}
         >
@@ -149,7 +151,7 @@ function DiscoverTopBar({
                 <button
                     type="button"
                     onClick={chrome.toggleMenu}
-                    aria-label={menuOpen ? "Close menu" : "Open menu"}
+                    aria-label={menuOpen ? chrome.words.closeMenu : chrome.words.openMenu}
                     className={`relative grid h-11 w-11 place-items-center text-white ${glass}`}
                     data-testid="explore-menu-button"
                 >
@@ -169,14 +171,15 @@ function DiscoverTopBar({
 
 /** `fill`: shares the column with a panel above it, so it takes what is left instead of the feed's height. */
 function FeaturedPanel({items, fill = false}: {items: DiscoverFeaturedItem[]; fill?: boolean}) {
+    const {words} = useAppShellChrome();
     return (
         <aside className={`hidden overflow-hidden border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] lg:flex lg:flex-col ${fill ? "min-h-0 flex-1" : "h-[90svh] min-h-[42rem]"}`}>
             <div className="space-y-3 border-b border-white/[0.06] p-3">
-                <AppPrimaryLink href="/app/capture" icon="camera" className="w-full">Scan an animal</AppPrimaryLink>
+                <AppPrimaryLink href="/app/capture" icon="camera" className="w-full">{words.scanAnimal}</AppPrimaryLink>
             </div>
             <div className="border-b border-white/[0.06] px-4 py-3">
-                <h2 className="text-sm font-black uppercase tracking-[0.16em] text-white/45">Recent top captures</h2>
-                <p className="mt-1 text-xs text-white/30">Select a top capture</p>
+                <h2 className="text-sm font-black uppercase tracking-[0.16em] text-white/45">{words.recentTopCaptures}</h2>
+                <p className="mt-1 text-xs text-white/30">{words.selectTopCapture}</p>
             </div>
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {items.length ? (
@@ -198,14 +201,14 @@ function FeaturedPanel({items, fill = false}: {items: DiscoverFeaturedItem[]; fi
                             <div className="min-w-0 self-center">
                                 <p className="line-clamp-2 text-sm font-bold leading-5 text-white">{item.animalName}</p>
                                 <p className={`mt-1 text-[0.62rem] font-black uppercase tracking-[0.12em] ${item.kind === "endorsed" ? "text-cyan-200/80" : "text-amber-200/80"}`}>
-                                    {item.kind === "endorsed" ? "Top endorsed" : "Rare capture"}
+                                    {item.kind === "endorsed" ? words.topEndorsed : words.rareCapture}
                                 </p>
                             </div>
                         </Link>
                     ))
                 ) : (
                     <div className="border border-white/[0.06] bg-white/[0.025] p-4 text-sm leading-6 text-white/40">
-                        No featured captures yet.
+                        {words.noFeatured}
                     </div>
                 )}
             </div>
@@ -218,11 +221,12 @@ function FeaturedPanel({items, fill = false}: {items: DiscoverFeaturedItem[]; fi
  * upward swipe lands on a loading post instead of feeling frozen at the end.
  */
 function TimelineLoadingSnap() {
+    const {words} = useAppShellChrome();
     return (
         <div
             data-timeline-snap-item
             aria-live="polite"
-            aria-label="Loading more posts"
+            aria-label={words.loadingPosts}
             className="flex h-full min-h-0 shrink-0 snap-start snap-always items-center justify-center gap-2 bg-black"
         >
             <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-white/25" />
@@ -233,8 +237,9 @@ function TimelineLoadingSnap() {
 }
 
 function CollectorLoadingSkeleton() {
+    const {words} = useAppShellChrome();
     return (
-        <div aria-live="polite" aria-label="Loading more collectors" className="space-y-3">
+        <div aria-live="polite" aria-label={words.loadingCollectors} className="space-y-3">
             {[0, 1].map((item) => (
                 <article
                     key={item}
@@ -268,6 +273,7 @@ function CollectorLoadingSkeleton() {
 }
 
 function CollectorCard({collector, arkWords = ARK_COPY}: {collector: DiscoverCollectorItem; arkWords?: CompanionWords["ark"]}) {
+    const {words} = useAppShellChrome();
     const content = (
         <article className="flex gap-4 border border-white/[0.08] bg-[#121212]/90 p-4 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition hover:border-primary-400/25 hover:bg-[#161616] md:p-5">
             {collector.avatarUrl
@@ -301,7 +307,7 @@ function CollectorCard({collector, arkWords = ARK_COPY}: {collector: DiscoverCol
             </div>
             {collector.bestFindImageSrc ? (
                 <div className="hidden w-20 shrink-0 overflow-hidden border border-white/10 bg-white/5 sm:block">
-                    <img src={collector.bestFindImageSrc} alt={collector.bestFindAnimalName ?? "Best find"} loading="lazy" className="aspect-square h-full w-full object-cover" />
+                    <img src={collector.bestFindImageSrc} alt={collector.bestFindAnimalName ?? words.bestFind} loading="lazy" className="aspect-square h-full w-full object-cover" />
                 </div>
             ) : null}
         </article>
@@ -370,6 +376,7 @@ export default function DiscoverHome({
     initialArkMoments?: ArkMoment[] | null;
 }) {
     const router = useRouter();
+    const {words: shellWords} = useAppShellChrome();
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
     const segmentRef = useRef<DiscoverSegment>(initialSegment);
     segmentRef.current = segment;
@@ -1051,9 +1058,9 @@ export default function DiscoverHome({
                             <div className="px-4 py-6 lg:p-0">
                                 <AppEmpty
                                     icon="home"
-                                    title="Timeline is quiet"
-                                    detail="Check back soon, or make one of your animals public."
-                                    action={<AppPrimaryLink href="/app/capture" icon="camera" className="hidden md:inline-flex">Scan an animal</AppPrimaryLink>}
+                                    title={shellWords.timelineQuiet}
+                                    detail={shellWords.timelineQuietDetail}
+                                    action={<AppPrimaryLink href="/app/capture" icon="camera" className="hidden md:inline-flex">{shellWords.scanAnimal}</AppPrimaryLink>}
                                 />
                             </div>
                         )}
@@ -1081,7 +1088,7 @@ export default function DiscoverHome({
                 </section>
             ) : (
                 <div className="px-4 py-6 lg:p-0">
-                    <AppEmpty icon="collection" title="No collectors yet" detail="Public collector profiles will appear here as the community grows." />
+                    <AppEmpty icon="collection" title={shellWords.noCollectors} detail={shellWords.noCollectorsDetail} />
                 </div>
             )}
         </div>

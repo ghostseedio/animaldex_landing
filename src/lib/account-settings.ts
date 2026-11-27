@@ -4,6 +4,9 @@
  * `SupabaseAuthSignInMethodDisplay` and `PriceDisplayCurrencyCatalog`.
  */
 
+import {currencyForCountry, regionOfLanguageTag} from "@/lib/request-country";
+import {fillSettingsWords, SETTINGS_WORDS_EN, type SettingsWords} from "@/lib/settings-words";
+
 // MARK: - Location privacy (iOS `LocationVisibility`)
 
 export type LocationVisibility = "everyone" | "following" | "friends" | "private";
@@ -19,8 +22,24 @@ export function normalizeLocationVisibility(value: unknown): LocationVisibility 
     return LOCATION_VISIBILITY_OPTIONS.some((option) => option.id === value) ? value as LocationVisibility : "everyone";
 }
 
-export function locationVisibilityTitle(value: LocationVisibility) {
-    return LOCATION_VISIBILITY_OPTIONS.find((option) => option.id === value)?.title ?? "Everyone";
+const VISIBILITY_WORD: Record<LocationVisibility, keyof SettingsWords> = {
+    everyone: "visibilityEveryone",
+    following: "visibilityFollowing",
+    friends: "visibilityFriends",
+    private: "visibilityPrivate"
+};
+
+export function locationVisibilityTitle(value: LocationVisibility, words: SettingsWords = SETTINGS_WORDS_EN) {
+    return words[VISIBILITY_WORD[value] ?? "visibilityEveryone"];
+}
+
+/** A push row's title and subtitle in the reader's language (`PUSH_PREFERENCE_ROWS` is the English). */
+export function pushPreferenceWords(id: keyof PushPreferences, words: SettingsWords = SETTINGS_WORDS_EN): {title: string; subtitle: string} {
+    const english = PUSH_PREFERENCE_ROWS.find((row) => row.id === id);
+    const key = `push${id.charAt(0).toUpperCase()}${id.slice(1)}` as keyof SettingsWords;
+    const title = words[key] as string | undefined;
+    const subtitle = words[`${key}Note` as keyof SettingsWords] as string | undefined;
+    return {title: title ?? english?.title ?? id, subtitle: subtitle ?? english?.subtitle ?? ""};
 }
 
 // MARK: - Push alert types (profiles.push_*_enabled)
@@ -78,10 +97,16 @@ export function decodeRecordPrivacy(row: Record<string, unknown> | null | undefi
 }
 
 /** iOS `playRecordPrivacySummary`: one audience for all of them reads as that audience; a mix reads as Custom. */
-export function recordPrivacySummary(privacy: RecordPrivacy): string {
+export function recordPrivacySummary(privacy: RecordPrivacy, words: SettingsWords = SETTINGS_WORDS_EN): string {
     const audiences = new Set(RECORD_PRIVACY_SECTIONS.map((section) => privacy[section.id]));
-    if (audiences.size !== 1) return "Custom";
-    return locationVisibilityTitle(Array.from(audiences)[0]);
+    if (audiences.size !== 1) return words.visibilityCustom;
+    return locationVisibilityTitle(Array.from(audiences)[0], words);
+}
+
+/** A Record section's header and footer in the reader's language. */
+export function recordPrivacySectionWords(id: RecordPrivacySection, words: SettingsWords = SETTINGS_WORDS_EN): {header: string; footer: string} {
+    const key = id === "powers" ? "recordPowers" : id === "trials" ? "recordTrials" : "recordBattles";
+    return {header: words[`${key}Header`], footer: words[`${key}Footer`]};
 }
 
 // MARK: - Sign-in methods
@@ -109,34 +134,36 @@ export function signInMethodLabels(providers: string[]) {
     return Array.from(new Set(providers.map(signInMethodLabel)));
 }
 
-/** Why "Change Password" is absent for a provider-managed account. */
-export function passwordChangeFootnote(labels: string[]) {
-    if (labels.includes("Sign in with Apple") && labels.length === 1) {
-        return "This account uses Sign in with Apple. Manage access and privacy in Settings → Apple ID on your device.";
-    }
-    if (labels.includes("Sign in with Apple")) {
-        return "Password changes apply only to the email-and-password sign-in method. Apple sign-in is managed in Settings → Apple ID.";
-    }
-    return "In-app password changes apply to accounts that use email and password. Other sign-in methods use that provider’s account security.";
+/** A sign-in method's label (`signInMethodLabel`, English) in the reader's language; provider names stay as they are. */
+export function localizedSignInMethodLabel(label: string, words: SettingsWords = SETTINGS_WORDS_EN) {
+    if (label === "Sign in with Apple") return words.methodApple;
+    if (label === "Email and password") return words.methodEmail;
+    if (label === "Signed in") return words.signedIn;
+    return label;
 }
 
-export function noEmailFootnote(labels: string[]) {
-    return labels.includes("Sign in with Apple")
-        ? "No email is stored for this account. If you used Hide My Email, Apple may show a private relay address only in your Apple ID settings."
-        : "No email is on file for this account. Sign-in is managed by your provider.";
+/** Why "Change Password" is absent for a provider-managed account. `labels` are `signInMethodLabels`' English. */
+export function passwordChangeFootnote(labels: string[], words: SettingsWords = SETTINGS_WORDS_EN) {
+    if (labels.includes("Sign in with Apple") && labels.length === 1) return words.footnoteAppleOnly;
+    if (labels.includes("Sign in with Apple")) return words.footnoteAppleMixed;
+    return words.footnoteProvider;
+}
+
+export function noEmailFootnote(labels: string[], words: SettingsWords = SETTINGS_WORDS_EN) {
+    return labels.includes("Sign in with Apple") ? words.noEmailApple : words.noEmailProvider;
 }
 
 /** iOS `ChangePasswordView` limits. */
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
-export function passwordChangeProblem(input: {current: string; next: string; confirm: string}) {
-    if (!input.current) return "Enter your current password.";
+export function passwordChangeProblem(input: {current: string; next: string; confirm: string}, words: SettingsWords = SETTINGS_WORDS_EN) {
+    if (!input.current) return words.passwordEnterCurrent;
     if (input.next.length < PASSWORD_MIN_LENGTH || input.next.length > PASSWORD_MAX_LENGTH) {
-        return `Use ${PASSWORD_MIN_LENGTH}–${PASSWORD_MAX_LENGTH} characters. Avoid obvious passwords.`;
+        return fillSettingsWords(words.passwordRule, {min: PASSWORD_MIN_LENGTH, max: PASSWORD_MAX_LENGTH});
     }
-    if (input.next !== input.confirm) return "New passwords don’t match.";
-    if (input.next === input.current) return "New password must be different from your current password.";
+    if (input.next !== input.confirm) return words.passwordMismatch;
+    if (input.next === input.current) return words.passwordSame;
     return null;
 }
 
@@ -178,26 +205,27 @@ function decodeStrikes(value: unknown): AccountStanding["strikes"] {
  * yet, so it never adds "Tap a strike to dispute it." (Contact Support is
  * the way, as the ladder's footnote says).
  */
-export function accountStandingStatusLine(standing: AccountStanding) {
+export function accountStandingStatusLine(standing: AccountStanding, words: SettingsWords = SETTINGS_WORDS_EN) {
     switch (standing.standing) {
         case "at_risk":
-            return Math.max(standing.maxStrikes - standing.strikeCount, 1) === 1
-                ? "One more strike suspends your account."
-                : "Two more strikes suspend your account.";
+            return Math.max(standing.maxStrikes - standing.strikeCount, 1) === 1 ? words.statusOneMore : words.statusTwoMore;
         case "suspended":
-            return "New captures can't be identified while the account is suspended.";
+            return words.statusSuspended;
         default:
-            return "No strikes. Keep capturing real animals with your own camera.";
+            return words.statusGood;
     }
 }
 
 /** iOS `StrikeLadderSection`, without disputes. */
-export const STRIKE_LADDER = [
-    {count: 1, title: "First strike", detail: "A warning. The photo comes off Discover."},
-    {count: 2, title: "Second strike", detail: "A final warning."},
-    {count: 3, title: "Third strike", detail: "Your account is suspended."}
-] as const;
-export const STRIKE_LADDER_FOOTNOTE = "Contact Support with other shots from the same moment or proof you were there. A person looks at every message.";
+export function strikeLadder(words: SettingsWords = SETTINGS_WORDS_EN) {
+    return [
+        {count: 1, title: words.strike1Title, detail: words.strike1Detail},
+        {count: 2, title: words.strike2Title, detail: words.strike2Detail},
+        {count: 3, title: words.strike3Title, detail: words.strike3Detail}
+    ] as const;
+}
+export const STRIKE_LADDER = strikeLadder();
+export const STRIKE_LADDER_FOOTNOTE = SETTINGS_WORDS_EN.strikeFootnote;
 
 export function decodeAccountStanding(value: unknown): AccountStanding {
     const row = value as Record<string, unknown> | null;
@@ -214,11 +242,11 @@ export function decodeAccountStanding(value: unknown): AccountStanding {
     };
 }
 
-export function accountStandingValue(standing: AccountStanding) {
+export function accountStandingValue(standing: AccountStanding, words: SettingsWords = SETTINGS_WORDS_EN) {
     switch (standing.standing) {
-        case "at_risk": return `${standing.strikeCount} of ${standing.maxStrikes} strikes`;
-        case "suspended": return "Suspended";
-        default: return "Good standing";
+        case "at_risk": return fillSettingsWords(words.standingAtRisk, {count: standing.strikeCount, max: standing.maxStrikes});
+        case "suspended": return words.standingSuspended;
+        default: return words.standingGood;
     }
 }
 
@@ -254,15 +282,7 @@ export function isSupportedCurrency(code: string | null | undefined): code is st
 
 /** A language tag's currency by its region ("en-GB" → GBP), for "System"; null without a known region. */
 export function currencyForLanguage(tag: string | null | undefined): string | null {
-    const region = tag?.trim().split(/[-_]/)[1]?.toUpperCase();
-    const byRegion: Record<string, string> = {
-        GB: "GBP", US: "USD", ID: "IDR", AU: "AUD", CA: "CAD", NZ: "NZD", IN: "INR", JP: "JPY", KR: "KRW",
-        SG: "SGD", MY: "MYR", PH: "PHP", TH: "THB", ZA: "ZAR", BR: "BRL", MX: "MXN", CH: "CHF", SE: "SEK",
-        NO: "NOK", DK: "DKK", PL: "PLN", CZ: "CZK", HU: "HUF", RO: "RON", TR: "TRY", IL: "ILS", IS: "ISK",
-        HK: "HKD", CN: "CNY", DE: "EUR", FR: "EUR", ES: "EUR", IT: "EUR", NL: "EUR", IE: "EUR", PT: "EUR",
-        BE: "EUR", AT: "EUR", FI: "EUR", GR: "EUR"
-    };
-    return region ? byRegion[region] ?? null : null;
+    return currencyForCountry(regionOfLanguageTag(tag));
 }
 
 /** "system" (or anything unknown) resolves to the locale's currency, else USD. */
@@ -298,7 +318,7 @@ export function currencyDisplayName(code: string, locale?: string) {
 }
 
 /** The Currency row's value and the System option's title. */
-export function currencySelectionLabel(preference: string | null | undefined, resolved: string) {
+export function currencySelectionLabel(preference: string | null | undefined, resolved: string, words: SettingsWords = SETTINGS_WORDS_EN) {
     const isSystem = !preference || preference.trim().toLowerCase() === CURRENCY_SYSTEM_VALUE;
-    return isSystem ? `System (${resolved})` : resolved;
+    return isSystem ? fillSettingsWords(words.currencySystem, {currency: resolved}) : resolved;
 }

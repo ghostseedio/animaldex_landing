@@ -5,7 +5,7 @@ import Link from "@/app/[locale]/_components/link";
 import {useWebStoreAvailability} from "@/app/[locale]/(authenticated)/app/_components/web-store-availability";
 import {recommendCreditPack, WEB_STORE_PRODUCTS, type WebStoreProductCode} from "@/lib/web-store-catalog";
 import {startWebCheckout} from "@/lib/web-checkout-client";
-import {useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
+import {useAppShellChrome, useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 
 // The checkout itself lives in lib/web-checkout-client (shared with the Ask limit panel, CC 2).
 export {startWebCheckout};
@@ -24,6 +24,10 @@ export function PurchaseChoice({
     onRefresh: () => void;
 }) {
     const describeError = useUserFacingError();
+    const {words} = useAppShellChrome();
+    const credits = (n: number) => (n === 1 ? words.creditOne : words.creditMany.replace("{n}", String(n)));
+    // A Credits pack by its count in the reader's words ("25 Kredit"); Pro by its name.
+    const packLabel = (code: WebStoreProductCode) => (WEB_STORE_PRODUCTS[code].kind === "credits" ? credits(WEB_STORE_PRODUCTS[code].credits) : WEB_STORE_PRODUCTS[code].label);
     const deficit = Math.max(0, needed - balance);
     const availability = useWebStoreAvailability();
     // The pack that covers the shortfall, or the other one when only it is on sale.
@@ -51,9 +55,10 @@ export function PurchaseChoice({
     return (
         <div className="mt-5 space-y-4">
             <p className="text-sm leading-6 text-white/70">
-                You need {needed === 1 ? "1 Credit" : `${needed} Credits`} to continue.
-                Balance: {balance === 1 ? "1 Credit" : `${balance} Credits`}
-                {deficit > 0 ? ` · ${deficit} more needed` : ""}.
+                {(deficit > 0 ? words.purchaseNeedMore : words.purchaseNeed)
+                    .replace("{needed}", credits(needed))
+                    .replace("{balance}", credits(balance))
+                    .replace("{deficit}", String(deficit))}
             </p>
             {recommended || proOnSale ? (
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -64,7 +69,7 @@ export function PurchaseChoice({
                             onClick={() => void buy(recommended)}
                             className="inline-flex min-h-11 items-center justify-center bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50"
                         >
-                            {busy === recommended ? "Opening checkout…" : `Buy ${WEB_STORE_PRODUCTS[recommended].label}`}
+                            {busy === recommended ? words.openingCheckout : words.buyPack.replace("{pack}", packLabel(recommended))}
                         </button>
                     ) : null}
                     {proOnSale && choosePlan ? (
@@ -72,7 +77,7 @@ export function PurchaseChoice({
                             href="/app/credits#pro"
                             className="inline-flex min-h-11 items-center justify-center border border-white/15 px-4 py-3 text-sm font-black text-white"
                         >
-                            See Pro plans
+                            {words.seeProPlans}
                         </Link>
                     ) : proOnSale ? (
                         <button
@@ -81,18 +86,18 @@ export function PurchaseChoice({
                             onClick={() => void buy("pro_upgrade")}
                             className="inline-flex min-h-11 items-center justify-center border border-white/15 px-4 py-3 text-sm font-black text-white disabled:opacity-50"
                         >
-                            {busy === "pro_upgrade" ? "Opening checkout…" : "Go Pro"}
+                            {busy === "pro_upgrade" ? words.openingCheckout : words.goPro}
                         </button>
                     ) : null}
                 </div>
             ) : (
                 <p className="text-sm leading-6 text-white/55">
-                    Credits and Pro aren’t on sale on the website right now. You can get them in the AnimalDex app.
+                    {words.notOnSale}
                 </p>
             )}
             {proOnSale ? (
                 <p className="text-xs leading-5 text-white/45">
-                    Pro includes unlimited captures and 100 messages a day with any animal.
+                    {words.proIncludes}
                 </p>
             ) : null}
             <div className="flex flex-wrap gap-3 text-sm font-bold">
@@ -104,11 +109,11 @@ export function PurchaseChoice({
                         disabled={Boolean(busy)}
                         onClick={() => void buy(code)}
                     >
-                        See {WEB_STORE_PRODUCTS[code].label}
+                        {words.seePack.replace("{pack}", packLabel(code))}
                     </button>
                 ))}
                 <button type="button" className="text-white/50" onClick={onRefresh}>
-                    Refresh balance
+                    {words.refreshBalance}
                 </button>
             </div>
             {error ? <p className="text-sm text-red-300" role="alert">{error}</p> : null}

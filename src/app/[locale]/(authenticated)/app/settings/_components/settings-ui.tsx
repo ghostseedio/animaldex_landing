@@ -29,16 +29,18 @@ function Chevron() {
 }
 
 /** A pushed screen: back to Settings, a centred title, then its sections. */
-export function SettingsScreen({title, backHref = "/app/settings", backLabel = "Settings", children}: {
+export function SettingsScreen({title, backHref = "/app/settings", backLabel = "Settings", backAriaLabel, children}: {
     title: string;
     backHref?: string;
     backLabel?: string;
+    /** "Back to Settings", in the reader's language. */
+    backAriaLabel?: string;
     children: ReactNode;
 }) {
     return (
         <div className="mx-auto w-full max-w-2xl pb-10">
             <header className="sticky top-0 z-20 -mx-4 mb-2 grid grid-cols-[1fr_auto_1fr] items-center bg-black/95 px-4 py-2.5 backdrop-blur-xl md:mx-0 md:px-0">
-                <Link href={backHref} className="inline-flex min-h-10 items-center gap-1 justify-self-start text-sm font-bold text-primary-200 transition hover:text-primary-100" aria-label={`Back to ${backLabel}`}>
+                <Link href={backHref} className="inline-flex min-h-10 items-center gap-1 justify-self-start text-sm font-bold text-primary-200 transition hover:text-primary-100" aria-label={backAriaLabel ?? `Back to ${backLabel}`}>
                     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
                     {backLabel}
                 </Link>
@@ -179,9 +181,9 @@ export function SettingsDestructiveRow({icon, title, onClick, prominent = false,
 }
 
 /** A tick for the selected option in a list screen. */
-export function SelectedMark({selected}: {selected: boolean}) {
+export function SelectedMark({selected, label = "Selected"}: {selected: boolean; label?: string}) {
     return selected ? (
-        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor" aria-label="Selected"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.3 14.2-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7Z" /></svg>
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor" aria-label={label}><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.3 14.2-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7Z" /></svg>
     ) : null;
 }
 

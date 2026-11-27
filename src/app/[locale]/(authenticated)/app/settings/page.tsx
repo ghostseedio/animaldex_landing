@@ -14,10 +14,14 @@ import {readArkFounderSettings} from "@/data/ark-founders";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {accountStandingValue, currencySelectionLabel, locationVisibilityTitle, recordPrivacySummary} from "@/lib/account-settings";
 import {getLocalePath} from "@/lib/site";
+import {getSettingsWords} from "@/loaders/settings-words";
+import type {Metadata} from "next";
 import {appStoreUrl} from "@/lib/store-links";
 
 export const dynamic = "force-dynamic";
-export const metadata = {title: "Settings & activity"};
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    return {title: (await getSettingsWords(params.locale)).title};
+}
 
 const LANGUAGE_NAMES: Record<string, string> = {en: "English", id: "Bahasa Indonesia"};
 
@@ -37,11 +41,12 @@ export default async function SettingsPage({params}: {params: {locale: string}})
     // 3.2 Debates: the public roster opt-in, while the server has Debates on.
     const supabase = createSupabaseServerClient();
     // Ark founders: "Show my name on my Ark animals", only while the server names founders (its switch on).
-    const [debatesEnabled, words, founderSettings, {words: arkWords}] = await Promise.all([
+    const [debatesEnabled, words, founderSettings, {words: arkWords}, w] = await Promise.all([
         loadDebatesEnabled(),
         getCompanionWords(params.locale),
         readArkFounderSettings(),
-        getArkWords(params.locale)
+        getArkWords(params.locale),
+        getSettingsWords(params.locale)
     ]);
     const optedIn = debatesEnabled && supabase ? await readRosterOptIn(supabase) : null;
 
@@ -50,23 +55,23 @@ export default async function SettingsPage({params}: {params: {locale: string}})
     return (
         <div className="mx-auto w-full max-w-2xl space-y-5 pb-10">
             <header className="pt-1">
-                <h1 className="text-[17px] font-bold text-white md:font-display md:text-3xl">Settings &amp; activity</h1>
+                <h1 className="text-[17px] font-bold text-white md:font-display md:text-3xl">{w.title}</h1>
             </header>
 
             {/* "Missions", without a count: "29 active missions" read as a to-do list on a first visit. */}
             <SettingsSection>
-                <SettingsNavigationRow href="/app/missions" icon={SettingsIcons.missions} title="Missions" />
+                <SettingsNavigationRow href="/app/missions" icon={SettingsIcons.missions} title={w.missions} />
                 <SettingsDivider />
                 <SettingsNavigationRow
                     href="/app/credits"
                     icon={SettingsIcons.credits}
-                    title="Credits & unlocks"
+                    title={w.creditsUnlocks}
                     value={overview.isPro ? null : String(overview.creditBalance)}
                 />
                 {overview.showsEarnings ? (
                     <>
                         <SettingsDivider />
-                        <SettingsNavigationRow href="/app/earnings" icon={SettingsIcons.earnings} title="Earnings" subtitle="See how earning with AnimalDex works" />
+                        <SettingsNavigationRow href="/app/earnings" icon={SettingsIcons.earnings} title={w.earnings} subtitle={w.earningsSubtitle} />
                     </>
                 ) : null}
             </SettingsSection>
@@ -75,31 +80,31 @@ export default async function SettingsPage({params}: {params: {locale: string}})
             {overview.isNewAccount ? null : (
                 <>
                     <SettingsSection>
-                        <SettingsNavigationRow href="/app/profile?tab=shop" icon={SettingsIcons.shop} title="Shop" />
+                        <SettingsNavigationRow href="/app/profile?tab=shop" icon={SettingsIcons.shop} title={w.shop} />
                         <SettingsDivider />
-                        <SettingsNavigationRow href="/app/profile?tab=locations" icon={SettingsIcons.location} title="Locations" />
+                        <SettingsNavigationRow href="/app/profile?tab=locations" icon={SettingsIcons.location} title={w.locations} />
                         <SettingsDivider />
-                        <SettingsNavigationRow href="/app/guides" icon={SettingsIcons.guides} title="Wildlife Guides" />
+                        <SettingsNavigationRow href="/app/guides" icon={SettingsIcons.guides} title={w.wildlifeGuides} />
                     </SettingsSection>
 
                     <SettingsSection>
-                        <SettingsNavigationRow href="/app/settings/gifts" icon={SettingsIcons.gift} title="Gifts" />
+                        <SettingsNavigationRow href="/app/settings/gifts" icon={SettingsIcons.gift} title={w.gifts} />
                         {overview.showsTrades ? (
                             <>
                                 <SettingsDivider />
-                                <SettingsNavigationRow href="/app/trades" icon={SettingsIcons.trade} title="Trades & offers" />
+                                <SettingsNavigationRow href="/app/trades" icon={SettingsIcons.trade} title={w.trades} />
                             </>
                         ) : null}
                     </SettingsSection>
                 </>
             )}
 
-            <SettingsSection title="PREFERENCES">
-                <SettingsNavigationRow href="/app/settings/notifications" icon={SettingsIcons.bell} title="Notifications" value={anyPush ? "On" : "Off"} />
+            <SettingsSection title={w.sectionPreferences}>
+                <SettingsNavigationRow href="/app/settings/notifications" icon={SettingsIcons.bell} title={w.notifications} value={anyPush ? w.on : w.off} />
                 <SettingsDivider />
-                <SettingsNavigationRow href="/app/settings/language" icon={SettingsIcons.globe} title="Language" value={LANGUAGE_NAMES[params.locale] ?? params.locale.toUpperCase()} />
+                <SettingsNavigationRow href="/app/settings/language" icon={SettingsIcons.globe} title={w.language} value={LANGUAGE_NAMES[params.locale] ?? params.locale.toUpperCase()} />
                 <SettingsDivider />
-                <SettingsNavigationRow href="/app/settings/currency" icon={SettingsIcons.banknote} title="Currency" value={currencySelectionLabel(overview.currencyPreference, overview.displayCurrency)} />
+                <SettingsNavigationRow href="/app/settings/currency" icon={SettingsIcons.banknote} title={w.currency} value={currencySelectionLabel(overview.currencyPreference, overview.displayCurrency, w)} />
                 <SettingsDivider />
                 <SoundEffectsRow />
             </SettingsSection>
@@ -110,34 +115,34 @@ export default async function SettingsPage({params}: {params: {locale: string}})
                 <ArkFounderNameSection initial={founderSettings} title={arkWords.eyebrow} words={arkWords.founders.settings} broughtBy={arkWords.founders.card.broughtBy} />
             ) : null}
 
-            <SettingsSection title="PRIVACY & DATA">
-                <SettingsNavigationRow href="/app/settings/location-privacy" icon={SettingsIcons.location} title="Location privacy" value={locationVisibilityTitle(overview.locationVisibility)} />
+            <SettingsSection title={w.sectionPrivacy}>
+                <SettingsNavigationRow href="/app/settings/location-privacy" icon={SettingsIcons.location} title={w.locationPrivacy} value={locationVisibilityTitle(overview.locationVisibility, w)} />
                 <SettingsDivider />
-                <SettingsNavigationRow href="/app/settings/record-privacy" icon={SettingsIcons.record} title="Record privacy" value={recordPrivacySummary(overview.recordPrivacy)} />
+                <SettingsNavigationRow href="/app/settings/record-privacy" icon={SettingsIcons.record} title={w.recordPrivacy} value={recordPrivacySummary(overview.recordPrivacy, w)} />
             </SettingsSection>
 
             <ChatHistorySection />
 
             {overview.instagramImportOn ? (
-                <SettingsSection title="CONNECTED SERVICES">
+                <SettingsSection title={w.sectionConnected}>
                     <InstagramRow />
                 </SettingsSection>
             ) : null}
 
-            <SettingsSection title="SUPPORT & ABOUT" footer="AnimalDex for web">
-                <SettingsNavigationRow href="/support" icon={SettingsIcons.help} title="Help & support" />
+            <SettingsSection title={w.sectionSupport} footer={w.footerWeb}>
+                <SettingsNavigationRow href="/support" icon={SettingsIcons.help} title={w.help} />
                 <SettingsDivider />
-                <SettingsNavigationRow href={`${appStoreUrl}?action=write-review`} external icon={SettingsIcons.star} title="Rate AnimalDex" />
+                <SettingsNavigationRow href={`${appStoreUrl}?action=write-review`} external icon={SettingsIcons.star} title={w.rate} />
                 <SettingsDivider />
-                <SettingsNavigationRow href="/legal/privacy" icon={SettingsIcons.privacy} title="Privacy Policy" />
+                <SettingsNavigationRow href="/legal/privacy" icon={SettingsIcons.privacy} title={w.privacyPolicy} />
                 <SettingsDivider />
-                <SettingsNavigationRow href="/legal/terms" icon={SettingsIcons.terms} title="Terms of Use" />
+                <SettingsNavigationRow href="/legal/terms" icon={SettingsIcons.terms} title={w.terms} />
             </SettingsSection>
 
-            <SettingsSection title="ACCOUNT">
-                <SettingsNavigationRow href="/app/settings/account" icon={SettingsIcons.person} title="Account" value={overview.email} />
+            <SettingsSection title={w.sectionAccount}>
+                <SettingsNavigationRow href="/app/settings/account" icon={SettingsIcons.person} title={w.account} value={overview.email} />
                 <SettingsDivider />
-                <SettingsNavigationRow href="/app/settings/account-standing" icon={SettingsIcons.shield} title="Account standing" value={accountStandingValue(overview.standing)} />
+                <SettingsNavigationRow href="/app/settings/account-standing" icon={SettingsIcons.shield} title={w.accountStanding} value={accountStandingValue(overview.standing, w)} />
             </SettingsSection>
         </div>
     );

@@ -64,6 +64,8 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                     followLabel={t("footerGroups.follow")}
                     openMenuLabel={t("openMenu")}
                     closeMenuLabel={t("closeMenu")}
+                    primaryNavigationLabel={t("primaryNavigation")}
+                    mobileNavigationLabel={t("mobileNavigation")}
                     actions={(
                         <>
                             <LocaleToggle currentLocale={locale} label={t("language")} />

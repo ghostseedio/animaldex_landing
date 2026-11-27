@@ -3,6 +3,9 @@ import {PushPreferencesList} from "@/app/[locale]/(authenticated)/app/settings/_
 import {SettingsIcons, SettingsNavigationRow, SettingsScreen, SettingsSection} from "@/app/[locale]/(authenticated)/app/settings/_components/settings-ui";
 import {getSettingsOverview} from "@/data/account-settings";
 import {getLocalePath} from "@/lib/site";
+import {fillSettingsWords} from "@/lib/settings-words";
+import {getSettingsWords} from "@/loaders/settings-words";
+
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +18,12 @@ export const dynamic = "force-dynamic";
 export default async function NotificationSettingsPage({params}: {params: {locale: string}}) {
     const overview = await getSettingsOverview();
     if (!overview) redirect(getLocalePath(params.locale, "/account"));
+    const w = await getSettingsWords(params.locale);
 
     return (
-        <SettingsScreen title="Notifications">
-            <SettingsSection footer="You will hear about updates to your captures, people you follow, new messages, and Credit bonuses in the AnimalDex app.">
-                <SettingsNavigationRow href="/app/notifications" icon={SettingsIcons.bell} title="Notifications" subtitle="Recent AnimalDex notifications and account activity." />
+        <SettingsScreen title={w.notifications} backLabel={w.settings} backAriaLabel={fillSettingsWords(w.backTo, {label: w.settings})}>
+            <SettingsSection footer={w.notificationsFooter}>
+                <SettingsNavigationRow href="/app/notifications" icon={SettingsIcons.bell} title={w.notifications} subtitle={w.notificationsRowSubtitle} />
             </SettingsSection>
             <PushPreferencesList initial={overview.push} />
         </SettingsScreen>
