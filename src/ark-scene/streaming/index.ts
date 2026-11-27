@@ -102,6 +102,8 @@ export type StreamerOptions = {
     /** What the page holds now (the scene's GPU estimate, the JS heap where the browser says it). */
     memory?: () => MemoryReading;
     heapLimitMB?: number | null;
+    /** A desktop pointer, not a recording: its heap budget from its own heap's limit (`streaming/tiers.ts` heapBudgetMB). */
+    desktop?: boolean;
     /** Memory pressure at the smallest distance: ask the scene for a lower tier. */
     onDrop?: () => void;
     /** With two islands, the clear fog is pushed out beyond this reach (m; `arkFogReach`'s `from`; default 700). */
@@ -327,7 +329,7 @@ export class ArkStreamer {
             const elapsed = Number.isFinite(this.lastMemory) ? now - this.lastMemory : 0;
             this.lastMemory = now;
             this.reading = this.options.memory();
-            const stepped = stepRenderScale(this.scale, this.reading, ARK_STREAM_TIERS[this.tierName], this.calmFor + elapsed, this.options.heapLimitMB ?? null);
+            const stepped = stepRenderScale(this.scale, this.reading, ARK_STREAM_TIERS[this.tierName], this.calmFor + elapsed, this.options.heapLimitMB ?? null, this.options.desktop ?? false);
             if (stepped.scale !== this.scale) this.lastCheck = -Infinity;
             this.scale = stepped.scale;
             this.calmFor = stepped.calmFor;

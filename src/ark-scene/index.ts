@@ -1429,6 +1429,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         fogFrom: wildFrame().fogFrom,
         haze,
         heapLimitMB: ((performance as Performance & {memory?: {jsHeapSizeLimit?: number}}).memory?.jsHeapSizeLimit ?? 0) / 2 ** 20 || null,
+        // (PERF-WEB: a desktop's heap budget from its own heap, not a phone's: recordings keep today's.)
+        desktop: !options.recording && !window.matchMedia?.("(pointer: coarse)").matches,
         memory: () => {
             // The scenery's GPU estimate (every object's geometry and textures but the animal models' own, which keep to
             // their own ceiling: `runtime/memory.ts`, `runtime.memoryReading`), at most every 10 s; and the heap's floor
