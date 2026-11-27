@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "지켜보기",
             "stop": "그만 보기"
+        },
+        "broods": {
+            "eggs": "알 {start}개 · {left}개 남음",
+            "eggsAll": "알 {start}개",
+            "eggOne": "알 1개",
+            "young": "새끼 {start}마리 · {left}마리 남음",
+            "youngAll": "새끼 {start}마리",
+            "carried": "새끼 {start}마리 임신 중",
+            "takenBy": "{aPredator}에게 {count} 빼앗김",
+            "didNotSurvive": "{count} 살아남지 못함",
+            "nestFailed": "둥지 실패",
+            "failed": "새끼들이 살아남지 못함",
+            "parentLost": "부모와 함께 잃음",
+            "unsettled": "{count} 정착하지 못함",
+            "independent": "{count} 이제 독립함",
+            "logHatched": "{animal}: 알 {count}개 부화",
+            "logBorn": "{animal}: 새끼 {count}마리 태어남",
+            "logRaid": "{animal}: {aPredator}에게 알 {count}개 빼앗김 · {left}개 남음",
+            "logTaken": "{animal}: {aPredator}에게 새끼 {count}마리 빼앗김 · {left}마리 남음",
+            "logHeldOff": "{animal}: 부모가 {aPredator}의 공격을 막아냄",
+            "logNestFailed": "{animal}: 둥지 실패",
+            "logFailed": "{animal}: 새끼들이 살아남지 못함",
+            "logParentLost": "{animal}: 부모와 함께 새끼들을 잃음",
+            "logRecruited": "{animal}: 새끼 {count}마리 이제 독립함",
+            "logUnsettled": "{animal}: 새끼 {count}마리 정착하지 못함",
+            "logUnguarded": "{animal}: 새끼들이 부모 없이 살아감"
         }
     },
     "talkPage": {

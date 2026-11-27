@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Mira",
             "stop": "Deixa de mirar"
+        },
+        "broods": {
+            "eggs": "{start} ous · en queden {left}",
+            "eggsAll": "{start} ous",
+            "eggOne": "1 ou",
+            "young": "{start} cries · en queden {left}",
+            "youngAll": "{start} cries",
+            "carried": "Espera {start} cries",
+            "takenBy": "{aPredator} se n'ha endut {count}",
+            "didNotSurvive": "{count} no han sobreviscut",
+            "nestFailed": "El niu ha fracassat",
+            "failed": "Les cries no han sobreviscut",
+            "parentLost": "Perdudes amb el seu progenitor",
+            "unsettled": "{count} no s'han establert",
+            "independent": "{count} ja viuen pel seu compte",
+            "logHatched": "{animal}: han eclosionat {count} ous",
+            "logBorn": "{animal}: han nascut {count} cries",
+            "logRaid": "{animal}: {aPredator} s'ha endut {count} ous · en queden {left}",
+            "logTaken": "{animal}: {aPredator} s'ha endut {count} cries · en queden {left}",
+            "logHeldOff": "{animal}: el progenitor ha fet fugir {aPredator}",
+            "logNestFailed": "{animal}: el niu ha fracassat",
+            "logFailed": "{animal}: les cries no han sobreviscut",
+            "logParentLost": "{animal}: les cries s'han perdut amb el seu progenitor",
+            "logRecruited": "{animal}: {count} cries ja viuen pel seu compte",
+            "logUnsettled": "{animal}: {count} cries no s'han establert",
+            "logUnguarded": "{animal}: les cries continuen sense cap progenitor"
         }
     },
     "talkPage": {

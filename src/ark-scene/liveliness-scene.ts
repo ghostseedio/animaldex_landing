@@ -119,6 +119,8 @@ export type LiveHooks = {
     poseAt: (entry: LiveAnimal, epochSeconds: number) => LivePose | null;
     /** Its roost (the schedule's `roostOf`), for those whose roost is shelter. */
     roostOf: (entry: LiveAnimal) => {x: number; y: number; z: number} | null;
+    /** BROODS: where a brood's stand-in is kept while its kind keeps its young at a spot (its brood's nest); null or absent: the family's own spot. */
+    stayAt?: (youngId: string) => {x: number; z: number} | null;
     /** The scene's entry for an id. */
     entryOf: (id: string) => LiveAnimal | null;
     heightAt: (x: number, z: number) => number;
@@ -669,6 +671,12 @@ export class ArkLiveliness {
         const key = `${familyKey}#${slot}`;
         const known = this.spots.get(key);
         if (known !== undefined) return known;
+        // (BROODS: a brood's young lie at its nest, the record's place.)
+        const fixed = this.options.hooks.stayAt?.(young.animal.id) ?? null;
+        if (fixed) {
+            this.spots.set(key, fixed);
+            return fixed;
+        }
         const parent = parentId ? this.options.hooks.entryOf(parentId) : null;
         let anchor: Pt | null = null;
         let den = false;

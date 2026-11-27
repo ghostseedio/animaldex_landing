@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Mirar",
             "stop": "Dejar de mirar"
+        },
+        "broods": {
+            "eggs": "{start} huevos · quedan {left}",
+            "eggsAll": "{start} huevos",
+            "eggOne": "1 huevo",
+            "young": "{start} crías · quedan {left}",
+            "youngAll": "{start} crías",
+            "carried": "Gestando {start} crías",
+            "takenBy": "{aPredator} se llevó {count}",
+            "didNotSurvive": "{count} no sobrevivieron",
+            "nestFailed": "El nido fracasó",
+            "failed": "Las crías no sobrevivieron",
+            "parentLost": "Perdidas junto con su progenitor",
+            "unsettled": "{count} no lograron establecerse",
+            "independent": "{count} ya viven por su cuenta",
+            "logHatched": "{animal}: eclosionaron {count} huevos",
+            "logBorn": "{animal}: nacieron {count} crías",
+            "logRaid": "{animal}: {aPredator} se llevó {count} huevos · quedan {left}",
+            "logTaken": "{animal}: {aPredator} se llevó {count} crías · quedan {left}",
+            "logHeldOff": "{animal}: el progenitor ahuyentó a {aPredator}",
+            "logNestFailed": "{animal}: el nido fracasó",
+            "logFailed": "{animal}: las crías no sobrevivieron",
+            "logParentLost": "{animal}: las crías se perdieron junto con su progenitor",
+            "logRecruited": "{animal}: {count} crías ya viven por su cuenta",
+            "logUnsettled": "{animal}: {count} crías no lograron establecerse",
+            "logUnguarded": "{animal}: las crías siguen adelante sin un progenitor"
         }
     },
     "talkPage": {

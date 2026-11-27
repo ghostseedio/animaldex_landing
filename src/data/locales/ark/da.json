@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Se med",
             "stop": "Stop med at se"
+        },
+        "broods": {
+            "eggs": "{start} æg · {left} tilbage",
+            "eggsAll": "{start} æg",
+            "eggOne": "1 æg",
+            "young": "{start} unger · {left} tilbage",
+            "youngAll": "{start} unger",
+            "carried": "Venter {start} unger",
+            "takenBy": "{count} taget af {aPredator}",
+            "didNotSurvive": "{count} overlevede ikke",
+            "nestFailed": "Reden mislykkedes",
+            "failed": "Kuldet overlevede ikke",
+            "parentLost": "Gik tabt sammen med forælderen",
+            "unsettled": "{count} fandt ikke et sted at slå sig ned",
+            "independent": "{count} klarer sig nu selv",
+            "logHatched": "{animal}: {count} æg klækket",
+            "logBorn": "{animal}: {count} unger født",
+            "logRaid": "{animal}: {count} æg taget af {aPredator} · {left} tilbage",
+            "logTaken": "{animal}: {count} unger taget af {aPredator} · {left} tilbage",
+            "logHeldOff": "{animal}: forælderen jog {aPredator} væk",
+            "logNestFailed": "{animal}: reden mislykkedes",
+            "logFailed": "{animal}: kuldet overlevede ikke",
+            "logParentLost": "{animal}: kuldet gik tabt sammen med forælderen",
+            "logRecruited": "{animal}: {count} unger klarer sig nu selv",
+            "logUnsettled": "{animal}: {count} unger fandt ikke et sted at slå sig ned",
+            "logUnguarded": "{animal}: kuldet klarer sig videre uden en forælder"
         }
     },
     "talkPage": {

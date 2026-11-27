@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Manood",
             "stop": "Itigil ang panonood"
+        },
+        "broods": {
+            "eggs": "{start} itlog · {left} ang natitira",
+            "eggsAll": "{start} itlog",
+            "eggOne": "1 itlog",
+            "young": "{start} anak · {left} ang natitira",
+            "youngAll": "{start} anak",
+            "carried": "Nagbubuntis ng {start} anak",
+            "takenBy": "{count} ang kinuha ng {aPredator}",
+            "didNotSurvive": "{count} ang hindi nakaligtas",
+            "nestFailed": "Nabigo ang pugad",
+            "failed": "Hindi nakaligtas ang mga anak",
+            "parentLost": "Nawala kasama ng magulang nito",
+            "unsettled": "{count} ang hindi nakahanap ng matitirhan",
+            "independent": "{count} ang nagsasarili na ngayon",
+            "logHatched": "{animal}: {count} itlog ang napisa",
+            "logBorn": "{animal}: {count} anak ang isinilang",
+            "logRaid": "{animal}: {count} itlog ang kinuha ng {aPredator} · {left} ang natitira",
+            "logTaken": "{animal}: {count} anak ang kinuha ng {aPredator} · {left} ang natitira",
+            "logHeldOff": "{animal}: itinaboy ng magulang ang {aPredator}",
+            "logNestFailed": "{animal}: nabigo ang pugad",
+            "logFailed": "{animal}: hindi nakaligtas ang mga anak",
+            "logParentLost": "{animal}: nawala ang mga anak kasama ng kanilang magulang",
+            "logRecruited": "{animal}: {count} anak ang nagsasarili na ngayon",
+            "logUnsettled": "{animal}: {count} anak ang hindi nakahanap ng matitirhan",
+            "logUnguarded": "{animal}: nagpapatuloy ang mga anak nang walang magulang"
         }
     },
     "talkPage": {

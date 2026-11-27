@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Παρακολούθηση",
             "stop": "Διακοπή παρακολούθησης"
+        },
+        "broods": {
+            "eggs": "{start} αυγά · απομένουν {left}",
+            "eggsAll": "{start} αυγά",
+            "eggOne": "1 αυγό",
+            "young": "{start} μικρά · απομένουν {left}",
+            "youngAll": "{start} μικρά",
+            "carried": "Κυοφορεί {start} μικρά",
+            "takenBy": "{aPredator} πήρε {count}",
+            "didNotSurvive": "{count} δεν επέζησαν",
+            "nestFailed": "Η φωλιά απέτυχε",
+            "failed": "Τα μικρά δεν επέζησαν",
+            "parentLost": "Χάθηκαν μαζί με τον γονέα τους",
+            "unsettled": "{count} δεν εγκαταστάθηκαν",
+            "independent": "{count} ζουν πλέον μόνα τους",
+            "logHatched": "{animal}: εκκολάφθηκαν {count} αυγά",
+            "logBorn": "{animal}: γεννήθηκαν {count} μικρά",
+            "logRaid": "{animal}: {aPredator} πήρε {count} αυγά · απομένουν {left}",
+            "logTaken": "{animal}: {aPredator} πήρε {count} μικρά · απομένουν {left}",
+            "logHeldOff": "{animal}: ο γονέας έδιωξε τον θηρευτή: {aPredator}",
+            "logNestFailed": "{animal}: η φωλιά απέτυχε",
+            "logFailed": "{animal}: τα μικρά δεν επέζησαν",
+            "logParentLost": "{animal}: τα μικρά χάθηκαν μαζί με τον γονέα τους",
+            "logRecruited": "{animal}: {count} μικρά ζουν πλέον μόνα τους",
+            "logUnsettled": "{animal}: {count} μικρά δεν εγκαταστάθηκαν",
+            "logUnguarded": "{animal}: τα μικρά συνεχίζουν χωρίς γονέα"
         }
     },
     "talkPage": {

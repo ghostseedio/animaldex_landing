@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Assistir",
             "stop": "Parar de assistir"
+        },
+        "broods": {
+            "eggs": "{start} ovos · restam {left}",
+            "eggsAll": "{start} ovos",
+            "eggOne": "1 ovo",
+            "young": "{start} filhotes · restam {left}",
+            "youngAll": "{start} filhotes",
+            "carried": "Gestando {start} filhotes",
+            "takenBy": "{count} levados por {aPredator}",
+            "didNotSurvive": "{count} não sobreviveram",
+            "nestFailed": "O ninho fracassou",
+            "failed": "A ninhada não sobreviveu",
+            "parentLost": "Perdida junto com o progenitor",
+            "unsettled": "{count} não se estabeleceram",
+            "independent": "{count} agora vivem por conta própria",
+            "logHatched": "{animal}: {count} ovos eclodiram",
+            "logBorn": "{animal}: {count} filhotes nasceram",
+            "logRaid": "{animal}: {count} ovos levados por {aPredator} · restam {left}",
+            "logTaken": "{animal}: {count} filhotes levados por {aPredator} · restam {left}",
+            "logHeldOff": "{animal}: o progenitor afugentou {aPredator}",
+            "logNestFailed": "{animal}: o ninho fracassou",
+            "logFailed": "{animal}: a ninhada não sobreviveu",
+            "logParentLost": "{animal}: a ninhada se perdeu junto com o progenitor",
+            "logRecruited": "{animal}: {count} filhotes agora vivem por conta própria",
+            "logUnsettled": "{animal}: {count} filhotes não se estabeleceram",
+            "logUnguarded": "{animal}: a ninhada segue sem um progenitor"
         }
     },
     "talkPage": {

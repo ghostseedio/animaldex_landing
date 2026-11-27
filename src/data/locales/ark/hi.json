@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "देखें",
             "stop": "देखना बंद करें"
+        },
+        "broods": {
+            "eggs": "{start} अंडे · {left} बचे",
+            "eggsAll": "{start} अंडे",
+            "eggOne": "1 अंडा",
+            "young": "{start} बच्चे · {left} बचे",
+            "youngAll": "{start} बच्चे",
+            "carried": "गर्भ में {start} बच्चे",
+            "takenBy": "{count} शिकार बने · शिकारी: {aPredator}",
+            "didNotSurvive": "{count} नहीं बचे",
+            "nestFailed": "घोंसला विफल रहा",
+            "failed": "बच्चे नहीं बचे",
+            "parentLost": "माता या पिता के साथ खो गए",
+            "unsettled": "{count} बस नहीं पाए",
+            "independent": "{count} अब आत्मनिर्भर",
+            "logHatched": "{animal}: {count} अंडों से बच्चे निकले",
+            "logBorn": "{animal}: {count} बच्चे जन्मे",
+            "logRaid": "{animal}: {count} अंडे शिकार बने · शिकारी: {aPredator} · {left} बचे",
+            "logTaken": "{animal}: {count} बच्चे शिकार बने · शिकारी: {aPredator} · {left} बचे",
+            "logHeldOff": "{animal}: माता-पिता ने शिकारी को भगा दिया: {aPredator}",
+            "logNestFailed": "{animal}: घोंसला विफल रहा",
+            "logFailed": "{animal}: बच्चे नहीं बचे",
+            "logParentLost": "{animal}: बच्चे माता या पिता के साथ खो गए",
+            "logRecruited": "{animal}: {count} बच्चे अब आत्मनिर्भर",
+            "logUnsettled": "{animal}: {count} बच्चे बस नहीं पाए",
+            "logUnguarded": "{animal}: बच्चे माता-पिता के बिना आगे बढ़ रहे हैं"
         }
     },
     "talkPage": {

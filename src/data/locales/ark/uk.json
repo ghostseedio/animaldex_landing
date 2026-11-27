@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Дивитися",
             "stop": "Припинити перегляд"
+        },
+        "broods": {
+            "eggs": "Яйця: {start} · залишилося: {left}",
+            "eggsAll": "Яйця: {start}",
+            "eggOne": "1 яйце",
+            "young": "Дитинчата: {start} · залишилося: {left}",
+            "youngAll": "Дитинчата: {start}",
+            "carried": "Виношує дитинчат: {start}",
+            "takenBy": "Стали здобиччю: {count} · хижак: {aPredator}",
+            "didNotSurvive": "Не вижили: {count}",
+            "nestFailed": "Гніздування не вдалося",
+            "failed": "Виводок не вижив",
+            "parentLost": "Втрачено разом з одним із батьків",
+            "unsettled": "Не оселилися: {count}",
+            "independent": "Тепер самостійні: {count}",
+            "logHatched": "{animal}: з {count} яєць вилупилося потомство",
+            "logBorn": "{animal}: народилося дитинчат: {count}",
+            "logRaid": "{animal}: яйця стали здобиччю: {count} · хижак: {aPredator} · залишилося: {left}",
+            "logTaken": "{animal}: дитинчата стали здобиччю: {count} · хижак: {aPredator} · залишилося: {left}",
+            "logHeldOff": "{animal}: один із батьків відігнав хижака: {aPredator}",
+            "logNestFailed": "{animal}: гніздування не вдалося",
+            "logFailed": "{animal}: виводок не вижив",
+            "logParentLost": "{animal}: виводок втрачено разом з одним із батьків",
+            "logRecruited": "{animal}: дитинчата стали самостійними: {count}",
+            "logUnsettled": "{animal}: дитинчата не оселилися: {count}",
+            "logUnguarded": "{animal}: виводок живе далі без батьків"
         }
     },
     "talkPage": {

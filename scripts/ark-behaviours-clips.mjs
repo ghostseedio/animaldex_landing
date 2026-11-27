@@ -24,6 +24,11 @@ const arg = (name, fallback) => {
 const out = path.resolve(arg("out", path.join(root, ".ark-golden", "behaviours-shots")));
 const scenes = arg("scenes", "birth,den,contest,dung").split(",");
 // The hunt acts (`hunt-acts.ts`): their own page and moments, `scripts/ark-hunt-clips.mjs` (`--scenes hunt-cat,hunt-heron`).
+// The broods (`live-broods.ts`): their own page and timeline, `scripts/ark-broods-clips.mjs` (`--scenes broodnest,broodduck,...`).
+if (scenes.some((name) => name.startsWith("brood"))) {
+    await import("./ark-broods-clips.mjs");
+    process.exit(0);
+}
 if (scenes.some((name) => name.startsWith("hunt"))) {
     await import("./ark-hunt-clips.mjs");
     process.exit(0);

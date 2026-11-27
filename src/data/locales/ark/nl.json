@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Kijken",
             "stop": "Stoppen met kijken"
+        },
+        "broods": {
+            "eggs": "{start} eieren · {left} over",
+            "eggsAll": "{start} eieren",
+            "eggOne": "1 ei",
+            "young": "{start} jongen · {left} over",
+            "youngAll": "{start} jongen",
+            "carried": "Draagt {start} jongen",
+            "takenBy": "{count} gepakt door {aPredator}",
+            "didNotSurvive": "{count} hebben het niet overleefd",
+            "nestFailed": "Het nest is mislukt",
+            "failed": "De jongen hebben het niet overleefd",
+            "parentLost": "Verloren gegaan met de ouder",
+            "unsettled": "{count} vonden geen eigen plek",
+            "independent": "{count} nu zelfstandig",
+            "logHatched": "{animal}: {count} eieren uitgekomen",
+            "logBorn": "{animal}: {count} jongen geboren",
+            "logRaid": "{animal}: {count} eieren gepakt door {aPredator} · {left} over",
+            "logTaken": "{animal}: {count} jongen gepakt door {aPredator} · {left} over",
+            "logHeldOff": "{animal}: de ouder verjoeg {aPredator}",
+            "logNestFailed": "{animal}: het nest is mislukt",
+            "logFailed": "{animal}: de jongen hebben het niet overleefd",
+            "logParentLost": "{animal}: de jongen zijn verloren gegaan met de ouder",
+            "logRecruited": "{animal}: {count} jongen nu zelfstandig",
+            "logUnsettled": "{animal}: {count} jongen vonden geen eigen plek",
+            "logUnguarded": "{animal}: de jongen gaan verder zonder ouder"
         }
     },
     "talkPage": {

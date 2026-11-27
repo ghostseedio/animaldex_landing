@@ -180,6 +180,18 @@ export class LiveMeals<E> {
         this.meals = next.sort((a, b) => a.t0 - b.t0);
     }
 
+    /**
+     * BROODS: a meal the scene has no chase for (never built: a hunter that cannot follow its prey where it is) is let
+     * go, its stand-in dropped; the brood layer acts the take as a raid instead (`live-broods.ts`). One already built stays.
+     */
+    forget(predator: string, prey: string): void {
+        this.meals = this.meals.filter((m) => {
+            if (m.built || m.act.predator.id !== predator || m.act.prey.id !== prey) return true;
+            this.stop(m);
+            return false;
+        });
+    }
+
     private stop(m: Live<E>): void {
         m.acting.forEach((e) => this.host.setAct(e, null));
         m.acting.clear();

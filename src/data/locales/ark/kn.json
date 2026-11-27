@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "ನೋಡಿ",
             "stop": "ನೋಡುವುದನ್ನು ನಿಲ್ಲಿಸಿ"
+        },
+        "broods": {
+            "eggs": "{start} ಮೊಟ್ಟೆಗಳು · {left} ಉಳಿದಿವೆ",
+            "eggsAll": "{start} ಮೊಟ್ಟೆಗಳು",
+            "eggOne": "1 ಮೊಟ್ಟೆ",
+            "young": "{start} ಮರಿಗಳು · {left} ಉಳಿದಿವೆ",
+            "youngAll": "{start} ಮರಿಗಳು",
+            "carried": "ಗರ್ಭದಲ್ಲಿ {start} ಮರಿಗಳು",
+            "takenBy": "{aPredator} {count} ಹೊತ್ತೊಯ್ದಿತು",
+            "didNotSurvive": "{count} ಬದುಕುಳಿಯಲಿಲ್ಲ",
+            "nestFailed": "ಗೂಡು ವಿಫಲವಾಯಿತು",
+            "failed": "ಮರಿಗಳು ಬದುಕುಳಿಯಲಿಲ್ಲ",
+            "parentLost": "ಪೋಷಕ ಪ್ರಾಣಿಯೊಂದಿಗೆ ಕಳೆದುಹೋದವು",
+            "unsettled": "{count} ನೆಲೆ ಕಂಡುಕೊಳ್ಳಲಿಲ್ಲ",
+            "independent": "{count} ಈಗ ಸ್ವತಂತ್ರವಾಗಿವೆ",
+            "logHatched": "{animal}: {count} ಮೊಟ್ಟೆಗಳು ಒಡೆದು ಮರಿಗಳು ಹೊರಬಂದವು",
+            "logBorn": "{animal}: {count} ಮರಿಗಳು ಜನಿಸಿದವು",
+            "logRaid": "{animal}: {aPredator} {count} ಮೊಟ್ಟೆಗಳನ್ನು ಹೊತ್ತೊಯ್ದಿತು · {left} ಉಳಿದಿವೆ",
+            "logTaken": "{animal}: {aPredator} {count} ಮರಿಗಳನ್ನು ಹೊತ್ತೊಯ್ದಿತು · {left} ಉಳಿದಿವೆ",
+            "logHeldOff": "{animal}: ಪೋಷಕ ಪ್ರಾಣಿ ಪರಭಕ್ಷಕವನ್ನು ಓಡಿಸಿತು: {aPredator}",
+            "logNestFailed": "{animal}: ಗೂಡು ವಿಫಲವಾಯಿತು",
+            "logFailed": "{animal}: ಮರಿಗಳು ಬದುಕುಳಿಯಲಿಲ್ಲ",
+            "logParentLost": "{animal}: ಮರಿಗಳು ಪೋಷಕ ಪ್ರಾಣಿಯೊಂದಿಗೆ ಕಳೆದುಹೋದವು",
+            "logRecruited": "{animal}: {count} ಮರಿಗಳು ಈಗ ಸ್ವತಂತ್ರವಾಗಿವೆ",
+            "logUnsettled": "{animal}: {count} ಮರಿಗಳು ನೆಲೆ ಕಂಡುಕೊಳ್ಳಲಿಲ್ಲ",
+            "logUnguarded": "{animal}: ಮರಿಗಳು ಪೋಷಕರಿಲ್ಲದೆ ಮುಂದುವರಿಯುತ್ತಿವೆ"
         }
     },
     "talkPage": {
