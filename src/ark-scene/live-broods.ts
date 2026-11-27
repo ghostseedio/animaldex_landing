@@ -173,6 +173,8 @@ type Live = {
     /** Worked out once: each egg's place in the clutch (x, y, z by threes), and each instanced member's two own numbers. */
     spots?: {all: number; layout: string; at: Float32Array};
     rand?: Float32Array;
+    /** When something else last held its attending parent (s): it then walks back onto its eggs. */
+    heldAt?: number;
     /** How many stand-ins it had when it ended with survivors (they wait for their recruits). */
     handing?: number;
 };
@@ -773,11 +775,19 @@ export class LiveBroods<E> {
             const wasEgg = brood.stage === "egg" || (brood.stage === "young" && brood.laid_ark_day !== null && brood.stage_ark_day !== null && brood.laid_ark_day < brood.stage_ark_day);
             const nested = brood.stage === "egg" || (wasEgg && (brood.care === "nest" || (live.hatchAt !== null && epoch < live.hatchAt + HATCH_STAY)));
             const carer = !live.ended && brood.stage === "egg" && brood.carer && brood.hold && look ? brood.carer : null;
-            if (carer) {
+            // (Only where it can be seen: an act keeps its animal drawn one by one with its model in, and a parent on a nest
+            // across the island is a speck. Beyond the camera's reach it goes about its day; coming into reach it is on its
+            // eggs at once, and it walks back onto them only after something nearer had it, or as the clutch is laid.)
+            if (carer && !near) {
+                if (live.sitter) this.release(live);
+            } else if (carer) {
                 const entry = h.find(carer);
-                if (entry && !h.busy(entry)) {
+                const held = entry ? h.busy(entry) : false;
+                if (held) live.heldAt = epoch;
+                if (entry && !held) {
                     const body = h.body(entry);
-                    if (!live.sitter || live.sitter.id !== carer) live.sitter = {id: carer, since: epoch, from: body};
+                    const walks = (live.heldAt !== undefined && epoch - live.heldAt < 2) || (live.layAt > -Infinity && epoch - live.layAt < 10);
+                    if (!live.sitter || live.sitter.id !== carer) live.sitter = {id: carer, since: walks ? epoch : epoch - SETTLE, from: body};
                     const water = nest.water || WATER_PLAN.test(plan ?? "");
                     let to = carerPose(brood.hold!, water, nest, body.length, brood.id, still ? 0 : epoch);
                     if (raided) {
@@ -832,7 +842,7 @@ export class LiveBroods<E> {
                     pose(entry, {x: body.x, z: body.z, base: body.base, yaw: body.yaw, pitch: 0, roll: 0, scale: Math.max(k, 0.02), dim: 1 - k, hidden: k <= 0.02, state: "rest", speed: 0});
                     continue;
                 }
-                if (inNest && !handing) {
+                if (inNest && !handing && near) {
                     const angle = (i / Math.max(live.models, 1)) * Math.PI * 2 + unit(brood.id) * 6.283;
                     const r = live.models > 1 ? live.size * 0.2 : 0;
                     const at: BroodBody = {x: nest.x + Math.sin(angle) * r, z: nest.z + Math.cos(angle) * r, base: nest.y + (look?.nest === "nest" && wasEgg ? live.size * 0.06 : 0), yaw: angle, length: 0};
