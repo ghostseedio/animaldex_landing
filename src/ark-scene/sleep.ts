@@ -206,8 +206,8 @@ export function getUpSeconds(length: number, lying: boolean, startled: boolean):
 export function stepSleep(t: number, asleep: boolean, dt: number, seconds: number): number {
     // (Lane SIG10: a clock set back, a replay or the harness's `setAt`, gives a negative step: never out of 0…1 for it, or a
     // sleeper was drawn up and about while asleep, and a buried one's card said buried with nothing sunk.)
-    const rate = Math.max(dt, 0) / Math.max(seconds, 0.05);
-    return Math.min(Math.max(asleep ? t + rate : t - rate, 0), 1);
+    const rate = dt / Math.max(seconds, 0.05);
+    return asleep ? Math.min(t + rate, 1) : Math.max(t - rate, 0);
 }
 
 const smooth = (a: number, b: number, x: number) => {
