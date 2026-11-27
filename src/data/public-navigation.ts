@@ -42,8 +42,10 @@ export const EARN_ON_ANIMALDEX_HREF = "/earn-on-animaldex";
 export const ANIMAL_FREQUENCIES_HREF = "/animal-frequencies";
 export const ANIMAL_TRIALS_HREF = "/animal-trials";
 export const WILDLIFE_GUIDES_HREF = "/wildlife-guides";
+/** The header's "Browse animals" link: the animal catalog (owner, 2026-11-27; it pointed at the quiz before). */
+export const FIND_YOUR_ANIMALS_HREF = "/animals";
 /** The questionnaire that finds the animals who see the world like you. */
-export const FIND_YOUR_ANIMALS_HREF = "/what-animal-am-i";
+export const WHAT_ANIMAL_AM_I_HREF = "/what-animal-am-i";
 /** AI disclosure, crisis protocol, teen mode and what reaches AI providers (SPEC 3.1). */
 export const AI_AND_SAFETY_HREF = "/legal/ai-and-safety";
 /** The shared 3D world, and the pages that explain it (SEO lane S3, 2026-11-12). */
@@ -141,7 +143,7 @@ export const blogNavLink: PublicNavLink = {href: BLOG_HREF, labelKey: "blog"};
  */
 export const footerProductLinks: PublicNavLink[] = [
     {href: TALK_HREF, labelKey: "talkToAnAnimal"},
-    findYourAnimalsNavLink,
+    {href: WHAT_ANIMAL_AM_I_HREF, labelKey: "whatAnimalAmI"},
     {href: START_COLLECTION_HREF, labelKey: "getTheApp"},
     howItWorksNavLink
 ];

@@ -110,13 +110,13 @@ test("the header is Talk · Find your animals · Get the app (Nov 2026), with th
     // Talk and Get the app are the header's two buttons; Find your animals is its one link.
     // The Ark leads (SEO lane S3, 2026-11-12: the world was in no navigation), then Find your animals.
     assert.deepEqual(headerNavLinks.map((link) => link.href), [ARK_HREF, FIND_YOUR_ANIMALS_HREF]);
-    assert.equal(FIND_YOUR_ANIMALS_HREF, "/what-animal-am-i");
-    for (const hub of ["/comparisons", "/tier-list", "/pokemon-animals", "/talk-to-animals", HOW_IT_WORKS_HREF, "/animals", "/blog"]) {
+    assert.equal(FIND_YOUR_ANIMALS_HREF, "/animals"); // "Browse animals" opens the catalog (owner, 2026-11-27)
+    for (const hub of ["/comparisons", "/tier-list", "/pokemon-animals", "/talk-to-animals", HOW_IT_WORKS_HREF, "/what-animal-am-i", "/blog"]) {
         assert.ok(!headerNavLinks.some((link) => link.href === hub), `${hub} should not be in the header`);
     }
     // The pages stay live and in the footer: the search hubs most people arrive through.
     const footerHrefs = footerColumns.flatMap((column) => column.links ?? []).map((link) => link.href);
-    for (const hub of ["/animals", "/comparisons", "/tier-list", "/animal-hybrids", FIND_YOUR_ANIMALS_HREF, HOW_IT_WORKS_HREF, ARK_HREF, "/ark/how-it-works", "/ark/food-chain", "/about"]) {
+    for (const hub of ["/animals", "/comparisons", "/tier-list", "/animal-hybrids", "/what-animal-am-i", HOW_IT_WORKS_HREF, ARK_HREF, "/ark/how-it-works", "/ark/food-chain", "/about"]) {
         assert.ok(footerHrefs.includes(hub), `${hub} should stay in the footer`);
     }
     assert.ok(!footerHrefs.includes("/talk-to-animals"), "one Talk entry in the footer");
