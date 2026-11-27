@@ -1,3 +1,5 @@
+import {APP_SHELL_WORDS_EN, type AppShellWords} from "@/lib/app-shell-words";
+
 /** Ark care (GIFTS M2): what a care gift does for the living animal the card brought aboard. */
 export type GiftCareKind = "meal" | "shelter" | "nest";
 
@@ -44,8 +46,8 @@ const ARK_CARE_GIFTS: Record<string, {name: string; description: string}> = {
 };
 
 /** The empty catalog's calm state: shown when there is no gift to offer (gifts are dark from M1 until Ark care). */
-export const GIFTS_COMING_TITLE = "Gifts are coming to the Ark";
-export const GIFTS_COMING_BODY = "Soon, gifts will bring food, shelter and nesting help to animals living on the Ark.";
+export const GIFTS_COMING_TITLE = APP_SHELL_WORDS_EN.giftsComingTitle;
+export const GIFTS_COMING_BODY = APP_SHELL_WORDS_EN.giftsComingBody;
 
 /**
  * A Gift's name: the Ark care slugs by their own words, any other slug by the server's `display_name`, else the
@@ -114,15 +116,18 @@ export function giftAccent(iconKey: string | null | undefined): string {
 }
 
 /** What a failed send says (iOS `giftErrorMessage`). */
-export function giftErrorMessage(raw: string | null | undefined): string {
+/** The words a Gift error is shown in (the app shell's `appShell.giftError*`, English by default). */
+export type GiftErrorWords = Pick<AppShellWords, "giftErrorCredits" | "giftErrorDisabled" | "giftErrorSelf" | "giftErrorRate" | "giftErrorBlocked" | "giftErrorUnavailable" | "giftErrorGeneric">;
+
+export function giftErrorMessage(raw: string | null | undefined, words: GiftErrorWords = APP_SHELL_WORDS_EN): string {
     const text = (raw ?? "").toLowerCase();
-    if (text.includes("insufficient_credits")) return "You need more Credits to send this Gift.";
-    if (text.includes("gifts_disabled")) return "Gifts are turned off right now.";
-    if (text.includes("self_gift_blocked")) return "You cannot send a Gift to your own capture.";
-    if (text.includes("gift_rate_limited")) return "You have sent the maximum Gifts for now. Try again later.";
-    if (text.includes("users_blocked")) return "Gifts are not available between these accounts.";
-    if (text.includes("gift_not_available")) return "This Gift isn't available right now.";
-    return "Unable to send this Gift right now.";
+    if (text.includes("insufficient_credits")) return words.giftErrorCredits;
+    if (text.includes("gifts_disabled")) return words.giftErrorDisabled;
+    if (text.includes("self_gift_blocked")) return words.giftErrorSelf;
+    if (text.includes("gift_rate_limited")) return words.giftErrorRate;
+    if (text.includes("users_blocked")) return words.giftErrorBlocked;
+    if (text.includes("gift_not_available")) return words.giftErrorUnavailable;
+    return words.giftErrorGeneric;
 }
 
 /** `/api/app/gifts/catalog`'s body, read (v1 or v2 shape; v2's extra fields are optional). */

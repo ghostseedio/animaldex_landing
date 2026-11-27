@@ -20,10 +20,10 @@ type AccountPageProps = {
     };
 };
 
-export const metadata: Metadata = {
-    title: "Sign in",
-    robots: {index: false, follow: false}
-};
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const t = await getScopedTranslator(params.locale, "account");
+    return {title: t("metaTitle"), robots: {index: false, follow: false}};
+}
 
 function safeRedirectTarget(next: string | undefined, locale: string) {
     if (!next || !next.startsWith("/") || next.startsWith("//")) {
@@ -87,6 +87,8 @@ export default async function AccountPage({params, searchParams}: AccountPagePro
                     downloadPrompt: t("downloadPrompt"),
                     downloadApp: t("downloadApp"),
                     loginFormTitle: t("loginFormTitle"),
+                    loginFormEyebrow: t("loginFormEyebrow"),
+                    emailPlaceholder: t("emailPlaceholder"),
                     termsLine: t("termsLine"),
                     termsLink: t("termsLink"),
                     privacyLink: t("privacyLink"),

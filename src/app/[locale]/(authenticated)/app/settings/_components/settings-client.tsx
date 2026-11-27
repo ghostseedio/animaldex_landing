@@ -15,8 +15,13 @@ import {
     type RecordPrivacy,
     type RecordPrivacySection,
     currencyDisplayName,
-    passwordChangeProblem
+    locationVisibilityTitle,
+    passwordChangeProblem,
+    pushPreferenceWords,
+    recordPrivacySectionWords
 } from "@/lib/account-settings";
+import {fillSettingsWords} from "@/lib/settings-words";
+import {useSettingsWords} from "@/app/[locale]/(authenticated)/app/settings/_components/settings-words-context";
 import {connectionStatusLabel, INSTAGRAM_IMPORT_PATH, type ExternalImportConnectionRow} from "@/lib/instagram-import";
 import {setDebateRoster} from "@/components/debates/use-debates";
 import {debateProblemText} from "@/lib/debate-words";
@@ -57,6 +62,7 @@ const SOUND_KEY = "animaldex.soundEffectsEnabled";
 
 /** iOS "Sound Effects": the web's own sounds read the same switch. */
 export function SoundEffectsRow() {
+    const w = useSettingsWords();
     const [enabled, setEnabled] = useState(true);
     useEffect(() => {
         try {
@@ -68,7 +74,7 @@ export function SoundEffectsRow() {
     return (
         <SettingsToggleRow
             icon={SettingsIcons.speaker}
-            title="Sound Effects"
+            title={w.soundEffects}
             checked={enabled}
             onChange={(next) => {
                 setEnabled(next);
@@ -193,7 +199,18 @@ export function ArkFounderNameSection({initial, title, words, broughtBy}: {initi
 }
 
 /** iOS `InstagramSettingsConnectionRow`. */
+/** `connectionStatusLabel`'s English, in the reader's language. */
+function instagramStatusWords(label: string, w: ReturnType<typeof useSettingsWords>) {
+    if (label === "Checking…") return w.instagramChecking;
+    if (label === "Not connected") return w.instagramNotConnected;
+    if (label === "Reauthorization required") return w.instagramReauthorize;
+    if (label === "Connected") return w.instagramConnected;
+    const handle = /^Connected as @(.+)$/.exec(label)?.[1];
+    return handle ? fillSettingsWords(w.instagramConnectedAs, {name: handle}) : label;
+}
+
 export function InstagramRow() {
+    const w = useSettingsWords();
     const [label, setLabel] = useState("Checking…");
     useEffect(() => {
         let active = true;
@@ -209,12 +226,13 @@ export function InstagramRow() {
             active = false;
         };
     }, []);
-    return <SettingsNavigationRow href={INSTAGRAM_IMPORT_PATH} icon={SettingsIcons.instagram} title="Instagram" value={label} />;
+    return <SettingsNavigationRow href={INSTAGRAM_IMPORT_PATH} icon={SettingsIcons.instagram} title={w.instagram} value={instagramStatusWords(label, w)} />;
 }
 
 // MARK: - Location privacy
 
 export function LocationPrivacyList({initial}: {initial: LocationVisibility}) {
+    const w = useSettingsWords();
     const describeError = useUserFacingError();
     const [visibility, setVisibility] = useState(initial);
     const [saving, setSaving] = useState(false);
@@ -238,15 +256,15 @@ export function LocationPrivacyList({initial}: {initial: LocationVisibility}) {
 
     return (
         <SettingsSection
-            title="WHO CAN SEE CAPTURE LOCATIONS"
-            footer={error ?? "This controls the place shown on your public captures. It does not change what AnimalDex stores for your own collection."}
+            title={w.whoCanSeeLocations}
+            footer={error ?? w.locationFooter}
         >
             {LOCATION_VISIBILITY_OPTIONS.map((option, index) => (
                 <div key={option.id}>
                     {index > 0 ? <SettingsDivider /> : null}
                     <SettingsActionRow
-                        icon={visibility === option.id ? <SelectedMark selected /> : SettingsIcons.pin}
-                        title={option.title}
+                        icon={visibility === option.id ? <SelectedMark selected label={w.selected} /> : SettingsIcons.pin}
+                        title={locationVisibilityTitle(option.id, w)}
                         onClick={() => void save(option.id)}
                         disabled={saving}
                     />
@@ -258,8 +276,6 @@ export function LocationPrivacyList({initial}: {initial: LocationVisibility}) {
 
 // MARK: - Chat history
 
-const CHAT_HISTORY_NOTE = "Your conversations with animals are saved to your account so they're on every device. Turn this off to keep new chats on this device only.";
-const CHAT_HISTORY_CONFIRM = "Delete every conversation with your animals? This can't be undone.";
 
 /**
  * iOS `AnimalChatHistorySection` (docs/chat-sync/SPEC.md, section 3): keep
@@ -267,6 +283,7 @@ const CHAT_HISTORY_CONFIRM = "Delete every conversation with your animals? This 
  * browser's copy. Shown once the account's answer is in, as iOS does.
  */
 export function ChatHistorySection() {
+    const w = useSettingsWords();
     const [historySync, setHistorySync] = useState<boolean | null>(null);
     const [saving, setSaving] = useState(false);
     const [deletion, setDeletion] = useState<"idle" | "confirming" | "deleting" | "done">("idle");
@@ -300,7 +317,7 @@ export function ChatHistorySection() {
             if (!response.ok) throw new Error(String(response.status));
         } catch {
             setHistorySync(previous);
-            setProblem("Something went wrong. Try again.");
+            setProblem(w.somethingWrong);
         } finally {
             setSaving(false);
         }
@@ -322,17 +339,17 @@ export function ChatHistorySection() {
             setDeletion("done");
         } catch {
             setDeletion("idle");
-            setProblem("Something went wrong. Try again.");
+            setProblem(w.somethingWrong);
         }
     }
 
     if (historySync === null) return null;
     return (
-        <SettingsSection title="Chat history" footer={problem ?? undefined}>
+        <SettingsSection title={w.chatHistory} footer={problem ?? undefined}>
             <SettingsToggleRow
                 icon={SettingsIcons.cloud}
-                title="Keep my chats on all my devices"
-                subtitle={CHAT_HISTORY_NOTE}
+                title={w.chatKeep}
+                subtitle={w.chatNote}
                 checked={historySync}
                 onChange={(next) => void setSync(next)}
                 disabled={saving}
@@ -340,16 +357,16 @@ export function ChatHistorySection() {
             <SettingsDivider />
             {deletion === "confirming" ? (
                 <div className="space-y-3 px-4 py-3">
-                    <p className="text-[13px] leading-5 text-white/70">{CHAT_HISTORY_CONFIRM}</p>
+                    <p className="text-[13px] leading-5 text-white/70">{w.chatConfirm}</p>
                     <div className="flex gap-2">
-                        <button type="button" onClick={() => void deleteAll()} className="min-h-10 flex-1 rounded-pill bg-red-500/90 px-4 text-sm font-bold text-white">Delete chat history</button>
-                        <button type="button" onClick={() => setDeletion("idle")} className="min-h-10 flex-1 rounded-pill border border-white/15 px-4 text-sm font-bold text-white">Cancel</button>
+                        <button type="button" onClick={() => void deleteAll()} className="min-h-10 flex-1 rounded-pill bg-red-500/90 px-4 text-sm font-bold text-white">{w.chatDelete}</button>
+                        <button type="button" onClick={() => setDeletion("idle")} className="min-h-10 flex-1 rounded-pill border border-white/15 px-4 text-sm font-bold text-white">{w.cancel}</button>
                     </div>
                 </div>
             ) : (
                 <SettingsDestructiveRow
                     icon={SettingsIcons.trash}
-                    title={deletion === "done" ? "Delete chat history · Done" : "Delete chat history"}
+                    title={deletion === "done" ? w.chatDeleteDone : w.chatDelete}
                     onClick={() => setDeletion("confirming")}
                     busy={deletion === "deleting"}
                     disabled={deletion === "deleting"}
@@ -363,6 +380,7 @@ export function ChatHistorySection() {
 
 /** iOS `SettingsPlayRecordPrivacyView`: one audience per part of the Record. */
 export function RecordPrivacyList({initial}: {initial: RecordPrivacy}) {
+    const w = useSettingsWords();
     const describeError = useUserFacingError();
     const [privacy, setPrivacy] = useState(initial);
     const [saving, setSaving] = useState<RecordPrivacySection | null>(null);
@@ -387,13 +405,13 @@ export function RecordPrivacyList({initial}: {initial: RecordPrivacy}) {
     return (
         <>
             {RECORD_PRIVACY_SECTIONS.map((section) => (
-                <SettingsSection key={section.id} title={section.header} footer={error && saving === null ? error : section.footer}>
+                <SettingsSection key={section.id} title={recordPrivacySectionWords(section.id, w).header} footer={error && saving === null ? error : recordPrivacySectionWords(section.id, w).footer}>
                     {LOCATION_VISIBILITY_OPTIONS.map((option, index) => (
                         <div key={option.id}>
                             {index > 0 ? <SettingsDivider /> : null}
                             <SettingsActionRow
-                                icon={<SelectedMark selected={privacy[section.id] === option.id} />}
-                                title={option.title}
+                                icon={<SelectedMark selected={privacy[section.id] === option.id} label={w.selected} />}
+                                title={locationVisibilityTitle(option.id, w)}
                                 onClick={() => void save(section.id, option.id)}
                                 disabled={saving !== null}
                             />
@@ -408,6 +426,7 @@ export function RecordPrivacyList({initial}: {initial: RecordPrivacy}) {
 // MARK: - Notifications
 
 export function PushPreferencesList({initial}: {initial: PushPreferences}) {
+    const w = useSettingsWords();
     const describeError = useUserFacingError();
     const [preferences, setPreferences] = useState(initial);
     const [error, setError] = useState<string | null>(null);
@@ -433,16 +452,16 @@ export function PushPreferencesList({initial}: {initial: PushPreferences}) {
 
     return (
         <SettingsSection
-            title="ALERT TYPES"
-            footer={error ?? "Turning these off stops the alert only. Capture, activity, and Credit bonus updates still appear in your notifications list. Messages stay in Messages."}
+            title={w.alertTypes}
+            footer={error ?? w.alertTypesFooter}
         >
             {PUSH_PREFERENCE_ROWS.map((row, index) => (
                 <div key={row.id}>
                     {index > 0 ? <SettingsDivider /> : null}
                     <SettingsToggleRow
                         icon={icons[row.id]}
-                        title={row.title}
-                        subtitle={row.subtitle}
+                        title={pushPreferenceWords(row.id, w).title}
+                        subtitle={pushPreferenceWords(row.id, w).subtitle}
                         checked={preferences[row.id]}
                         onChange={(next) => void toggle(row.id, next)}
                     />
@@ -454,7 +473,8 @@ export function PushPreferencesList({initial}: {initial: PushPreferences}) {
 
 // MARK: - Currency
 
-export function CurrencyList({preference, systemCurrency}: {preference: string; systemCurrency: string}) {
+export function CurrencyList({preference, systemCurrency, locale}: {preference: string; systemCurrency: string; locale?: string}) {
+    const w = useSettingsWords();
     const router = useRouter();
     const [current, setCurrent] = useState(preference.toLowerCase() === CURRENCY_SYSTEM_VALUE ? CURRENCY_SYSTEM_VALUE : preference.toUpperCase());
 
@@ -467,20 +487,20 @@ export function CurrencyList({preference, systemCurrency}: {preference: string; 
     const isSystem = current === CURRENCY_SYSTEM_VALUE;
     return (
         <>
-            <SettingsSection footer="Price estimates are shown in this currency. Values are converted from a fixed reference rate, not a live exchange rate.">
+            <SettingsSection footer={w.currencyFooter}>
                 <SettingsActionRow
-                    icon={isSystem ? <SelectedMark selected /> : SettingsIcons.globe}
-                    title={`System (${systemCurrency})`}
+                    icon={isSystem ? <SelectedMark selected label={w.selected} /> : SettingsIcons.globe}
+                    title={fillSettingsWords(w.currencySystem, {currency: systemCurrency})}
                     onClick={() => choose(CURRENCY_SYSTEM_VALUE)}
                 />
             </SettingsSection>
-            <SettingsSection title="ALL CURRENCIES">
+            <SettingsSection title={w.allCurrencies}>
                 {DISPLAY_CURRENCY_CODES.map((code, index) => (
                     <div key={code}>
                         {index > 0 ? <SettingsDivider /> : null}
                         <SettingsActionRow
-                            icon={!isSystem && current === code ? <SelectedMark selected /> : <span className="text-sm font-black">¤</span>}
-                            title={`${code} · ${currencyDisplayName(code)}`}
+                            icon={!isSystem && current === code ? <SelectedMark selected label={w.selected} /> : <span className="text-sm font-black">¤</span>}
+                            title={`${code} · ${currencyDisplayName(code, locale)}`}
                             onClick={() => choose(code)}
                         />
                     </div>
@@ -493,6 +513,7 @@ export function CurrencyList({preference, systemCurrency}: {preference: string; 
 // MARK: - Account
 
 export function ChangePasswordForm() {
+    const w = useSettingsWords();
     const describeError = useUserFacingError();
     const [current, setCurrent] = useState("");
     const [next, setNext] = useState("");
@@ -503,7 +524,7 @@ export function ChangePasswordForm() {
 
     async function submit(event: React.FormEvent) {
         event.preventDefault();
-        const problem = passwordChangeProblem({current, next, confirm});
+        const problem = passwordChangeProblem({current, next, confirm}, w);
         if (problem) {
             setError(problem);
             return;
@@ -532,21 +553,22 @@ export function ChangePasswordForm() {
     const field = "w-full border border-white/10 bg-black/40 px-3.5 py-3 text-[15px] text-white outline-none placeholder:text-white/30 focus:border-primary-400/60";
     return (
         <form onSubmit={submit} className="space-y-3">
-            <p className="text-sm text-white/55">Enter your current password, then choose a new one.</p>
-            <input type="password" autoComplete="current-password" placeholder="Current password" value={current} onChange={(event) => setCurrent(event.target.value)} className={field} />
-            <input type="password" autoComplete="new-password" placeholder="New password" maxLength={PASSWORD_MAX_LENGTH} value={next} onChange={(event) => setNext(event.target.value)} className={field} />
-            <input type="password" autoComplete="new-password" placeholder="Confirm new password" maxLength={PASSWORD_MAX_LENGTH} value={confirm} onChange={(event) => setConfirm(event.target.value)} className={field} />
-            <p className="text-xs text-white/40">Use 8–128 characters. Avoid obvious passwords.</p>
+            <p className="text-sm text-white/55">{w.passwordIntro}</p>
+            <input type="password" autoComplete="current-password" placeholder={w.currentPassword} value={current} onChange={(event) => setCurrent(event.target.value)} className={field} />
+            <input type="password" autoComplete="new-password" placeholder={w.newPassword} maxLength={PASSWORD_MAX_LENGTH} value={next} onChange={(event) => setNext(event.target.value)} className={field} />
+            <input type="password" autoComplete="new-password" placeholder={w.confirmPassword} maxLength={PASSWORD_MAX_LENGTH} value={confirm} onChange={(event) => setConfirm(event.target.value)} className={field} />
+            <p className="text-xs text-white/40">{fillSettingsWords(w.passwordRule, {min: 8, max: PASSWORD_MAX_LENGTH})}</p>
             {error ? <p className="text-sm text-red-300" role="alert">{error}</p> : null}
-            {done ? <p className="text-sm text-primary-200" role="status">Password updated.</p> : null}
+            {done ? <p className="text-sm text-primary-200" role="status">{w.passwordUpdated}</p> : null}
             <button type="submit" disabled={saving} className="w-full rounded-full bg-primary-400 py-3 text-[15px] font-black text-black transition hover:brightness-105 disabled:opacity-50">
-                {saving ? "Updating…" : "Update password"}
+                {saving ? w.updating : w.updatePassword}
             </button>
         </form>
     );
 }
 
 export function SignOutRow() {
+    const w = useSettingsWords();
     const describeError = useUserFacingError();
     const router = useRouter();
     const [busy, setBusy] = useState(false);
@@ -555,7 +577,7 @@ export function SignOutRow() {
         <SettingsSection footer={error ?? undefined}>
             <SettingsDestructiveRow
                 icon={SettingsIcons.signOut}
-                title={busy ? "Signing out..." : "Sign Out"}
+                title={busy ? w.signingOut : w.signOut}
                 busy={busy}
                 disabled={busy}
                 onClick={async () => {
@@ -577,6 +599,7 @@ export function SignOutRow() {
 }
 
 export function DeleteAccountRow() {
+    const w = useSettingsWords();
     const describeError = useUserFacingError();
     const router = useRouter();
     const [confirming, setConfirming] = useState(false);
@@ -602,10 +625,10 @@ export function DeleteAccountRow() {
 
     return (
         <>
-            <SettingsSection footer={error ?? "Deleting your account removes your profile, captures, community content, messages, and associated AnimalDex data from our records unless retention is legally required."}>
+            <SettingsSection footer={error ?? w.deleteFooter}>
                 <SettingsDestructiveRow
                     icon={SettingsIcons.trash}
-                    title={busy ? "Deleting Account..." : "Delete Account"}
+                    title={busy ? w.deleting : w.deleteAccount}
                     prominent
                     busy={busy}
                     disabled={busy}
@@ -615,13 +638,11 @@ export function DeleteAccountRow() {
             {confirming ? (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:items-center" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title">
                     <div className="w-full max-w-sm border border-white/10 bg-[#1c1c1c] p-5 text-center">
-                        <h2 id="delete-account-title" className="text-[17px] font-bold text-white">Delete your AnimalDex account?</h2>
-                        <p className="mt-2 text-sm text-white/60">
-                            This permanently deletes your profile and associated AnimalDex data. Active App Store subscriptions must be cancelled from your Apple account. A web subscription can be cancelled from Credits &amp; Unlocks → Manage subscription.
-                        </p>
+                        <h2 id="delete-account-title" className="text-[17px] font-bold text-white">{w.deleteTitle}</h2>
+                        <p className="mt-2 text-sm text-white/60">{w.deleteBody}</p>
                         <div className="mt-5 grid gap-2">
-                            <button type="button" onClick={() => void remove()} className="rounded-full bg-red-500 py-3 text-[15px] font-black text-white">Delete Account</button>
-                            <button type="button" onClick={() => setConfirming(false)} className="rounded-full border border-white/10 py-3 text-[15px] font-bold text-white">Cancel</button>
+                            <button type="button" onClick={() => void remove()} className="rounded-full bg-red-500 py-3 text-[15px] font-black text-white">{w.deleteAccount}</button>
+                            <button type="button" onClick={() => setConfirming(false)} className="rounded-full border border-white/10 py-3 text-[15px] font-bold text-white">{w.cancel}</button>
                         </div>
                     </div>
                 </div>

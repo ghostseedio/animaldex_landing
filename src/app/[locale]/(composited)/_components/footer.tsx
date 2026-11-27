@@ -115,7 +115,7 @@ export default function Footer({t}: {t: ScopedTranslator}) {
 
                 {/* Bottom bar: legal, company, and the return control, on one rule. */}
                 <div className="flex flex-col gap-4 border-t border-line-400 py-6 md:flex-row md:items-center md:justify-between md:gap-8">
-                    <nav aria-label="Legal" className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                    <nav aria-label={t("legalNavigation")} className="flex flex-wrap items-center gap-x-5 gap-y-2">
                         {renderLinks(footerLegalLinks)}
                     </nav>
 

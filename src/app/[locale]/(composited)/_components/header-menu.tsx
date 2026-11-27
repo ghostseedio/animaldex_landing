@@ -41,6 +41,9 @@ type HeaderMenuProps = {
     followLabel: string;
     openMenuLabel: string;
     closeMenuLabel: string;
+    /** The desktop and drawer navs' accessible names. */
+    primaryNavigationLabel?: string;
+    mobileNavigationLabel?: string;
 };
 
 export default function HeaderMenu({
@@ -58,7 +61,9 @@ export default function HeaderMenu({
     navigationLabel,
     followLabel,
     openMenuLabel,
-    closeMenuLabel
+    closeMenuLabel,
+    primaryNavigationLabel = "Primary navigation",
+    mobileNavigationLabel = "Mobile navigation"
 }: HeaderMenuProps) {
     const [open, setOpen] = useState(false);
     // On a species page the drawer's Talk button talks to that animal.
@@ -146,7 +151,7 @@ export default function HeaderMenu({
             {/* Desktop nav: stretched to the full header height so each item's active
                 marker lands on the header's bottom rule. */}
             <nav
-                aria-label="Primary navigation"
+                aria-label={primaryNavigationLabel}
                 className="hidden min-w-0 flex-1 items-stretch justify-start xl:flex"
             >
                 {children}
@@ -171,7 +176,7 @@ export default function HeaderMenu({
                 <nav
                     ref={drawerRef}
                     id="mobile-navigation-drawer"
-                    aria-label="Mobile navigation"
+                    aria-label={mobileNavigationLabel}
                     aria-modal="true"
                     role="dialog"
                     onKeyDown={trapFocus}

@@ -1,4 +1,5 @@
 /* Ported from the apps' supabase/functions/_shared/crisis-helplines.ts (AnimalDex strategy/chat-engine, 2026-11-04): keep the two in step. */
+import { normalizeCountry } from "../request-country";
 /// The fixed reply to a crisis (animal-crisis.ts): the animal steps aside, says
 /// plainly that it is an AI, and gives the person's local emergency number and
 /// helplines. Never written by a model, so it can never be talked out of.
@@ -160,10 +161,8 @@ const LANGUAGE_COUNTRY: Record<string, string> = {
     tagalog: "PH",
 };
 
-function countryCode(value: string | null | undefined): string | null {
-    const code = value?.trim().toUpperCase();
-    return code && /^[A-Z]{2}$/.test(code) ? (code === "UK" ? "GB" : code) : null;
-}
+/** Cloudflare's `XX` (unknown) and `T1` (Tor) are no country, so the next source decides. */
+const countryCode = normalizeCountry;
 
 export function resolveCrisisCountry(params: {
     requestCountry?: string | null;

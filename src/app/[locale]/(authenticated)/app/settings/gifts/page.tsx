@@ -6,6 +6,8 @@ import {getOwnerEndorsedCaptures, getOwnerRatedCaptures, getOwnerSentGiftCapture
 import type {PublicProfileCapture} from "@/data/public-profiles";
 import {formatAnimalDexNumber} from "@/lib/profile-capture-grid";
 import {getLocalePath} from "@/lib/site";
+import {fillSettingsWords} from "@/lib/settings-words";
+import {getSettingsWords} from "@/loaders/settings-words";
 
 export const dynamic = "force-dynamic";
 
@@ -54,33 +56,34 @@ function CaptureGrid({items, label, badge}: {
 export default async function GiftsPage({params}: {params: {locale: string}}) {
     const context = await getAuthenticatedAppContext();
     if (!context) redirect(getLocalePath(params.locale, "/account"));
-    const [gifts, rated, endorsed] = await Promise.all([
+    const [gifts, rated, endorsed, w] = await Promise.all([
         getOwnerSentGiftCaptures(48),
         getOwnerRatedCaptures(48),
-        getOwnerEndorsedCaptures(48)
+        getOwnerEndorsedCaptures(48),
+        getSettingsWords(params.locale)
     ]);
 
     return (
-        <SettingsScreen title="Gifts">
+        <SettingsScreen title={w.gifts} backLabel={w.settings} backAriaLabel={fillSettingsWords(w.backTo, {label: w.settings})}>
             {gifts.length ? (
-                <CaptureGrid items={gifts} label={(capture) => `${capture.animalName}. Sent a Gift`} />
+                <CaptureGrid items={gifts} label={(capture) => fillSettingsWords(w.giftSentLabel, {animal: capture.animalName})} />
             ) : (
-                <p className="px-6 py-14 text-center text-[15px] text-white/60">Gifts you send and ratings you leave will appear here.</p>
+                <p className="px-6 py-14 text-center text-[15px] text-white/60">{w.giftsEmpty}</p>
             )}
             {rated.length ? (
                 <section>
-                    <BandHeader title="Ratings" />
+                    <BandHeader title={w.ratings} />
                     <CaptureGrid
                         items={rated}
-                        label={(capture) => `${capture.animalName}. Rated ${(capture as typeof rated[number]).stars} stars`}
+                        label={(capture) => fillSettingsWords(w.ratedLabel, {animal: capture.animalName, stars: (capture as typeof rated[number]).stars})}
                         badge={(capture) => `${(capture as typeof rated[number]).stars} ★`}
                     />
                 </section>
             ) : null}
             {endorsed.length ? (
                 <section>
-                    <BandHeader title="Endorsements" />
-                    <CaptureGrid items={endorsed} label={(capture) => `${capture.animalName}. Endorsed ${(capture as typeof endorsed[number]).endorsedStat}`} />
+                    <BandHeader title={w.endorsements} />
+                    <CaptureGrid items={endorsed} label={(capture) => fillSettingsWords(w.endorsedLabel, {animal: capture.animalName, stat: (capture as typeof endorsed[number]).endorsedStat})} />
                 </section>
             ) : null}
         </SettingsScreen>

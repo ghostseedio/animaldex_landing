@@ -1,5 +1,6 @@
 "use client";
 
+import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import {useEffect, useSyncExternalStore} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {arkAboardHref, createArkAboardStore, decodeArkAboard, type ArkAboardStore} from "@/lib/ark-aboard";
@@ -47,10 +48,12 @@ function SailboatGlyph() {
 
 /** The chip's look, on its own (the dev fixtures and the tests draw it without a read). */
 export function ArkAboardChipLink({animalId}: {animalId: string}) {
+    // The app shell's words (English outside the shell: the dev fixtures and the tests).
+    const {words} = useAppShellChrome();
     return (
-        <Link href={arkAboardHref(animalId)} className={CHIP} data-testid="discover-aboard-chip" aria-label="Aboard the Ark. Opens the Ark on this animal.">
+        <Link href={arkAboardHref(animalId)} className={CHIP} data-testid="discover-aboard-chip" aria-label={words.arkAboardLabel}>
             <SailboatGlyph />
-            <span>Aboard the Ark</span>
+            <span>{words.arkAboard}</span>
         </Link>
     );
 }

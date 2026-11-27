@@ -15,13 +15,13 @@
 import {useCallback, useEffect, useRef, useState, type CSSProperties} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useOptionalAppCredits} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
+import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
+import type {AppShellWords} from "@/lib/app-shell-words";
 import {giftAttemptKeys} from "@/lib/gift-attempt-keys";
 import {
     giftAccent,
     giftErrorMessage,
     giftImageSrc,
-    GIFTS_COMING_BODY,
-    GIFTS_COMING_TITLE,
     offeredGifts,
     parseGiftCatalog,
     parseGiftSendResult,
@@ -73,6 +73,7 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
     onSent?: (result: GiftSendResult, definition: GiftDefinition) => void;
 }) {
     const credits = useOptionalAppCredits();
+    const {words} = useAppShellChrome();
     const balance = credits?.balance ?? null;
     const [liveCatalog, setLiveCatalog] = useState<GiftCatalog>(catalog);
     const offered = offeredGifts(liveCatalog);
@@ -136,7 +137,7 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
             const json = await response.json().catch(() => ({}));
             if (!response.ok) {
                 const raw = typeof json.error === "string" ? json.error : null;
-                setError(giftErrorMessage(raw));
+                setError(giftErrorMessage(raw, words));
                 if (raw?.toLowerCase().includes("gift_not_available")) void reloadCatalog();
                 return;
             }
@@ -151,7 +152,7 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
             setPhase({kind: "celebrating", result, definition});
             onSent?.(result, definition);
         } catch {
-            setError(giftErrorMessage(null));
+            setError(giftErrorMessage(null, words));
         } finally {
             setSending(false);
         }
@@ -164,7 +165,7 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
             className="theme-dark fixed inset-0 z-50 flex items-end justify-center bg-black/70 md:items-center md:p-4"
             role="dialog"
             aria-modal="true"
-            aria-label="Send a Gift"
+            aria-label={words.giftSend}
             onClick={(event) => {
                 if (event.target === event.currentTarget && !celebrating) close();
             }}
@@ -187,7 +188,7 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
                                 type="button"
                                 onClick={close}
                                 disabled={sending}
-                                aria-label="Close"
+                                aria-label={words.close}
                                 className="grid h-8 w-8 shrink-0 place-items-center text-white/45 transition-colors hover:text-white"
                             >
                                 <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
@@ -198,7 +199,7 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
 
                         {error ? <p className="px-4 pb-2 text-xs font-medium text-red-300" role="alert">{error}</p> : null}
 
-                        {offered.length === 0 ? <GiftsComing /> : null}
+                        {offered.length === 0 ? <GiftsComing words={words} /> : null}
 
                         <div className={`grid min-h-0 flex-1 grid-cols-4 gap-1.5 overflow-y-auto px-2.5 pb-3 ${offered.length === 0 ? "hidden" : ""}`}>
                             {offered.map((definition) => {
@@ -214,7 +215,7 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
                                         <button
                                             type="button"
                                             aria-pressed={isSelected}
-                                            aria-label={`${definition.displayName}, ${definition.creditCost} Credits`}
+                                            aria-label={words.giftOption.replace("{name}", definition.displayName).replace("{cost}", String(definition.creditCost))}
                                             onClick={() => {
                                                 setSelectedId(definition.id);
                                                 setError(null);
@@ -244,7 +245,7 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
                                                     href="/app/credits"
                                                     className="mx-1.5 mb-2 flex h-8 items-center justify-center rounded-[2px] bg-primary-400 text-[13px] font-black text-black"
                                                 >
-                                                    Get Credits
+                                                    {words.giftGetCredits}
                                                 </Link>
                                             ) : (
                                                 <button
@@ -253,7 +254,7 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
                                                     onClick={() => void send(definition)}
                                                     className="mx-1.5 mb-2 flex h-8 items-center justify-center rounded-[2px] bg-primary-400 text-[13px] font-black text-black transition hover:brightness-105 disabled:opacity-70"
                                                 >
-                                                    {sending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/25 border-t-black" aria-label="Sending" /> : "Send"}
+                                                    {sending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/25 border-t-black" aria-label={words.giftSending} /> : words.giftSendButton}
                                                 </button>
                                             )
                                         ) : null}
@@ -263,24 +264,24 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
                         </div>
 
                         <div className="flex items-center gap-3 border-t border-white/[0.06] bg-[#141416] px-4 pb-[max(0.875rem,env(safe-area-inset-bottom))] pt-2.5">
-                            <span className="text-[15px] font-semibold text-white">Gifts</span>
+                            <span className="text-[15px] font-semibold text-white">{words.giftGifts}</span>
                             <span className="flex-1" />
                             {balance != null && offered.length > 0 ? (
                                 <Link
                                     href="/app/credits"
-                                    aria-label={`Credits, ${balance} available`}
+                                    aria-label={words.giftBalanceLink.replace("{balance}", String(balance))}
                                     className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 transition-colors hover:bg-white/[0.14]"
                                 >
                                     <CreditsIcon size={14} />
                                     <span className="text-[13px] font-bold tabular-nums text-white">{(shownBalance ?? balance).toLocaleString()}</span>
-                                    <span className="text-xs font-semibold text-white/70">Credits</span>
+                                    <span className="text-xs font-semibold text-white/70">{words.giftCreditsWord}</span>
                                     <span aria-hidden="true" className="text-[10px] font-bold text-white/45">›</span>
                                 </Link>
                             ) : null}
                         </div>
                     </>
                 ) : (
-                    <GiftCelebration definition={phase.definition} result={phase.result} balance={shownBalance} />
+                    <GiftCelebration definition={phase.definition} result={phase.result} balance={shownBalance} words={words} />
                 )}
             </div>
         </div>
@@ -288,20 +289,20 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
 }
 
 /** Nothing to offer (gifts are dark until Ark care): a calm line, never an upsell. */
-function GiftsComing() {
+function GiftsComing({words}: {words: AppShellWords}) {
     return (
         <div className="flex flex-col items-center gap-3 px-8 pb-8 pt-5 text-center" role="status">
             <span className="grid h-14 w-14 place-items-center rounded-full bg-white/[0.06] text-primary-300" aria-hidden="true">
                 <GiftGlyph className="h-6 w-6" />
             </span>
-            <p className="text-base font-semibold text-white">{GIFTS_COMING_TITLE}</p>
-            <p className="max-w-xs text-sm leading-relaxed text-white/60">{GIFTS_COMING_BODY}</p>
+            <p className="text-base font-semibold text-white">{words.giftsComingTitle}</p>
+            <p className="max-w-xs text-sm leading-relaxed text-white/60">{words.giftsComingBody}</p>
         </div>
     );
 }
 
 /** "Gift sent!": the Gift bursts, the cost rises, the balance counts down (iOS `celebrationContent`). */
-function GiftCelebration({definition, result, balance}: {definition: GiftDefinition; result: GiftSendResult; balance: number | null}) {
+function GiftCelebration({definition, result, balance, words}: {definition: GiftDefinition; result: GiftSendResult; balance: number | null; words: AppShellWords}) {
     const accent = giftAccent(definition.iconKey);
 
     return (
@@ -339,22 +340,22 @@ function GiftCelebration({definition, result, balance}: {definition: GiftDefinit
                 </span>
             </div>
             <div className="flex flex-col gap-1.5">
-                <p className="font-display text-3xl font-bold text-white">Gift sent!</p>
+                <p className="font-display text-3xl font-bold text-white">{words.giftSent}</p>
                 <p className="text-sm font-semibold" style={{color: accent}}>{definition.displayName}</p>
                 {definition.description ? <p className="max-w-xs text-xs text-white/60">{definition.description}</p> : null}
             </div>
             <div className="flex flex-col items-center gap-2.5">
                 <p className="font-display text-3xl font-bold text-orange-400 motion-safe:animate-[giftRise_350ms_ease-out_120ms_both]">
-                    −{result.creditCost} Credits
+                    {words.giftCost.replace("{cost}", String(result.creditCost))}
                 </p>
                 {balance != null ? (
                     <p className="inline-flex items-center gap-2 rounded-full bg-white/[0.08] px-4 py-3 text-xs text-white/60">
-                        Balance
+                        {words.giftBalance}
                         <span className="inline-flex items-center gap-1.5 text-sm font-bold tabular-nums text-primary-300">
                             <CreditsIcon size={14} />
                             {balance.toLocaleString()}
                         </span>
-                        Credits
+                        {words.giftCreditsWord}
                     </p>
                 ) : null}
             </div>

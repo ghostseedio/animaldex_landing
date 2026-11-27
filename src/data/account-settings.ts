@@ -6,7 +6,6 @@ import {isAppFeatureOn} from "@/lib/app-feature-flags";
 import {
     type AccountStanding,
     CURRENCY_PREFERENCE_COOKIE,
-    currencyForLanguage,
     EMPTY_ACCOUNT_STANDING,
     type LocationVisibility,
     PUSH_PREFERENCE_COLUMNS,
@@ -19,6 +18,7 @@ import {
     resolveDisplayCurrency,
     signInMethodLabels
 } from "@/lib/account-settings";
+import {COUNTRY_HEADER, systemCurrencyFor} from "@/lib/request-country";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 /**
@@ -50,9 +50,14 @@ export type SettingsOverview = {
     displayCurrency: string;
 };
 
-/** The locale's currency for "System", from Accept-Language (e.g. en-GB → GBP). */
+/**
+ * The currency for "System": the visitor's country from Cloudflare
+ * (`CF-IPCountry`, so an en-US browser in the UK shows GBP), else the first
+ * Accept-Language tag with a region that has one (en-GB → GBP).
+ */
 function localeCurrency() {
-    return currencyForLanguage(headers().get("accept-language")?.split(",")[0]?.trim() ?? "");
+    const request = headers();
+    return systemCurrencyFor({country: request.get(COUNTRY_HEADER), acceptLanguage: request.get("accept-language")});
 }
 
 export function getCurrencyPreference() {

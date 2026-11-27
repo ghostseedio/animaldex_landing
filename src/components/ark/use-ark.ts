@@ -10,10 +10,11 @@
 import {useEffect, useState} from "react";
 import {
     CURRENCY_PREFERENCE_COOKIE,
-    currencyForLanguage,
     formatDisplayMoney,
+    isSupportedCurrency,
     resolveDisplayCurrency
 } from "@/lib/account-settings";
+import {systemCurrencyFor} from "@/lib/request-country";
 import {
     arkProblemCode,
     decodeArkChange,
@@ -92,17 +93,55 @@ function readCurrencyCookie(): string | null {
     }
 }
 
+const GEO_CURRENCY_KEY = "animaldex-geo-currency";
+
+/** The "System" currency the server worked out from Cloudflare's country (`/api/geo`), once per tab session. */
+async function geoSystemCurrency(): Promise<string | null> {
+    try {
+        const cached = window.sessionStorage.getItem(GEO_CURRENCY_KEY);
+        if (cached) return cached === "-" ? null : cached;
+    } catch {
+        // Storage blocked: ask the server every time.
+    }
+    try {
+        const response = await fetch("/api/geo", {headers: {Accept: "application/json"}, cache: "no-store"});
+        if (!response.ok) return null;
+        const payload = await response.json().catch(() => null) as {currency?: unknown} | null;
+        const currency = typeof payload?.currency === "string" ? payload.currency : null;
+        try {
+            window.sessionStorage.setItem(GEO_CURRENCY_KEY, currency ?? "-");
+        } catch {
+            // Not remembered; harmless.
+        }
+        return currency;
+    } catch {
+        return null;
+    }
+}
+
 /**
- * The reader's display currency (Settings → Currency, else the browser's
- * region, else USD), as the server pages resolve it. `initial` is the
- * server's answer when the page has one; the browser's own read follows.
+ * The reader's display currency (Settings → Currency, else the visitor's
+ * country, else the browser's region, else USD), as the server pages resolve
+ * it. `initial` is the server's answer when the page has one; otherwise the
+ * browser's languages give a first answer and `/api/geo` (Cloudflare's
+ * country) the final one, so a cached page agrees with the server.
  */
 export function useDisplayCurrency(initial?: string | null): string {
     const [currency, setCurrency] = useState(() => initial ?? "USD");
     useEffect(() => {
         if (initial) return;
-        const language = typeof navigator !== "undefined" ? navigator.language : null;
-        setCurrency(resolveDisplayCurrency(readCurrencyCookie() ?? "system", currencyForLanguage(language)));
+        const preference = readCurrencyCookie() ?? "system";
+        const languages = typeof navigator !== "undefined" ? (navigator.languages?.length ? navigator.languages : [navigator.language]) : [];
+        setCurrency(resolveDisplayCurrency(preference, systemCurrencyFor({languages})));
+        // An explicit choice in Settings (even USD) wins; nothing to ask the server.
+        if (isSupportedCurrency(preference)) return;
+        let live = true;
+        void geoSystemCurrency().then((system) => {
+            if (live && system) setCurrency(resolveDisplayCurrency(preference, system));
+        });
+        return () => {
+            live = false;
+        };
     }, [initial]);
     return currency;
 }
