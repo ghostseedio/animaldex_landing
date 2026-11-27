@@ -129,7 +129,25 @@ export const APP_SHELL_WORDS_EN = {
     timelineQuiet: "Timeline is quiet",
     timelineQuietDetail: "Check back soon, or make one of your animals public.",
     noCollectors: "No collectors yet",
-    noCollectorsDetail: "Public collector profiles will appear here as the community grows."
+    noCollectorsDetail: "Public collector profiles will appear here as the community grows.",
+    /** Missions (missions/page.tsx): the board's header, shelves and states; mission titles come from the server. */
+    missionBoard: "MISSION BOARD",
+    missionsTitle: "Credits & milestones",
+    missionsActive: "Active",
+    missionsCompleted: "Completed",
+    missionsReferrals: "Referrals",
+    shelfStarter: "Starter",
+    shelfStarterNote: "Fast wins to teach the capture loop.",
+    shelfProgression: "Progression",
+    shelfProgressionNote: "Build species depth, stat quality, and variety.",
+    shelfAdvanced: "Advanced",
+    shelfAdvancedNote: "Trade-era goals and harder competitive steps.",
+    shelfLegendary: "Legendary",
+    shelfLegendaryNote: "Collector hunts and the hardest animal objectives.",
+    missionUnlocksAt: "Unlocks at {points} collection points ({now} now)",
+    missionLocked: "Locked",
+    missionComplete: "Complete",
+    missionRepeatable: "Repeatable"
 };
 
 export type AppShellWords = typeof APP_SHELL_WORDS_EN;
