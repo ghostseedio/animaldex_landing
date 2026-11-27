@@ -155,8 +155,11 @@ export class BroodDraw implements BroodSink {
         }
         // (Spawn floats at the water's top, and tadpoles keep to the top of the warm shallows: drawn after the water's
         // surfaces (2), as the wakes on it are, so they are seen from above through a hand's depth of clear water.)
+        // (An opaque material is drawn before every transparent one whatever its order, the water among them: the
+        // tadpoles' is marked transparent, at full opacity, to be drawn in that later pass.)
         this.pools.spawn.mesh.renderOrder = 3;
         this.pools.tadpole.mesh.renderOrder = 3;
+        (this.pools.tadpole.mesh.material as MeshStandardMaterial).transparent = true;
     }
 
     begin() {

@@ -88,6 +88,7 @@ for (const name of scenes) {
         const labels = [];
         const hashes = [];
         const states = [];
+        const raw = [];
         for (let i = 0; i < plan.length; i++) {
             // (The `on` run's own views are the others': the same camera before and after.)
             const [note, shown, state] = await page.evaluate(async ([k, given]) => {
@@ -97,6 +98,7 @@ for (const name of scenes) {
             }, [i, mode === "on" ? null : views[name]?.[i] ?? null]);
             if (mode === "on") (views[name] ??= [])[i] = shown;
             states.push(createHash("md5").update(state ?? "").digest("hex"));
+            raw.push(state ?? "");
             labels.push(`${String(i).padStart(2, "0")} ${note.replace(/\n/g, " | ")}`);
             const file = path.join(dir, `${String(i).padStart(2, "0")}.jpg`);
             // (The same frame without the note, hashed: `off` must be `none`'s picture.)
@@ -106,6 +108,8 @@ for (const name of scenes) {
             await page.screenshot({path: file, type: "jpeg", quality: 88});
         }
         writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        // (The scene state each shot hashed, whole: to see what differs when two loads' states do.)
+        writeFileSync(path.join(dir, "states.json"), JSON.stringify(raw.map((r) => JSON.parse(r || "null"))));
         const cols = 4;
         execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(plan.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-${mode === "on" ? "after" : mode === "none" ? "before" : mode}-strip.jpg`)]);
         summary[name][mode] = {errors: errors.slice(0, 10), shots: labels, hashes, states};

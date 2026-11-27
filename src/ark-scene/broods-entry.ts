@@ -333,14 +333,18 @@ async function main() {
             await frames(2);
             handle.setView(shown);
             await frames(3);
-            const sceneNow = (debug as unknown as {scene?: {children: unknown[]; traverse: (f: (o: {type?: string; visible?: boolean; count?: number}) => void) => void}}).scene;
+            const sceneNow = (debug as unknown as {scene?: {children: unknown[]; traverse: (f: (o: {type?: string; name?: string; visible?: boolean; count?: number}) => void) => void}}).scene;
             let objects = 0;
             let instances = 0;
+            // (Which objects, by type and name: to tell what differs when two loads' counts do.)
+            const kinds: Record<string, number> = {};
             sceneNow?.traverse((o) => {
                 objects++;
+                const kind = `${o.type ?? "?"}:${o.name ?? ""}`;
+                kinds[kind] = (kinds[kind] ?? 0) + 1;
                 if (o.type === "InstancedMesh" && o.visible) instances += o.count ?? 0;
             });
-            api.lastState = JSON.stringify({objects, instances, entries: debug.entries().map((e) => { const at = handle.locate(e.animal.id); return [e.animal.id, at ? [at.x.toFixed(2), at.y.toFixed(2), at.z.toFixed(2)] : null, e.act ? String(e.act.state) : null]; })});
+            api.lastState = JSON.stringify({objects, instances, kinds: Object.entries(kinds).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)), entries: debug.entries().map((e) => { const at = handle.locate(e.animal.id); return [e.animal.id, at ? [at.x.toFixed(2), at.y.toFixed(2), at.z.toFixed(2)] : null, e.act ? String(e.act.state) : null]; })});
             const state = debug.broods();
             const row = state?.broods[0];
             const acts = debug.entries().filter((e) => e.act).map((e) => `${e.animal.model_slug}${e.animal.id.startsWith("brood:") ? `#${e.animal.id.slice(-1)}` : ""} ${String(e.act!.state ?? "")}${e.act!.hidden ? " hidden" : ""}${Number(e.act!.scale) < 1 ? ` scale ${Number(e.act!.scale).toFixed(2)}` : ""}`);
