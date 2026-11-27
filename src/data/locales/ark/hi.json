@@ -337,7 +337,10 @@
             "laidCountOne": "अंडों का 1 समूह",
             "laidCountOther": "अंडों के {count} समूह",
             "hatchedCountOne": "1 अंडे से निकला",
-            "hatchedCountOther": "{count} अंडों से निकले"
+            "hatchedCountOther": "{count} अंडों से निकले",
+            "deathUnknown": "{animal} मर गया। कारण पता नहीं है",
+            "deathsUnknownOne": "1 मौत, कारण पता नहीं",
+            "deathsUnknownOther": "{count} मौतें, कारण पता नहीं"
         },
         "capture": {
             "aboardOne": "Ark में: 1 {animal} सवार",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: घोंसले के लिए पत्तों को जोड़ना",
             "escapedWounded": "{aPrey} {aPredator} से घायल होकर बच निकला और छिपकर आराम कर रहा है",
             "rescued": "{aAnimal} को भुखमरी की हालत में पाया गया और देखभाल में ले लिया गया",
-            "lostHome": "{aAnimal} का घर छिन गया: उसका जंगल काट दिया गया"
+            "lostHome": "{aAnimal} का घर छिन गया: उसका जंगल काट दिया गया",
+            "deathUnknownOther": "{count} {animals} मर गए, कारण पता नहीं",
+            "closeCall": "{aAnimal} की जान पर बन आई थी। कारण पता नहीं है। पर जान बच गई"
         },
         "card": {
             "now": "अभी: {activity}",

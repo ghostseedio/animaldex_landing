@@ -337,7 +337,10 @@
             "laidCountOne": "1 kuluçka",
             "laidCountOther": "{count} kuluçka",
             "hatchedCountOne": "1 yumurtadan çıkış",
-            "hatchedCountOther": "{count} yumurtadan çıkış"
+            "hatchedCountOther": "{count} yumurtadan çıkış",
+            "deathUnknown": "{animal} öldü. Nedeni bilinmiyor",
+            "deathsUnknownOne": "1 ölüm, nedeni bilinmiyor",
+            "deathsUnknownOther": "{count} ölüm, nedeni bilinmiyor"
         },
         "capture": {
             "aboardOne": "Ark'ta: gemide 1 {animal}",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: yuva için yaprakları birleştirme",
             "escapedWounded": "{aPrey} yaralı kaçıp kurtuldu, saklanıp dinleniyor; kovalayan: {aPredator}",
             "rescued": "{aAnimal} açlıktan ölmek üzereyken bulundu ve bakıma alındı",
-            "lostHome": "{aAnimal} evini kaybetti: ormanı kesildi"
+            "lostHome": "{aAnimal} evini kaybetti: ormanı kesildi",
+            "deathUnknownOther": "{count} {animals} öldü, nedeni bilinmiyor",
+            "closeCall": "{aAnimal} ölümün eşiğine geldi. Nedeni bilinmiyor. Kurtuldu"
         },
         "card": {
             "now": "Şimdi: {activity}",

@@ -142,6 +142,14 @@ export type ArkEvent = {
      */
     rescued?: true;
     /**
+     * AGE-RISK (AnimalDex docs/ark/age-risk.md, behind the server's `age_risk`): a `death_old` row whose cause the Ark does not
+     * know (`unknown: true`: it died by its clock, but the clock cannot be called old age), and one that was a survived close call
+     * (`closeCall: true`, with `unknown` and `lives` not final): nothing died, a heart was spent and it lies up. Said "died,
+     * cause not known" and "came close to dying; the cause is not known; it pulled through", never "of old age".
+     */
+    unknown?: true;
+    closeCall?: true;
+    /**
      * REAL-REPRODUCTION (AnimalDex decision 440, behind the server's `real_reproduction`): a `mated` row's way of breeding
      * (`payload.way`: broadcast, brooding, spawn_pair, amplexus, male_pregnancy...), a birth's `alone` (a split or a bud
      * off one parent) or `pouch` (from a father's pouch). Absent with it off, or when the read sends no payload.
@@ -316,6 +324,8 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
         const livesSource = livesRow ? (kind === "revived" ? livesRow : {lives: livesRow}) : payload;
         // (A rescue, `fed` with `rescued`: found starving, taken into care; its hearts left ride on it as a death's do.)
         const rescued = kind === "fed" && (row.rescued === true || payload.rescued === true);
+        const closeCall = kind === "death_old" && (row.closeCall === true || payload.closeCall === true);
+        const unknownCause = kind === "death_old" && (closeCall || row.unknown === true || payload.unknown === true);
         const lives = kind === "revived" || kind === "eaten" || kind === "death_old" || kind === "starved" || rescued ? decodeArkEventLives(kind, livesSource) : null;
         const way = payload.pouch === true || row.pouch === true ? "pouch" : text(row.way ?? payload.way, 24);
         // ARK-LOG-FOOD: where it happened (the read's `place`, or a payload that carries it); else the animal as it is now.
@@ -342,6 +352,8 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             ...(kind === "meal" && (encounter?.web || row.trap === "web" || payload.trap === "web") ? {web: true as const} : {}),
             ...(lives ? {lives} : {}),
             ...(rescued ? {rescued: true as const} : {}),
+            ...(unknownCause ? {unknown: true as const} : {}),
+            ...(closeCall ? {closeCall: true as const} : {}),
             ...(way && (kind === "mated" || kind === "birth") ? {way} : {}),
             ...(place ? {place} : {})
         });
@@ -367,10 +379,10 @@ export type ArkAct =
     /** `encounter`: under encounter hunting, where the hunter found its prey (the chase runs between those places). */
     | {kind: "meal"; at: string; predator: ArkEventAnimal; prey: ArkEventAnimal; phrase: string | null; extinct: boolean; encounter?: ArkMealEncounter; /** ARK-WEBS: caught in its web (`ArkEvent.web`). */ web?: true; /** SIG-EVENTS: the engine saved this catch as a cache (`signature` food_cache by the predator just after it): carried off and buried, not eaten. */ cached?: boolean}
     /** Old age, or (`starved`) long hunger: acted out quietly, it lies still and fades, never a chase. */
-    | {kind: "death"; at: string; animal: ArkEventAnimal; cause: "old" | "starved"; extinct: boolean}
+    | {kind: "death"; at: string; animal: ArkEventAnimal; cause: "old" | "starved"; extinct: boolean; /** AGE-RISK: a clock death the Ark cannot call old age (`ArkEvent.unknown`): said "died, cause not known". */ unknown?: true}
     | {kind: "extinction"; at: string; species: string};
 
-export type ArkReplaySummary = {arrivals: number; births: number; meals: number; deaths: number; starved: number; extinctions: number; /** Clutches laid (A9). */ laid: number; /** Of the births, the young that hatched. */ hatched: number};
+export type ArkReplaySummary = {arrivals: number; births: number; meals: number; deaths: number; /** AGE-RISK: deaths whose cause is not known (not counted in `deaths`, which are of old age). */ unknownDeaths?: number; starved: number; extinctions: number; /** Clutches laid (A9). */ laid: number; /** Of the births, the young that hatched. */ hatched: number};
 
 export type ArkReplayPlan = {acts: ArkAct[]; summary: ArkReplaySummary; total: number};
 
@@ -437,10 +449,13 @@ export function planArkReplay(events: ArkEvent[], maxActs = ARK_REPLAY_MAX_ACTS)
             }
             case "death_old":
             case "starved": {
+                // A survived close call (AGE-RISK, `closeCall`): nothing died, so it is neither counted nor acted as a death.
+                if (event.closeCall) break;
                 if (event.kind === "starved") summary.starved++;
+                else if (event.unknown) summary.unknownDeaths = (summary.unknownDeaths ?? 0) + 1;
                 else summary.deaths++;
                 if (!event.animal) break;
-                const act = {kind: "death" as const, at: event.at, animal: event.animal, cause: event.kind === "starved" ? "starved" as const : "old" as const, extinct: false};
+                const act = {kind: "death" as const, at: event.at, animal: event.animal, cause: event.kind === "starved" ? "starved" as const : "old" as const, extinct: false, ...(event.unknown ? {unknown: true as const} : {})};
                 endedBy.set(event.animal.species_profile_id || event.animal.model_slug, act);
                 acts.push(act);
                 break;
@@ -472,7 +487,7 @@ export function planArkReplay(events: ArkEvent[], maxActs = ARK_REPLAY_MAX_ACTS)
 
 /** Nothing worth a replay or a summary. */
 export function isQuietArkReplay(summary: ArkReplaySummary): boolean {
-    return summary.arrivals + summary.births + summary.meals + summary.deaths + summary.starved + summary.extinctions + summary.laid === 0;
+    return summary.arrivals + summary.births + summary.meals + summary.deaths + (summary.unknownDeaths ?? 0) + summary.starved + summary.extinctions + summary.laid === 0;
 }
 
 /** The clutch a hatch came from, when it was laid in the same replay (the same parent's latest before it). */

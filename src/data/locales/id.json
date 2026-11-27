@@ -4547,7 +4547,10 @@
       "laidCountOne": "1 sarang telur",
       "laidCountOther": "{count} sarang telur",
       "hatchedCountOne": "1 menetas",
-      "hatchedCountOther": "{count} menetas"
+      "hatchedCountOther": "{count} menetas",
+      "deathUnknown": "{animal} mati. Penyebabnya tidak diketahui",
+      "deathsUnknownOne": "1 mati, penyebab tidak diketahui",
+      "deathsUnknownOther": "{count} mati, penyebab tidak diketahui"
     },
     "capture": {
       "aboardOne": "Di Ark: 1 {animal}",
@@ -4714,7 +4717,9 @@
       "antWeave": "{animals}: menarik daun bersama untuk sarang",
       "escapedWounded": "{aPrey} lolos dari {aPredator}, terluka, dan kini beristirahat",
       "rescued": "{aAnimal} ditemukan kelaparan dan dibawa ke perawatan",
-      "lostHome": "{aAnimal} kehilangan rumahnya: hutannya ditebang"
+      "lostHome": "{aAnimal} kehilangan rumahnya: hutannya ditebang",
+      "deathUnknownOther": "{count} {animals} mati, penyebab tidak diketahui",
+      "closeCall": "{aAnimal} nyaris mati. Penyebabnya tidak diketahui. Ia selamat"
     },
     "card": {
       "now": "Sekarang: {activity}",

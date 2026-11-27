@@ -81,6 +81,11 @@ export type ArkLiveItem = {
      */
     hurt?: true;
     lost?: true;
+    /**
+     * AGE-RISK (docs/ark/age-risk.md, behind the server's `age_risk`): a clock death the Ark cannot call old age ("died, cause not
+     * known"), never folded with the deaths of old age. A survived close call is its own line, `say: "closeCall"` (`hearts-lines.ts`).
+     */
+    unknown?: true;
     /** A human's old-age death (decision 442): said gently, "died peacefully of old age". */
     peaceful?: boolean;
     /** REAL-REPRODUCTION (decision 440): a breeding said its kind's own way (a spawning night, a pair's spawn, amplexus, a father's pouch, a split). */
@@ -91,7 +96,7 @@ export type ArkLiveItem = {
     web?: boolean;
     /** A kind's dormant season beginning or ending (`src/ark-scene/live/dormancy-lines.ts`): said with its own words. */
     /** (`signature`: a saved signature move, AnimalDex SIG-EVENTS, `src/ark-scene/live/signature-events.ts`.) */
-    say?: "dormant" | "woke" | "escaped" | "rescued" | "deforested" | "dated" | "moved_in" | "released" | "signature" | "cacheRehidden" | "cacheStolen" | "mate_found";
+    say?: "dormant" | "woke" | "escaped" | "rescued" | "closeCall" | "deforested" | "dated" | "moved_in" | "released" | "signature" | "cacheRehidden" | "cacheStolen" | "mate_found";
     /** A species' own sentence for what it is seen doing (`src/ark-scene/live/signature-lines.ts`): said as it is. */
     line?: string;
     /**
@@ -169,7 +174,13 @@ export function arkLiveServerItems(events: readonly ArkEvent[]): ArkLiveItem[] {
                 if (!animal) break;
                 // One it recovers from is its own line (never folded into "3 died of old age"), with its hearts left.
                 const hearts = event.lives && !event.lives.final ? event.lives.heartsLeft : undefined;
-                items.push({id: event.id, kind: event.kind === "starved" ? "starved" : "death", source: "server", key: `${event.kind}:${speciesOf(animal)}${hearts !== undefined ? `:h${animal.id}` : ""}`, animal: animal.name, other: null, count: 1, eggs: null, ...(hearts !== undefined ? {hearts} : {}), ...(event.kind === "death_old" && animal.model_slug === "human" ? {peaceful: true} : {}), focus: {...focusOn(animal), animalId: null}});
+                // AGE-RISK: a survived close call is not a death: its own line, alive (`hearts-lines.ts` says it). One whose cause the Ark does not know is said so, never as old age.
+                if (event.kind === "death_old" && event.closeCall) {
+                    items.push({id: event.id, kind: "revived", say: "closeCall", source: "server", key: `closeCall:${speciesOf(animal)}:${animal.id}`, animal: animal.name, other: null, count: 1, eggs: null, ...(hearts !== undefined ? {hearts} : {}), focus: focusOn(animal)});
+                    break;
+                }
+                const unknown = event.kind === "death_old" && event.unknown === true;
+                items.push({id: event.id, kind: event.kind === "starved" ? "starved" : "death", source: "server", key: `${unknown ? "death_unknown" : event.kind}:${speciesOf(animal)}${hearts !== undefined ? `:h${animal.id}` : ""}`, animal: animal.name, other: null, count: 1, eggs: null, ...(hearts !== undefined ? {hearts} : {}), ...(unknown ? {unknown: true as const} : {}), ...(event.kind === "death_old" && animal.model_slug === "human" ? {peaceful: true} : {}), focus: {...focusOn(animal), animalId: null}});
                 break;
             }
             case "revived":
@@ -448,7 +459,7 @@ function isEnglish(locale: string): boolean {
 }
 
 /** A line as the reader reads it. `locale`: the words' language (English names take their plural). */
-export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young" | "peaceful" | "way">>, words: ArkLiveText, locale: string): string {
+export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young" | "peaceful" | "way" | "unknown">>, words: ArkLiveText, locale: string): string {
     const text = arkLiveLineBase(line, words, locale);
     const hearts = line.hearts;
     if (typeof hearts !== "number" || line.kind === "revived" || (line.kind !== "meal" && line.kind !== "death" && line.kind !== "starved")) return text;
@@ -465,6 +476,9 @@ export function arkLiveWayOf(way: string | undefined): ArkLiveWay | null {
 
 /** (Their English is `ARK_LIVE_ENGLISH`'s, as en.json has it.) */
 export const ARK_LIVE_WAY_ENGLISH = ARK_LIVE_ENGLISH as Required<Pick<typeof ARK_LIVE_ENGLISH, ArkLiveWay>>;
+
+/** AGE-RISK: a single death whose cause is not known (`ark.replay.deathUnknown`), the fallback under a language without it. */
+const ARK_REPLAY_UNKNOWN_ENGLISH = "The {animal} died. The cause is not known";
 
 const ARK_LIVE_HEARTS_ENGLISH = {
     heartsLeftOne: "1 ♥ left",
@@ -484,7 +498,7 @@ export function arkHeartsLeftText(hearts: number, words: ArkLiveText, locale: st
     return n === 0 ? live.heartsLeftNone : n === 1 ? live.heartsLeftOne : fillArkWords(live.heartsLeftOther, {n: n.toLocaleString(locale)});
 }
 
-function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young" | "peaceful" | "way">>, words: ArkLiveText, locale: string): string {
+function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young" | "peaceful" | "way" | "unknown">>, words: ArkLiveText, locale: string): string {
     const live = words.live;
     // REAL-REPRODUCTION (decision 440): its kind's own way, in its own words (no verb that agrees with a number).
     if (line.way && (line.kind === "mated" || line.kind === "birth" || line.kind === "hatched")) {
@@ -554,6 +568,8 @@ function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "
             if (typeof line.hearts === "number" && line.other) return fillArkWords(live.eatenBy ?? ARK_LIVE_HEARTS_ENGLISH.eatenBy, {animal: line.other, aPredator: arkWithArticle(line.animal, words)});
             return times(fillArkWords(replay.meal, {predator: line.animal, aPrey: arkWithArticle(line.other ?? "", words)}));
         case "death":
+            // AGE-RISK: the Ark does not know what ended it: never "of old age".
+            if (line.unknown) return many ? fillArkWords(live.deathUnknownOther ?? ARK_LIVE_ENGLISH.deathUnknownOther!, {count, animals}) : fillArkWords(replay.deathUnknown ?? ARK_REPLAY_UNKNOWN_ENGLISH, {animal: line.animal});
             if (line.peaceful) return many ? fillArkWords(live.deathPeacefulOther ?? "{count} {animals} died peacefully of old age", {count, animals}) : fillArkWords(replay.deathPeaceful ?? "The {animal} died peacefully of old age", {animal: line.animal});
             return many ? fillArkWords(live.deathOther, {count, animals}) : fillArkWords(replay.death, {animal: line.animal});
         case "starved":

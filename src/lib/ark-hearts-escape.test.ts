@@ -6,14 +6,15 @@ import {ARK_HEARTS_ENGLISH, arkHeartsWords, arkLivesText, arkRecoveringText, dec
 import {arkHeartsEscape, arkHeartsVariant, arkOldAgeFinal, decodeArkHeartsRules, type ArkHeartsRules} from "./ark-hearts-rules";
 import {arkLiveLineText, arkLiveServerItems, type ArkLiveText} from "./ark-live-log";
 import {ARK_LIVE_ENGLISH} from "./ark-live-words";
-import {decodeArkEvents} from "./ark-life";
+import {decodeArkEvents, planArkReplay} from "./ark-life";
+import {arkReadEvents} from "./ark-rankings";
 import {arkReleaseWords, ARK_RELEASE_ENGLISH} from "./ark-release";
 import {arkSurvivalHeartsWords} from "./ark-rankings-words";
 import {companionWords, companionWordsForHearts} from "./companion-bond";
 import {arkMomentText} from "./ark-life-so-far";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
 import {forestItems, forestText} from "@/ark-scene/live/forest-lines";
-import {heartsNotes, rescueItems, rescueText} from "@/ark-scene/live/hearts-lines";
+import {closeCallRow, closeCallText, heartsNotes, rescueItems, rescueText} from "@/ark-scene/live/hearts-lines";
 import {planArkEventReplay} from "@/ark-scene/replay/event-replay";
 import {arkReplayText} from "@/ark-scene/replay/text";
 import {arkSeenGroup} from "@/ark-scene/seen/live-cast";
@@ -307,4 +308,103 @@ test("every Ark language has the hearts-escape words, with the same placeholders
         for (const key of ["title", "p1", "p2", "p2Old"]) assert.ok(file.pages.howItWorks.hearts[key].length > 20, `${lang} howItWorks.hearts.${key}`);
         for (const key of ["arkTitleEscape", "arkLifeEscape", "arkLivesEscape", "arkNoneEscape", "arkNoteEscape", "arkNoteEscapeOld"]) assert.equal(typeof file.companions.heal[key], "string", `${lang} companions.heal.${key}`);
     }
+});
+
+// AGE-RISK (docs/ark/age-risk.md): what the public read sends for a clock death the Ark cannot call old age, and a survived close call.
+const unknownDeath = row(21, "death_old", {animal: vole(21, {status: "died_old"}), unknown: true});
+const unknownDeath2 = row(22, "death_old", {animal: vole(22, {status: "died_old"}), unknown: true});
+const oldAgeDeath = row(23, "death_old", {animal: vole(23, {status: "died_old"})});
+const closeCall = row(24, "death_old", {animal: vole(24), unknown: true, closeCall: true, lives: {heartsLeft: 2, returnsDay: 600}});
+const closeCallLast = row(25, "death_old", {animal: vole(25), unknown: true, closeCall: true, lives: {heartsLeft: 0, returnsDay: 600}});
+
+test("age risk: a death whose cause is not known is said so, never as old age, and never folded with the deaths of old age", () => {
+    const events = decodeArkEvents({events: [unknownDeath, oldAgeDeath, closeCall]}, null);
+    const byId = new Map(events.map((e) => [e.id, e]));
+    assert.equal(byId.get("21")?.unknown, true);
+    assert.equal(byId.get("21")?.closeCall, undefined);
+    assert.equal(byId.get("23")?.unknown, undefined);
+    assert.equal(byId.get("24")?.closeCall, true);
+    assert.equal(byId.get("24")?.unknown, true, "a close call is one whose cause is not known");
+    const items = arkLiveServerItems(events);
+    const unknown = items.find((i) => i.id === "21")!;
+    const old = items.find((i) => i.id === "23")!;
+    assert.equal(unknown.unknown, true);
+    assert.notEqual(unknown.key, old.key);
+    assert.equal(arkLiveLineText(unknown, words, "en"), "The Field Vole died. The cause is not known");
+    assert.equal(arkLiveLineText({...unknown, count: 3}, words, "en"), "3 Field Voles died, cause not known");
+    assert.equal(arkLiveLineText(old, words, "en"), "The Field Vole died of old age", "a death of old age is as it was");
+    assert.equal(/old age/.test(arkLiveLineText({...unknown, count: 2}, words, "en") + arkLiveLineText(unknown, words, "en")), false);
+    // The same row with a heart (old age that still returns): its tail as a death's has it.
+    const withHeart = arkLiveServerItems(decodeArkEvents({events: [row(26, "death_old", {animal: vole(26), unknown: true, lives: {heartsLeft: 1, returnsDay: 600}})]}, null))[0];
+    assert.equal(arkLiveLineText(withHeart, words, "en"), "The Field Vole died. The cause is not known · 1 ♥ left");
+});
+
+test("age risk: a survived close call is its own line, alive, with its hearts, and no death", () => {
+    const events = decodeArkEvents({events: [closeCall, closeCallLast]}, null);
+    const items = arkLiveServerItems(events);
+    assert.deepEqual(items.map((i) => [i.say, i.kind, i.hearts]), [["closeCall", "revived", 2], ["closeCall", "revived", 0]]);
+    assert.equal(closeCallText(items[0], words, "en"), "A Field Vole came close to dying. The cause is not known. It pulled through · 2 ♥ left");
+    assert.equal(closeCallText(items[1], words, "en"), "A Field Vole came close to dying. The cause is not known. It pulled through · no ♥ left");
+    assert.equal(closeCallText({animal: "Field Vole", say: "closeCall"}, words, "en"), "A Field Vole came close to dying. The cause is not known. It pulled through");
+    assert.equal(closeCallText({animal: "Field Vole", say: "rescued"}, words, "en"), null);
+    assert.equal(closeCallRow(closeCall), true);
+    assert.equal(closeCallRow(unknownDeath), false);
+    assert.equal(closeCallRow(row(30, "escaped", {closeCall: true})), false);
+    assert.equal(closeCallRow({kind: "death_old", payload: {closeCall: true}}), true);
+    // Its own log line (the animal's card, "Its day").
+    assert.deepEqual(heartsNotes({events: [closeCall, unknownDeath]}, words, "en").map((n) => [n.animalId, n.text]), [[id(24), "A Field Vole came close to dying. The cause is not known. It pulled through · 2 ♥ left"]]);
+});
+
+test("age risk: the replay counts a death of unknown cause apart, a close call not at all, and says each", () => {
+    const events = decodeArkEvents({events: [unknownDeath, unknownDeath2, oldAgeDeath, closeCall]}, null);
+    const plan = planArkReplay(events);
+    assert.equal(plan.summary.deaths, 1);
+    assert.equal(plan.summary.unknownDeaths, 2);
+    const deaths = plan.acts.filter((a) => a.kind === "death");
+    assert.equal(deaths.length, 3, "a close call is no death act");
+    assert.deepEqual(deaths.map((a) => (a as {unknown?: boolean}).unknown === true), [true, true, false]);
+    const snapshot: ArkSnapshot = {voyage: {slug: "first", name: "Ark", started_at: null}, counts: {animals: 0, species: 0, founders: 0}, zones: [], animals: [], as_of: at, ark_day: 472};
+    const log = {events: [unknownDeath, oldAgeDeath, closeCall]};
+    const now = Date.parse(at) + 600_000;
+    const unknown = planArkEventReplay("21", log, snapshot, {now});
+    assert.equal(unknown.unknownCause, true);
+    assert.equal(arkReplayText(unknown, null, "en").headline, "The Field Vole died. The cause is not known");
+    const old = planArkEventReplay("23", log, snapshot, {now});
+    assert.equal(old.unknownCause, undefined);
+    assert.equal(arkReplayText(old, null, "en").headline, "The Field Vole died of old age");
+    assert.throws(() => planArkEventReplay("24", log, snapshot, {now}), /close call/);
+    // A close call is no cast either: nothing died, nobody is brought in for a dying act.
+    assert.equal(arkSeenGroup("24", log, snapshot, now), null);
+});
+
+test("the log's flows count a wounded escape and a rescue as leaving, so their return is not an extra animal", () => {
+    const flows = (rows: unknown[]) => arkReadEvents({events: rows}).flows.map((f) => f.delta);
+    assert.deepEqual(flows([wounded, plain, rescue, feed, back]), [-1, -1, 1], "a plain miss and an ordinary feed are not flows; the return is +1");
+    assert.deepEqual(arkReadEvents({events: [wounded, rescue]}).falls, [], "and neither is a death");
+    assert.deepEqual(flows([plain, feed]), []);
+});
+
+test("Life so far: a survived close call and a death of unknown cause are said as they are", () => {
+    const base = {id: "x", at: Date.parse(at), arkDay: 1, island: null, area: null};
+    assert.equal(arkMomentText({...base, kind: "close_call"}), "Came close to dying, and pulled through");
+    assert.equal(arkMomentText({...base, kind: "died", way: "unknown"}), "Died, cause not known");
+    assert.equal(arkMomentText({...base, kind: "died", way: "death_old"}), "Died of old age");
+});
+
+test("every Ark language has the age-risk words, with the same placeholders", () => {
+    const dir = path.join(locales, "ark");
+    const all = [path.join(locales, "en.json"), path.join(locales, "id.json"), ...readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => path.join(dir, f))];
+    assert.equal(all.length, 45);
+    const holes = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort().join(",");
+    const spec: Array<[string, string[]]> = [["live", ["deathUnknownOther", "closeCall"]], ["replay", ["deathUnknown", "deathsUnknownOne", "deathsUnknownOther"]]];
+    for (const file of all) {
+        const ark = JSON.parse(readFileSync(file, "utf8")).ark;
+        for (const [group, keys] of spec) for (const key of keys) {
+            assert.equal(typeof ark[group]?.[key], "string", `${file} ark.${group}.${key}`);
+            assert.equal(holes(ark[group][key]), holes(english.ark[group][key]), `${file} ark.${group}.${key} placeholders`);
+        }
+        assert.equal(/[.。]$/.test(ark.live.closeCall.trim()), false, `${file}: the close call line ends with no full stop (a hearts tail may follow)`);
+    }
+    assert.equal(ARK_LIVE_ENGLISH.deathUnknownOther, english.ark.live.deathUnknownOther);
+    assert.equal(ARK_LIVE_ENGLISH.closeCall, english.ark.live.closeCall);
 });

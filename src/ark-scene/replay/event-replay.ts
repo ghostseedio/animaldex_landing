@@ -76,6 +76,8 @@ export type ArkEventReplay = {
     causeEventId: string | null;
     /** What the plan could not find (a parent with no record in the log given): said in the recorder's log, never hidden. */
     notes: string[];
+    /** On a death: the Ark does not know its cause (AGE-RISK `unknown`): the headline says "cause not known", never old age. */
+    unknownCause?: true;
 };
 
 /** Why an event cannot be replayed: `code` for the caller, the message for a person. */
@@ -133,6 +135,8 @@ export function planArkEventReplay(eventId: string | number, raw: unknown, snaps
     if (!row || !wanted) throw new ArkReplayUnavailable("unknown_event", `Event ${wanted || "(none)"} is not in the event log that was read (the public log reaches 30 days back, released events only)`);
     const atMs = timeOf(row);
     const rowKind = typeof row.kind === "string" ? row.kind : "";
+    // A survived close call (AGE-RISK `closeCall`) is a `death_old` row, but nothing died: there is no dying act to replay.
+    if (rowKind === "death_old" && (row.closeCall === true || rowOf(row.payload)?.closeCall === true)) throw new ArkReplayUnavailable("not_replayable", `Event ${wanted} is a close call that was survived: nothing died, so there is no death to replay`);
     const kind = KIND_OF[rowKind];
     if (!kind) throw new ArkReplayUnavailable("not_replayable", `Event ${wanted} is "${rowKind}": only ${Object.keys(KIND_OF).join(", ")} are replayed`);
     // No look-ahead: an event not yet released is never in the public read; one dated after now is refused all the same.
@@ -206,7 +210,8 @@ export function planArkEventReplay(eventId: string | number, raw: unknown, snaps
             if (!own.animal) return none("does not name its animal");
             // (V1: the dying act begins once the record is out, `ark-act-hold.ts`, as the live world acts it.)
             const from = arkActStart(t0);
-            return {...base, t0: from, cast: [member("subject", own.animal)], marks: [], feed: {deaths: [{key: `death:${wanted}`, animal: own.animal, t0: from, ...(rowKind === "starved" ? {cause: "starved" as const} : {})}]}};
+            const unknown = rowKind === "death_old" && (row.unknown === true || rowOf(row.payload)?.unknown === true);
+            return {...base, t0: from, cast: [member("subject", own.animal)], marks: [], ...(unknown ? {unknownCause: true as const} : {}), feed: {deaths: [{key: `death:${wanted}`, animal: own.animal, t0: from, ...(rowKind === "starved" ? {cause: "starved" as const} : {})}]}};
         }
         case "extinct": {
             // The row that ended the kind: its last death or the meal its last one was eaten in, at or just before the extinction.

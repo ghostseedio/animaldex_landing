@@ -17,7 +17,7 @@ import {decodeArkEvents} from "@/lib/ark-life";
 import {arkLiveLineText} from "@/lib/ark-live-log";
 import {crisisText} from "@/ark-scene/live/crisis-lines";
 import {escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
-import {rescueItems, rescueText} from "@/ark-scene/live/hearts-lines";
+import {closeCallText, rescueItems, rescueText} from "@/ark-scene/live/hearts-lines";
 import {arkLiveTextOf, arkSeenWordsOf, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
 import {arkSeenStateText, arkSeenStates} from "@/ark-scene/seen/hooks";
 import {ARK_LITE_FEED_BACK_MS, ARK_LITE_FEED_LONG, ARK_LITE_FEED_POLL_MS, ARK_LITE_FEED_SHORT, arkLiteFeedFromEvents, arkLiteFeedLines, arkLiteFeedMerge, arkLiteFeedSeed, type ArkLiteFeedEntry} from "@/lib/ark-lite-feed";
@@ -273,7 +273,7 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
             const item = el("li", `arkl-ev${fresh ? " new" : ""}`);
             item.appendChild(icon("i", line.slug, options.iconUrl));
             // (V1: an escape's own words, both animals named, as the 3D log says it; E4: the crisis layer's.)
-            item.appendChild(el("span", "t", crisisText(line.item, text) ?? escapeText(line.item, text, locale) ?? rescueText(line.item, text, locale) ?? arkLiveLineText(line.item, text, locale)));
+            item.appendChild(el("span", "t", crisisText(line.item, text) ?? escapeText(line.item, text, locale) ?? rescueText(line.item, text, locale) ?? closeCallText(line.item, text, locale) ?? arkLiveLineText(line.item, text, locale)));
             item.appendChild(el("span", "ago", arkAgoText(line.at, now, locale)));
             list.appendChild(item);
         }

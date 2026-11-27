@@ -337,7 +337,10 @@
             "laidCountOne": "kundi 1 la mayai",
             "laidCountOther": "makundi {count} ya mayai",
             "hatchedCountOne": "aliyeanguliwa 1",
-            "hatchedCountOther": "walioanguliwa {count}"
+            "hatchedCountOther": "walioanguliwa {count}",
+            "deathUnknown": "{animal} alikufa. Sababu haijulikani",
+            "deathsUnknownOne": "kifo 1, sababu haijulikani",
+            "deathsUnknownOther": "vifo {count}, sababu haijulikani"
         },
         "capture": {
             "aboardOne": "Ndani ya Ark: {animal} 1",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: kuvuta majani pamoja kwa kiota",
             "escapedWounded": "{aPrey} alimtoroka {aPredator} akiwa amejeruhiwa, na amejificha kupumzika",
             "rescued": "{aAnimal} alipatikana akiwa na njaa kali, akapelekwa kutunzwa",
-            "lostHome": "{aAnimal} alipoteza makazi yake: miti ya msitu wake ilikatwa"
+            "lostHome": "{aAnimal} alipoteza makazi yake: miti ya msitu wake ilikatwa",
+            "deathUnknownOther": "{animals} {count} walikufa, sababu haijulikani",
+            "closeCall": "{aAnimal} alikaribia kufa. Sababu haijulikani. Hata hivyo, alinusurika"
         },
         "card": {
             "now": "Sasa: {activity}",

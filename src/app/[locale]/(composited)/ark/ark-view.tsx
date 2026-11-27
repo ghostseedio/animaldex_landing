@@ -199,7 +199,8 @@ function actCaption(act: ArkAct, words: ArkWords, locale: string, animals: ArkAn
                 + (act.phrase ? ` · ${fillArkWords(w.mealPhrase, {phrase: act.phrase})}` : "")
                 + gone(act.prey.name, act.extinct);
         case "death":
-            return fillArkWords(act.cause === "starved" ? w.starved : arkIsHuman(act.animal) ? w.deathPeaceful ?? "The {animal} died peacefully of old age" : w.death, {animal: act.animal.name}) + gone(act.animal.name, act.extinct);
+            // (AGE-RISK: a clock death the Ark cannot call old age is said so, never "of old age".)
+            return fillArkWords(act.cause === "starved" ? w.starved : act.unknown ? w.deathUnknown ?? "The {animal} died. The cause is not known" : arkIsHuman(act.animal) ? w.deathPeaceful ?? "The {animal} died peacefully of old age" : w.death, {animal: act.animal.name}) + gone(act.animal.name, act.extinct);
         case "extinction":
             return fillArkWords(w.extinction, {animal: act.species});
     }
@@ -216,6 +217,7 @@ function replaySummary(summary: ArkReplaySummary, since: Date, words: ArkWords, 
         part(summary.births - summary.hatched, w.birthsOne, w.birthsOther),
         part(summary.meals, w.mealsOne, w.mealsOther),
         part(summary.deaths, w.deathsOne, w.deathsOther),
+        part(summary.unknownDeaths ?? 0, w.deathsUnknownOne ?? "1 death, cause not known", w.deathsUnknownOther ?? "{count} deaths, cause not known"),
         part(summary.starved, w.starvedOne, w.starvedOther),
         part(summary.extinctions, w.extinctionsOne, w.extinctionsOther)
     ].filter((p): p is string => Boolean(p));

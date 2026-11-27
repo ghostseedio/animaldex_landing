@@ -337,7 +337,10 @@
             "laidCountOne": "1 nidada puesta",
             "laidCountOther": "{count} nidadas puestas",
             "hatchedCountOne": "1 eclosión",
-            "hatchedCountOther": "{count} eclosiones"
+            "hatchedCountOther": "{count} eclosiones",
+            "deathUnknown": "{animal} murió. No se sabe la causa",
+            "deathsUnknownOne": "1 muerte, causa desconocida",
+            "deathsUnknownOther": "{count} muertes, causa desconocida"
         },
         "capture": {
             "aboardOne": "En el Ark: 1 {animal} a bordo",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: hojas unidas para el nido",
             "escapedWounded": "{aPrey} se escapó de {aPredator} con heridas y se ha ocultado a reposar",
             "rescued": "Encontraron {aAnimal} muriéndose de hambre y se hicieron cargo de su cuidado",
-            "lostHome": "{aAnimal} perdió su hogar: talaron su bosque"
+            "lostHome": "{aAnimal} perdió su hogar: talaron su bosque",
+            "deathUnknownOther": "{animals}: {count} murieron, causa desconocida",
+            "closeCall": "{aAnimal} estuvo a punto de morir. No se sabe la causa. Salió adelante"
         },
         "card": {
             "now": "Ahora: {activity}",

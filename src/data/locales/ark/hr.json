@@ -337,7 +337,10 @@
             "laidCountOne": "1 leglo",
             "laidCountOther": "legala: {count}",
             "hatchedCountOne": "1 izlegnuto",
-            "hatchedCountOther": "izlegnutih: {count}"
+            "hatchedCountOther": "izlegnutih: {count}",
+            "deathUnknown": "{animal} ugiba. Uzrok nije poznat",
+            "deathsUnknownOne": "1 smrt, uzrok nepoznat",
+            "deathsUnknownOther": "smrti: {count}, uzrok nepoznat"
         },
         "capture": {
             "aboardOne": "U Arku: {animal} · na brodu: 1",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: privlačenje listova za gnijezdo",
             "escapedWounded": "{aPrey} uspijeva pobjeći od {aPredator} s ranom i skriva se",
             "rescued": "Našli su {aAnimal} kako gladuje i zbrinuli ga",
-            "lostHome": "{aAnimal} gubi dom: posječena je šuma u kojoj živi"
+            "lostHome": "{aAnimal} gubi dom: posječena je šuma u kojoj živi",
+            "deathUnknownOther": "{animals}: ugiba {count}, uzrok nepoznat",
+            "closeCall": "{aAnimal}: smrt je bila blizu. Uzrok nije poznat. Sve je dobro prošlo"
         },
         "card": {
             "now": "Sada: {activity}",

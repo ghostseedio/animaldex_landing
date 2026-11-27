@@ -191,6 +191,10 @@ export type ArkReplayWords = {
     death: string;
     /** A human's old-age death (decision 442). */
     deathPeaceful?: string;
+    /** AGE-RISK (docs/ark/age-risk.md, behind `age_risk`): a clock death the Ark cannot call old age, and its counts ("1 death, cause not known"). */
+    deathUnknown?: string;
+    deathsUnknownOne?: string;
+    deathsUnknownOther?: string;
     starved: string;
     lastGone: string;
     extinction: string;

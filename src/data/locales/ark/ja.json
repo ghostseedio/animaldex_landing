@@ -337,7 +337,10 @@
             "laidCountOne": "産卵1回",
             "laidCountOther": "産卵{count}回",
             "hatchedCountOne": "ふ化1匹",
-            "hatchedCountOther": "ふ化{count}匹"
+            "hatchedCountOther": "ふ化{count}匹",
+            "deathUnknown": "{animal}が死にました。原因は不明です",
+            "deathsUnknownOne": "原因不明の死1件",
+            "deathsUnknownOther": "原因不明の死{count}件"
         },
         "capture": {
             "aboardOne": "Ark：{animal}が1匹乗船中",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}：葉を引き寄せて巣作り",
             "escapedWounded": "{aPrey}が{aPredator}から傷を負いながら逃げ、身を潜めています",
             "rescued": "{aAnimal}が飢えているところを見つかり、保護されました",
-            "lostHome": "{aAnimal}がすみかを失いました: 森が切り倒されました"
+            "lostHome": "{aAnimal}がすみかを失いました: 森が切り倒されました",
+            "deathUnknownOther": "{animals}が{count}匹死にました。原因は不明です",
+            "closeCall": "{aAnimal}は死にかけました。原因は不明です。なんとか持ちこたえました"
         },
         "card": {
             "now": "いま：{activity}",

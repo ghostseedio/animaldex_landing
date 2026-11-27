@@ -337,7 +337,10 @@
             "laidCountOne": "1 മുട്ടക്കൂട്ടം",
             "laidCountOther": "{count} മുട്ടക്കൂട്ടങ്ങൾ",
             "hatchedCountOne": "1 വിരിഞ്ഞു",
-            "hatchedCountOther": "{count} വിരിഞ്ഞു"
+            "hatchedCountOther": "{count} വിരിഞ്ഞു",
+            "deathUnknown": "{animal} ചത്തു. കാരണം അറിയില്ല",
+            "deathsUnknownOne": "1 മരണം, കാരണം അറിയില്ല",
+            "deathsUnknownOther": "{count} മരണങ്ങൾ, കാരണം അറിയില്ല"
         },
         "capture": {
             "aboardOne": "Ark-ൽ: കപ്പലിൽ 1 {animal}",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: കൂടിനായി ഇലകൾ ചേർത്തുവലിക്കൽ",
             "escapedWounded": "{aPrey} പരിക്കേറ്റ് {aPredator}-ൽ നിന്ന് രക്ഷപ്പെട്ട് ഒളിച്ച് വിശ്രമിക്കുന്നു",
             "rescued": "{aAnimal} പട്ടിണി കിടക്കുന്നതായി കണ്ടെത്തി, പരിചരണത്തിലെടുത്തു",
-            "lostHome": "{aAnimal}-ന് വീട് നഷ്ടമായി: അതിന്റെ കാട് വെട്ടിമാറ്റി"
+            "lostHome": "{aAnimal}-ന് വീട് നഷ്ടമായി: അതിന്റെ കാട് വെട്ടിമാറ്റി",
+            "deathUnknownOther": "{count} {animals} ചത്തു, കാരണം അറിയില്ല",
+            "closeCall": "{aAnimal} മരണത്തിന്റെ വക്കിലെത്തി. കാരണം അറിയില്ല. എങ്കിലും രക്ഷപ്പെട്ടു"
         },
         "card": {
             "now": "ഇപ്പോൾ: {activity}",

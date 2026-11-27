@@ -337,7 +337,10 @@
             "laidCountOne": "1 fészekalj",
             "laidCountOther": "{count} fészekalj",
             "hatchedCountOne": "1 kikelt",
-            "hatchedCountOther": "{count} kikelt"
+            "hatchedCountOther": "{count} kikelt",
+            "deathUnknown": "{animal} elpusztult. Az ok ismeretlen",
+            "deathsUnknownOne": "1 elhullás, az ok ismeretlen",
+            "deathsUnknownOther": "{count} elhullás, az ok ismeretlen"
         },
         "capture": {
             "aboardOne": "Az Arkon: 1 {animal} a fedélzeten",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: levelek összehúzása a fészekhez",
             "escapedWounded": "{aPrey} sebesülten elmenekült {aPredator} elől, és rejtőzve lábadozik",
             "rescued": "{aAnimal} éhezve került elő, és gondozásba vették",
-            "lostHome": "{aAnimal} elvesztette az otthonát: kivágták az erdejét"
+            "lostHome": "{aAnimal} elvesztette az otthonát: kivágták az erdejét",
+            "deathUnknownOther": "{animals}: {count} elpusztult, az ok ismeretlen",
+            "closeCall": "{aAnimal} közel járt a halálhoz. Az ok ismeretlen. Túlélte"
         },
         "card": {
             "now": "Most: {activity}",

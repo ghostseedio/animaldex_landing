@@ -337,7 +337,10 @@
             "laidCountOne": "מצבור ביצים אחד הוטל",
             "laidCountOther": "{count} מצבורי ביצים הוטלו",
             "hatchedCountOne": "אחד בקע",
-            "hatchedCountOther": "{count} בקעו"
+            "hatchedCountOther": "{count} בקעו",
+            "deathUnknown": "{animal} מת. הסיבה לא ידועה",
+            "deathsUnknownOne": "מוות אחד, הסיבה לא ידועה",
+            "deathsUnknownOther": "{count} מקרי מוות, הסיבה לא ידועה"
         },
         "capture": {
             "aboardOne": "ב-Ark: {animal} אחד על הסיפון",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: משיכת עלים יחד לקן",
             "escapedWounded": "{aPrey} ברח מפני {aPredator}, פצוע, ומסתתר",
             "rescued": "{aAnimal} נמצא גווע ברעב ולקחו אותו לטיפול",
-            "lostHome": "{aAnimal} איבד את ביתו: היער שלו נכרת"
+            "lostHome": "{aAnimal} איבד את ביתו: היער שלו נכרת",
+            "deathUnknownOther": "{count} {animals} מתו, הסיבה לא ידועה",
+            "closeCall": "{aAnimal} על סף מוות. הסיבה לא ידועה. הכול הסתיים בטוב"
         },
         "card": {
             "now": "עכשיו: {activity}",

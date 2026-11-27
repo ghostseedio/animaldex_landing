@@ -337,7 +337,10 @@
             "laidCountOne": "1 γέννα αυγών",
             "laidCountOther": "{count} γέννες αυγών",
             "hatchedCountOne": "1 εκκόλαψη",
-            "hatchedCountOther": "{count} εκκολάψεις"
+            "hatchedCountOther": "{count} εκκολάψεις",
+            "deathUnknown": "{animal} πέθανε. Η αιτία είναι άγνωστη",
+            "deathsUnknownOne": "1 θάνατος, άγνωστη αιτία",
+            "deathsUnknownOther": "{count} θάνατοι, άγνωστη αιτία"
         },
         "capture": {
             "aboardOne": "Στην Ark: 1 {animal} στο σκάφος",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: φύλλα τραβιούνται μαζί για τη φωλιά",
             "escapedWounded": "{aPrey} ξέφυγε από {aPredator} με τραύματα και κρύβεται για να γιατρευτεί",
             "rescued": "{aAnimal} βρέθηκε να λιμοκτονεί και τέθηκε υπό φροντίδα",
-            "lostHome": "{aAnimal} έχασε το σπίτι του: το δάσος του κόπηκε"
+            "lostHome": "{aAnimal} έχασε το σπίτι του: το δάσος του κόπηκε",
+            "deathUnknownOther": "{animals}: {count} πέθαναν, άγνωστη αιτία",
+            "closeCall": "{aAnimal} παραλίγο να πεθάνει. Η αιτία είναι άγνωστη. Τα κατάφερε"
         },
         "card": {
             "now": "Τώρα: {activity}",

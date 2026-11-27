@@ -337,7 +337,10 @@
             "laidCountOne": "یک دسته تخم گذاشته شد",
             "laidCountOther": "{count} دسته تخم گذاشته شد",
             "hatchedCountOne": "یکی از تخم درآمد",
-            "hatchedCountOther": "{count} از تخم درآمدند"
+            "hatchedCountOther": "{count} از تخم درآمدند",
+            "deathUnknown": "{animal} مرد. علتش معلوم نیست",
+            "deathsUnknownOne": "یک مرگ، علت نامعلوم",
+            "deathsUnknownOther": "{count} مرگ، علت نامعلوم"
         },
         "capture": {
             "aboardOne": "در Ark: یک {animal} سوار است",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: کشیدن برگ‌ها به هم برای لانه",
             "escapedWounded": "{aPrey} زخمی از دست {aPredator} فرار کرد و پنهان شده است",
             "rescued": "{aAnimal} در حال گرسنگی کشیدن پیدا شد و تحت مراقبت قرار گرفت",
-            "lostHome": "{aAnimal} خانه‌اش را از دست داد: جنگلش قطع شد"
+            "lostHome": "{aAnimal} خانه‌اش را از دست داد: جنگلش قطع شد",
+            "deathUnknownOther": "{count} {animals} مردند، علتش معلوم نیست",
+            "closeCall": "{aAnimal} نزدیک بود بمیرد. علتش معلوم نیست. اما جان به در برد"
         },
         "card": {
             "now": "اکنون: {activity}",

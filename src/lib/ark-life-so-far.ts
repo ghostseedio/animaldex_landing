@@ -52,7 +52,7 @@ export type ArkMoment = {
 export const ARK_MOMENT_KINDS = [
     "arrived", "born", "young", "mated", "dated", "moved_in", "parted", "went_to_mate", "meal", "ate_cache", "ate_dung",
     "cache_stolen", "cache_rehidden", "escaped", "signature", "eggs_collected", "grown_up", "grew_old", "returned_to_care",
-    "moved_zoo", "rehomed", "revived", "died"
+    "moved_zoo", "rehomed", "revived", "close_call", "died"
 ] as const;
 export type ArkMomentKind = (typeof ARK_MOMENT_KINDS)[number];
 
@@ -203,6 +203,9 @@ export const ARK_LIFE_SO_FAR_ENGLISH = {
     /** A heart a survived attack (the server's `hearts_escape`, docs/ark/hearts-escape.md): nothing died, it lay up and returned. `arkMomentText`'s `escape`. */
     revivedEscape: "Back after lying up",
     diedOld: "Died of old age",
+    /** AGE-RISK (docs/ark/age-risk.md): the Ark does not know what ended it (`way: "unknown"`), and a close call that was survived (`close_call`). */
+    diedUnknown: "Died, cause not known",
+    closeCall: "Came close to dying, and pulled through",
     diedOldPeaceful: "Died peacefully of old age",
     eatenBy: "Eaten by {predator}",
     eaten: "Was eaten",
@@ -296,7 +299,10 @@ export function arkMomentText(moment: ArkMoment, options: {self?: string | null;
             return w.rehomed;
         case "revived":
             return options.escape ? w.revivedEscape : w.revived;
+        case "close_call":
+            return w.closeCall;
         case "died":
+            if (moment.way === "unknown") return w.diedUnknown;
             if (moment.way === "death_old" || moment.way === "died_old") return options.human ? w.diedOldPeaceful : w.diedOld;
             if (moment.way === "eaten") return moment.predator ? fill(w.eatenBy, {predator: arkWithArticle(moment.predator)}) : w.eaten;
             if (moment.way === "starved") return w.starved;
@@ -325,6 +331,7 @@ export function arkMomentTone(moment: ArkMoment): "start" | "family" | "food" | 
         case "cache_rehidden":
             return "food";
         case "escaped":
+        case "close_call":
             return "danger";
         case "died":
         case "rehomed":

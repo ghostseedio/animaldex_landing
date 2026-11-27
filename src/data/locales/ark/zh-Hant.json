@@ -337,7 +337,10 @@
             "laidCountOne": "產下 1 窩蛋",
             "laidCountOther": "產下 {count} 窩蛋",
             "hatchedCountOne": "1 隻孵化",
-            "hatchedCountOther": "{count} 隻孵化"
+            "hatchedCountOther": "{count} 隻孵化",
+            "deathUnknown": "{animal}死了。原因不明",
+            "deathsUnknownOne": "1 隻死亡，原因不明",
+            "deathsUnknownOther": "{count} 隻死亡，原因不明"
         },
         "capture": {
             "aboardOne": "Ark 中：船上有 1 隻{animal}",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}：把葉子拉攏築巢",
             "escapedWounded": "{aPrey}負傷從{aPredator}身邊逃走了，正躲起來養傷",
             "rescued": "{aAnimal}被發現正在挨餓，已被接去照料",
-            "lostHome": "{aAnimal}失去了家：牠的森林被砍伐了"
+            "lostHome": "{aAnimal}失去了家：牠的森林被砍伐了",
+            "deathUnknownOther": "{count} 隻{animals}死了，原因不明",
+            "closeCall": "{aAnimal}差點死掉。原因不明。最後撐過來了"
         },
         "card": {
             "now": "現在：{activity}",

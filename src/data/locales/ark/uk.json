@@ -337,7 +337,10 @@
             "laidCountOne": "1 кладка",
             "laidCountOther": "кладок: {count}",
             "hatchedCountOne": "1 вилуплення",
-            "hatchedCountOther": "вилуплень: {count}"
+            "hatchedCountOther": "вилуплень: {count}",
+            "deathUnknown": "{animal} помирає. Причина невідома",
+            "deathsUnknownOne": "1 смерть, причина невідома",
+            "deathsUnknownOther": "смертей: {count}, причина невідома"
         },
         "capture": {
             "aboardOne": "В Ark: {animal}, на борту — 1",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: стягування листя для гнізда",
             "escapedWounded": "{aPrey}: вдалося втекти з раною, тепер відлежується; мисливець — {aPredator}",
             "rescued": "{aAnimal}: знайдено в стані виснаження від голоду й узято під опіку",
-            "lostHome": "{aAnimal}: дім втрачено, ліс вирубали"
+            "lostHome": "{aAnimal}: дім втрачено, ліс вирубали",
+            "deathUnknownOther": "{animals}: померли ({count}), причина невідома",
+            "closeCall": "{aAnimal}: смерть була зовсім поруч. Причина невідома. Усе обійшлося"
         },
         "card": {
             "now": "Зараз: {activity}",

@@ -337,7 +337,10 @@
             "laidCountOne": "1 ponte",
             "laidCountOther": "{count} pontes",
             "hatchedCountOne": "1 éclosion",
-            "hatchedCountOther": "{count} éclosions"
+            "hatchedCountOther": "{count} éclosions",
+            "deathUnknown": "{animal} est mort. La cause est inconnue",
+            "deathsUnknownOne": "1 mort, cause inconnue",
+            "deathsUnknownOther": "{count} morts, cause inconnue"
         },
         "capture": {
             "aboardOne": "Dans l'Ark : 1 {animal} à bord",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: feuilles rapprochées pour le nid",
             "escapedWounded": "{aPrey} a échappé à {aPredator} avec une blessure et se terre",
             "rescued": "On a trouvé {aAnimal} mourant de faim et la ville en prend soin",
-            "lostHome": "{aAnimal} a perdu son habitat : sa forêt a été abattue"
+            "lostHome": "{aAnimal} a perdu son habitat : sa forêt a été abattue",
+            "deathUnknownOther": "{animals} : {count} sont morts, cause inconnue",
+            "closeCall": "{aAnimal} a failli mourir. La cause est inconnue. Tout s'est bien terminé"
         },
         "card": {
             "now": "Maintenant : {activity}",

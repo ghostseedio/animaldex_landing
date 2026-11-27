@@ -337,7 +337,10 @@
             "laidCountOne": "1 గుడ్ల గుంపు",
             "laidCountOther": "{count} గుడ్ల గుంపులు",
             "hatchedCountOne": "1 పొదిగిన పిల్ల",
-            "hatchedCountOther": "{count} పొదిగిన పిల్లలు"
+            "hatchedCountOther": "{count} పొదిగిన పిల్లలు",
+            "deathUnknown": "{animal} చనిపోయింది. కారణం తెలియదు",
+            "deathsUnknownOne": "1 మరణం, కారణం తెలియదు",
+            "deathsUnknownOther": "{count} మరణాలు, కారణం తెలియదు"
         },
         "capture": {
             "aboardOne": "Ark లో: 1 {animal} ఉంది",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: గూడు కోసం ఆకులను కలిపి లాగడం",
             "escapedWounded": "{aPrey} {aPredator} నుండి గాయంతో తప్పించుకుని, దాక్కుని విశ్రాంతి తీసుకుంటోంది",
             "rescued": "{aAnimal} ఆకలితో అలమటిస్తూ కనిపించి, సంరక్షణలోకి తీసుకెళ్లబడింది",
-            "lostHome": "{aAnimal} తన ఇంటిని కోల్పోయింది: దాని అడవి నరికివేయబడింది"
+            "lostHome": "{aAnimal} తన ఇంటిని కోల్పోయింది: దాని అడవి నరికివేయబడింది",
+            "deathUnknownOther": "{count} {animals} చనిపోయాయి, కారణం తెలియదు",
+            "closeCall": "{aAnimal} చావు అంచుల వరకు వెళ్లింది. కారణం తెలియదు. అయినా బతికి బయటపడింది"
         },
         "card": {
             "now": "ఇప్పుడు: {activity}",

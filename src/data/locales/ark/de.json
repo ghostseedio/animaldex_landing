@@ -337,7 +337,10 @@
             "laidCountOne": "1 Gelege",
             "laidCountOther": "{count} Gelege",
             "hatchedCountOne": "1 geschlüpft",
-            "hatchedCountOther": "{count} geschlüpft"
+            "hatchedCountOther": "{count} geschlüpft",
+            "deathUnknown": "{animal} ist gestorben. Die Ursache ist unbekannt",
+            "deathsUnknownOne": "1 Todesfall, Ursache unbekannt",
+            "deathsUnknownOther": "{count} Todesfälle, Ursache unbekannt"
         },
         "capture": {
             "aboardOne": "In der Ark: 1 {animal} an Bord",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: Blätter werden zum Nest zusammengezogen",
             "escapedWounded": "{aPrey} konnte verletzt vor {aPredator} fliehen und ruht sich im Versteck aus",
             "rescued": "{aAnimal} wurde ausgehungert gefunden und in Obhut genommen",
-            "lostHome": "{aAnimal} hat sein Zuhause verloren: sein Wald wurde gefällt"
+            "lostHome": "{aAnimal} hat sein Zuhause verloren: sein Wald wurde gefällt",
+            "deathUnknownOther": "{animals}: {count} gestorben, Ursache unbekannt",
+            "closeCall": "{aAnimal} war dem Tod nahe. Die Ursache ist unbekannt. Es ging gut aus"
         },
         "card": {
             "now": "Jetzt: {activity}",

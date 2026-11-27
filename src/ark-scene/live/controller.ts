@@ -33,7 +33,7 @@ import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt
 import {crisisText, recordItems} from "@/ark-scene/live/crisis-lines"; // E4 (the crisis layer)
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
-import {heartsNotes, rescueItems, rescueText} from "@/ark-scene/live/hearts-lines";
+import {closeCallRow, closeCallText, heartsNotes, rescueItems, rescueText} from "@/ark-scene/live/hearts-lines";
 import {arkHeartsEscape, decodeArkHeartsRules, type ArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {cacheEventItems, cacheEventText, signatureCues, signatureEventItems, signatureEventText} from "@/ark-scene/live/signature-events"; // SIG-EVENTS: saved signature moves
 import {richItems, richNotes} from "@/ark-scene/live/rich-lines"; // decision 434
@@ -97,6 +97,7 @@ const REPLAY_ENGLISH: ArkLiveText["replay"] = {
     an: "an {animal}",
     meal: "The {predator} ate {aPrey}",
     death: "The {animal} died of old age",
+    deathUnknown: "The {animal} died. The cause is not known",
     starved: "The {animal} starved",
     extinction: "The last {animal} is gone",
     laidOne: "{aAnimal} laid an egg",
@@ -214,7 +215,7 @@ export class ArkLive {
             })();
             if (stored === "1" || stored === "0") collapsed = stored === "1";
         }
-        this.lineText = (line) => signatureEventText(line, this.text, this.locale) ?? cacheEventText(line, this.text) ?? signatureText(line, this.text) ?? escapeText(line, this.text, this.locale) ?? rescueText(line, this.text, this.locale) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? releaseText(line, this.text) ?? mateText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? crisisText(line, this.text) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale);
+        this.lineText = (line) => signatureEventText(line, this.text, this.locale) ?? cacheEventText(line, this.text) ?? signatureText(line, this.text) ?? escapeText(line, this.text, this.locale) ?? rescueText(line, this.text, this.locale) ?? closeCallText(line, this.text, this.locale) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? releaseText(line, this.text) ?? mateText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? crisisText(line, this.text) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale);
         this.crisesAt = performance.now();
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
@@ -285,7 +286,8 @@ export class ArkLive {
      */
     private casting(raw: unknown): Promise<void> | null {
         const list: unknown[] = Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as {events?: unknown}).events) ? (raw as {events: unknown[]}).events : [];
-        const rows = list.filter((row) => row && typeof row === "object" && SEEN_KINDS.has(String((row as {kind?: unknown}).kind)));
+        // (A survived close call (AGE-RISK `closeCall`) is a `death_old` row but nothing died: there is no act and no cast for it.)
+        const rows = list.filter((row) => row && typeof row === "object" && SEEN_KINDS.has(String((row as {kind?: unknown}).kind)) && !closeCallRow(row));
         if (!rows.length || this.options.seen === false || !this.options.scene()?.setCast) return null;
         if (this.seen) {
             this.seen.note(rows, this.current);
@@ -438,7 +440,7 @@ export class ArkLive {
     /** 3.3 fix (log): the record's deaths, handed to the scene: its body lies where it died, and a tap on its line goes there. */
     private died(events: readonly ArkEvent[]) {
         // (V1: the dying act begins once the record is out, `ark-act-hold.ts`; until then its stand-in goes on with its day.)
-        const deaths = events.filter((event) => (event.kind === "death_old" || event.kind === "starved") && event.animal).map((event) => ({key: `death:${event.id}`, animal: event.animal!, t0: arkActStartOf(event.at), ...(event.kind === "starved" ? {cause: "starved" as const} : {})}));
+        const deaths = events.filter((event) => (event.kind === "death_old" || event.kind === "starved") && event.animal && !event.closeCall).map((event) => ({key: `death:${event.id}`, animal: event.animal!, t0: arkActStartOf(event.at), ...(event.kind === "starved" ? {cause: "starved" as const} : {})}));
         if (!deaths.length) return;
         try {
             this.options.scene()?.addDeaths?.(deaths);

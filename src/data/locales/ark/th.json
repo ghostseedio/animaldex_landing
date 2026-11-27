@@ -337,7 +337,10 @@
             "laidCountOne": "วางไข่ 1 ชุด",
             "laidCountOther": "วางไข่ {count} ชุด",
             "hatchedCountOne": "ฟัก 1 ตัว",
-            "hatchedCountOther": "ฟัก {count} ตัว"
+            "hatchedCountOther": "ฟัก {count} ตัว",
+            "deathUnknown": "{animal} ตาย ไม่ทราบสาเหตุ",
+            "deathsUnknownOne": "ตาย 1 ตัว ไม่ทราบสาเหตุ",
+            "deathsUnknownOther": "ตาย {count} ตัว ไม่ทราบสาเหตุ"
         },
         "capture": {
             "aboardOne": "ใน Ark: {animal} 1 ตัวอยู่บนเรือ",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: ดึงใบไม้เข้าหากันเพื่อทำรัง",
             "escapedWounded": "{aPrey} หนีรอดจาก {aPredator} ไปได้ในสภาพบาดเจ็บ และกำลังหลบพัก",
             "rescued": "{aAnimal} ถูกพบในสภาพอดอยาก และถูกรับไปดูแล",
-            "lostHome": "{aAnimal} เสียบ้านไป: ป่าของมันถูกโค่น"
+            "lostHome": "{aAnimal} เสียบ้านไป: ป่าของมันถูกโค่น",
+            "deathUnknownOther": "{animals} {count} ตัวตาย ไม่ทราบสาเหตุ",
+            "closeCall": "{aAnimal} เกือบตาย ไม่ทราบสาเหตุ แต่รอดมาได้"
         },
         "card": {
             "now": "ตอนนี้: กำลัง{activity}",

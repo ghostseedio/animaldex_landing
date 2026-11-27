@@ -337,7 +337,10 @@
             "laidCountOne": "1 legsel gelegd",
             "laidCountOther": "{count} legsels gelegd",
             "hatchedCountOne": "1 uitgekomen",
-            "hatchedCountOther": "{count} uitgekomen"
+            "hatchedCountOther": "{count} uitgekomen",
+            "deathUnknown": "{animal} is gestorven. De oorzaak is onbekend",
+            "deathsUnknownOne": "1 sterfgeval, oorzaak onbekend",
+            "deathsUnknownOther": "{count} sterfgevallen, oorzaak onbekend"
         },
         "capture": {
             "aboardOne": "In de Ark: 1 {animal} aan boord",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: bladeren samentrekken voor het nest",
             "escapedWounded": "{aPrey} is gewond ontsnapt aan {aPredator} en ligt schuil",
             "rescued": "{aAnimal} is uitgehongerd gevonden en in de zorg genomen",
-            "lostHome": "{aAnimal} is zijn thuis kwijt: zijn bos is gekapt"
+            "lostHome": "{aAnimal} is zijn thuis kwijt: zijn bos is gekapt",
+            "deathUnknownOther": "{animals}: {count} stierven, oorzaak onbekend",
+            "closeCall": "{aAnimal} was bijna dood. De oorzaak is onbekend. Het liep goed af"
         },
         "card": {
             "now": "Nu: {activity}",

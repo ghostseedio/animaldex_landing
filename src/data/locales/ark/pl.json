@@ -337,7 +337,10 @@
             "laidCountOne": "1 złożony lęg",
             "laidCountOther": "złożonych lęgów: {count}",
             "hatchedCountOne": "1 wyklute",
-            "hatchedCountOther": "wyklutych: {count}"
+            "hatchedCountOther": "wyklutych: {count}",
+            "deathUnknown": "{animal} umiera. Przyczyna jest nieznana",
+            "deathsUnknownOne": "1 śmierć, przyczyna nieznana",
+            "deathsUnknownOther": "śmierci: {count}, przyczyna nieznana"
         },
         "capture": {
             "aboardOne": "W Ark: {animal} · na pokładzie: 1",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: ściąganie liści do gniazda",
             "escapedWounded": "{aPrey}: udało się uciec z raną, łowca: {aPredator}, teraz się ukrywa",
             "rescued": "{aAnimal}: znaleziono w skrajnym głodzie i wzięto pod opiekę",
-            "lostHome": "{aAnimal} traci dom: wycięto las, w którym mieszka"
+            "lostHome": "{aAnimal} traci dom: wycięto las, w którym mieszka",
+            "deathUnknownOther": "{animals}: umiera {count}, przyczyna nieznana",
+            "closeCall": "{aAnimal}: śmierć była blisko. Przyczyna jest nieznana. Skończyło się dobrze"
         },
         "card": {
             "now": "Teraz: {activity}",

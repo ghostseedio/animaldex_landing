@@ -337,7 +337,10 @@
             "laidCountOne": "১ গুচ্ছ ডিম পাড়া",
             "laidCountOther": "{count} গুচ্ছ ডিম পাড়া",
             "hatchedCountOne": "১টি ডিম ফুটেছে",
-            "hatchedCountOther": "{count}টি ডিম ফুটেছে"
+            "hatchedCountOther": "{count}টি ডিম ফুটেছে",
+            "deathUnknown": "{animal} মারা গেছে। কারণ জানা নেই",
+            "deathsUnknownOne": "১টি মৃত্যু, কারণ জানা নেই",
+            "deathsUnknownOther": "{count}টি মৃত্যু, কারণ জানা নেই"
         },
         "capture": {
             "aboardOne": "Ark-এ আছে: ১টি {animal}",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: বাসার জন্য পাতা টেনে জোড়া",
             "escapedWounded": "{aPrey} {aPredator}-এর কাছ থেকে আহত হয়ে পালিয়ে গেছে এবং লুকিয়ে আছে",
             "rescued": "{aAnimal}-কে অনাহারে থাকা অবস্থায় পাওয়া গেছে এবং যত্নে নেওয়া হয়েছে",
-            "lostHome": "{aAnimal} তার ঘর হারিয়েছে: তার বন কেটে ফেলা হয়েছে"
+            "lostHome": "{aAnimal} তার ঘর হারিয়েছে: তার বন কেটে ফেলা হয়েছে",
+            "deathUnknownOther": "{count}টি {animals} মারা গেছে, কারণ জানা নেই",
+            "closeCall": "{aAnimal} মৃত্যুর খুব কাছে চলে গিয়েছিল। কারণ জানা নেই। শেষ পর্যন্ত বেঁচে গেছে"
         },
         "card": {
             "now": "এখন: {activity}",

@@ -337,7 +337,10 @@
             "laidCountOne": "1 posta",
             "laidCountOther": "{count} postes",
             "hatchedCountOne": "1 eclosió",
-            "hatchedCountOther": "{count} eclosions"
+            "hatchedCountOther": "{count} eclosions",
+            "deathUnknown": "{animal} ha mort. No se sap la causa",
+            "deathsUnknownOne": "1 mort, causa desconeguda",
+            "deathsUnknownOther": "{count} morts, causa desconeguda"
         },
         "capture": {
             "aboardOne": "A l'Ark: 1 {animal} a bord",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: fulles ajuntades per al niu",
             "escapedWounded": "{aPrey} s'ha escapat de {aPredator} amb ferides i s'ha amagat a reposar",
             "rescued": "Han trobat {aAnimal} morint-se de fam i se n'han fet càrrec",
-            "lostHome": "{aAnimal} ha perdut la llar: li han talat el bosc"
+            "lostHome": "{aAnimal} ha perdut la llar: li han talat el bosc",
+            "deathUnknownOther": "{animals}: {count} han mort, causa desconeguda",
+            "closeCall": "{aAnimal} ha estat a punt de morir. No se sap la causa. Se n'ha sortit"
         },
         "card": {
             "now": "Ara: {activity}",

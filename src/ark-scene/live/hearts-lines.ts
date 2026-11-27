@@ -33,6 +33,24 @@ export function isRescue(row: Row | null | undefined): boolean {
     return Boolean(row) && typeof row === "object" && row!.kind === "fed" && (row!.rescued === true || row!.payload?.rescued === true);
 }
 
+/** A survived close call (AGE-RISK, behind `age_risk` with `hearts_escape`): a `death_old` row with `closeCall`. Nothing died. */
+export function closeCallRow(row: unknown): boolean {
+    const r = row as {kind?: unknown; closeCall?: unknown; payload?: {closeCall?: unknown} | null} | null;
+    return Boolean(r) && typeof r === "object" && r!.kind === "death_old" && (r!.closeCall === true || r!.payload?.closeCall === true);
+}
+
+/**
+ * A close call's line (docs/ark/age-risk.md): "A Vole came close to dying. The cause is not known. It pulled through · 2 ♥ left". It
+ * never says old age, and nothing dies and comes back: the heart was spent and the animal lies up.
+ */
+export function closeCallText(line: Pick<ArkLiveItem, "animal"> & Partial<Pick<ArkLiveItem, "say" | "hearts">>, words: ArkLiveText, locale = "en"): string | null {
+    if (line.say !== "closeCall") return null;
+    const said = fillArkWords(words.live.closeCall ?? ARK_LIVE_ENGLISH.closeCall!, {aAnimal: arkWithArticle(line.animal, words)});
+    const text = said ? said[0].toLocaleUpperCase() + said.slice(1) : said;
+    if (typeof line.hearts !== "number") return text;
+    return fillArkWords(words.live.withHearts ?? "{line} · {hearts}", {line: text, hearts: arkHeartsLeftText(line.hearts, words, locale)});
+}
+
 /** The rescue's line, or null for any other line. The hearts left follow it as a death's do. */
 export function rescueText(line: Pick<ArkLiveItem, "animal"> & Partial<Pick<ArkLiveItem, "say" | "hearts">>, words: ArkLiveText, locale = "en"): string | null {
     if (line.say !== "rescued") return null;
@@ -75,7 +93,8 @@ export function heartsNotes(raw: unknown, words: ArkLiveText, locale = "en"): Ar
         if (!id || !Number.isFinite(at)) continue;
         const day = typeof row.ark_day === "number" ? Math.floor(row.ark_day) : null;
         let text: string | null = null;
-        if (isRescue(row) && named(row.animal)) text = rescueText({say: "rescued", animal: named(row.animal), hearts: escapeHearts(row)}, words, locale);
+        if (closeCallRow(row) && named(row.animal)) text = closeCallText({say: "closeCall", animal: named(row.animal), hearts: escapeHearts(row)}, words, locale);
+        else if (isRescue(row) && named(row.animal)) text = rescueText({say: "rescued", animal: named(row.animal), hearts: escapeHearts(row)}, words, locale);
         else if (row.kind === "escaped" && row.reason !== "shelter" && escapeWounded(row) && named(row.animal) && named(row.other)) text = escapeText({say: "escaped", animal: named(row.animal), other: named(row.other), hurt: true, hearts: escapeHearts(row)}, words, locale);
         if (text) notes.push({animalId: id, id: `hearts:${String(row.id)}`, kind: "said", at, day, text});
     }

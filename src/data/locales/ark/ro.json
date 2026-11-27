@@ -337,7 +337,10 @@
             "laidCountOne": "1 pontă depusă",
             "laidCountOther": "ponte depuse: {count}",
             "hatchedCountOne": "1 pui ieșit din ou",
-            "hatchedCountOther": "pui ieșiți din ou: {count}"
+            "hatchedCountOther": "pui ieșiți din ou: {count}",
+            "deathUnknown": "{animal} a murit. Cauza nu se știe",
+            "deathsUnknownOne": "1 moarte, cauză necunoscută",
+            "deathsUnknownOther": "morți: {count}, cauză necunoscută"
         },
         "capture": {
             "aboardOne": "În Ark: 1 {animal} la bord",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: frunze trase împreună pentru cuib",
             "escapedWounded": "{aPrey} a scăpat de {aPredator} cu o rană și se ascunde ca să se odihnească",
             "rescued": "{aAnimal} a fost găsit murind de foame și luat în grijă",
-            "lostHome": "{aAnimal} și-a pierdut casa: pădurea în care trăia a fost tăiată"
+            "lostHome": "{aAnimal} și-a pierdut casa: pădurea în care trăia a fost tăiată",
+            "deathUnknownOther": "{animals}: {count} au murit, cauză necunoscută",
+            "closeCall": "{aAnimal} a fost la un pas de moarte. Cauza nu se știe. A supraviețuit"
         },
         "card": {
             "now": "Acum: {activity}",

@@ -4562,7 +4562,10 @@
       "laidCountOne": "1 clutch laid",
       "laidCountOther": "{count} clutches laid",
       "hatchedCountOne": "1 hatched",
-      "hatchedCountOther": "{count} hatched"
+      "hatchedCountOther": "{count} hatched",
+      "deathUnknown": "The {animal} died. The cause is not known",
+      "deathsUnknownOne": "1 death, cause not known",
+      "deathsUnknownOther": "{count} deaths, cause not known"
     },
     "capture": {
       "aboardOne": "In the Ark: 1 {animal} aboard",
@@ -4681,7 +4684,9 @@
       "antWeave": "{animals} are pulling leaves together for their nest",
       "escapedWounded": "{aPrey} got away from {aPredator}, wounded, and is lying up",
       "rescued": "{aAnimal} was found starving and taken into care",
-      "lostHome": "{aAnimal} lost its home: its forest was cut down"
+      "lostHome": "{aAnimal} lost its home: its forest was cut down",
+      "deathUnknownOther": "{count} {animals} died, cause not known",
+      "closeCall": "{aAnimal} came close to dying. The cause is not known. It pulled through"
     },
     "card": {
       "now": "Now: {activity}",

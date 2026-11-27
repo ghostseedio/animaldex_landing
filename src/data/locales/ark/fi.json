@@ -337,7 +337,10 @@
             "laidCountOne": "1 pesye munittu",
             "laidCountOther": "{count} pesyettä munittu",
             "hatchedCountOne": "1 kuoriutui",
-            "hatchedCountOther": "{count} kuoriutui"
+            "hatchedCountOther": "{count} kuoriutui",
+            "deathUnknown": "{animal} kuoli. Syy ei ole tiedossa",
+            "deathsUnknownOne": "1 kuolemantapaus, syy ei tiedossa",
+            "deathsUnknownOther": "{count} kuolemantapausta, syy ei tiedossa"
         },
         "capture": {
             "aboardOne": "Arkissa: {animal}, 1 kyydissä",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: lehtien vetäminen yhteen pesäksi",
             "escapedWounded": "{aPrey} pääsi pakoon loukkaantuneena ja piileskelee, saalistaja: {aPredator}",
             "rescued": "{aAnimal} löydettiin nääntymäisillään ja otettiin hoitoon",
-            "lostHome": "{aAnimal} menetti kotinsa: sen metsä kaadettiin"
+            "lostHome": "{aAnimal} menetti kotinsa: sen metsä kaadettiin",
+            "deathUnknownOther": "{animals}: {count} kuoli, syy ei tiedossa",
+            "closeCall": "{aAnimal} oli lähellä kuolemaa. Syy ei ole tiedossa. Selvisi kuitenkin"
         },
         "card": {
             "now": "Nyt: {activity}",

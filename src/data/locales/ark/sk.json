@@ -337,7 +337,10 @@
             "laidCountOne": "1 znáška",
             "laidCountOther": "znášok: {count}",
             "hatchedCountOne": "1 vyliahnuté",
-            "hatchedCountOther": "vyliahnutých: {count}"
+            "hatchedCountOther": "vyliahnutých: {count}",
+            "deathUnknown": "{animal} umiera. Príčina nie je známa",
+            "deathsUnknownOne": "1 úmrtie, príčina nie je známa",
+            "deathsUnknownOther": "úmrtí: {count}, príčina nie je známa"
         },
         "capture": {
             "aboardOne": "V Ark: {animal} · na palube: 1",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: sťahovanie listov do hniezda",
             "escapedWounded": "{aPrey}: podarilo sa ujsť so zranením, lovec: {aPredator}; teraz sa ukrýva",
             "rescued": "{aAnimal}: našli, ako hladuje, a vzali do opatery",
-            "lostHome": "{aAnimal} stráca domov: vyrúbali les, v ktorom žije"
+            "lostHome": "{aAnimal} stráca domov: vyrúbali les, v ktorom žije",
+            "deathUnknownOther": "{animals}: umiera {count}, príčina nie je známa",
+            "closeCall": "{aAnimal}: smrť bola na dosah. Príčina nie je známa. Všetko dobre dopadlo"
         },
         "card": {
             "now": "Teraz: {activity}",

@@ -337,7 +337,10 @@
             "laidCountOne": "1 ಮೊಟ್ಟೆಗುಂಪು",
             "laidCountOther": "{count} ಮೊಟ್ಟೆಗುಂಪುಗಳು",
             "hatchedCountOne": "1 ಮೊಟ್ಟೆಯೊಡೆದ ಮರಿ",
-            "hatchedCountOther": "{count} ಮೊಟ್ಟೆಯೊಡೆದ ಮರಿಗಳು"
+            "hatchedCountOther": "{count} ಮೊಟ್ಟೆಯೊಡೆದ ಮರಿಗಳು",
+            "deathUnknown": "{animal} ಸತ್ತಿತು. ಕಾರಣ ತಿಳಿದಿಲ್ಲ",
+            "deathsUnknownOne": "1 ಸಾವು, ಕಾರಣ ತಿಳಿದಿಲ್ಲ",
+            "deathsUnknownOther": "{count} ಸಾವುಗಳು, ಕಾರಣ ತಿಳಿದಿಲ್ಲ"
         },
         "capture": {
             "aboardOne": "Ark ನಲ್ಲಿ: ಹಡಗಿನಲ್ಲಿ 1 {animal}",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: ಗೂಡಿಗಾಗಿ ಎಲೆಗಳನ್ನು ಎಳೆದು ಜೋಡಿಸುವುದು",
             "escapedWounded": "{aPrey} ಗಾಯಗೊಂಡು {aPredator} ಇಂದ ತಪ್ಪಿಸಿಕೊಂಡು ಅಡಗಿ ವಿಶ್ರಮಿಸುತ್ತಿದೆ",
             "rescued": "{aAnimal} ಹಸಿವಿನಿಂದ ಬಳಲುತ್ತಿರುವುದು ಕಂಡುಬಂತು, ಅದನ್ನು ಆರೈಕೆಗೆ ತೆಗೆದುಕೊಳ್ಳಲಾಯಿತು",
-            "lostHome": "{aAnimal} ತನ್ನ ಮನೆಯನ್ನು ಕಳೆದುಕೊಂಡಿದೆ: ಅದರ ಕಾಡನ್ನು ಕಡಿಯಲಾಯಿತು"
+            "lostHome": "{aAnimal} ತನ್ನ ಮನೆಯನ್ನು ಕಳೆದುಕೊಂಡಿದೆ: ಅದರ ಕಾಡನ್ನು ಕಡಿಯಲಾಯಿತು",
+            "deathUnknownOther": "{count} {animals} ಸತ್ತವು, ಕಾರಣ ತಿಳಿದಿಲ್ಲ",
+            "closeCall": "{aAnimal} ಸಾವಿನ ಅಂಚಿಗೆ ಬಂದಿತು. ಕಾರಣ ತಿಳಿದಿಲ್ಲ. ಆದರೂ ಬದುಕುಳಿಯಿತು"
         },
         "card": {
             "now": "ಈಗ: {activity}",

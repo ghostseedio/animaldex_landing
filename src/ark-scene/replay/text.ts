@@ -55,7 +55,7 @@ function headlineOf(replay: ArkEventReplay, text: ArkLiveText, words: Record<key
             return line(replay.feed.play ? "hatched" : "birth", young[0]?.name ?? first, null, Math.max(young.length, 1));
         }
         case "death":
-            return line(replay.eventKind === "starved" ? "starved" : "death", first);
+            return replay.unknownCause && replay.eventKind !== "starved" ? arkLiveLineText({kind: "death", animal: first, other: null, count: 1, eggs: null, source: "server", unknown: true}, text, locale) : line(replay.eventKind === "starved" ? "starved" : "death", first);
         case "extinct":
             return line("extinction", replay.species.name || first);
         case "meal":

@@ -337,7 +337,10 @@
             "laidCountOne": "1 pugad ng itlog",
             "laidCountOther": "{count} pugad ng itlog",
             "hatchedCountOne": "1 napisa",
-            "hatchedCountOther": "{count} napisa"
+            "hatchedCountOther": "{count} napisa",
+            "deathUnknown": "Namatay ang {animal}. Hindi alam ang sanhi",
+            "deathsUnknownOne": "1 namatay, hindi alam ang sanhi",
+            "deathsUnknownOther": "{count} namatay, hindi alam ang sanhi"
         },
         "capture": {
             "aboardOne": "Sa Ark: 1 {animal} ang nakasakay",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: paghila ng mga dahon para sa pugad",
             "escapedWounded": "Nakatakas ang {aPrey} mula sa {aPredator} nang sugatan at nagtatago ngayon para gumaling",
             "rescued": "Natagpuan ang {aAnimal} na gutom na gutom at kinupkop para alagaan",
-            "lostHome": "Nawalan ng tahanan ang {aAnimal}: pinutol ang kagubatan nito"
+            "lostHome": "Nawalan ng tahanan ang {aAnimal}: pinutol ang kagubatan nito",
+            "deathUnknownOther": "{count} {animals} ang namatay, hindi alam ang sanhi",
+            "closeCall": "{aAnimal} ay muntik nang mamatay. Hindi alam ang sanhi. Nakaligtas ito"
         },
         "card": {
             "now": "Ngayon: {activity}",

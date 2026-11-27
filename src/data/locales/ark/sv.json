@@ -337,7 +337,10 @@
             "laidCountOne": "1 kull lagd",
             "laidCountOther": "{count} kullar lagda",
             "hatchedCountOne": "1 kläckt",
-            "hatchedCountOther": "{count} kläckta"
+            "hatchedCountOther": "{count} kläckta",
+            "deathUnknown": "{animal} dog. Orsaken är okänd",
+            "deathsUnknownOne": "1 dödsfall, okänd orsak",
+            "deathsUnknownOther": "{count} dödsfall, okänd orsak"
         },
         "capture": {
             "aboardOne": "I Ark: 1 {animal} ombord",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: löv dras ihop till boet",
             "escapedWounded": "{aPrey} kom undan {aPredator} med ett sår och ligger lågt",
             "rescued": "{aAnimal} hittades svältande och togs om hand",
-            "lostHome": "{aAnimal} förlorade sitt hem: dess skog höggs ned"
+            "lostHome": "{aAnimal} förlorade sitt hem: dess skog höggs ned",
+            "deathUnknownOther": "{animals}: {count} dog, okänd orsak",
+            "closeCall": "{aAnimal} var nära att dö. Orsaken är okänd. Det gick bra till slut"
         },
         "card": {
             "now": "Nu: {activity}",

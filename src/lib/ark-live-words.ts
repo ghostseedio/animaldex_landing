@@ -56,6 +56,13 @@ export type ArkLiveWords = {
     escapedWounded?: string;
     rescued?: string;
     lostHome?: string;
+    /**
+     * AGE-RISK (AnimalDex docs/ark/age-risk.md, behind `age_risk`): several deaths whose cause the Ark does not know ("{count}
+     * {animals} died, cause not known"), and a survived close call ("{aAnimal} came close to dying. The cause is not known. It
+     * pulled through"), which takes "· 2 ♥ left" after it as a death's line does.
+     */
+    deathUnknownOther?: string;
+    closeCall?: string;
     /** SIG-EVENTS signature_caches: a corvid moved the cache it was watched making; another found and took a cache. */
     cacheRehidden?: string;
     cacheStolen?: string;
@@ -160,6 +167,8 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     escapedWounded: "{aPrey} got away from {aPredator}, wounded, and is lying up",
     rescued: "{aAnimal} was found starving and taken into care",
     lostHome: "{aAnimal} lost its home: its forest was cut down",
+    deathUnknownOther: "{count} {animals} died, cause not known",
+    closeCall: "{aAnimal} came close to dying. The cause is not known. It pulled through",
     cacheRehidden: "{aAnimal} is re-hiding its food after being watched",
     cacheStolen: "{aThief} dug up food that {aOwner} had hidden",
     revived: "{animal} is back",

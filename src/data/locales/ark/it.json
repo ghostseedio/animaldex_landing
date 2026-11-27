@@ -337,7 +337,10 @@
             "laidCountOne": "1 covata deposta",
             "laidCountOther": "{count} covate deposte",
             "hatchedCountOne": "1 schiusa",
-            "hatchedCountOther": "{count} schiuse"
+            "hatchedCountOther": "{count} schiuse",
+            "deathUnknown": "{animal} è morto. La causa è sconosciuta",
+            "deathsUnknownOne": "1 morte, causa sconosciuta",
+            "deathsUnknownOther": "{count} morti, causa sconosciuta"
         },
         "capture": {
             "aboardOne": "Nell'Ark: 1 {animal} a bordo",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: foglie avvicinate per il nido",
             "escapedWounded": "{aPrey} sfugge a {aPredator} con una ferita e si nasconde per riprendersi",
             "rescued": "Hanno trovato {aAnimal} che soffriva la fame e se ne sono presi cura",
-            "lostHome": "{aAnimal} ha perso la sua casa: la sua foresta è stata abbattuta"
+            "lostHome": "{aAnimal} ha perso la sua casa: la sua foresta è stata abbattuta",
+            "deathUnknownOther": "{animals}: {count} morti, causa sconosciuta",
+            "closeCall": "{aAnimal} ha rischiato di morire. La causa è sconosciuta. Se l'è cavata"
         },
         "card": {
             "now": "Ora: {activity}",

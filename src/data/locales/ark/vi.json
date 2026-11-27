@@ -337,7 +337,10 @@
             "laidCountOne": "1 ổ trứng",
             "laidCountOther": "{count} ổ trứng",
             "hatchedCountOne": "1 con nở",
-            "hatchedCountOther": "{count} con nở"
+            "hatchedCountOther": "{count} con nở",
+            "deathUnknown": "Con {animal} đã chết. Chưa rõ nguyên nhân",
+            "deathsUnknownOne": "1 con chết, chưa rõ nguyên nhân",
+            "deathsUnknownOther": "{count} con chết, chưa rõ nguyên nhân"
         },
         "capture": {
             "aboardOne": "Trên Ark: có 1 con {animal}",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: kéo lá lại với nhau để làm tổ",
             "escapedWounded": "{aPrey} đã thoát khỏi {aPredator}, bị thương, và đang ẩn mình nghỉ ngơi",
             "rescued": "{aAnimal} được tìm thấy trong tình trạng đói lả và được đưa đi chăm sóc",
-            "lostHome": "{aAnimal} mất nơi ở: khu rừng của nó bị chặt phá"
+            "lostHome": "{aAnimal} mất nơi ở: khu rừng của nó bị chặt phá",
+            "deathUnknownOther": "{count} con {animals} đã chết, chưa rõ nguyên nhân",
+            "closeCall": "{aAnimal} suýt chết. Chưa rõ nguyên nhân. Nó đã qua khỏi"
         },
         "card": {
             "now": "Lúc này: đang {activity}",

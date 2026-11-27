@@ -337,7 +337,10 @@
             "laidCountOne": "وُضعت دفعة بيض واحدة",
             "laidCountOther": "وُضعت {count} من دفعات البيض",
             "hatchedCountOne": "فقس صغير واحد",
-            "hatchedCountOther": "فقس {count} من الصغار"
+            "hatchedCountOther": "فقس {count} من الصغار",
+            "deathUnknown": "مات {animal}. السبب غير معروف",
+            "deathsUnknownOne": "وفاة واحدة بسبب غير معروف",
+            "deathsUnknownOther": "{count} من الوفيات بسبب غير معروف"
         },
         "capture": {
             "aboardOne": "في Ark: {animal} واحد على المتن",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: ضمّ الأوراق لبناء العش",
             "escapedWounded": "أفلت {aPrey} من {aPredator} جريحًا ويتوارى الآن ليتعافى",
             "rescued": "وُجد {aAnimal} يتضور جوعًا وأُخذ إلى الرعاية",
-            "lostHome": "فقد {aAnimal} بيته: قُطعت غابته"
+            "lostHome": "فقد {aAnimal} بيته: قُطعت غابته",
+            "deathUnknownOther": "مات {count} من {animals} بسبب غير معروف",
+            "closeCall": "{aAnimal} أوشك على الموت. السبب غير معروف. لكنه نجا"
         },
         "card": {
             "now": "الآن: {activity}",

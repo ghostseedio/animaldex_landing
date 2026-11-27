@@ -337,7 +337,10 @@
             "laidCountOne": "1 kuld lagt",
             "laidCountOther": "{count} kuld lagt",
             "hatchedCountOne": "1 klækket",
-            "hatchedCountOther": "{count} klækket"
+            "hatchedCountOther": "{count} klækket",
+            "deathUnknown": "{animal} døde. Årsagen er ukendt",
+            "deathsUnknownOne": "1 dødsfald, årsag ukendt",
+            "deathsUnknownOther": "{count} dødsfald, årsag ukendt"
         },
         "capture": {
             "aboardOne": "I Ark: 1 {animal} om bord",
@@ -456,7 +459,9 @@
             "antWeave": "{animals}: blade trækkes sammen til reden",
             "escapedWounded": "{aPrey} slap væk fra {aPredator}, såret, og ligger lavt",
             "rescued": "{aAnimal} blev fundet sultende og taget i pleje",
-            "lostHome": "{aAnimal} mistede sit hjem: dets skov blev fældet"
+            "lostHome": "{aAnimal} mistede sit hjem: dets skov blev fældet",
+            "deathUnknownOther": "{animals}: {count} døde, årsag ukendt",
+            "closeCall": "{aAnimal} var tæt på at dø. Årsagen er ukendt. Men det gik godt"
         },
         "card": {
             "now": "Nu: {activity}",
