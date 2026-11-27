@@ -633,6 +633,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     setBroods?: (read: import("@/lib/ark-broods").ArkBroodsRead) => void;
     /** BROODS: recruits of a brood (a `birth` with `recruit: true`): they take over from its stand-ins; their lineage is kept. */
     noteRecruits?: (list: Array<{brood: string; young: string[]; parents: string[]}>) => void;
+    /** BROODS: raids a parent held off (an `escaped` with a `brood`): the hunter comes, the parent drives it off, it leaves. */
+    noteHeldOff?: (list: import("@/ark-scene/live/brood-lines").ArkBroodHeldOff[]) => void;
     /**
      * The record's escapes (`escaped` events, AnimalDex decision 373: the prey that got away, the predator, the time on
      * the shared clock, and the encounter's geometry as the server wrote it), acted out in the live world: the chase

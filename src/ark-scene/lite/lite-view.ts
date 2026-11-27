@@ -13,13 +13,15 @@
 
 import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkFounders} from "@/lib/ark-founders";
+import type {ArkBroodWords} from "@/lib/ark-broods";
 import {decodeArkEvents} from "@/lib/ark-life";
 import {arkLiveLineText} from "@/lib/ark-live-log";
 import {crisisText} from "@/ark-scene/live/crisis-lines";
 import {escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
+import {broodText} from "@/ark-scene/live/brood-lines";
 import {arkLiveTextOf, arkSeenWordsOf, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
 import {arkSeenStateText, arkSeenStates} from "@/ark-scene/seen/hooks";
-import {ARK_LITE_FEED_BACK_MS, ARK_LITE_FEED_LONG, ARK_LITE_FEED_POLL_MS, ARK_LITE_FEED_SHORT, arkLiteFeedFromEvents, arkLiteFeedLines, arkLiteFeedMerge, arkLiteFeedSeed, type ArkLiteFeedEntry} from "@/lib/ark-lite-feed";
+import {ARK_LITE_FEED_BACK_MS, ARK_LITE_FEED_LONG, ARK_LITE_FEED_POLL_MS, ARK_LITE_FEED_SHORT, arkLiteFeedBroods, arkLiteFeedFromEvents, arkLiteFeedLines, arkLiteFeedMerge, arkLiteFeedSeed, type ArkLiteFeedEntry} from "@/lib/ark-lite-feed";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import {arkLiteKindAnimals, arkLiteModel, arkLiteWords, type ArkLiteKind, type ArkLiteMine, type ArkLiteModel, type ArkLiteViewWords} from "@/lib/ark-lite";
 import {arkAgoText} from "@/lib/ark-loading";
@@ -272,7 +274,7 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
             const item = el("li", `arkl-ev${fresh ? " new" : ""}`);
             item.appendChild(icon("i", line.slug, options.iconUrl));
             // (V1: an escape's own words, both animals named, as the 3D log says it; E4: the crisis layer's.)
-            item.appendChild(el("span", "t", crisisText(line.item, text) ?? escapeText(line.item, text) ?? arkLiveLineText(line.item, text, locale)));
+            item.appendChild(el("span", "t", broodText(line.item) ?? crisisText(line.item, text) ?? escapeText(line.item, text) ?? arkLiveLineText(line.item, text, locale)));
             item.appendChild(el("span", "ago", arkAgoText(line.at, now, locale)));
             list.appendChild(item);
         }
@@ -310,7 +312,10 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
                 for (const event of events) newest = Math.max(newest, Date.parse(event.at) || 0);
                 more = body.more === true && newest > cursor;
                 cursor = newest;
-                feed = arkLiteFeedMerge(feed, arkLiteFeedFromEvents(events));
+                feed = arkLiteFeedMerge(feed, arkLiteFeedFromEvents(events, body.events ?? []));
+                // BROODS: the record's brood rows, in the 3D log's words (`brood-lines.ts`): words only, as the escapes below.
+                const broodLines = arkLiteFeedBroods(body.events ?? [], {words: sub(words, "broods") as ArkBroodWords | null, text: liveText(), locale, brood: () => null});
+                if (broodLines.length) feed = arkLiteFeedMerge(feed, broodLines);
                 // V1: the record's escapes too (the 3D log reads them from the rows, `escape-lines.ts`): "A Plains Zebra got
                 // away from an African Lion". Words only here: Ark Lite has no world to act them in.
                 const rows = Array.isArray(body.events) ? body.events as Array<{id?: unknown; kind?: unknown; at?: unknown; animal?: {model_slug?: unknown} | null}> : [];

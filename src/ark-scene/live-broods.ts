@@ -33,6 +33,7 @@ import type {ArkAnimal, ArkSnapshot, ArkZone} from "@/ark-scene/types";
 import type {QualityTier} from "@/ark-scene/post";
 import type {ArkAct, ArkEventAnimal} from "@/lib/ark-life";
 import {arkActStart} from "@/lib/ark-act-hold";
+import type {ArkBroodHeldOff} from "@/ark-scene/live/brood-lines";
 import {ARK_DAY_MS} from "@/lib/ark-clock";
 import {ARK_BROOD_MEMBER_PREFIX, arkBroodLossStage, arkBroodMemberId, arkBroodOfMember, type ArkBrood, type ArkBroodLoss, type ArkBroodsRead} from "@/lib/ark-broods";
 import {waysOf} from "@/ark-scene/young-ways";
@@ -118,6 +119,10 @@ export type LiveBroodsHost<E> = {
      * `hidden`: its eggs and young are inside, out of sight.
      */
     raisedSite?: (brood: ArkBrood, home: Point, drawn: number) => {x: number; y: number; z: number; props: boolean; hidden: boolean} | null | undefined;
+    /** Whether it is awake now (a parent feeds its nestlings only then). Absent: always. */
+    awake?: (entry: E) => boolean;
+    /** Its kind's drive-off clip (`drive_charge`, `drive_mob`, `drive_distract`) when it is on its rig now (`drive-clips.ts`), else null. */
+    driveClip?: (entry: E, name: string) => DriveClip | null;
     /** An adult of the kind's drawn length (m). */
     adultLength: (brood: ArkBrood) => number;
     /** Where an entry is drawn now, and where its day has it at a time (null: off its day). */
@@ -169,6 +174,24 @@ type LossAct = {
     over?: boolean;
 };
 
+/** A raid the parent held off (`heldOff`), acted at the brood: the hunter comes, the parent drives it off, it goes. */
+type DriveAct = {
+    key: string;
+    hunter: string;
+    /** The record's guard (`brood.guard`), else whoever attends the brood when it is acted. */
+    guard: string | null;
+    t0: number;
+    style?: DriveStyle;
+    /** Where the hunter's day had it when it set out; where the stand is (the nest, or the parent its young are with). */
+    from?: {x: number; z: number; y: number; yaw: number} | null;
+    at?: BroodPlace;
+    /** The parent's place when the hunter came, and where it was posed last (a plover's lure for the hunter). */
+    home?: BroodBody | null;
+    lure?: Point | null;
+    acted?: boolean;
+    over?: boolean;
+};
+
 type Live = {
     brood: ArkBrood;
     ended: boolean;
@@ -209,6 +232,10 @@ type Live = {
     propsNest?: boolean;
     /** The water its hatchlings make for (`hatchToward`), worked out once; null: none near or none sought. */
     water?: Point | null;
+    /** Raids held off at it (`heldOff`), by the record row's key. */
+    drives?: Map<string, DriveAct>;
+    /** This frame's feeding visit to its nestlings: how hard they beg, which one is fed, where the parent is at the rim (null: none). */
+    feeding?: {beg: number; fed: number; from: Point} | null;
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
@@ -313,6 +340,44 @@ export function nestlingLength(adult: number, u: number): number {
     return adult * (0.26 + 0.44 * clamp(u, 0, 1));
 }
 
+/** Where the female alone feeds the young (the males' part done at the lek or the bower). */
+const FEMALE_FEEDS = /(?:^|-)(?:hummingbird|bowerbird|lyrebird|manakin|pheasant|grouse|peafowl|peacock|turkey|capercaillie|junglefowl)$/;
+
+/** Feeding visits to nestlings (s): one each `FEED_CYCLE`, a parent coming in, feeding one, staying a little, going. */
+export const FEED_CYCLE = 80;
+const FEED_ARRIVE = 50;
+const FEED_IN = 4;
+const FEED_FEED = 8;
+const FEED_STAY = 8;
+const FEED_OUT = 4;
+
+/**
+ * Where a feeding visit is `t` seconds into its cycle: `away` (its day has it), `in` (coming to the rim, 0..1), `feed`
+ * (at the rim, its head down into a gape), `stay` (at the rim, looking about), `out` (going, 0..1). And how hard the
+ * nestlings beg (0..1): from when they hear it coming until it has fed. Pure.
+ */
+export function feedPhase(t: number): {phase: "away" | "in" | "feed" | "stay" | "out"; k: number; beg: number} {
+    const c = ((t % FEED_CYCLE) + FEED_CYCLE) % FEED_CYCLE;
+    const a = FEED_ARRIVE;
+    const beg = c < a - 1.5 ? 0 : c < a + FEED_IN ? clamp((c - (a - 1.5)) / 1.5, 0, 1) : c < a + FEED_IN + FEED_FEED ? 1 : clamp(1 - (c - (a + FEED_IN + FEED_FEED)) / 1.2, 0, 1);
+    if (c < a) return {phase: "away", k: 0, beg};
+    if (c < a + FEED_IN) return {phase: "in", k: (c - a) / FEED_IN, beg};
+    if (c < a + FEED_IN + FEED_FEED) return {phase: "feed", k: (c - a - FEED_IN) / FEED_FEED, beg};
+    if (c < a + FEED_IN + FEED_FEED + FEED_STAY) return {phase: "stay", k: (c - a - FEED_IN - FEED_FEED) / FEED_STAY, beg};
+    if (c < a + FEED_IN + FEED_FEED + FEED_STAY + FEED_OUT) return {phase: "out", k: (c - a - FEED_IN - FEED_FEED - FEED_STAY) / FEED_OUT, beg};
+    return {phase: "away", k: 0, beg};
+}
+
+/** When a brood's feeding visits start on the shared clock (s, modulo `FEED_CYCLE`): each its own, seeded by its id. */
+export function feedCycleStart(broodId: string): number {
+    return unit(`${broodId}:feed`) * FEED_CYCLE;
+}
+
+/** The parents' turns at feeding: visit `n`'s parent (both feed, by turns; where the female alone does, she). Pure. */
+export function feederOf(n: number, attending: string, other: string | null, slug: string): string {
+    return other && !FEMALE_FEEDS.test(slug) && n % 2 === 1 ? other : attending;
+}
+
 /** Whether its young can run from a hunter (a chase), or are taken where they are (a raid). */
 export function broodFlees(brood: Pick<ArkBrood, "care">, plan: string | null): boolean {
     return MODEL_PLAN.test(plan ?? "") && brood.care !== "nest" && brood.care !== "carry";
@@ -393,6 +458,209 @@ export function raidPose(s: number, feed: number, from: {x: number; z: number; y
     const b = f - feed;
     if (!back || b >= RAID_BACK) return null;
     return {...go(here, back, b / RAID_BACK, RAID_BACK), meal: undefined};
+}
+
+/** A drive-off (a raid the parent held off, docs/ark/broods.md 7.2 `escaped` with a `brood`): the parent's stand against the hunter after the hunter's way in (s). */
+export const DRIVE_SECONDS = 9;
+/** The parent's way back to its brood after it (s); and how long before the hunter is there it stops and faces it. */
+const DRIVE_HOME = 2.4;
+const DRIVE_ALERT = 5;
+export type DriveStyle = "mob" | "charge" | "distract";
+
+/**
+ * How a parent drives a hunter off its brood, by what its kind does: a bird that keeps a nest and flies MOBS it
+ * (scolding close in, jabbing at it, a swoop over its head, as songbirds and crows do); a ground-nesting bird whose
+ * young run about on land (a plover) LEADS IT OFF with the broken-wing display; any other (a duck or a goose with its
+ * young, a mammal at its den, a crocodile at its mound, a guarding fish) CHARGES it. Pure.
+ */
+export function driveStyle(plan: string | null, care: string | null, flies: boolean, swims: boolean): DriveStyle {
+    if (plan !== "bird") return "charge";
+    if (care === "follow") return swims ? "charge" : "distract";
+    return flies ? "mob" : "charge";
+}
+
+/** A drive-off clip as the act uses it (`drive-clips.ts`): its length, and the share of it it moves on over, and how far. */
+export type DriveClip = {seconds: number; moving: [number, number] | null; distance: number};
+type Spot = {x: number; z: number; y: number; yaw: number};
+type Being = {x: number; z: number; base: number; yaw: number; length: number};
+
+/**
+ * The parent `d` seconds into its stand (d < 0: the hunter still coming; it stops where it is and faces it), then its
+ * way back to `home`, where it was when the hunter came; null once it is back. `hunter`: where the hunter is now;
+ * `surface`: what it stands on there (the water's top, else the ground), `afloat`: whether that is water; `clip`: its
+ * kind's Blender clip for the style where its rig has one (null: the pose's own threat, a lunge or a jab of the head,
+ * on its ordinary clips; on the water always, as the clips are made on foot). Pure.
+ */
+export function driveGuardPose(d: number, style: DriveStyle, home: Being, hunter: Being, surface: (x: number, z: number) => number, clip: DriveClip | null, afloat: (x: number, z: number) => boolean = () => false): ActPose | null {
+    const mk = (x: number, z: number, base: number, yaw: number, state: string, speed = 0, extra: Partial<ActPose> = {}): ActPose => ({x, z, base, yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state, speed, ...extra});
+    const toward = Math.atan2(hunter.x - home.x, hunter.z - home.z);
+    if (d < 0) return mk(home.x, home.z, home.base, toward, "scan");
+    const L = Math.max(home.length, 0.05);
+    // (Just short of it, on its side: where a stand is made.)
+    const gap = Math.max((L + hunter.length) * 0.55, 0.15);
+    const near = {x: hunter.x - Math.sin(toward) * gap, z: hunter.z - Math.cos(toward) * gap};
+    const after = d - DRIVE_SECONDS;
+    // Then back to its brood, as the hunter goes.
+    const homeFrom = (from: {x: number; z: number; base: number}, flying: boolean): ActPose | null => {
+        if (after >= DRIVE_HOME) return null;
+        const e = ease(after / DRIVE_HOME);
+        const x = from.x + (home.x - from.x) * e;
+        const z = from.z + (home.z - from.z) * e;
+        const far = Math.hypot(home.x - from.x, home.z - from.z);
+        const lift = flying ? Math.sin(Math.PI * e) * clamp(far * 0.3, 0.4, 2) : 0;
+        const base = flying ? from.base + (home.base - from.base) * e + lift : e < 1 ? surface(x, z) + (home.base - surface(home.x, home.z)) * e : home.base;
+        return mk(x, z, base, far > 0.05 ? Math.atan2(home.x - from.x, home.z - from.z) : home.yaw, flying ? "fly" : "walk", far / DRIVE_HOME);
+    };
+    if (style === "mob") {
+        // Close in by air, scold and jab at it from the ground beside it (`drive_mob`), a swoop low over its head to its
+        // other side, and again; then away home.
+        const IN = 1.2;
+        const SWOOP = 1.8;
+        const swoopAt = (DRIVE_SECONDS - IN - SWOOP) / 2 + IN;
+        const side = (n: number) => toward + (n ? 1 : -1) * 0.5;
+        const spotOf = (n: number) => ({x: hunter.x - Math.sin(side(n)) * gap * 1.6, z: hunter.z - Math.cos(side(n)) * gap * 1.6});
+        const first = spotOf(0);
+        const second = spotOf(1);
+        // (On the ground beside it; level with it where it is up off the ground, at a raised nest.)
+        const levelAt = (at: {x: number; z: number}) => (hunter.base - surface(at.x, at.z) > 0.3 ? hunter.base : surface(at.x, at.z));
+        const level = levelAt(first);
+        const head = hunter.base + Math.max(hunter.length * 0.6, 0.15);
+        const mob = (at: {x: number; z: number}, t: number): ActPose => {
+            const face = Math.atan2(hunter.x - at.x, hunter.z - at.z);
+            // (Its rig's clip hops and jabs; without it, the head jabbed at it, three to a scold.)
+            const jab = clip ? 0 : 0.22 * Math.max(Math.sin(t * Math.PI * 3), 0);
+            return mk(at.x, at.z, levelAt(at), face, "drive_mob", 0, {pitch: jab});
+        };
+        if (d < IN) {
+            const e = ease(d / IN);
+            const x = home.x + (first.x - home.x) * e;
+            const z = home.z + (first.z - home.z) * e;
+            const far = Math.hypot(first.x - home.x, first.z - home.z);
+            return mk(x, z, home.base + (level - home.base) * e + Math.sin(Math.PI * e) * clamp(far * 0.3, 0.3, 2), Math.atan2(first.x - home.x, first.z - home.z), "fly", far / IN);
+        }
+        if (d < swoopAt) return mob(first, d - IN);
+        if (d < swoopAt + SWOOP) {
+            const k = (d - swoopAt) / SWOOP;
+            const x = first.x + (second.x - first.x) * k;
+            const z = first.z + (second.z - first.z) * k;
+            // (Low over its head at the middle of the pass.)
+            const y = level + (levelAt(second) - level) * k + (head + 0.2 - level) * Math.sin(Math.PI * k);
+            return mk(x, z, y, Math.atan2(second.x - first.x, second.z - first.z), "fly", Math.hypot(second.x - first.x, second.z - first.z) / SWOOP, {pitch: k < 0.5 ? -0.25 : 0.2});
+        }
+        if (after < 0) return mob(second, d - swoopAt - SWOOP);
+        return homeFrom({x: second.x, z: second.z, base: levelAt(second)}, true);
+    }
+    if (style === "distract") {
+        // Off from its young across the hunter's way, low, a wing dragged (`drive_distract`), a few running steps, and
+        // dragged again: slow enough to be followed; then up and back.
+        const away = toward + Math.PI * 0.62;
+        const CYCLE = 2.4;
+        const DRAG = 1.6;
+        const stride = Math.max(L * 2.4, 0.4);
+        const at = (t: number) => {
+            const n = Math.floor(t / CYCLE);
+            const k = t - n * CYCLE;
+            const run = n * stride + (k < DRAG ? 0 : ease((k - DRAG) / (CYCLE - DRAG)) * stride);
+            return {x: home.x + Math.sin(away) * run, z: home.z + Math.cos(away) * run, dragging: k < DRAG};
+        };
+        if (after < 0) {
+            const p = at(d);
+            return mk(p.x, p.z, surface(p.x, p.z), away + (p.dragging ? Math.sin(d * 3.1) * 0.25 : 0), p.dragging ? "drive_distract" : "run", p.dragging ? 0 : stride / (CYCLE - DRAG), p.dragging && !clip ? {roll: 0.32 + 0.1 * Math.sin(d * 5), pitch: 0.12} : {});
+        }
+        const p = at(DRIVE_SECONDS);
+        return homeFrom({x: p.x, z: p.z, base: surface(p.x, p.z)}, true);
+    }
+    // Charging: a rush at it, a stand face to face (`drive_charge`: a lunge, a stamp, braced), a step back toward its
+    // young; again, the hunter giving ground each time.
+    const CYCLE = 3;
+    const RUSH = 0.8;
+    const STAND = Math.max(clip?.seconds ?? 1.5, 1.2);
+    if (after < 0) {
+        const n = Math.floor(d / Math.max(CYCLE, RUSH + STAND + 0.5));
+        const k = d - n * Math.max(CYCLE, RUSH + STAND + 0.5);
+        const rush = {x: home.x + (near.x - home.x) * 0.25, z: home.z + (near.z - home.z) * 0.25};
+        // (The clip moves it on over its own `moving` share: the rush stops that far short, and the lunge takes it there.)
+        const lunge = clip?.moving ? Math.min(clip.distance, gap) : 0;
+        const stop = {x: near.x - Math.sin(toward) * lunge, z: near.z - Math.cos(toward) * lunge};
+        if (k < RUSH) {
+            const e = ease(k / RUSH);
+            const x = rush.x + (stop.x - rush.x) * e;
+            const z = rush.z + (stop.z - rush.z) * e;
+            return mk(x, z, surface(x, z), toward, afloat(x, z) ? "swim" : "run", Math.hypot(stop.x - rush.x, stop.z - rush.z) / RUSH);
+        }
+        if (k < RUSH + STAND) {
+            const t = k - RUSH;
+            let x = stop.x;
+            let z = stop.z;
+            if (clip?.moving && lunge > 0) {
+                const [a, b] = clip.moving;
+                const u = clamp((t / clip.seconds - a) / (b - a), 0, 1);
+                x = stop.x + Math.sin(toward) * lunge * u;
+                z = stop.z + Math.cos(toward) * lunge * u;
+            }
+            // (Without its clip, or on the water: head low and thrust at it, a threat.)
+            const wet = afloat(x, z);
+            return mk(x, z, surface(x, z), toward, wet ? "swim" : "drive_charge", 0, clip && !wet ? {} : {pitch: 0.14 * Math.max(Math.sin(t * 7), 0)});
+        }
+        const span = Math.max(Math.max(CYCLE, RUSH + STAND + 0.5) - RUSH - STAND, 0.5);
+        const e = ease((k - RUSH - STAND) / span);
+        const x = near.x + (rush.x - near.x) * e;
+        const z = near.z + (rush.z - near.z) * e;
+        return mk(x, z, surface(x, z), toward, afloat(x, z) ? "swim" : "walk", Math.hypot(near.x - rush.x, near.z - rush.z) / span);
+    }
+    return homeFrom({x: near.x, z: near.z, base: surface(near.x, near.z)}, false);
+}
+
+/**
+ * The hunter at a drive-off `s` seconds in: its way to the brood's edge (as a raid's), its stand there as the parent
+ * comes at it, giving ground (or following the parent that leads it off: `lure`), then turning and going back to its
+ * day. Null once it is back. Pure.
+ */
+export function driveHunterPose(s: number, style: DriveStyle, from: Spot | null, back: Spot | null, nest: BroodPlace, length: number, size: number, walk: number, flies: boolean, ground: (x: number, z: number) => number, lure: Point | null): ActPose | null {
+    if (s < RAID_WALK) return raidPose(s, 0, from, null, nest, length, size, walk, flies, ground);
+    const mk = (x: number, z: number, base: number, yaw: number, state: string, speed = 0): ActPose => ({x, z, base, yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state, speed, meal: "hunting"});
+    const reach = Math.max(length * 0.45, size * 0.5);
+    const dir = from && Math.hypot(nest.x - from.x, nest.z - from.z) > 0.05 ? Math.atan2(nest.x - from.x, nest.z - from.z) : nest.yaw;
+    const at = {x: nest.x - Math.sin(dir) * reach, z: nest.z - Math.cos(dir) * reach};
+    const surface = (x: number, z: number) => (nest.water ? nest.y + Math.max(length * 0.1, 0.02) : ground(x, z));
+    const d = s - RAID_WALK;
+    // (How far it gives ground by the end of the stand: back the way it came, a body length and more.)
+    const give = Math.min(Math.max(length * 1.2, size * 1.5), 6);
+    let x = at.x;
+    let z = at.z;
+    let yaw = dir;
+    let state = "scan";
+    let speed = 0;
+    if (style === "distract" && lure) {
+        // It follows the parent it takes for easy prey, a few lengths behind.
+        const k = clamp(d / (DRIVE_SECONDS - 1), 0, 1);
+        const gap = Math.max(length * 1.5, 0.6);
+        const to = Math.atan2(lure.x - at.x, lure.z - at.z);
+        const dist = Math.max(Math.hypot(lure.x - at.x, lure.z - at.z) - gap, 0) * k;
+        x = at.x + Math.sin(to) * dist;
+        z = at.z + Math.cos(to) * dist;
+        yaw = to;
+        state = d < DRIVE_SECONDS - 1 && dist > 0.05 ? "walk" : "scan";
+        speed = state === "walk" ? Math.max(walk * 0.5, 0.3) : 0;
+    } else if (d > 3) {
+        // It stands its ground a moment, then backs off, still facing it.
+        const k = ease(clamp((d - 3) / (DRIVE_SECONDS - 3), 0, 1));
+        x = at.x - Math.sin(dir) * give * k;
+        z = at.z - Math.cos(dir) * give * k;
+        state = d < DRIVE_SECONDS ? "walk" : "scan";
+        speed = d < DRIVE_SECONDS ? give / (DRIVE_SECONDS - 3) : 0;
+    }
+    if (d < DRIVE_SECONDS) return mk(x, z, surface(x, z), yaw, state, speed);
+    // Then it turns and goes, quickly, back to its own day.
+    const b = d - DRIVE_SECONDS;
+    if (!back || b >= RAID_BACK) return null;
+    const e = ease(b / RAID_BACK);
+    const tx = x + (back.x - x) * e;
+    const tz = z + (back.z - z) * e;
+    const far = Math.hypot(back.x - x, back.z - z);
+    const air = flies && far > Math.max(length * 6, 3);
+    const y = air ? surface(x, z) + (back.y - surface(x, z)) * e + Math.sin(Math.PI * e) * clamp(far * 0.2, 1, 8) : Math.abs(back.y - ground(back.x, back.z)) < 0.3 ? surface(tx, tz) : surface(x, z) + (back.y - surface(x, z)) * e;
+    return {...mk(tx, tz, y, far > 0.05 ? Math.atan2(back.x - x, back.z - z) : yaw, air ? "fly" : nest.water ? "swim" : "run", (far / RAID_BACK) * 1.6), meal: undefined};
 }
 
 /**
@@ -536,6 +804,25 @@ export class LiveBroods<E> {
         if (this.recruitIds.size > 500) this.recruitIds.delete(this.recruitIds.values().next().value as string);
     }
 
+    /**
+     * Raids a parent held off (an `escaped` with a `brood`, docs/ark/broods.md 7.2): each acted at its brood from the
+     * record's time (its encounter's step), as a raid is: the hunter comes, the guard drives it off, it goes back to its
+     * day. One too old to act, or at a brood not drawn here, is the log's line alone.
+     */
+    heldOff(list: readonly ArkBroodHeldOff[], epoch: number): void {
+        for (const held of list) {
+            const live = this.broods.get(held.brood);
+            if (!live || live.drives?.has(held.key)) continue;
+            const step = (held.encounter as {t?: unknown} | null | undefined)?.t;
+            const t0 = arkActStart(held.atMs / 1000, typeof step === "number" && Number.isFinite(step) ? step : null);
+            if (!Number.isFinite(t0) || epoch - t0 > ACT_LATE) continue;
+            const drives = (live.drives ??= new Map());
+            drives.set(held.key, {key: held.key, hunter: held.hunter.id, guard: held.guard, t0});
+            // (A brood held off again and again keeps its last few.)
+            if (drives.size > 8) drives.delete(drives.keys().next().value as string);
+        }
+    }
+
     /** A stand-in's parents (the brood's), for the young systems; null for any other id. */
     parentsOf(id: string): readonly string[] | null {
         return this.parents.get(id) ?? null;
@@ -615,6 +902,12 @@ export class LiveBroods<E> {
             live.acts.forEach((act) => {
                 if ((act.kind === "raid" || act.kind === "meal") && !act.over && act.loss.hunter && epoch > act.t0 - RAID_WALK - 60 && epoch < act.effectAt + RAID_BACK + 5) out.push(act.loss.hunter.id);
             });
+            live.drives?.forEach((act) => {
+                if (act.over || epoch <= act.t0 - 60 || epoch >= act.t0 + RAID_WALK + DRIVE_SECONDS + RAID_BACK + 5) return;
+                out.push(act.hunter);
+                const guard = act.guard ?? this.attendant(live);
+                if (guard) out.push(guard);
+            });
         });
         return out;
     }
@@ -625,6 +918,9 @@ export class LiveBroods<E> {
         this.broods.forEach((live) => {
             live.acts.forEach((act) => {
                 if (act.kind === "raid" && act.acted && !act.over && epoch >= act.t0 && epoch < act.effectAt + 2) out.push({predator: act.loss.hunter!.id, t0: act.t0});
+            });
+            live.drives?.forEach((act) => {
+                if (act.acted && !act.over && epoch >= act.t0 && epoch < act.t0 + RAID_WALK + DRIVE_SECONDS) out.push({predator: act.hunter, t0: act.t0});
             });
         });
         return out;
@@ -954,6 +1250,8 @@ export class LiveBroods<E> {
                 if (epoch >= act.effectAt + RAID_BACK) act.over = true;
                 if (epoch >= act.effectAt) dirty = true;
             });
+            // A raid held off: the hunter comes, the guard drives it off (its place is the act's while it does).
+            const driven = live.drives?.size ? this.actDrive(live, nest, plan, epoch, pose, seat) : null;
             // The eggs and whoever attends them.
             const look = broodEggLook(brood, plan, nest.water);
             // (A nest is there under its eggs, and under nestlings; an ended one stands empty a while.)
@@ -966,6 +1264,10 @@ export class LiveBroods<E> {
             // eggs at once, and it walks back onto them only after something nearer had it, or as the clutch is laid.)
             if (carer && !near) {
                 if (live.sitter) this.release(live);
+            } else if (carer && driven === carer) {
+                // (Off its eggs, driving the hunter away: back onto them from where it ends up.)
+                live.sitter = null;
+                live.heldAt = epoch;
             } else if (carer) {
                 const entry = h.find(carer);
                 const held = entry ? h.busy(entry) : false;
@@ -1107,6 +1409,23 @@ export class LiveBroods<E> {
                 const b = with_ ? h.body(with_) : null;
                 if (!b || Math.hypot(b.x - view!.x, b.z - view!.z) >= reach) return;
             }
+            // Nestlings fed: a parent of its carer set comes to the rim by turns, feeds one, stays a little and goes; the
+            // nestlings beg, heads up and gapes open, as it comes (docs/ark/broods.md 8: a parent's visits by `carer`; what fed
+            // young are for as long as the read has a carer, awake; not an event, nothing counted). Not while a hunter is at it.
+            live.feeding = null;
+            if (broodNestlings(brood, plan) && near && !live.hidden && !raided && !driven && !still && hatch >= HATCH_STAY && brood.carer) {
+                const attending = this.attendant(live);
+                const cycle0 = feedCycleStart(brood.id);
+                const n = Math.floor((epoch - cycle0) / FEED_CYCLE);
+                const f = feedPhase(epoch - cycle0);
+                const feeder = attending ? feederOf(n, attending, brood.parents.find((id) => id !== attending && h.out(id)) ?? null, brood.model_slug) : null;
+                const entry = feeder && f.phase !== "away" ? h.find(feeder) : null;
+                if (entry && !h.busy(entry) && (h.awake?.(entry) ?? true)) {
+                    const start = cycle0 + n * FEED_CYCLE;
+                    const visit = this.feedVisit(entry, nest, live.size, f, start, epoch);
+                    if (pose(entry, seat(visit.pose))) live.feeding = {beg: f.beg, fed: n, from: visit.rim};
+                }
+            }
             // The specks: whoever of the count is not drawn with a model (a model stand-in the budget rests is a speck too).
             let models = 0;
             for (let i = 0; i < live.models - awayModels; i++) if (h.out(arkBroodMemberId(brood.id, i))) models++;
@@ -1123,6 +1442,96 @@ export class LiveBroods<E> {
         });
         this.acting = acting;
         if (dirty) this.rebuild(epoch);
+    }
+
+    /**
+     * The drive-offs at a brood this frame (`heldOff`): the hunter's way in and its stand, giving ground, going; the
+     * guard facing it as it comes, then charging, mobbing or leading it off by its kind's ways (`driveStyle`), then
+     * back. Acted only with both drawn (else the log's line alone). The guard's id while it is posed so, else null.
+     */
+    private actDrive(live: Live, nest: BroodPlace, plan: string | null, epoch: number, pose: (entry: E | null, act: ActPose | null, moving?: boolean) => boolean, seat: (p: ActPose | null) => ActPose | null): string | null {
+        const h = this.host;
+        let posed: string | null = null;
+        live.drives!.forEach((act) => {
+            if (act.over || posed) return;
+            const s = epoch - act.t0;
+            if (s < 0) return;
+            const hunter = h.find(act.hunter);
+            const guardId = act.guard && h.out(act.guard) ? act.guard : this.attendant(live);
+            const guard = guardId ? h.find(guardId) : null;
+            if (!hunter || !guard) {
+                if (s > RAID_WALK) act.over = true;
+                return;
+            }
+            if (act.from === undefined) act.from = h.scheduleAt(hunter, act.t0);
+            const wet = (x: number, z: number) => h.waterTop(x, z) > h.ground(x, z) + 0.05;
+            if (!act.at) {
+                // (Young that go about with a parent are defended where they are with it; eggs and nestlings at the nest.
+                // A hunter that does not go in the water stands on the shore nearest: a fox at the pond's edge.)
+                const with_ = live.brood.stage === "young" && live.brood.care !== "nest" && live.brood.care !== "none" ? h.body(guard) : null;
+                act.at = with_ ? {...nest, x: with_.x, z: with_.z, y: with_.base, water: wet(with_.x, with_.z)} : nest;
+                if (act.at.water && !h.flies(hunter) && !h.swims?.(hunter)) {
+                    const dry = h.shore?.(act.at.x, act.at.z) ?? null;
+                    if (dry) act.at = {...act.at, x: dry.x, z: dry.z, y: Math.max(h.ground(dry.x, dry.z), 0), top: h.waterTop(dry.x, dry.z), water: false};
+                }
+            }
+            const style = (act.style ??= driveStyle(plan, live.brood.care, h.flies(guard), Boolean(h.swims?.(guard))));
+            const hb = h.body(hunter);
+            const hp = driveHunterPose(s, style, act.from, h.scheduleAt(hunter, epoch), act.at, hb.length, live.size, h.walk(hunter), h.flies(hunter), h.ground, act.lure ?? null);
+            if (!hp) {
+                act.over = true;
+                return;
+            }
+            if (pose(hunter, act.at === nest ? seat(hp) : hp)) act.acted = true;
+            const d = s - RAID_WALK;
+            // (It goes on as it was until the hunter is close: the last seconds of its way in, it stops and faces it.)
+            if (d < -DRIVE_ALERT) return;
+            // (Where the guard was when the hunter came: its stand is from there.)
+            if (d < 0 || !act.home) act.home = h.body(guard);
+            const surface = (x: number, z: number) => (wet(x, z) ? h.waterTop(x, z) : h.ground(x, z));
+            const name = style === "mob" ? "drive_mob" : style === "distract" ? "drive_distract" : "drive_charge";
+            const gp = driveGuardPose(d, style, act.home, {x: hp.x, z: hp.z, base: hp.base, yaw: hp.yaw, length: hb.length}, surface, h.driveClip?.(guard, name) ?? null, wet);
+            if (!gp) return;
+            act.lure = {x: gp.x, z: gp.z};
+            if (pose(guard, seat(gp))) posed = guardId;
+        });
+        return posed;
+    }
+
+    /**
+     * A feeding visit's pose for its parent: flying in from where its day had it (at most 25 m off, from that side) to the
+     * nest's rim, feeding there with its head down to the cup, looking about, and flying back to its day. And the rim.
+     */
+    private feedVisit(entry: E, nest: BroodPlace, size: number, f: ReturnType<typeof feedPhase>, start: number, epoch: number): {pose: ActPose; rim: Point} {
+        const h = this.host;
+        const body = h.body(entry);
+        const near = (p: {x: number; z: number; y: number} | null): {x: number; z: number; y: number} => {
+            const at = p ?? {x: body.x, z: body.z, y: body.base};
+            const d = Math.hypot(at.x - nest.x, at.z - nest.z);
+            if (d <= 25) return at;
+            const k = 25 / d;
+            const x = nest.x + (at.x - nest.x) * k;
+            const z = nest.z + (at.z - nest.z) * k;
+            return {x, z, y: Math.max(h.ground(x, z), 0) + 3};
+        };
+        const from = near(h.scheduleAt(entry, start + FEED_ARRIVE));
+        const to = near(h.scheduleAt(entry, start + FEED_CYCLE));
+        const side = Math.hypot(from.x - nest.x, from.z - nest.z) > 0.05 ? Math.atan2(from.x - nest.x, from.z - nest.z) : unit(String(start)) * 6.283;
+        const rim = {x: nest.x + Math.sin(side) * size * 0.5, z: nest.z + Math.cos(side) * size * 0.5};
+        const inward = side + Math.PI;
+        const mk = (x: number, z: number, base: number, yaw: number, state: string, speed = 0, pitch = 0): ActPose => ({x, z, base, yaw, pitch, roll: 0, scale: 1, dim: 0, hidden: false, state, speed});
+        const fly = (a: {x: number; z: number; y: number}, b: {x: number; z: number; y: number}, k: number, seconds: number): ActPose => {
+            const e = ease(k);
+            const d = Math.hypot(b.x - a.x, b.z - a.z);
+            const y = a.y + (b.y - a.y) * e + Math.sin(Math.PI * clamp(k, 0, 1)) * clamp(d * 0.15, 0.3, 3);
+            return mk(a.x + (b.x - a.x) * e, a.z + (b.z - a.z) * e, y, d > 0.05 ? Math.atan2(b.x - a.x, b.z - a.z) : inward, h.flies(entry) ? "fly" : "walk", d / seconds);
+        };
+        const at = {x: rim.x, z: rim.z, y: nest.y};
+        if (f.phase === "in") return {pose: fly(from, at, f.k, FEED_IN), rim};
+        if (f.phase === "out") return {pose: fly(at, to, f.k, FEED_OUT), rim};
+        // (At the rim, facing in: a dip of the head into the cup each second, the food going into the gape held up highest.)
+        if (f.phase === "feed") return {pose: mk(rim.x, rim.z, nest.y, inward, "eat", 0, 0.22 + 0.16 * Math.max(Math.sin(epoch * 4.4), 0)), rim};
+        return {pose: mk(rim.x, rim.z, nest.y, inward + Math.sin(epoch * 0.9) * 0.6, "scan"), rim};
     }
 
     /** How far a brood is through its stage at `epoch` (0 begun … 1 due), from the read's days; 0.5 when they are not known. */
@@ -1148,6 +1557,9 @@ export class LiveBroods<E> {
         const length = nestlingLength(live.adult, this.stageShare(brood, this.now));
         const floor = nest.y + live.size * 0.06;
         const turn = unit(brood.id) * 6.283;
+        // (A parent at the rim (`live.feeding`): they beg, stretched up and gapes wide toward it, the one it feeds highest.)
+        const feed = live.feeding ?? null;
+        const fed = feed ? ((feed.fed % drawn) + drawn) % drawn : -1;
         for (let k = 0; k < drawn; k++) {
             const fade = k === drawn - 1 ? clamp(rest - (drawn - 1), 0.05, 1) : 1;
             const angle = turn + (k / Math.max(drawn, 1)) * 6.283;
@@ -1158,8 +1570,9 @@ export class LiveBroods<E> {
             const every = 9 + unit(`${brood.id}:${k}:s`) * 8;
             const into = (epoch + unit(`${brood.id}:${k}:p`) * every) % every;
             const stretch = into < 1.6 ? Math.sin((Math.PI * into) / 1.6) : 0;
-            const up = 0.28 + 0.4 * stretch;
-            const yaw = angle + Math.sin(epoch * 0.6 + k * 2.3) * 0.7;
+            const beg = feed ? feed.beg * (k === fed ? 1 : 0.7 + 0.25 * Math.sin(epoch * 9 + k * 2.1)) : 0;
+            const up = Math.max(0.28 + 0.4 * stretch, 0.28 + 0.72 * clamp(beg, 0, 1));
+            const yaw = beg > 0.05 ? Math.atan2(feed!.from.x - x, feed!.from.z - z) + Math.sin(epoch * 11 + k * 1.3) * 0.18 * beg : angle + Math.sin(epoch * 0.6 + k * 2.3) * 0.7;
             sink.nestling(x, floor, z, yaw, length, up, pop * fade);
         }
     }

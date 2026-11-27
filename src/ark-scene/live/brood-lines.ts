@@ -68,6 +68,26 @@ export function broodRecruits(raw: unknown, from: number): Array<{brood: string;
     return Array.from(by.values());
 }
 
+/** A raid a parent held off, for the scene to act (`noteHeldOff`). */
+export type ArkBroodHeldOff = {key: string; brood: string; hunter: {id: string; species_profile_id: string; name: string; model_slug: string}; guard: string | null; atMs: number; encounter?: unknown};
+
+/**
+ * The rows' raids a parent held off (an `escaped` with a `brood`, docs/ark/broods.md 7.2: no `animal`, the hunter as
+ * `other`, the attending parent as `brood.guard`), for the scene to act (`noteHeldOff`). None older than `from`.
+ */
+export function broodHeldOff(raw: unknown, from: number): ArkBroodHeldOff[] {
+    const out: ArkBroodHeldOff[] = [];
+    for (const row of rowsOf(raw) as Array<Row & {encounter?: unknown; payload?: {encounter?: unknown} | null}>) {
+        if (!row || typeof row !== "object" || row.kind !== "escaped") continue;
+        const brood = broodOf(row);
+        const hunter = row.other;
+        const at = typeof row.at === "string" ? Date.parse(row.at) : NaN;
+        if (!brood || !hunter || typeof hunter.id !== "string" || !hunter.id || !Number.isFinite(at) || at < from) continue;
+        out.push({key: `held:${String(row.id)}`, brood: brood.id, hunter: {id: hunter.id, species_profile_id: typeof hunter.species_profile_id === "string" ? hunter.species_profile_id : "", name: named(hunter), model_slug: typeof hunter.model_slug === "string" ? hunter.model_slug : ""}, guard: typeof brood.guard === "string" && brood.guard ? brood.guard : null, atMs: at, encounter: row.encounter ?? row.payload?.encounter});
+    }
+    return out;
+}
+
 export type BroodLineContext = {
     /** The broods' words (`ark.broods`), and the log's own (articles). */
     words: ArkBroodWords | null | undefined;

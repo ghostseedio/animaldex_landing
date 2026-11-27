@@ -8,6 +8,8 @@
  *
  *   node scripts/ark-behaviours-clips.mjs --out <dir> --scenes broodnest,broodduck,broodchick,broodfrog,broodtoad,broodfish,broodcroc,broodden,broodspider
  *   (or this file itself; `--modes on,none,off`: which rows to make; `--quality high|medium|low`)
+ *   `--rigs <folder>`: the v3 rig set as published, with that folder's files over it (the drive-off clips staged for
+ *   publishing, `drive-clips.json` and each species' bin): read only, nothing is written there or published.
  */
 import {execFileSync} from "node:child_process";
 import {createHash} from "node:crypto";
@@ -35,8 +37,23 @@ await build({entryPoints: [path.join(root, "src/ark-scene/broods-entry.ts")], ou
 writeFileSync(path.join(site, "index.html"), `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Ark broods</title>
 <style>html,body{margin:0;height:100%;background:#0b1020;overflow:hidden}#ark{position:fixed;inset:0}#note{position:fixed;left:10px;top:8px;z-index:9;font:600 13px/1.35 ui-sans-serif,system-ui;color:#fff;text-shadow:0 1px 3px #000;white-space:pre}</style>
 </head><body><div id="ark"></div><div id="note"></div><script src="./scene.js"></script></body></html>`);
+// (`--rigs`: the published v3 set, a staged folder's files over it.)
+const rigsDir = arg("rigs", "") ? path.resolve(arg("rigs", "")) : null;
+const PUBLISHED_RIGS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/ark-rig/v3";
 const server = createServer((request, response) => {
     const url = new URL(request.url, "http://localhost");
+    if (rigsDir && url.pathname.startsWith("/ark-rig/v3/")) {
+        const rest = path.normalize(url.pathname.slice("/ark-rig/v3/".length)).replace(/^\/+/, "");
+        const staged = path.join(rigsDir, rest);
+        if (staged.startsWith(rigsDir) && existsSync(staged)) return void response.writeHead(200, {"Content-Type": staged.endsWith(".json") ? "application/json" : "application/octet-stream", "Cache-Control": "no-store"}).end(readFileSync(staged));
+        fetch(`${PUBLISHED_RIGS}/${rest}`)
+            .then(async (r) => {
+                if (!r.ok) return void response.writeHead(r.status).end();
+                response.writeHead(200, {"Content-Type": r.headers.get("content-type") ?? "application/octet-stream", "Cache-Control": "no-store"}).end(Buffer.from(await r.arrayBuffer()));
+            })
+            .catch(() => void response.writeHead(502).end());
+        return;
+    }
     const folder = url.pathname.startsWith("/ark/") ? path.join(root, "public") : site;
     const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "index.html");
     if (!file.startsWith(folder) || !existsSync(file)) return void response.writeHead(404).end();
@@ -67,7 +84,7 @@ for (const name of scenes) {
             if (m.type() === "error") errors.push(m.text().slice(0, 300));
             if (m.text().startsWith("[broods]")) console.log(name, mode, m.text().slice(0, 600));
         });
-        await page.goto(`${base}?scene=${name}&broods=${mode}&quality=${quality}${arg("grass", "") === "0" ? "&grass=0" : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
+        await page.goto(`${base}?scene=${name}&broods=${mode}&quality=${quality}${arg("grass", "") === "0" ? "&grass=0" : ""}${rigsDir ? "&rigs=local" : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
         try {
             await page.waitForFunction(() => window.__broods || window.__broodsError, null, {timeout: 300000});
         } catch (error) {

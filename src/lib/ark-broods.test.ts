@@ -4,8 +4,11 @@ import path from "node:path";
 import {test} from "node:test";
 import {ARK_BROODS_OFF, ARK_BROOD_ENGLISH, arkBroodCardLine, arkBroodLossStage, arkBroodMemberId, arkBroodOfMember, arkBroodsByParent, decodeArkBroods, type ArkBroodsRead} from "@/lib/ark-broods";
 import {rawBrood, rawBroodsRead, rawLoss, type RawBrood} from "@/ark-scene/fixtures/broods";
-import {BROOD_EGGS_DRAWN, BROOD_MODELS, BROOD_MODELS_MOST, HATCH_ROCK, LiveBroods, RAID_WALK, broodCareSex, broodDrawn, broodEggLook, broodFlees, broodModels, broodNestlings, broodSpeck, carerPose, eggSpot, hatchPose, nestlingLength, raidPose, type BroodPlace, type BroodSink, type LiveBroodsHost} from "@/ark-scene/live-broods";
-import {broodItems, broodRecruitIds, broodRecruits, broodText, isBroodActedRow, isBroodRow} from "@/ark-scene/live/brood-lines";
+import {BROOD_EGGS_DRAWN, BROOD_MODELS, BROOD_MODELS_MOST, DRIVE_SECONDS, FEED_CYCLE, HATCH_ROCK, LiveBroods, RAID_WALK, broodCareSex, broodDrawn, broodEggLook, broodFlees, broodModels, broodNestlings, broodSpeck, carerPose, driveGuardPose, driveHunterPose, driveStyle, eggSpot, feedPhase, feederOf, hatchPose, nestlingLength, raidPose, type BroodPlace, type BroodSink, type LiveBroodsHost} from "@/ark-scene/live-broods";
+import {broodHeldOff, broodItems, broodRecruitIds, broodRecruits, broodText, isBroodActedRow, isBroodRow} from "@/ark-scene/live/brood-lines";
+import {decodeDriveClips} from "@/ark-scene/drive-clips";
+import {arkLiteFeedBroods, arkLiteFeedFromEvents} from "@/lib/ark-lite-feed";
+import {decodeArkEvents} from "@/lib/ark-life";
 import {ARK_ACT_HOLD_SECONDS} from "@/lib/ark-act-hold";
 import {setRecordedSexes} from "@/ark-scene/behaviour-recipes";
 import type {ActPose} from "@/ark-scene/acts";
@@ -715,4 +718,165 @@ test("every Ark locale has the broods' words, each with its placeholders", () =>
         assert.deepEqual(Object.keys(words).sort(), Object.keys(ARK_BROOD_ENGLISH).sort(), path.basename(file));
     }
     assert.deepEqual((JSON.parse(readFileSync(files[0], "utf8")) as {ark: {broods: unknown}}).ark.broods, ARK_BROOD_ENGLISH, "en.json is the English");
+});
+
+// MARK: Phase B: the drive-off, feeding, Ark Lite
+
+test("a drive-off's style is its kind's: a songbird mobs, a plover leads off, a duck with its young or a fox charges", () => {
+    assert.equal(driveStyle("bird", "nest", true, false), "mob", "an American Robin at its nest");
+    assert.equal(driveStyle("bird", "follow", true, false), "distract", "a Killdeer with its chicks: the broken-wing display");
+    assert.equal(driveStyle("bird", "follow", true, true), "charge", "a Mallard with her ducklings");
+    assert.equal(driveStyle("mammal", "nest", false, false), "charge", "a Red Fox at its den");
+    assert.equal(driveStyle("reptile", "guard", false, true), "charge", "a crocodile at its mound");
+});
+
+test("the drive-off: the guard faces the hunter, makes its stand at it, and goes back; the hunter stands, gives ground, and goes", () => {
+    const home = {x: 0, z: 0, base: 0, yaw: 0, length: 0.5};
+    const hunter = {x: 0, z: 3, base: 0, yaw: Math.PI, length: 0.9};
+    const ground = () => 0;
+    // Before: it stops where it is and faces the hunter.
+    const before = driveGuardPose(-2, "charge", home, hunter, ground, null)!;
+    assert.deepEqual([before.x, before.z, before.state], [0, 0, "scan"]);
+    assert.ok(Math.abs(before.yaw) < 1e-9, "facing it");
+    // A rush at it, then the stand face to face, its threat a lunge of the head where there is no clip.
+    const rush = driveGuardPose(0.4, "charge", home, hunter, ground, null)!;
+    assert.equal(rush.state, "run");
+    const stand = driveGuardPose(1.0, "charge", home, hunter, ground, null)!;
+    assert.equal(stand.state, "drive_charge");
+    assert.ok(Math.hypot(stand.x - hunter.x, stand.z - hunter.z) < 1, "close in at it");
+    assert.ok(stand.pitch >= 0);
+    // With its kind's clip: the rush stops short, and the clip's own lunge carries it there over the clip's moving share.
+    const clip = {seconds: 1.452, moving: [0.1791, 0.3582] as [number, number], distance: 0.26};
+    const lungeA = driveGuardPose(0.8 + 0.1, "charge", home, hunter, ground, clip)!;
+    const lungeB = driveGuardPose(0.8 + 0.6, "charge", home, hunter, ground, clip)!;
+    assert.equal(lungeA.state, "drive_charge");
+    assert.ok(lungeB.z - lungeA.z > 0.2, "on toward it as the clip lunges");
+    assert.equal(lungeA.pitch, 0, "the clip's own threat, nothing added");
+    // On the water it swims at it (the clips are made on foot).
+    const wet = driveGuardPose(1.0, "charge", home, hunter, () => 0.4, clip, () => true)!;
+    assert.equal(wet.state, "swim");
+    // Then back where it was, and done.
+    const back = driveGuardPose(DRIVE_SECONDS + 1, "charge", home, hunter, ground, null)!;
+    assert.equal(back.state, "walk");
+    assert.equal(driveGuardPose(DRIVE_SECONDS + 3, "charge", home, hunter, ground, null), null);
+    // A mob: in by air, scolding and jabbing beside it on the ground, a swoop low over its head, and away.
+    assert.equal(driveGuardPose(0.5, "mob", home, hunter, ground, null)!.state, "fly");
+    const mob = driveGuardPose(2.5, "mob", home, hunter, ground, null)!;
+    assert.equal(mob.state, "drive_mob");
+    assert.equal(mob.base, 0, "on the ground beside it");
+    assert.ok(Math.hypot(mob.x - hunter.x, mob.z - hunter.z) < 2);
+    const swoop = driveGuardPose(4.2 + 0.9, "mob", home, hunter, ground, null)!;
+    assert.equal(swoop.state, "fly");
+    assert.ok(swoop.base > hunter.base + hunter.length * 0.6, "over its head");
+    // A broken-wing display: dragging a wing, a few steps, dragging again, ever further off; the hunter following.
+    const drag = driveGuardPose(0.5, "distract", home, hunter, ground, null)!;
+    assert.equal(drag.state, "drive_distract");
+    assert.ok(drag.roll > 0, "a wing down, without its clip");
+    const farther = driveGuardPose(7.5, "distract", home, hunter, ground, null)!;
+    assert.ok(Math.hypot(farther.x, farther.z) > Math.hypot(drag.x, drag.z) + 0.5, "leading it off");
+    // The hunter: in to the brood's edge (a raid's way), its ground stood, then giving ground, then gone.
+    const nest: BroodPlace = {x: 0, z: 0, y: 0, top: 0, yaw: 0, water: false};
+    const from = {x: 0, z: 10, y: 0, yaw: 0};
+    const at = driveHunterPose(RAID_WALK + 1, "charge", from, from, nest, 0.9, 0.3, 1, false, ground, null)!;
+    assert.equal(at.state, "scan");
+    const giving = driveHunterPose(RAID_WALK + 6, "charge", from, from, nest, 0.9, 0.3, 1, false, ground, null)!;
+    assert.ok(Math.hypot(giving.x, giving.z) > Math.hypot(at.x, at.z) + 0.3, "it backs off");
+    assert.equal(driveHunterPose(RAID_WALK + DRIVE_SECONDS + 13, "charge", from, from, nest, 0.9, 0.3, 1, false, ground, null), null);
+    const lured = driveHunterPose(RAID_WALK + 6, "distract", from, from, nest, 0.9, 0.3, 1, false, ground, {x: 5, z: 0})!;
+    assert.ok(lured.x > at.x + 1, "it follows the parent that leads it off");
+});
+
+test("a raid held off is acted at the brood from the record: the guard drives the hunter off; nothing is taken", () => {
+    const rows = [row(3, "escaped", {animal: null, other: heron, brood: {id: ID, taken: 0, left: 9, stage: "egg", defended: true, guard: A}, prey: {species_profile_id: "sp-mallard", name: "Mallard", model_slug: "mallard"}})];
+    const held = broodHeldOff(rows, -Infinity);
+    assert.deepEqual(held.map((h) => [h.key, h.brood, h.hunter.id, h.guard]), [["held:3", ID, HUNTER.id, A]]);
+    assert.deepEqual(broodHeldOff([row(4, "escaped", {animal: duck, other: heron})], -Infinity), [], "an escape of a prey is the escapes' own");
+    const w = world();
+    w.layer.set(read(T0, [mallard()]), T0);
+    w.layout();
+    assert.equal(w.step(T0 + 5).eggs, 9);
+    w.layer.heldOff(held, T0 + 4);
+    const start = T0 + 3 + ARK_ACT_HOLD_SECONDS;
+    assert.deepEqual(w.layer.pins(start - 30).sort(), [A, HUNTER.id].sort(), "the hunter and the guard are drawn for it");
+    w.step(start + 1);
+    assert.equal(w.entries.get(HUNTER.id)!.act?.state, "walk", "the hunter on its way in");
+    assert.equal(w.entries.get(A)!.act?.state, "rest", "the duck sits on until it is close");
+    w.step(start + RAID_WALK - 2);
+    assert.equal(w.entries.get(A)!.act?.state, "scan", "up, facing it");
+    const states = new Set<string>();
+    let eggs = Infinity;
+    for (let s = RAID_WALK; s < RAID_WALK + DRIVE_SECONDS; s += 0.2) {
+        eggs = Math.min(eggs, w.step(start + s).eggs);
+        states.add(w.entries.get(A)!.act?.state ?? "");
+    }
+    assert.ok(Array.from(states).some((state) => state.startsWith("drive_")), `its stand: ${Array.from(states).join(", ")}`);
+    assert.equal(eggs, 9, "held off: none of them taken");
+    assert.deepEqual(w.layer.raids(start + RAID_WALK + 1), [{predator: HUNTER.id, t0: start}], "WATCH ranks it as a hunt");
+    // Over: the hunter its own again, the duck back on her eggs.
+    w.step(start + RAID_WALK + DRIVE_SECONDS + 30);
+    w.step(start + RAID_WALK + DRIVE_SECONDS + 40);
+    assert.equal(w.entries.get(HUNTER.id)!.act, null);
+    assert.equal(w.entries.get(A)!.act?.state, "rest");
+    assert.deepEqual(w.layer.pins(start + 300), []);
+    // One read long after it happened is the log's line alone; the guard not out: nothing acted, nobody else standing in.
+    const late = world();
+    late.layer.set(read(T0, [mallard()]), T0);
+    late.layout();
+    late.layer.heldOff(held, T0 + 1000);
+    late.step(T0 + 1001);
+    assert.equal(late.entries.get(HUNTER.id)!.act, null);
+});
+
+test("nestlings fed: a parent comes to the rim by turns, they beg toward it; nothing while asleep", () => {
+    // The cycle: away most of it; in, feeding, staying, going; the begging from when it is heard until it has fed.
+    assert.equal(feedPhase(10).phase, "away");
+    assert.equal(feedPhase(10).beg, 0);
+    assert.equal(feedPhase(52).phase, "in");
+    assert.equal(feedPhase(58).phase, "feed");
+    assert.equal(feedPhase(58).beg, 1);
+    assert.equal(feedPhase(68).phase, "stay");
+    assert.equal(feedPhase(72).phase, "out");
+    assert.equal(feedPhase(58 + FEED_CYCLE).phase, "feed", "every cycle");
+    // Both parents by turns, where both feed; the female alone where she does.
+    assert.deepEqual([0, 1, 2, 3].map((n) => feederOf(n, A, B, "american-robin")), [A, B, A, B]);
+    assert.deepEqual([0, 1].map((n) => feederOf(n, A, B, "ruby-throated-hummingbird")), [A, A]);
+    assert.deepEqual([0, 1].map((n) => feederOf(n, A, null, "american-robin")), [A, A], "one parent out: it feeds them all");
+});
+
+test("Ark Lite: the record's brood lines in the 3D log's words, and a recruit is never said as a birth", () => {
+    const rows = [
+        row(3, "escaped", {animal: null, other: heron, brood: {id: ID, defended: true, guard: A}, prey: {species_profile_id: "sp-mallard", name: "Mallard", model_slug: "mallard"}}),
+        row(4, "brood_stage", {animal: duck, brood: {id: ID, from: "egg", count: 7, of: 9}}),
+        row(8, "birth", {animal: {...duck, id: "r-1"}, parents: [A, B], recruit: true, brood: {id: ID, survivors: 3, of: 9}}),
+        row(12, "birth", {animal: {...duck, id: "c-1"}, parents: [A, B]})
+    ];
+    const lines = arkLiteFeedBroods(rows, {words: null, text: TEXT, locale: "en", brood: () => null});
+    assert.deepEqual(lines.map((entry) => [entry.id, broodText(entry.item), entry.slug]), [
+        ["event:3", "Mallard: the parent drove off a Grey Heron", "mallard"],
+        ["event:4", "Mallard: 7 eggs hatched", "mallard"],
+        ["event:8", "Mallard: 1 young now on their own", "mallard"]
+    ]);
+    assert.equal(lines[0].at, rows[0].at, "at its row's time");
+    const snapshot = {animals: [{id: A, model_slug: "mallard", name: "Mallard"}], voyage: {started_at: new Date(T0 * 1000).toISOString()}} as unknown as ArkSnapshot;
+    const events = decodeArkEvents(rows, snapshot);
+    const plain = arkLiteFeedFromEvents(events, rows).map((entry) => entry.id);
+    assert.equal(plain.includes("event:8") || plain.some((id) => id.includes("r-1")), false, "the recruit's birth is the brood line's");
+    // (No rows given, as before: unchanged.)
+    assert.deepEqual(arkLiteFeedFromEvents(events.filter((e) => String(e.id) !== "8")).map((entry) => entry.id), arkLiteFeedFromEvents(events, rows).map((entry) => entry.id));
+});
+
+test("the drive-off clips: the list as the Blender lane writes it; a bad file or a name that is not a drive's is left out", () => {
+    const list = decodeDriveClips({kind: "ark-drive-clips", version: 1, species: {
+        mallard: {rig: "5c5b46711068", file: "0eb23247defe.drive.bin", bones: 19, rows: 109, drive_clips: [
+            {name: "drive_charge", duration: 1.452, row: 0, rows: 68, loop: false, moving: [0.1791, 0.3582], distance: 0.2566},
+            {name: "drive_mob", duration: 2, row: 68, rows: 41, loop: true},
+            {name: "walk", duration: 1, row: 0, rows: 10}
+        ]},
+        killdeer: {rig: "c79e68302077", file: "bfcd468d7531.drive.bin", bones: 19, rows: 58, drive_clips: [{name: "drive_distract", duration: 1.6, row: 41, rows: 17, loop: true, flight: true}]},
+        bad: {rig: "x", file: "../../etc.bin", bones: 19, rows: 10, drive_clips: [{name: "drive_mob", duration: 2, row: 0, rows: 10}]}
+    }})!;
+    assert.deepEqual(Array.from(list.keys()).sort(), ["killdeer", "mallard"]);
+    assert.deepEqual(list.get("mallard")!.clips.map((c) => [c.name, c.loop, c.moving, c.distance]), [["drive_charge", false, [0.1791, 0.3582], 0.2566], ["drive_mob", true, undefined, undefined]]);
+    assert.equal(list.get("killdeer")!.clips[0].flight, true);
+    assert.equal(decodeDriveClips({kind: "ark-power-clips", version: 1, species: {}}), null);
 });

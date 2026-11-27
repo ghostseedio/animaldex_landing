@@ -1757,7 +1757,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      */
     let cast: ArkCastLayer | null = null;
     /** BROODS (AnimalDex docs/ark/broods.md 7): the brood layer and its meshes, made for a brood read that says `on: true`; null: the scene is today's. */
-    let broods: {layer: LiveBroods<Entry>; draw: BroodDraw} | null = null;
+    let broods: {layer: LiveBroods<Entry>; draw: BroodDraw; driveClips: import("@/ark-scene/drive-clips").ArkDriveClips} | null = null;
     /** V2 replay: the camera's near plane pushed out toward a shot's subject (m), or null: the scene's own. */
     let nearCut: number | null = null;
     /**
@@ -6386,6 +6386,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const powerClip = !reducedMotion && !state.flying ? entry.power?.clip ?? null : null;
         if (powerClip && rig.clips[powerClip]) {
             want = powerClip;
+            mode = "time";
+            rate = 1;
+        }
+        // BROODS: a parent's drive-off (`live-broods.ts`): its species' Blender clip (`drive-clips.ts`) while the act names one.
+        const driveClip = !reducedMotion && !state.flying && entry.act?.state?.startsWith("drive_") ? entry.act.state : null;
+        if (driveClip && rig.clips[driveClip]) {
+            want = driveClip;
             mode = "time";
             rate = 1;
         }
@@ -11247,9 +11254,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         if (!read.on || broodsLoading) return;
         broodsLoading = true;
-        void Promise.all([import("@/ark-scene/live-broods"), import("@/ark-scene/brood-draw"), import("@/ark-scene/brood-sites"), library.ready()])
-            .then(([layerModule, drawModule, sitesModule]) => {
+        void Promise.all([import("@/ark-scene/live-broods"), import("@/ark-scene/brood-draw"), import("@/ark-scene/brood-sites"), import("@/ark-scene/drive-clips"), library.ready()])
+            .then(([layerModule, drawModule, sitesModule, driveModule]) => {
                 if (disposed) return;
+                // (A parent's drive-off clips ride on the v3 rigs, as the Power clips do: the list asked for at the first drive-off.)
+                const driveClips = driveModule.createArkDriveClips({
+                    base: rigBasesFrom(options.modelBase, options.rigBase).find((base) => rigSetVersion(base) === 3) ?? null,
+                    loaded: (slug) => {
+                        const rig = rigs.get(slug);
+                        return rig ? {set: rig.set, version: rig.version, bones: rig.bones, has: (name: string) => Boolean(rig.clips[name])} : null;
+                    },
+                    request: (slug) => rigs.request(slug, true),
+                    flight: (slug) => Boolean(rigs.get(slug)?.flight),
+                    add: (slug, rig, bin, clips) => rigs.addDriveClips(slug, rig, bin, clips)
+                });
                 const draw = new drawModule.BroodDraw(tier, (slug) => {
                     const model = library.get(slug);
                     return model?.far ? textureColour(model.far.map, model.placeholder ? "#b9a789" : "#8f7f66") : null;
@@ -11318,6 +11336,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     flies: (entry) => entry.sched?.profile.move === "fly",
                     swims: (entry) => entry.sched?.profile.move === "swim" || Boolean(entry.sched?.profile.moves.includes("swim")),
                     raisedSite: (brood, home, drawn) => sitesModule.broodNestSite(brood, home, drawn, (id) => placedAll.get(id) ?? null),
+                    driveClip: (entry, name) => (entry.rig ? driveClips.clipFor(entry.animal.model_slug, name) : null),
+                    awake: (entry) => entry.awake,
                     setAct: (entry, pose) => {
                         entry.act = pose;
                     },
@@ -11333,7 +11353,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     }
                 });
                 layer.tier = tier;
-                broods = {layer, draw};
+                broods = {layer, draw, driveClips};
                 if (broodsRead) layer.set(broodsRead, worldMs() / 1000);
             })
             .catch(() => {
@@ -12658,6 +12678,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             if (list.map((r) => lineage.note(r.young, r.parents)).some(Boolean)) liveliness.lineageChanged();
         },
+        noteHeldOff: (list) => broods?.layer.heldOff(list, worldMs() / 1000), // BROODS: a drive-off at the brood's place
         addHatchings: (hatchings) => {
             // ARK-MATING-SHOWN: the young come out of their clutch, held as a birth is (`live-clutches.ts`).
             liveClutches.addHatched(hatchings.map((h) => ({key: h.key, parents: h.parents, young: h.young, t0: h.held ?? h.t0})));
@@ -13203,6 +13224,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             setFishChasers(null);
             nests.dispose();
             broods?.draw.dispose(); // BROODS
+            broods?.driveClips.dispose();
             document.removeEventListener("visibilitychange", syncSound);
             liveliness.dispose();
             if (jetty) (jetty.userData.dispose as () => void)();

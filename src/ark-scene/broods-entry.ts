@@ -13,6 +13,7 @@ import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {FIXTURE_ARK_DAY_SECONDS, rawBrood, rawBroodsRead, rawLoss, type RawBrood} from "@/ark-scene/fixtures/broods";
 import {ARK_BROODS_OFF, arkBroodCardLine, arkBroodsByParent, decodeArkBroods} from "@/lib/ark-broods";
+import {FEED_CYCLE, feedCycleStart} from "@/ark-scene/live-broods";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -34,9 +35,11 @@ type Ctx = {
     encounter: (k: number) => {t: number; predator: {x: number; z: number}; prey: {x: number; z: number; r: number}} | undefined;
     /** New animals come aboard (recruits): added to the snapshot, born on the brood's stage day. */
     recruit: (n: number) => string[];
+    /** A raid the guard held off (an `escaped` with a `brood`): handed to the scene as the live controller does (`noteHeldOff`). */
+    heldOff: (hunterRow: number, guard: string) => void;
 };
-type Shot = {s: number; label: string; distance?: number; polar?: number; azimuth?: number; /** Frame this animal (the k-th cast row's first) instead of the nest. */ follow?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; /** The cast's first home slot (90: the harness's usual), when that spot hides the brood (under lily pads, inside a shrub). */ slot?: number; /** The brood floats at the water's top (spawn): framed there. */ surface?: boolean; distance: number; polar?: number; azimuth?: number; brood: (ctx: Omit<Ctx, "b" | "live" | "ended" | "epoch" | "encounter" | "recruit">) => RawBrood; steps: Array<[number, (ctx: Ctx) => void]>; shots: Shot[]};
+type Shot = {s: number; label: string; distance?: number; polar?: number; azimuth?: number; /** Frame this animal (the k-th cast row's first) instead of the nest. */ follow?: number; /** (Feeding) the second of a feeding visit's cycle to film, in the first cycle after `s`: `s` is moved there. */ feed?: number};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** The cast's first home slot (90: the harness's usual), when that spot hides the brood (under lily pads, inside a shrub). */ slot?: number; /** The brood floats at the water's top (spawn): framed there. */ surface?: boolean; distance: number; polar?: number; azimuth?: number; brood: (ctx: Omit<Ctx, "b" | "live" | "ended" | "epoch" | "encounter" | "recruit" | "heldOff">) => RawBrood; steps: Array<[number, (ctx: Ctx) => void]>; shots: Shot[]};
 
 let lossId = 900;
 /** A loss on the brood: its counts moved, the row put first. */
@@ -159,6 +162,56 @@ const SCENES: Record<string, Scene> = {
         steps: [[40, (c) => lose(c, "taken", 9, 1)], [200, (c) => hatch(c, {care: "guard"})]],
         shots: [{s: 10, label: "28 eggs in a scrape (24 drawn), guarded"}, {s: 121, label: "RAID: the monitor comes", distance: 7}, {s: 131, label: "RAID: at the clutch"}, {s: 137, label: "RAID: eggs going"}, {s: 145, label: "9 taken: 19 left"}, {s: 201, label: "HATCH"}, {s: 202.5, label: "HATCH: coming out, each its own time", distance: 2.2, polar: 0.75}, {s: 204, label: "hatchlings out", distance: 2.2, polar: 0.75}, {s: 207, label: "scattered; some making for her or the water", distance: 2.6, polar: 0.75}, {s: 211, label: "+10 s", distance: 3, polar: 0.75}, {s: 230, label: "19 hatchlings: 6 models + 13 instanced, by the guarding parent", follow: 0, distance: 5}]
     },
+    // PHASE B. A robin's raid held off: the crow comes to the nest up the tree; the female mobs it (scolding and jabbing
+    // beside it, a swoop over its head) until it gives ground and goes. Then the nestlings fed, begging at the rim.
+    drivenest: {
+        zone: "farm_garden", hours: 10, distance: 3, polar: 0.9,
+        cast: [{slug: "american-robin", name: "American Robin", n: 2, sexes: ["f", "m"]}, {slug: "american-crow", name: "American Crow", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "American Robin", model_slug: "american-robin", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 4, start: 4, zone: "farm_garden", care: "nest", hold: "sit", laid_ark_day: day - 10, stage_ark_day: day - 10, next_ark_day: day + 3}),
+        steps: [[60, (c) => c.heldOff(1, c.id(0, 0))], [200, (c) => hatch(c)]],
+        shots: [
+            {s: 40, label: "4 eggs, the female on them"}, {s: 146, label: "HELD OFF: the crow coming; she is up, facing it", distance: 4}, {s: 149.6, label: "HELD OFF: she flies at it", distance: 3},
+            {s: 151, label: "HELD OFF: mobbing beside it (drive_mob)", distance: 2.4}, {s: 152.2, label: "HELD OFF: a jab +1.2 s", distance: 2.4}, {s: 155.1, label: "HELD OFF: the swoop over its head", distance: 3}, {s: 157, label: "HELD OFF: mobbing from its other side; it gives ground", distance: 3},
+            {s: 159.4, label: "HELD OFF: she goes back", distance: 4}, {s: 164, label: "HELD OFF: the crow leaves; 4 eggs, all there", distance: 5},
+            {s: 215, feed: 51.5, label: "FED: a parent flying in; they hear it", distance: 1.6, polar: 0.8}, {s: 215, feed: 55, label: "FED: at the rim; begging, gapes up", distance: 0.8, polar: 0.7}, {s: 215, feed: 58, label: "FED: feeding one", distance: 0.6, polar: 0.75}, {s: 215, feed: 66, label: "FED: stays a little, looking about", distance: 0.8, polar: 0.7}, {s: 215, feed: 76, label: "FED: gone; heads down", distance: 0.8, polar: 0.7}
+        ]
+    },
+    // PHASE B. A mallard's nest held off: the fox comes; the duck charges it on foot (drive_charge) until it backs off.
+    driveduck: {
+        zone: "wetland", hours: 10, distance: 4, polar: 1.1,
+        cast: [{slug: "mallard", name: "Mallard", n: 2, sexes: ["f", "m"]}, {slug: "red-fox", name: "Red Fox", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Mallard", model_slug: "mallard", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 9, start: 9, zone: "wetland", care: "follow", hold: "sit", laid_ark_day: day - 10, stage_ark_day: day - 10, next_ark_day: day + 17}),
+        steps: [[60, (c) => c.heldOff(1, c.id(0, 0))]],
+        shots: [
+            {s: 40, label: "9 eggs, the duck on them", distance: 2}, {s: 146, label: "HELD OFF: the fox coming; she is up, facing it", distance: 5}, {s: 149.4, label: "HELD OFF: the rush at it", distance: 3.5},
+            {s: 150.2, label: "HELD OFF: the charge (drive_charge)", distance: 3}, {s: 150.9, label: "HELD OFF: braced, face to face", distance: 3}, {s: 152.6, label: "HELD OFF: a second rush", distance: 3.5}, {s: 155.3, label: "HELD OFF: again; the fox giving ground", distance: 4},
+            {s: 159, label: "HELD OFF: she goes back", distance: 5}, {s: 166, label: "HELD OFF: the fox leaves; 9 eggs, all there", distance: 6}
+        ]
+    },
+    // PHASE B. A killdeer's nest held off: the broken-wing display (drive_distract), the fox following her away.
+    drivechick: {
+        zone: "grassland", hours: 10, distance: 4, polar: 1.1,
+        cast: [{slug: "killdeer", name: "Killdeer", n: 2, sexes: ["f", "m"]}, {slug: "red-fox", name: "Red Fox", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Killdeer", model_slug: "killdeer", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 4, start: 4, zone: "grassland", care: "follow", hold: "sit", laid_ark_day: day - 10, stage_ark_day: day - 10, next_ark_day: day + 15}),
+        steps: [[60, (c) => c.heldOff(1, c.id(0, 0))]],
+        shots: [
+            {s: 40, label: "4 eggs in a scrape", distance: 1.5}, {s: 147, label: "HELD OFF: the fox coming", distance: 5}, {s: 149.8, label: "HELD OFF: the broken wing (drive_distract)", distance: 3},
+            {s: 151.5, label: "HELD OFF: a few steps, and again", distance: 4}, {s: 154, label: "HELD OFF: leading it off", distance: 5}, {s: 157, label: "HELD OFF: the fox following her, away from the eggs", distance: 6},
+            {s: 159.5, label: "HELD OFF: up and back", distance: 6}, {s: 166, label: "HELD OFF: 4 eggs, all there", distance: 5}
+        ]
+    },
+    // PHASE B. A fox's den held off: a coyote comes; the vixen charges it (drive_charge) until it goes.
+    driveden: {
+        zone: "woodland", hours: 10, distance: 5, polar: 1.1,
+        cast: [{slug: "red-fox", name: "Red Fox", n: 2, sexes: ["f", "m"]}, {slug: "coyote", name: "Coyote", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Red Fox", model_slug: "red-fox", parents: [id(0, 0), id(0, 1)], stage: "young", count: 4, start: 4, stage_count: 4, zone: "woodland", care: "nest", hold: null, laid_ark_day: day - 20, stage_ark_day: day - 5, next_ark_day: day + 30, young_mass_g: 100}),
+        steps: [[60, (c) => c.heldOff(1, c.id(0, 0))]],
+        shots: [
+            {s: 40, label: "4 cubs at the den", distance: 3}, {s: 146, label: "HELD OFF: the coyote coming; she faces it", distance: 6}, {s: 149.4, label: "HELD OFF: the rush", distance: 5},
+            {s: 150.2, label: "HELD OFF: the charge (drive_charge)", distance: 4}, {s: 151, label: "HELD OFF: braced", distance: 4}, {s: 155.3, label: "HELD OFF: again; it gives ground", distance: 5},
+            {s: 159, label: "HELD OFF: back to the cubs", distance: 6}, {s: 166, label: "HELD OFF: the coyote leaves; 4 cubs", distance: 7}
+        ]
+    },
     // A fox's litter: carried (nothing drawn), then cubs at the den; one lost with no cause.
     broodden: {
         zone: "woodland", hours: 10, distance: 3.5, polar: 1.1,
@@ -215,7 +268,9 @@ async function main() {
     if (!decoded) throw new Error("fixture did not decode");
     let snapshot = decoded;
     let ready = false;
-    const handle: ArkSceneHandle = mountArk(document.getElementById("ark")!, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: scene.hours, onReady: () => (ready = true)});
+    // (`?rigs=local`: the harness serves the v3 rig set with the drive-off clips staged beside it, the rest as published.)
+    const rigBase = params.get("rigs") === "local" ? `${location.origin}/ark-rig/v3` : undefined;
+    const handle: ArkSceneHandle = mountArk(document.getElementById("ark")!, {snapshot, modelBase: MODELS, ...(rigBase ? {rigBase} : {}), iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: scene.hours, onReady: () => (ready = true)});
     handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.15, storm: 0, windDirection: 0.4, rain: 0, fog: 0});
     const t0 = Date.UTC(2026, 10, 20, scene.hours) / 1000 + 60;
     const setAt = async (epoch: number) => {
@@ -272,6 +327,10 @@ async function main() {
             const nest = debug.broods()?.broods[0]?.place ?? home;
             return at ? {t: epoch, predator: {x: at.x, z: at.z}, prey: {x: nest.x, z: nest.z, r: 2.5}} : undefined;
         },
+        heldOff: (k, guard) => {
+            if (mode !== "on") return;
+            handle.noteHeldOff?.([{key: `held:${++lossId}`, brood: b.id, hunter: hunter(k), guard, atMs: epoch * 1000}]);
+        },
         recruit: (n) => {
             const ids: string[] = [];
             for (let i = 0; i < n; i++) ids.push(castId(9, recruits++));
@@ -287,6 +346,17 @@ async function main() {
             return ids;
         }
     });
+    // (Feeding shots: moved to their second of the first feeding cycle after their `s`, in order.)
+    let feedFrom = -Infinity;
+    for (const shot of scene.shots) {
+        if (shot.feed === undefined) continue;
+        const c0 = feedCycleStart(b.id);
+        const after = Math.max(t0 + shot.s, feedFrom);
+        const n = Math.ceil((after - c0 - shot.feed) / FEED_CYCLE);
+        shot.s = Math.round((c0 + n * FEED_CYCLE + shot.feed - t0) * 10) / 10;
+        feedFrom = t0 + shot.s;
+        shot.feed = undefined;
+    }
     // The first read (the brood as it is at the start), then each step at its own moment.
     await setAt(t0);
     apply(t0);

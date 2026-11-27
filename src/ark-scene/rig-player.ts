@@ -131,6 +131,8 @@ export type RigModel = {
     version?: string;
     /** Power clips appended (`addPowerClips`): their names, and the bytes they hold. */
     powerClips?: string[];
+    /** BROODS: a parent's drive-off clips appended (`addDriveClips`), as the Power clips are. */
+    driveClips?: string[];
     /** ARK-ANIM round 3: the posed lie's check (`locomotion/lie-pose.ts`), when the rig was a candidate; its clips are in `clips` when it passed. */
     posedLie?: {ok: boolean; reason: string | null; belly: number; sink: number} | null;
 };
@@ -723,8 +725,26 @@ export class RigLibrary {
     addPowerClips(slug: string, rig: string, bin: ArrayBuffer, clips: ReadonlyArray<RigClip & {name: string; row: number; rows: number}>): boolean {
         const model = this.models.get(slug);
         if (!model || model.set !== 3 || model.version !== rig || model.powerClips) return false;
+        const names = this.appendClips(model, bin, clips);
+        if (!names) return false;
+        model.powerClips = names;
+        return true;
+    }
+
+    /** BROODS: a species' drive-off clips (`drive-clips.json` beside the v3 set), appended as the Power clips are (`addPowerClips`). */
+    addDriveClips(slug: string, rig: string, bin: ArrayBuffer, clips: ReadonlyArray<RigClip & {name: string; row: number; rows: number}>): boolean {
+        const model = this.models.get(slug);
+        if (!model || model.set !== 3 || model.version !== rig || model.driveClips) return false;
+        const names = this.appendClips(model, bin, clips);
+        if (!names) return false;
+        model.driveClips = names;
+        return true;
+    }
+
+    /** Clips of a bin appended after the rows the rig holds now (its own, and any appended before): their names, or null. */
+    private appendClips(model: RigModel, bin: ArrayBuffer, clips: ReadonlyArray<RigClip & {name: string; row: number; rows: number}>): string[] | null {
         const rowHalves = model.bones * 12;
-        if (!bin.byteLength || bin.byteLength % (rowHalves * 2)) return false;
+        if (!bin.byteLength || bin.byteLength % (rowHalves * 2)) return null;
         const extra = new Uint16Array(bin);
         const binRows = extra.length / rowHalves;
         const ownRows = model.data.length / rowHalves;
@@ -738,17 +758,16 @@ export class RigLibrary {
             model.clips[clip.name] = withCycleSpeed({...clip, row: ownRows + clip.row}, model.entryVersion);
             names.push(clip.name);
         }
-        if (!names.length) return false;
+        if (!names.length) return null;
         // (The same texture object, grown: the materials keep their uniform; its GPU copy is made again at its new size.)
         model.texture.dispose();
         model.texture.image = {data, width: model.bones * 3, height: ownRows + binRows} as unknown as typeof model.texture.image;
         model.texture.needsUpdate = true;
         model.data = data;
         model.loco?.setBakedData(data);
-        model.powerClips = names;
         model.bytes += bin.byteLength;
         this.heldBytes += bin.byteLength;
-        return true;
+        return names;
     }
 
     dispose() {
