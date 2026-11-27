@@ -626,6 +626,16 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     /** ARK-MATING-SHOWN: the record's layings (`laid` rows): she lays where she is seen, the clutch stays until it hatches (`live-clutches.ts`). */
     addLayings?: (layings: Array<{key: string; parents: string[]; eggs: number | null; t0: number; hatchAt: number}>) => void;
     /**
+     * BROODS (AnimalDex docs/ark/broods.md 7): the engine's public brood read, decoded (`src/lib/ark-broods.ts`): the
+     * scene draws each brood's eggs, young and losses from it. Never called, or given a read that says `on: false`:
+     * nothing of the broods is loaded and the scene is as it was.
+     */
+    setBroods?: (read: import("@/lib/ark-broods").ArkBroodsRead) => void;
+    /** BROODS: recruits of a brood (a `birth` with `recruit: true`): they take over from its stand-ins; their lineage is kept. */
+    noteRecruits?: (list: Array<{brood: string; young: string[]; parents: string[]}>) => void;
+    /** BROODS: raids a parent held off (an `escaped` with a `brood`): the hunter comes, the parent drives it off, it leaves. */
+    noteHeldOff?: (list: import("@/ark-scene/live/brood-lines").ArkBroodHeldOff[]) => void;
+    /**
      * The record's escapes (`escaped` events, AnimalDex decision 373: the prey that got away, the predator, the time on
      * the shared clock, and the encounter's geometry as the server wrote it), acted out in the live world: the chase
      * that ends in a miss, then the prey's limp for a while (`live-escapes.ts`).

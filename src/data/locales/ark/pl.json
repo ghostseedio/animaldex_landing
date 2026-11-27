@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Oglądaj",
             "stop": "Przestań oglądać"
+        },
+        "broods": {
+            "eggs": "Jaja: {start} · pozostało: {left}",
+            "eggsAll": "Jaja: {start}",
+            "eggOne": "1 jajo",
+            "young": "Młode: {start} · pozostało: {left}",
+            "youngAll": "Młode: {start}",
+            "carried": "Spodziewa się młodych: {start}",
+            "takenBy": "Zabrane: {count} · drapieżnik: {aPredator}",
+            "didNotSurvive": "Nie przeżyło: {count}",
+            "nestFailed": "Lęg się nie powiódł",
+            "failed": "Młode nie przeżyły",
+            "parentLost": "Utracone wraz z rodzicem",
+            "unsettled": "Nie osiedliło się: {count}",
+            "independent": "Już samodzielne: {count}",
+            "logHatched": "{animal}: młode wykluły się z {count} jaj",
+            "logBorn": "{animal}: urodzone młode: {count}",
+            "logRaid": "{animal}: zabrane jaja: {count} · drapieżnik: {aPredator} · pozostało: {left}",
+            "logTaken": "{animal}: zabrane młode: {count} · drapieżnik: {aPredator} · pozostało: {left}",
+            "logHeldOff": "{animal}: rodzic odpędził drapieżnika: {aPredator}",
+            "logNestFailed": "{animal}: lęg się nie powiódł",
+            "logFailed": "{animal}: młode nie przeżyły",
+            "logParentLost": "{animal}: młode utracone wraz z rodzicem",
+            "logRecruited": "{animal}: już samodzielne młode: {count}",
+            "logUnsettled": "{animal}: młode, które się nie osiedliły: {count}",
+            "logUnguarded": "{animal}: młode radzą sobie dalej bez rodzica"
         }
     },
     "talkPage": {

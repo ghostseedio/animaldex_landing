@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Смотреть",
             "stop": "Перестать смотреть"
+        },
+        "broods": {
+            "eggs": "Яйца: {start} · осталось: {left}",
+            "eggsAll": "Яйца: {start}",
+            "eggOne": "1 яйцо",
+            "young": "Детёныши: {start} · осталось: {left}",
+            "youngAll": "Детёныши: {start}",
+            "carried": "Вынашивает детёнышей: {start}",
+            "takenBy": "Стали добычей: {count} · хищник: {aPredator}",
+            "didNotSurvive": "Не выжили: {count}",
+            "nestFailed": "Гнездование не удалось",
+            "failed": "Выводок не выжил",
+            "parentLost": "Потерян вместе с родителем",
+            "unsettled": "Не обосновались: {count}",
+            "independent": "Теперь самостоятельны: {count}",
+            "logHatched": "{animal}: из {count} яиц вылупилось потомство",
+            "logBorn": "{animal}: родилось детёнышей: {count}",
+            "logRaid": "{animal}: яйца стали добычей: {count} · хищник: {aPredator} · осталось: {left}",
+            "logTaken": "{animal}: детёныши стали добычей: {count} · хищник: {aPredator} · осталось: {left}",
+            "logHeldOff": "{animal}: родитель отогнал хищника: {aPredator}",
+            "logNestFailed": "{animal}: гнездование не удалось",
+            "logFailed": "{animal}: выводок не выжил",
+            "logParentLost": "{animal}: выводок потерян вместе с родителем",
+            "logRecruited": "{animal}: детёныши стали самостоятельными: {count}",
+            "logUnsettled": "{animal}: детёныши не обосновались: {count}",
+            "logUnguarded": "{animal}: выводок живёт дальше без родителя"
         }
     },
     "talkPage": {

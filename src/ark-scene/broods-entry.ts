@@ -1,0 +1,449 @@
+/**
+ * The broods harness's page (development only; `scripts/ark-broods-clips.mjs` builds it into `.ark-golden/broods/` and
+ * serves it, nothing deploys it). The live scene with a cast-only snapshot (`?scene=broodnest|broodduck|...`) on a
+ * controlled clock, and a brood read made by hand in the engine's contract shape (`fixtures/broods.ts`: never the real
+ * Ark) handed to `setBroods` exactly as the live controller would, step by step along a timeline: laid, raided,
+ * hatched, a take, a loss with no cause, failed, recruited. `?broods=none` gives the scene no read at all (the before
+ * pictures: today's scene); `?broods=off` gives it a read that says `on: false` (it must be the same).
+ * `window.__broods.shot(i)` moves the clock to the i-th moment of the scene's plan and frames the brood's place.
+ */
+
+import {decodeArkSnapshot, mountArk} from "@/ark-scene";
+import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
+import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
+import {FIXTURE_ARK_DAY_SECONDS, rawBrood, rawBroodsRead, rawLoss, type RawBrood} from "@/ark-scene/fixtures/broods";
+import {ARK_BROODS_OFF, arkBroodCardLine, arkBroodsByParent, decodeArkBroods} from "@/lib/ark-broods";
+import {FEED_CYCLE, feedCycleStart} from "@/ark-scene/live-broods";
+
+const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
+const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
+
+type Raw = (typeof fixture)["animals"][number];
+type Cast = {slug: string; name: string; n: number; activity?: string; /** The record's sexes ("m", "f"), as a read carries them while the server's `sexes` switch is on. */ sexes?: string[]};
+type Ctx = {
+    /** The moment (epoch s) and its Ark day. */
+    epoch: number;
+    day: number;
+    /** The scene's brood (the first), and its lists: live, and ended in the last day. */
+    b: RawBrood;
+    live: RawBrood[];
+    ended: RawBrood[];
+    /** The cast's ids: `id(k, i)` the i-th of the k-th cast row; a hunter's record for a loss. */
+    id: (k: number, i: number) => string;
+    hunter: (k: number) => {id: string; species_profile_id: string; name: string; model_slug: string};
+    /** A wild take's encounter: the hunter where it is now, the brood at its nest. */
+    encounter: (k: number) => {t: number; predator: {x: number; z: number}; prey: {x: number; z: number; r: number}} | undefined;
+    /** New animals come aboard (recruits): added to the snapshot, born on the brood's stage day. */
+    recruit: (n: number) => string[];
+    /** A raid the guard held off (an `escaped` with a `brood`): handed to the scene as the live controller does (`noteHeldOff`). */
+    heldOff: (hunterRow: number, guard: string) => void;
+};
+type Shot = {s: number; label: string; distance?: number; polar?: number; azimuth?: number; /** Frame this animal (the k-th cast row's first) instead of the nest. */ follow?: number; /** (Feeding) the second of a feeding visit's cycle to film, in the first cycle after `s`: `s` is moved there. */ feed?: number};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** The cast's first home slot (90: the harness's usual), when that spot hides the brood (under lily pads, inside a shrub). */ slot?: number; /** The brood floats at the water's top (spawn): framed there. */ surface?: boolean; distance: number; polar?: number; azimuth?: number; brood: (ctx: Omit<Ctx, "b" | "live" | "ended" | "epoch" | "encounter" | "recruit" | "heldOff">) => RawBrood; steps: Array<[number, (ctx: Ctx) => void]>; shots: Shot[]};
+
+let lossId = 900;
+/** A loss on the brood: its counts moved, the row put first. */
+const lose = (ctx: Ctx, cause: "taken" | "did_not_survive" | "failed" | "parent_lost" | "unsettled", count: number, hunterRow?: number, withEncounter = false) => {
+    const b = ctx.b;
+    b.count = Math.max(b.count - count, 0);
+    if (cause === "taken") b.taken += count;
+    else if (cause === "unsettled") b.unsettled = (b.unsettled ?? 0) + count;
+    else b.lost += count;
+    b.losses.unshift(rawLoss(++lossId, ctx.epoch, ctx.day, cause, count, b.count, hunterRow === undefined ? null : ctx.hunter(hunterRow), hunterRow !== undefined && withEncounter ? ctx.encounter(hunterRow) : undefined, b.stage));
+    b.losses = b.losses.slice(0, 12);
+};
+/** The stage's change: the young start from what is left. */
+const hatch = (ctx: Ctx, change: Partial<RawBrood> = {}) => {
+    Object.assign(ctx.b, {stage: "young", stage_count: ctx.b.count, stage_ark_day: ctx.day, next_ark_day: ctx.day + 30, hold: null, ...change});
+};
+/** The brood ends: out of the live list, into the ended one, with no `stage` (as the engine's read has an ended brood). */
+const end = (ctx: Ctx, outcome: NonNullable<RawBrood["outcome"]>) => {
+    ctx.b.outcome = outcome;
+    ctx.b.ended_ark_day = ctx.day;
+    delete ctx.b.stage;
+    ctx.live.splice(ctx.live.indexOf(ctx.b), 1);
+    ctx.ended.push(ctx.b);
+};
+
+const BROOD_ID = "b100d000-0000-4000-8000-000000000001";
+
+const SCENES: Record<string, Scene> = {
+    // A songbird's nest: laid, sat on, raided by a crow (the parent gives way), hatched, a nestling lost with no cause, failed: the nest stands empty.
+    broodnest: {
+        // (The nest is up a tree on an open limb, as a robin builds (`brood-sites.ts`): filmed from a little above.)
+        zone: "farm_garden", hours: 10, distance: 1.5, polar: 0.75,
+        cast: [{slug: "american-robin", name: "American Robin", n: 2, sexes: ["f", "m"]}, {slug: "american-crow", name: "American Crow", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "American Robin", model_slug: "american-robin", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 4, start: 4, zone: "farm_garden", care: "nest", hold: "sit", laid_ark_day: day, stage_ark_day: day, next_ark_day: day + 13}),
+        steps: [
+            [60, (c) => lose(c, "taken", 2, 1)],
+            [200, (c) => hatch(c)],
+            [260, (c) => lose(c, "did_not_survive", 1)],
+            [320, (c) => { lose(c, "failed", 1); end(c, "failed"); }]
+        ],
+        shots: [
+            {s: 0.9, label: "laid: the eggs come one by one"}, {s: 8, label: "4 eggs; the parent settles on them"}, {s: 30, label: "THE NEST: in the tree, as a robin builds", distance: 7, polar: 1.0}, {s: 40, label: "sitting"},
+            {s: 141, label: "RAID: the crow on its way (+6 s)", distance: 5, polar: 0.8}, {s: 149.5, label: "SCALE: the crow at the nest beside the robin", distance: 2.4, polar: 0.95}, {s: 150.5, label: "RAID: at the nest, the parent gives way"}, {s: 151.6, label: "RAID: one egg gone"}, {s: 154, label: "RAID: 2 taken, 2 left"}, {s: 175, label: "the crow gone; back on 2 eggs"},
+            {s: 200.6, label: "HATCH: the eggs rock"}, {s: 203, label: "HATCH: the young out"}, {s: 222, label: "2 nestlings in the nest"}, {s: 224, label: "2 nestlings: heads and gapes over the rim", distance: 0.7, polar: 0.55}, {s: 230, label: "nestlings, closer", distance: 0.5, polar: 0.7},
+            {s: 261.5, label: "DID NOT SURVIVE: one fades"}, {s: 268, label: "1 nestling left"},
+            {s: 322, label: "FAILED: the last fades"}, {s: 340, label: "the nest stands empty"}, {s: 925, label: "…and fades (10 min on)"}, {s: 935, label: "gone"}
+        ]
+    },
+    // Ducklings: a scrape of 9 eggs sat on, hatched, 6 with the duck's own model and 3 instanced following her, a fox's take of 2 (a chase), 2 lost with no cause, recruitment: 3 hand over, 2 did not settle.
+    broodduck: {
+        zone: "wetland", hours: 10, distance: 4, polar: 1.1,
+        // (The record's carer is its parent_a, here the drake, as the engine's may be: the duck is drawn sitting and leading, `broodCareSex`.)
+        cast: [{slug: "mallard", name: "Mallard", n: 2, sexes: ["f", "m"]}, {slug: "red-fox", name: "Red Fox", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Mallard", model_slug: "mallard", parents: [id(0, 1), id(0, 0)], carer: id(0, 1), stage: "egg", count: 9, start: 9, zone: "wetland", care: "follow", hold: "sit", laid_ark_day: day - 27, stage_ark_day: day - 27, next_ark_day: day}),
+        steps: [
+            [30, (c) => hatch(c)],
+            [120, (c) => lose(c, "taken", 2, 1, true)],
+            [300, (c) => lose(c, "did_not_survive", 2)],
+            [360, (c) => { c.recruit(3); lose(c, "unsettled", 2); c.b.recruited = 3; c.b.count = 0; end(c, "independent"); }]
+        ],
+        shots: [
+            {s: 12, label: "9 eggs in a scrape, sat on (the duck, not the drake)", distance: 2}, {s: 14, label: "the pair: the duck on the eggs, the drake about", distance: 6}, {s: 30.7, label: "HATCH: the eggs rock", distance: 2}, {s: 33.5, label: "HATCH: ducklings out", distance: 2}, {s: 40, label: "round the nest", distance: 3},
+            {s: 70, label: "9 ducklings: 6 models + 3 instanced, with her", follow: 0}, {s: 100, label: "following", follow: 0},
+            {s: 188, label: "TAKE: before (the brood with her)", distance: 7, follow: 0}, {s: 199, label: "TAKE: no chase onto the water: a raid at the record's place, the bank", distance: 7, follow: 1}, {s: 206, label: "TAKE: the fox at the bank; the two it takes are there", distance: 4, follow: 1}, {s: 211.5, label: "TAKE: feeding, the two before it", distance: 4, follow: 1}, {s: 213.5, label: "TAKE: one taken", distance: 4, follow: 1}, {s: 215.5, label: "TAKE: 2 taken", distance: 4, follow: 1}, {s: 222, label: "TAKE: the fox leaves", distance: 7, follow: 1},
+            {s: 250, label: "7 left with her", follow: 0}, {s: 301.5, label: "DID NOT SURVIVE: 2 fade", follow: 0}, {s: 310, label: "5 left", follow: 0},
+            {s: 361, label: "RECRUITED: 3 hand over (0.8 s)", follow: 0}, {s: 363, label: "RECRUITED: +3 s", follow: 0}, {s: 375, label: "3 new animals; 2 did not settle", follow: 0}
+        ]
+    },
+    // Plover chicks on dry ground: a scrape of 4 eggs, hatched, following the parent; a fox's take of 1 is a chase (`live-meals`).
+    broodchick: {
+        zone: "grassland", hours: 10, distance: 2.5, polar: 1.1,
+        cast: [{slug: "killdeer", name: "Killdeer", n: 2}, {slug: "red-fox", name: "Red Fox", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Killdeer", model_slug: "killdeer", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 4, start: 4, zone: "grassland", care: "follow", hold: "sit", laid_ark_day: day - 25, stage_ark_day: day - 25, next_ark_day: day}),
+        steps: [[30, (c) => hatch(c)], [120, (c) => lose(c, "taken", 1, 1, true)]],
+        shots: [
+            {s: 12, label: "4 eggs in a scrape, sat on", distance: 1.2}, {s: 33.5, label: "HATCH: chicks out", distance: 1.2}, {s: 70, label: "4 chicks with the parent", follow: 0}, {s: 100, label: "following", follow: 0},
+            {s: 188, label: "TAKE: the fox comes", distance: 8}, {s: 196, label: "TAKE: the chase +1 s", distance: 8}, {s: 198, label: "TAKE: +3 s", distance: 8}, {s: 200, label: "TAKE: +5 s", distance: 8}, {s: 203, label: "TAKE: +8 s", distance: 6, follow: 1}, {s: 210, label: "TAKE: the fox feeds", distance: 5, follow: 1},
+            {s: 260, label: "3 left with the parent", follow: 0}
+        ]
+    },
+    // Frog spawn: a clump of 1,200 that lasts, a duck's raid of 300, 300 lost with no cause, hatched: a school of tadpoles, a heron's take of 14, a census cut.
+    broodfrog: {
+        zone: "wetland", hours: 10, distance: 1.3, polar: 0.45, slot: 94, surface: true,
+        cast: [{slug: "common-frog", name: "Common Frog", n: 2}, {slug: "mallard", name: "Mallard", n: 1}, {slug: "great-blue-heron", name: "Great Blue Heron", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Common Frog", model_slug: "common-frog", parents: [id(0, 0), id(0, 1)], carer: null, stage: "egg", count: 1200, start: 1200, zone: "wetland", care: "none", hold: null, way: "amplexus", way_detail: "spawn_mass", laid_ark_day: day - 2, stage_ark_day: day - 2, next_ark_day: day + 10, young_mass_g: 0.1}),
+        steps: [
+            [40, (c) => lose(c, "taken", 300, 1)],
+            [180, (c) => lose(c, "did_not_survive", 300)],
+            [220, (c) => hatch(c)],
+            [280, (c) => lose(c, "taken", 14, 2)],
+            [420, (c) => lose(c, "did_not_survive", 400)]
+        ],
+        shots: [
+            {s: 10, label: "1,200 eggs: a clump of spawn that lasts"}, {s: 122, label: "RAID: the duck comes", distance: 4}, {s: 133, label: "RAID: feeding at the spawn"}, {s: 139, label: "RAID: half its take gone"}, {s: 144, label: "300 taken: 900 left"},
+            {s: 188, label: "300 did not survive: 600 left"}, {s: 221, label: "HATCH"}, {s: 224, label: "tadpoles out"}, {s: 245, label: "600 tadpoles: a school"}, {s: 247, label: "the school +2 s"},
+            {s: 362, label: "RAID: the heron comes", distance: 5}, {s: 372, label: "RAID: the heron feeds on tadpoles", distance: 3}, {s: 390, label: "14 taken: 586 left"}, {s: 428, label: "400 did not survive: 186 left"}
+        ]
+    },
+    // A toad's string.
+    broodtoad: {
+        zone: "wetland", hours: 10, distance: 1.3, polar: 0.45, slot: 97, surface: true,
+        cast: [{slug: "american-toad", name: "American Toad", n: 2}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "American Toad", model_slug: "american-toad", parents: [id(0, 0), id(0, 1)], carer: null, stage: "egg", count: 4000, start: 4000, zone: "wetland", care: "none", hold: null, way: "amplexus", way_detail: "string", laid_ark_day: day - 1, stage_ark_day: day - 1, next_ark_day: day + 8, young_mass_g: 0.05}),
+        steps: [[60, (c) => lose(c, "did_not_survive", 2000)]],
+        shots: [{s: 10, label: "4,000 eggs: a string wound through the weed"}, {s: 30, label: "it lasts"}, {s: 70, label: "2,000 did not survive: half the string"}]
+    },
+    // A stickleback's nest: the male fans his eggs for the whole egg stage; fry in a school with him.
+    broodfish: {
+        zone: "river_lake", hours: 10, distance: 0.7, polar: 1.0,
+        cast: [{slug: "three-spined-stickleback", name: "Three-spined Stickleback", n: 2}, {slug: "great-blue-heron", name: "Great Blue Heron", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Three-spined Stickleback", model_slug: "three-spined-stickleback", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 120, start: 120, zone: "river_lake", care: "guard", hold: "guard", way: "spawn_pair", way_detail: "nest", laid_ark_day: day - 3, stage_ark_day: day - 3, next_ark_day: day + 5, young_mass_g: 0.02}),
+        steps: [[60, (c) => hatch(c)], [120, (c) => lose(c, "did_not_survive", 60)]],
+        shots: [{s: 10, label: "120 eggs in his nest; the male fans them"}, {s: 10.3, label: "fanning +0.3 s"}, {s: 10.6, label: "fanning +0.6 s"}, {s: 40, label: "still fanning (the whole egg stage)"}, {s: 61, label: "HATCH"}, {s: 64, label: "fry out"}, {s: 90, label: "120 fry: 6 models + a school"}, {s: 130, label: "60 did not survive: 60 left"}]
+    },
+    // A crocodile's clutch on the bank, guarded; a monitor's raid takes a share.
+    broodcroc: {
+        zone: "river_lake", hours: 10, distance: 4, polar: 1.0,
+        cast: [{slug: "mugger-crocodile", name: "Mugger Crocodile", n: 2, sexes: ["f", "m"]}, {slug: "savannah-monitor", name: "Savannah Monitor", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Mugger Crocodile", model_slug: "mugger-crocodile", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 28, start: 28, zone: "river_lake", care: "guard", hold: "guard", laid_ark_day: day - 30, stage_ark_day: day - 30, next_ark_day: day + 30, young_mass_g: 70}),
+        steps: [[40, (c) => lose(c, "taken", 9, 1)], [200, (c) => hatch(c, {care: "guard"})]],
+        shots: [{s: 10, label: "28 eggs in a scrape (24 drawn), guarded"}, {s: 121, label: "RAID: the monitor comes", distance: 7}, {s: 131, label: "RAID: at the clutch"}, {s: 137, label: "RAID: eggs going"}, {s: 145, label: "9 taken: 19 left"}, {s: 201, label: "HATCH"}, {s: 202.5, label: "HATCH: coming out, each its own time", distance: 2.2, polar: 0.75}, {s: 204, label: "hatchlings out", distance: 2.2, polar: 0.75}, {s: 207, label: "scattered; some making for her or the water", distance: 2.6, polar: 0.75}, {s: 211, label: "+10 s", distance: 3, polar: 0.75}, {s: 230, label: "19 hatchlings: 6 models + 13 instanced, by the guarding parent", follow: 0, distance: 5}]
+    },
+    // PHASE B. A robin's raid held off: the crow comes to the nest up the tree; the female mobs it (scolding and jabbing
+    // from the rim across the cup, a pass over its head and back) until it goes. Then the nestlings fed, begging at the rim.
+    broodmob: {
+        zone: "farm_garden", hours: 10, distance: 3, polar: 0.9,
+        cast: [{slug: "american-robin", name: "American Robin", n: 2, sexes: ["f", "m"]}, {slug: "american-crow", name: "American Crow", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "American Robin", model_slug: "american-robin", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 4, start: 4, zone: "farm_garden", care: "nest", hold: "sit", laid_ark_day: day - 10, stage_ark_day: day - 10, next_ark_day: day + 3}),
+        steps: [[60, (c) => c.heldOff(1, c.id(0, 0))], [200, (c) => hatch(c)]],
+        shots: [
+            {s: 40, label: "4 eggs, the female on them"}, {s: 146, label: "HELD OFF: the crow coming; she is up, facing it", distance: 4}, {s: 149.4, label: "HELD OFF: off the eggs to the rim", distance: 1.6},
+            {s: 150.5, label: "HELD OFF: scolding from the rim (drive_mob)", distance: 1.4}, {s: 151.6, label: "HELD OFF: a jab +1.1 s", distance: 1.4}, {s: 152.6, label: "HELD OFF: a pass low over its head", distance: 2.2}, {s: 153.6, label: "HELD OFF: round and back", distance: 2.2}, {s: 156, label: "HELD OFF: scolding again", distance: 1.4},
+            {s: 159.4, label: "HELD OFF: the crow goes; she settles", distance: 2.4}, {s: 164, label: "HELD OFF: 4 eggs, all there", distance: 3},
+            {s: 215, feed: 51.5, label: "FED: a parent flying in; they hear it", distance: 1.6, polar: 0.8}, {s: 215, feed: 55, label: "FED: at the rim; begging, gapes up", distance: 0.8, polar: 0.7}, {s: 215, feed: 58, label: "FED: feeding one", distance: 0.6, polar: 0.75}, {s: 215, feed: 66, label: "FED: stays a little, looking about", distance: 0.8, polar: 0.7}, {s: 215, feed: 76, label: "FED: gone; heads down", distance: 0.8, polar: 0.7}
+        ]
+    },
+    // PHASE B. A mallard's nest held off: the fox comes; the duck charges it on foot (drive_charge) until it backs off.
+    broodcharge: {
+        zone: "wetland", hours: 10, distance: 4, polar: 1.1,
+        cast: [{slug: "mallard", name: "Mallard", n: 2, sexes: ["f", "m"]}, {slug: "red-fox", name: "Red Fox", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Mallard", model_slug: "mallard", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 9, start: 9, zone: "wetland", care: "follow", hold: "sit", laid_ark_day: day - 10, stage_ark_day: day - 10, next_ark_day: day + 17}),
+        steps: [[60, (c) => c.heldOff(1, c.id(0, 0))]],
+        shots: [
+            {s: 40, label: "9 eggs, the duck on them", distance: 2}, {s: 146, label: "HELD OFF: the fox coming; she is up, facing it", distance: 5}, {s: 149.4, label: "HELD OFF: the rush at it", distance: 3, follow: 0},
+            {s: 150.2, label: "HELD OFF: the charge (drive_charge)", distance: 2.6, follow: 0}, {s: 150.9, label: "HELD OFF: braced, face to face", distance: 2.6, follow: 0}, {s: 152.6, label: "HELD OFF: a second rush", distance: 3, follow: 0}, {s: 155.3, label: "HELD OFF: again; the fox giving ground", distance: 3.5, follow: 0},
+            {s: 159, label: "HELD OFF: she goes back", distance: 5}, {s: 166, label: "HELD OFF: the fox leaves; 9 eggs, all there", distance: 6}
+        ]
+    },
+    // PHASE B. A killdeer's nest held off: the broken-wing display (drive_distract), the fox following her away.
+    brooddistract: {
+        zone: "grassland", hours: 10, distance: 4, polar: 1.1,
+        cast: [{slug: "killdeer", name: "Killdeer", n: 2, sexes: ["f", "m"]}, {slug: "red-fox", name: "Red Fox", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Killdeer", model_slug: "killdeer", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 4, start: 4, zone: "grassland", care: "follow", hold: "sit", laid_ark_day: day - 10, stage_ark_day: day - 10, next_ark_day: day + 15}),
+        steps: [[60, (c) => c.heldOff(1, c.id(0, 0))]],
+        shots: [
+            {s: 40, label: "4 eggs in a scrape", distance: 1.5}, {s: 147, label: "HELD OFF: the fox coming", distance: 5}, {s: 149.8, label: "HELD OFF: the broken wing (drive_distract)", distance: 3},
+            {s: 151.5, label: "HELD OFF: a few steps, and again", distance: 4}, {s: 154, label: "HELD OFF: leading it off", distance: 5}, {s: 157, label: "HELD OFF: the fox following her, away from the eggs", distance: 6},
+            {s: 159.5, label: "HELD OFF: up and back", distance: 6}, {s: 166, label: "HELD OFF: 4 eggs, all there", distance: 5}
+        ]
+    },
+    // PHASE B. A fox's den held off: a coyote comes; the vixen charges it (drive_charge) until it goes.
+    broodguard: {
+        zone: "woodland", hours: 10, distance: 5, polar: 1.1,
+        cast: [{slug: "red-fox", name: "Red Fox", n: 2, sexes: ["f", "m"]}, {slug: "coyote", name: "Coyote", n: 1}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Red Fox", model_slug: "red-fox", parents: [id(0, 0), id(0, 1)], stage: "young", count: 4, start: 4, stage_count: 4, zone: "woodland", care: "nest", hold: null, laid_ark_day: day - 20, stage_ark_day: day - 5, next_ark_day: day + 30, young_mass_g: 100}),
+        steps: [[60, (c) => c.heldOff(1, c.id(0, 0))]],
+        shots: [
+            {s: 40, label: "4 cubs at the den", distance: 3}, {s: 146, label: "HELD OFF: the coyote coming; she faces it", distance: 6}, {s: 149.4, label: "HELD OFF: the rush", distance: 4, follow: 0},
+            {s: 150.2, label: "HELD OFF: the charge (drive_charge)", distance: 3.2, follow: 0}, {s: 151, label: "HELD OFF: braced", distance: 3.2, follow: 0}, {s: 155.3, label: "HELD OFF: again; it gives ground", distance: 4, follow: 0},
+            {s: 159, label: "HELD OFF: back to the cubs", distance: 6}, {s: 166, label: "HELD OFF: the coyote leaves; 4 cubs", distance: 7}
+        ]
+    },
+    // A fox's litter: carried (nothing drawn), then cubs at the den; one lost with no cause.
+    broodden: {
+        zone: "woodland", hours: 10, distance: 3.5, polar: 1.1,
+        cast: [{slug: "red-fox", name: "Red Fox", n: 2, sexes: ["f", "m"]}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Red Fox", model_slug: "red-fox", parents: [id(0, 0), id(0, 1)], stage: "carried", count: 5, start: 5, zone: "woodland", care: "nest", hold: null, laid_ark_day: day - 50, stage_ark_day: day - 50, next_ark_day: day, young_mass_g: 100}),
+        steps: [[30, (c) => { hatch(c); c.b.laid_ark_day = c.day; }], [120, (c) => lose(c, "did_not_survive", 1)]],
+        shots: [{s: 10, label: "CARRIED: 5 young inside her (nothing drawn)"}, {s: 34, label: "BORN: 5 cubs at the den"}, {s: 60, label: "the litter at the den"}, {s: 100, label: "+40 s"}, {s: 121.5, label: "DID NOT SURVIVE: one fades"}, {s: 130, label: "4 cubs left"}]
+    },
+    // A wolf spider's egg sac, then spiderlings.
+    broodspider: {
+        zone: "grassland", hours: 10, distance: 0.35, polar: 0.9, slot: 93,
+        cast: [{slug: "carolina-wolf-spider", name: "Carolina Wolf Spider", n: 2}],
+        brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Carolina Wolf Spider", model_slug: "carolina-wolf-spider", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 150, start: 150, zone: "grassland", care: "carry", hold: "guard", laid_ark_day: day - 5, stage_ark_day: day - 5, next_ark_day: day + 10, young_mass_g: 0.001}),
+        steps: [[40, (c) => hatch(c, {care: "carry"})], [100, (c) => lose(c, "did_not_survive", 75)]],
+        shots: [{s: 10, label: "150 eggs: one sac, guarded"}, {s: 44, label: "HATCH: spiderlings"}, {s: 70, label: "150 spiderlings: models on her + a cluster"}, {s: 108, label: "75 did not survive"}]
+    }
+};
+
+const castId = (k: number, i: number) => `0000feed-0000-4000-8000-${(k * 256 + i).toString(16).padStart(12, "0")}`;
+const speciesId = (k: number) => `5bec1e50-0000-4000-8000-${k.toString(16).padStart(12, "0")}`;
+
+const realDateNow = Date.now.bind(Date);
+const realPerfNow = performance.now.bind(performance);
+let fake: {date: number; perf: number} | null = null;
+Date.now = () => (fake ? fake.date : realDateNow());
+performance.now = () => (fake ? fake.perf : realPerfNow());
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const frames = (n: number) =>
+    new Promise<void>((resolve) => {
+        let left = n;
+        const tick = () => (--left <= 0 ? resolve() : requestAnimationFrame(tick));
+        requestAnimationFrame(tick);
+    });
+
+async function main() {
+    const params = new URLSearchParams(location.search);
+    const name = params.get("scene") ?? "broodnest";
+    const scene = SCENES[name];
+    if (!scene) throw new Error(`no scene ${name}`);
+    /** `on`: the fixture's read along the timeline. `off`: a read that says `on: false`. `none`: no read at all (today's scene). */
+    // (`none2`: `none` again, the control for the comparison: how alike two loads of the very same scene are.)
+    const asked = params.get("broods") ?? "on";
+    const mode = (asked === "on" || asked === "off" ? asked : "none") as "on" | "off" | "none";
+    (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
+    if (params.get("grass") === "0") (globalThis as {__arkNoGrass?: boolean}).__arkNoGrass = true;
+    const template = fixture.animals[0];
+    // (The scene's own Ark day at the scene's clock: from the voyage's start, as the live page has it.)
+    let day0 = (Date.UTC(2026, 10, 20, scene.hours) + 60_000 - Date.parse(fixture.voyage.started_at)) / (FIXTURE_ARK_DAY_SECONDS * 1000);
+    const animals: Raw[] = [];
+    scene.cast.forEach((c, k) => {
+        for (let i = 0; i < c.n; i++) animals.push({...template, id: castId(k, i), species_profile_id: speciesId(k), name: c.name, scientific_name: c.name, model_slug: c.slug, zone: scene.zone, activity: c.activity ?? "diurnal", sociality: k === 0 ? "pair" : "solitary", slot: (scene.slot ?? 90) + k, slot_rank: i, origin: "arrived", born_ark_day: 0, ...(c.sexes?.[i] ? {sex: c.sexes[i]} : {})} as Raw);
+    });
+    const decoded = decodeArkSnapshot({...fixture, animals});
+    if (!decoded) throw new Error("fixture did not decode");
+    let snapshot = decoded;
+    let ready = false;
+    // (`?rigs=local`: the harness serves the v3 rig set with the drive-off clips staged beside it, the rest as published.)
+    const rigBase = params.get("rigs") === "local" ? `${location.origin}/ark-rig/v3` : undefined;
+    const handle: ArkSceneHandle = mountArk(document.getElementById("ark")!, {snapshot, modelBase: MODELS, ...(rigBase ? {rigBase} : {}), iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: scene.hours, onReady: () => (ready = true)});
+    handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.15, storm: 0, windDirection: 0.4, rain: 0, fog: 0});
+    const t0 = Date.UTC(2026, 10, 20, scene.hours) / 1000 + 60;
+    const setAt = async (epoch: number) => {
+        const ms = epoch * 1000;
+        if (!fake) {
+            fake = {date: ms, perf: realPerfNow()};
+            handle.setClockScale(1, ms);
+        } else {
+            fake.perf += ms - fake.date;
+            fake.date = ms;
+        }
+        await frames(3);
+    };
+    await setAt(t0 - 20);
+    const until = realPerfNow() + 120_000;
+    while (realPerfNow() < until && (!ready || handle.loading())) await wait(200);
+    console.log("[broods] loaded", ready, handle.loading());
+    await setAt(t0 - 2);
+    await wait(800);
+    type Entry = {animal: {id: string; model_slug: string}; place: {x: number; z: number; ground: number}; act: Record<string, unknown> | null; length: number};
+    type Debug = {entries: () => Entry[]; broods: () => {broods: Array<{id: string; stage: string; ended: boolean; count: number; eggs: number; young: number; models: number; place: {x: number; z: number; y: number} | null; sitter: string | null; acts: Array<{id: string; kind: string; t0: number; effectAt: number; acted: boolean; over: boolean}>}>; drawn: Record<string, number>} | null; controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}; meals: () => Array<{key: string; t0: number; catchAt: number}>};
+    const debug = (window as unknown as {__arkDebug: Debug}).__arkDebug;
+    const a = castId(0, 0);
+    const home = debug.entries().find((e) => e.animal.id === a)?.place ?? null;
+    if (!home) throw new Error("cast not placed");
+    // (Closer than the page lets a visitor come: an egg is a few centimetres.)
+    debug.controls.minDistance = Math.min(debug.controls.minDistance, 0.2);
+    debug.camera.near = 0.03;
+    debug.camera.updateProjectionMatrix();
+    // (The scene's own Ark day: the harness pins the island's hour, and the scene's day with it. The live page's is the voyage's.)
+    const sceneDay = (debug as unknown as {liveliness?: {arkDayNow?: number}}).liveliness?.arkDayNow;
+    if (typeof sceneDay === "number" && sceneDay > 0) day0 = sceneDay;
+    console.log("[broods] ark day", day0);
+    const hunter = (k: number) => ({id: castId(k, 0), species_profile_id: speciesId(k), name: scene.cast[k].name, model_slug: scene.cast[k].slug});
+    const live: RawBrood[] = [scene.brood({id: castId, day: day0, hunter})];
+    const ended: RawBrood[] = [];
+    const b = live[0];
+    b.nest = {slot: scene.slot ?? 90, slot_rank: 0};
+    let recruits = 0;
+    const apply = (epoch: number) => {
+        if (mode === "none") return;
+        handle.setBroods?.(mode === "off" ? ARK_BROODS_OFF : decodeArkBroods(JSON.parse(JSON.stringify(rawBroodsRead(epoch, day0 + (epoch - t0) / FIXTURE_ARK_DAY_SECONDS, live, ended)))));
+    };
+    const ctxAt = (epoch: number): Ctx => ({
+        epoch,
+        day: day0 + (epoch - t0) / FIXTURE_ARK_DAY_SECONDS,
+        b,
+        live,
+        ended,
+        id: castId,
+        hunter,
+        encounter: (k) => {
+            const at = handle.locate(castId(k, 0));
+            const nest = debug.broods()?.broods[0]?.place ?? home;
+            return at ? {t: epoch, predator: {x: at.x, z: at.z}, prey: {x: nest.x, z: nest.z, r: 2.5}} : undefined;
+        },
+        heldOff: (k, guard) => {
+            if (mode !== "on") return;
+            handle.noteHeldOff?.([{key: `held:${++lossId}`, brood: b.id, hunter: hunter(k), guard, atMs: epoch * 1000}]);
+        },
+        recruit: (n) => {
+            const ids: string[] = [];
+            for (let i = 0; i < n; i++) ids.push(castId(9, recruits++));
+            if (mode !== "on") return ids;
+            const young = ids.map((id, i) => ({...template, id, species_profile_id: speciesId(0), name: scene.cast[0].name, scientific_name: scene.cast[0].name, model_slug: scene.cast[0].slug, zone: scene.zone, activity: "diurnal", sociality: "pair", slot: scene.slot ?? 90, slot_rank: 2 + i, origin: "born", born_ark_day: b.stage_ark_day}) as Raw);
+            animals.push(...young);
+            const next = decodeArkSnapshot({...fixture, animals});
+            if (next) {
+                snapshot = next;
+                handle.update(snapshot);
+                handle.noteRecruits?.([{brood: b.id, young: ids, parents: b.parents}]);
+            }
+            return ids;
+        }
+    });
+    // (Feeding shots: moved to their second of the first feeding cycle after their `s`, in order.)
+    let feedFrom = -Infinity;
+    for (const shot of scene.shots) {
+        if (shot.feed === undefined) continue;
+        const c0 = feedCycleStart(b.id);
+        const after = Math.max(t0 + shot.s, feedFrom);
+        const n = Math.ceil((after - c0 - shot.feed) / FEED_CYCLE);
+        shot.s = Math.round((c0 + n * FEED_CYCLE + shot.feed - t0) * 10) / 10;
+        feedFrom = t0 + shot.s;
+        shot.feed = undefined;
+    }
+    // The first read (the brood as it is at the start), then each step at its own moment.
+    await setAt(t0);
+    apply(t0);
+    let next = 0;
+    const advance = async (s: number) => {
+        while (next < scene.steps.length && scene.steps[next][0] <= s) {
+            const [at, step] = scene.steps[next++];
+            await setAt(t0 + at);
+            step(ctxAt(t0 + at));
+            apply(t0 + at);
+            await frames(3);
+        }
+    };
+    const view = (distance: number, at: {x: number; y?: number; z: number}, polar: number, azimuth: number): ArkCameraView => ({target: {x: at.x, y: (at.y ?? Math.max(handle.heightAt(at.x, at.z), 0)) + distance * 0.06, z: at.z}, distance, polar, azimuth});
+    /** Where the brood is (kept from the `on` run's own layer; with no layer, the first parent's home). */
+    let spot: {x: number; y: number; z: number} | null = null;
+    const api = {
+        plan: () => scene.shots,
+        steps: () => scene.steps.map(([s]) => s),
+        /** The view the last shot was framed with (the `on` run's are given to the others: the same camera before and after). */
+        lastView: null as ArkCameraView | null,
+        /** The scene as it stood at the last shot: every drawn animal's id, place and act, and what the scene holds (for `off` against `none`: two loads' pixels differ by the grass's own motion, their state must not). */
+        lastState: "",
+        shot: async (i: number, given?: ArkCameraView | null) => {
+            const shot = scene.shots[i];
+            await advance(shot.s);
+            await setAt(t0 + shot.s - 2.5);
+            for (let k = 1; k <= 25; k++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const placed = debug.broods()?.broods[0]?.place as {x: number; y: number; z: number; top?: number; water?: boolean} | null | undefined;
+            // (Spawn that floats is framed at the water's top, from above; a nest on the bed from under the water.)
+            if (placed) spot = {x: placed.x, y: placed.water && scene.surface ? Math.max(placed.top ?? placed.y, placed.y) : placed.y, z: placed.z};
+            const nest = spot ?? {x: home.x, y: home.ground, z: home.z};
+            const who = shot.follow !== undefined ? handle.locate(castId(shot.follow, 0)) : null;
+            const distance = shot.distance ?? scene.distance;
+            const at = who ?? nest;
+            // (From the clearest side: a nest under a fern or in a tuft was filmed through its leaves.)
+            const clear = handle.clearView?.({x: at.x, y: at.y ?? 0, z: at.z}, distance, shot.polar ?? scene.polar ?? 1.1, shot.azimuth ?? scene.azimuth ?? 0.7) ?? null;
+            const shown = given ?? view(distance, at, clear?.polar ?? shot.polar ?? scene.polar ?? 1.1, clear?.azimuth ?? shot.azimuth ?? scene.azimuth ?? 0.7);
+            api.lastView = shown;
+            // (Closer than the page lets a visitor come, set with each view: the scene puts its own floor back.)
+            handle.setNearCut?.(null, Math.min(distance, 4));
+            await frames(2);
+            handle.setView(shown);
+            await frames(3);
+            const sceneNow = (debug as unknown as {scene?: {children: unknown[]; traverse: (f: (o: {type?: string; name?: string; visible?: boolean; count?: number}) => void) => void}}).scene;
+            let objects = 0;
+            let instances = 0;
+            // (Which objects, by type and name: to tell what differs when two loads' counts do.)
+            const kinds: Record<string, number> = {};
+            sceneNow?.traverse((o) => {
+                objects++;
+                const kind = `${o.type ?? "?"}:${o.name ?? ""}`;
+                kinds[kind] = (kinds[kind] ?? 0) + 1;
+                if (o.type === "InstancedMesh" && o.visible) instances += o.count ?? 0;
+            });
+            api.lastState = JSON.stringify({objects, instances, kinds: Object.entries(kinds).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)), entries: debug.entries().map((e) => { const at = handle.locate(e.animal.id); return [e.animal.id, at ? [at.x.toFixed(2), at.y.toFixed(2), at.z.toFixed(2)] : null, e.act ? String(e.act.state) : null]; })});
+            const state = debug.broods();
+            const row = state?.broods[0];
+            // (And the rig clip it is drawn with: a drive-off's own Blender clip shows here as `[drive_charge]`.)
+            const clipOf = (e: Entry) => (e as unknown as {rig?: {now?: {name?: string}} | null}).rig?.now?.name ?? null;
+            const acts = debug.entries().filter((e) => e.act).map((e) => `${e.animal.model_slug}${e.animal.id.startsWith("brood:") ? `#${e.animal.id.slice(-1)}` : ""} ${String(e.act!.state ?? "")}${clipOf(e) ? ` [${clipOf(e)}]` : ""}${e.act!.hidden ? " hidden" : ""}${Number(e.act!.scale) < 1 ? ` scale ${Number(e.act!.scale).toFixed(2)}` : ""}`);
+            const read = mode === "on" ? decodeArkBroods(rawBroodsRead(t0 + shot.s, day0, live, ended)) : ARK_BROODS_OFF;
+            const card = arkBroodsByParent(read).get(a)?.[0];
+            const line = card ? arkBroodCardLine(card, null, "en", (n) => `${/^[aeiou]/i.test(n) ? "an" : "a"} ${n}`) : null;
+            const standIns = debug.entries().filter((e) => e.animal.id.startsWith("brood:")).length;
+            const where = (id: string) => {
+                const at = handle.locate(id);
+                return at ? `${at.x.toFixed(2)},${at.y.toFixed(2)},${at.z.toFixed(2)}` : "-";
+            };
+            const actOf = debug.entries().find((e) => e.animal.id === a)?.act as {base?: number; state?: string} | null | undefined;
+            const sizes = debug.entries().filter((e) => e.animal.id.startsWith("brood:") || e.animal.id === a).map((e) => `${e.animal.id.slice(-2)}:${e.length.toFixed(3)}/${String((e.animal as {born_ark_day?: number}).born_ark_day ?? "-").slice(0, 8)}/${(e.animal as {origin?: string}).origin}`).join(" ");
+            const arkNow = (debug as unknown as {liveliness?: {arkDayNow?: number; ageOf?: (e: unknown) => {stage?: string; scale?: number} | null}}).liveliness;
+            const firstStandIn = debug.entries().find((e) => e.animal.id.startsWith("brood:"));
+            const age = firstStandIn && arkNow?.ageOf ? arkNow.ageOf(firstStandIn) : null;
+            const trace = `ark day ${arkNow?.arkDayNow} lengths ${sizes} age ${JSON.stringify(age ? {stage: age.stage, scale: age.scale} : null)} ground ${row?.place ? handle.heightAt(row.place.x, row.place.z).toFixed(2) : "-"} a.act ${actOf ? `${Number(actOf.base).toFixed(2)} ${actOf.state}` : "-"} nest ${row?.place ? `${row.place.x.toFixed(2)},${row.place.y.toFixed(2)},${row.place.z.toFixed(2)}` : "-"} home ${home.x.toFixed(2)},${home.ground.toFixed(2)},${home.z.toFixed(2)} a ${where(a)} b ${where(castId(0, 1))} c ${scene.cast[1] ? where(castId(1, 0)) : "-"} view ${JSON.stringify(handle.view?.() ?? null).slice(0, 160)}`;
+            return [`${name} [${mode}] +${shot.s} s  ${shot.label}`, row ? `record: ${row.stage}${row.ended ? " (ended)" : ""} count ${row.count} · drawn: eggs ${row.eggs.toFixed(0)} young ${row.young.toFixed(1)} models ${row.models} (entries ${standIns}) sitter ${row.sitter ? "yes" : "no"} · instances ${JSON.stringify(state!.drawn)}` : "no brood layer", line ? `card: ${line.head}${line.notes.length ? ` — ${line.notes.join("; ")}` : ""}` : "", row ? `acts: ${row.acts.map((x) => `${x.kind}${x.acted ? "*" : ""}${x.over ? " over" : ` t0 ${(x.t0 - t0).toFixed(0)} → ${(x.effectAt - t0).toFixed(0)}`}`).join(", ")}` : "", acts.join(" | "), trace].filter(Boolean).join("\n");
+        },
+        handle
+    };
+    (window as unknown as {__broods: typeof api}).__broods = api;
+}
+
+main().catch((error) => {
+    console.error("[broods]", error?.stack ?? error);
+    (window as unknown as {__broodsError?: string}).__broodsError = String(error?.stack ?? error);
+});

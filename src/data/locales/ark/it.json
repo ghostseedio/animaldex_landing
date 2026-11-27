@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Guarda",
             "stop": "Smetti di guardare"
+        },
+        "broods": {
+            "eggs": "{start} uova · {left} rimaste",
+            "eggsAll": "{start} uova",
+            "eggOne": "1 uovo",
+            "young": "{start} piccoli · {left} rimasti",
+            "youngAll": "{start} piccoli",
+            "carried": "In attesa di {start} piccoli",
+            "takenBy": "Preda di {aPredator}: {count}",
+            "didNotSurvive": "{count} non ce l'hanno fatta",
+            "nestFailed": "La nidificazione è fallita",
+            "failed": "I piccoli non sono sopravvissuti",
+            "parentLost": "Persi insieme al genitore",
+            "unsettled": "{count} non si sono insediati",
+            "independent": "{count} ora indipendenti",
+            "logHatched": "{animal}: {count} uova schiuse",
+            "logBorn": "{animal}: {count} piccoli nati",
+            "logRaid": "{animal}: {count} uova predate da {aPredator} · {left} rimaste",
+            "logTaken": "{animal}: {count} piccoli predati da {aPredator} · {left} rimasti",
+            "logHeldOff": "{animal}: il genitore ha scacciato {aPredator}",
+            "logNestFailed": "{animal}: la nidificazione è fallita",
+            "logFailed": "{animal}: i piccoli non sono sopravvissuti",
+            "logParentLost": "{animal}: i piccoli sono andati persi insieme al genitore",
+            "logRecruited": "{animal}: {count} piccoli ora indipendenti",
+            "logUnsettled": "{animal}: {count} piccoli non si sono insediati",
+            "logUnguarded": "{animal}: i piccoli vanno avanti senza un genitore"
         }
     },
     "talkPage": {

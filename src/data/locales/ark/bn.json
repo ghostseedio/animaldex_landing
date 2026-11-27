@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "দেখুন",
             "stop": "দেখা বন্ধ করুন"
+        },
+        "broods": {
+            "eggs": "{start}টি ডিম · {left}টি বাকি",
+            "eggsAll": "{start}টি ডিম",
+            "eggOne": "একটি ডিম",
+            "young": "{start}টি বাচ্চা · {left}টি বাকি",
+            "youngAll": "{start}টি বাচ্চা",
+            "carried": "গর্ভে {start}টি বাচ্চা",
+            "takenBy": "{aPredator} {count}টি নিয়ে গেছে",
+            "didNotSurvive": "{count}টি বাঁচেনি",
+            "nestFailed": "বাসাটি টেকেনি",
+            "failed": "বাচ্চারা বাঁচেনি",
+            "parentLost": "মা-বাবার সঙ্গে হারিয়ে গেছে",
+            "unsettled": "{count}টি থিতু হতে পারেনি",
+            "independent": "{count}টি এখন স্বনির্ভর",
+            "logHatched": "{animal}: {count}টি ডিম ফুটেছে",
+            "logBorn": "{animal}: {count}টি বাচ্চা জন্মেছে",
+            "logRaid": "{animal}: {aPredator} {count}টি ডিম নিয়ে গেছে · {left}টি বাকি",
+            "logTaken": "{animal}: {aPredator} {count}টি বাচ্চা নিয়ে গেছে · {left}টি বাকি",
+            "logHeldOff": "{animal}: মা-বাবা {aPredator} তাড়িয়ে দিয়েছে",
+            "logNestFailed": "{animal}: বাসাটি টেকেনি",
+            "logFailed": "{animal}: বাচ্চারা বাঁচেনি",
+            "logParentLost": "{animal}: বাচ্চারা মা-বাবার সঙ্গে হারিয়ে গেছে",
+            "logRecruited": "{animal}: {count}টি বাচ্চা এখন স্বনির্ভর",
+            "logUnsettled": "{animal}: {count}টি বাচ্চা থিতু হতে পারেনি",
+            "logUnguarded": "{animal}: বাচ্চারা মা-বাবা ছাড়াই বেঁচে চলেছে"
         }
     },
     "talkPage": {

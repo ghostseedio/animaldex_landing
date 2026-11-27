@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Nézd",
             "stop": "Nézés leállítása"
+        },
+        "broods": {
+            "eggs": "{start} tojás · {left} maradt",
+            "eggsAll": "{start} tojás",
+            "eggOne": "1 tojás",
+            "young": "{start} utód · {left} maradt",
+            "youngAll": "{start} utód",
+            "carried": "{start} utódot vár",
+            "takenBy": "{aPredator} zsákmánya: {count}",
+            "didNotSurvive": "{count} nem élte túl",
+            "nestFailed": "A fészkelés sikertelen volt",
+            "failed": "Az utódok nem élték túl",
+            "parentLost": "A szülővel együtt odaveszett",
+            "unsettled": "{count} nem telepedett meg",
+            "independent": "{count} már önálló",
+            "logHatched": "{animal}: {count} tojás kikelt",
+            "logBorn": "{animal}: {count} utód született",
+            "logRaid": "{animal}: {aPredator} elvitt {count} tojást · {left} maradt",
+            "logTaken": "{animal}: {aPredator} elvitt {count} utódot · {left} maradt",
+            "logHeldOff": "{animal}: a szülő elűzte a támadót: {aPredator}",
+            "logNestFailed": "{animal}: a fészkelés sikertelen volt",
+            "logFailed": "{animal}: az utódok nem élték túl",
+            "logParentLost": "{animal}: az utódok a szülővel együtt odavesztek",
+            "logRecruited": "{animal}: {count} utód már önálló",
+            "logUnsettled": "{animal}: {count} utód nem telepedett meg",
+            "logUnguarded": "{animal}: az utódok szülő nélkül élnek tovább"
         }
     },
     "talkPage": {

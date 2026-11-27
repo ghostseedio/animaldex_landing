@@ -519,6 +519,8 @@ export type ArkWords = {
      * "Hatches in about {time} · if all goes well" (`{time}`: `minutes`, `hours` or `days` with `{n}`). Optional: English fills.
      */
     eggs?: Partial<Record<"eggsInNest" | "hatchesIn" | "ifAllGoesWell" | "minutes" | "hours" | "days", string>>;
+    /** BROODS (`ark.broods`, `lib/ark-broods.ts` ARK_BROOD_ENGLISH): a parent's brood line on its card and the live log's brood lines; optional: an older bundle lacks it, and English is said. */
+    broods?: import("@/lib/ark-broods").ArkBroodWords;
     /** "Estimated time left" on an animal at risk (`lib/ark-time-left.ts`); English fills any key a bundle lacks. */
     timeLeft?: Partial<ArkTimeLeftWords>;
     /** The two Ark ranking pages (`/tier-list/ark-survival`, `/tier-list/ark-fastest-breeders`; `lib/ark-rankings-words.ts`). Optional: an older bundle lacks them (English is the fallback). */

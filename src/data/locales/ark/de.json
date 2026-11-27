@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Zuschauen",
             "stop": "Zuschauen beenden"
+        },
+        "broods": {
+            "eggs": "{start} Eier · {left} übrig",
+            "eggsAll": "{start} Eier",
+            "eggOne": "1 Ei",
+            "young": "{start} Junge · {left} übrig",
+            "youngAll": "{start} Junge",
+            "carried": "Trägt {start} Junge",
+            "takenBy": "{aPredator} erbeutete {count}",
+            "didNotSurvive": "{count} haben nicht überlebt",
+            "nestFailed": "Das Gelege ging verloren",
+            "failed": "Die Jungen haben nicht überlebt",
+            "parentLost": "Mit dem Elterntier verloren",
+            "unsettled": "{count} konnten sich nicht ansiedeln",
+            "independent": "{count} jetzt selbstständig",
+            "logHatched": "{animal}: Aus {count} Eiern sind Junge geschlüpft",
+            "logBorn": "{animal}: {count} Junge geboren",
+            "logRaid": "{animal}: {aPredator} erbeutete {count} Eier · {left} übrig",
+            "logTaken": "{animal}: {aPredator} erbeutete {count} Junge · {left} übrig",
+            "logHeldOff": "{animal}: Das Elterntier vertrieb den Angreifer: {aPredator}",
+            "logNestFailed": "{animal}: Das Gelege ging verloren",
+            "logFailed": "{animal}: Die Jungen haben nicht überlebt",
+            "logParentLost": "{animal}: Die Jungen gingen mit dem Elterntier verloren",
+            "logRecruited": "{animal}: {count} Junge jetzt selbstständig",
+            "logUnsettled": "{animal}: {count} Junge konnten sich nicht ansiedeln",
+            "logUnguarded": "{animal}: Die Jungen leben ohne Elterntier weiter"
         }
     },
     "talkPage": {

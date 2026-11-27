@@ -9,6 +9,8 @@
  *   the newest line read: meals, pairs, clutches, hatchings, deaths, as the 3D Ark's log says them.
  * - An animal's arrival or birth is one line however it came (the snapshot's, or the record's).
  * - Lines of the same kind and species close together fold into one with a count ("3 Mallards were born").
+ * - BROODS: the record's brood rows in their own words, as the 3D log says them (`brood-lines.ts`): eggs taken, a raid
+ *   held off, hatched, the young on their own. A recruit's `birth` is said there, never as a birth.
  *
  * Privacy: as the 3D log (`ark-live-log.ts`): species only, never a bringer.
  */
@@ -17,6 +19,7 @@ import type {ArkSnapshot} from "@/ark-scene/types";
 import type {ArkEvent} from "@/lib/ark-life";
 import {arkLiveArrivalsFromSnapshot, type ArkLiveItem} from "@/lib/ark-live-log";
 import {recordItems} from "@/ark-scene/live/crisis-lines";
+import {broodItems, broodRecruitIds, type BroodLineContext} from "@/ark-scene/live/brood-lines";
 
 /** A line read: what happened, when, and its species' icon. */
 export type ArkLiteFeedEntry = {id: string; at: string; item: ArkLiveItem; slug: string | null};
@@ -61,13 +64,27 @@ export function arkLiteFeedSeed(snapshot: ArkSnapshot | null, limit = ARK_LITE_F
     return newest.map((animal, index) => ({id: items[index].id, at: animal.arrived_at, item: items[index], slug: animal.model_slug || null}));
 }
 
-/** The record's events as entries (a litter is one, at its first young's time). */
-export function arkLiteFeedFromEvents(events: readonly ArkEvent[]): ArkLiteFeedEntry[] {
-    const byId = new Map(events.map((event) => [String(event.id), event]));
-    return recordItems(events).map((item) => {
+/** The record's events as entries (a litter is one, at its first young's time). `raw`: the rows they came from (a brood's recruits are left to `arkLiteFeedBroods`). */
+export function arkLiteFeedFromEvents(events: readonly ArkEvent[], raw?: unknown): ArkLiteFeedEntry[] {
+    const recruits = raw === undefined ? null : broodRecruitIds(raw);
+    const kept = recruits?.size ? events.filter((event) => !recruits.has(String(event.id))) : events;
+    const byId = new Map(kept.map((event) => [String(event.id), event]));
+    return recordItems(kept).map((item) => {
         const event = byId.get(String(item.id));
         const slug = event?.animal?.model_slug || event?.other?.model_slug || null;
         return {id: String(item.id), at: event?.at ?? new Date(0).toISOString(), item, slug};
+    });
+}
+
+/** BROODS: the rows' brood lines as entries (`brood-lines.ts` `broodItems`), each at its row's time, with its kind's icon. */
+export function arkLiteFeedBroods(raw: unknown, ctx: BroodLineContext): ArkLiteFeedEntry[] {
+    const rows: Array<{id?: unknown; at?: unknown; animal?: {model_slug?: unknown} | null; prey?: {model_slug?: unknown} | null}> = Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as {events?: unknown}).events) ? (raw as {events: []}).events : [];
+    const byId = new Map(rows.filter((row) => row && typeof row === "object").map((row) => [`event:${String(row.id)}`, row]));
+    return broodItems(raw, -Infinity, () => false, ctx).items.flatMap((item) => {
+        const row = byId.get(String(item.id));
+        if (!row || typeof row.at !== "string") return [];
+        const slug = row.prey?.model_slug ?? row.animal?.model_slug;
+        return [{id: String(item.id), at: row.at, item, slug: typeof slug === "string" && slug ? slug : null}];
     });
 }
 

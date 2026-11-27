@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "જુઓ",
             "stop": "જોવાનું બંધ કરો"
+        },
+        "broods": {
+            "eggs": "{start} ઈંડાં · {left} બાકી",
+            "eggsAll": "{start} ઈંડાં",
+            "eggOne": "1 ઈંડું",
+            "young": "{start} બચ્ચાં · {left} બાકી",
+            "youngAll": "{start} બચ્ચાં",
+            "carried": "ગર્ભમાં {start} બચ્ચાં",
+            "takenBy": "{count} શિકાર બન્યાં · શિકારી: {aPredator}",
+            "didNotSurvive": "{count} બચ્યાં નહીં",
+            "nestFailed": "માળો નિષ્ફળ ગયો",
+            "failed": "બચ્ચાં બચ્યાં નહીં",
+            "parentLost": "માતા-પિતા સાથે ખોવાઈ ગયાં",
+            "unsettled": "{count} ઠરીઠામ થયાં નહીં",
+            "independent": "{count} હવે સ્વતંત્ર",
+            "logHatched": "{animal}: {count} ઈંડાંમાંથી બચ્ચાં નીકળ્યાં",
+            "logBorn": "{animal}: {count} બચ્ચાં જન્મ્યાં",
+            "logRaid": "{animal}: {count} ઈંડાં શિકાર બન્યાં · શિકારી: {aPredator} · {left} બાકી",
+            "logTaken": "{animal}: {count} બચ્ચાં શિકાર બન્યાં · શિકારી: {aPredator} · {left} બાકી",
+            "logHeldOff": "{animal}: માતા-પિતાએ શિકારીને ભગાડ્યો: {aPredator}",
+            "logNestFailed": "{animal}: માળો નિષ્ફળ ગયો",
+            "logFailed": "{animal}: બચ્ચાં બચ્યાં નહીં",
+            "logParentLost": "{animal}: બચ્ચાં માતા-પિતા સાથે ખોવાઈ ગયાં",
+            "logRecruited": "{animal}: {count} બચ્ચાં હવે સ્વતંત્ર",
+            "logUnsettled": "{animal}: {count} બચ્ચાં ઠરીઠામ થયાં નહીં",
+            "logUnguarded": "{animal}: બચ્ચાં માતા-પિતા વિના આગળ વધે છે"
         }
     },
     "talkPage": {

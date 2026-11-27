@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "观看",
             "stop": "停止观看"
+        },
+        "broods": {
+            "eggs": "{start} 枚卵 · 剩余 {left} 枚",
+            "eggsAll": "{start} 枚卵",
+            "eggOne": "1 枚卵",
+            "young": "{start} 只幼崽 · 剩余 {left} 只",
+            "youngAll": "{start} 只幼崽",
+            "carried": "怀有 {start} 只幼崽",
+            "takenBy": "{count} 个被{aPredator}掠走",
+            "didNotSurvive": "{count} 个未能存活",
+            "nestFailed": "这一巢未能成功",
+            "failed": "这窝幼崽未能存活",
+            "parentLost": "随亲代一同失去",
+            "unsettled": "{count} 只未能安家",
+            "independent": "{count} 只已独立生活",
+            "logHatched": "{animal}：{count} 枚卵已孵化",
+            "logBorn": "{animal}：{count} 只幼崽出生",
+            "logRaid": "{animal}：{count} 枚卵被{aPredator}掠走 · 剩余 {left} 枚",
+            "logTaken": "{animal}：{count} 只幼崽被{aPredator}掠走 · 剩余 {left} 只",
+            "logHeldOff": "{animal}：亲代赶走了{aPredator}",
+            "logNestFailed": "{animal}：这一巢未能成功",
+            "logFailed": "{animal}：这窝幼崽未能存活",
+            "logParentLost": "{animal}：这窝幼崽随亲代一同失去",
+            "logRecruited": "{animal}：{count} 只幼崽已独立生活",
+            "logUnsettled": "{animal}：{count} 只幼崽未能安家",
+            "logUnguarded": "{animal}：这窝幼崽在没有亲代的情况下继续生存"
         }
     },
     "talkPage": {

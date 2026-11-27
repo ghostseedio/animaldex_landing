@@ -5620,6 +5620,32 @@
     "watch": {
       "start": "Watch",
       "stop": "Stop watching"
+    },
+    "broods": {
+      "eggs": "{start} eggs · {left} left",
+      "eggsAll": "{start} eggs",
+      "eggOne": "1 egg",
+      "young": "{start} young · {left} left",
+      "youngAll": "{start} young",
+      "carried": "Carrying {start} young",
+      "takenBy": "{count} taken by {aPredator}",
+      "didNotSurvive": "{count} did not survive",
+      "nestFailed": "The nest failed",
+      "failed": "The brood did not survive",
+      "parentLost": "Lost with its parent",
+      "unsettled": "{count} did not settle",
+      "independent": "{count} now on their own",
+      "logHatched": "{animal}: {count} eggs hatched",
+      "logBorn": "{animal}: {count} young born",
+      "logRaid": "{animal}: {count} eggs taken by {aPredator} · {left} left",
+      "logTaken": "{animal}: {count} young taken by {aPredator} · {left} left",
+      "logHeldOff": "{animal}: the parent drove off {aPredator}",
+      "logNestFailed": "{animal}: the nest failed",
+      "logFailed": "{animal}: the brood did not survive",
+      "logParentLost": "{animal}: the brood was lost with its parent",
+      "logRecruited": "{animal}: {count} young now on their own",
+      "logUnsettled": "{animal}: {count} young did not settle",
+      "logUnguarded": "{animal}: the brood goes on without a parent"
     }
   },
   "seo": {

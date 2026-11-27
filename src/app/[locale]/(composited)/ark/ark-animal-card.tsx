@@ -2,7 +2,7 @@
 
 import {arkIsHuman} from "@/lib/ark-human";
 import {ARK_KEPT_OFF, arkKeptLines, isArkLeftKind, readArkKeptFlags, type ArkKeptFlags} from "@/lib/ark-kept";
-import React, {Suspense, lazy, useEffect, useMemo, useRef, useState} from "react";
+import React, {Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
@@ -56,6 +56,8 @@ const ArkCardPower = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card
 const ArkItsDay = lazy(() => import("@/app/[locale]/(composited)/ark/ark-its-day"));
 /** Care from visitors (GIFTS-CARE, decision 387): what was given and what the reader could give; lazy, nothing while the server's switch is off. */
 const ArkCardCare = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card-care"));
+// BROODS: a parent's brood line ("9 eggs · 7 left"), from the engine's brood read; nothing while its switch is off.
+const ArkCardBrood = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card-brood"));
 /** Life so far (lane BIO, behind `?lifestory`): its recorded moments, newest first; loaded only while the switch is on. */
 const ArkLifeSoFar = lazy(() => import("@/app/[locale]/(composited)/ark/ark-life-so-far"));
 
@@ -278,6 +280,8 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
     // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.
     const placeholder = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug);
+    // BROODS: "a Grey Heron" in the reader's words, for who took a brood's eggs or young.
+    const broodArticle = useCallback((name: string) => withArticle(name, words), [words]);
     const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager, named);
     // An ancestor's photo only on an animal born on the Ark, its own only on one that arrived; never one unlabelled.
     const shownPhoto = arkPhotoShownOn(photo, facts.born);
@@ -467,6 +471,8 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             </p>
                         ) : null}
                         {placeholder ? null : <Suspense fallback={null}><ArkCardCare animalId={animal.id} words={words.care} locale={locale} /></Suspense>}
+                        {/* BROODS (docs/ark/broods.md 7): its clutch or litter as the record has it: how many, how many left, who took them. */}
+                        {placeholder ? null : <Suspense fallback={null}><ArkCardBrood animalId={animal.id} words={words.broods} locale={locale} article={broodArticle} /></Suspense>}
                         {/* Life so far (behind `?lifestory`): its newest recorded moment; the whole list opens in its life story. */}
                         {lifeSoFarProps && !storyOpen ? <Suspense fallback={null}><ArkLifeSoFar part="line" {...lifeSoFarProps} onOpen={onStory} /></Suspense> : null}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} heartsInHeader /> : null}

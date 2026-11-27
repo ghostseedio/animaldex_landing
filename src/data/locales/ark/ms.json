@@ -1221,6 +1221,32 @@
         "watch": {
             "start": "Tonton",
             "stop": "Berhenti menonton"
+        },
+        "broods": {
+            "eggs": "{start} telur · {left} berbaki",
+            "eggsAll": "{start} telur",
+            "eggOne": "1 telur",
+            "young": "{start} anak · {left} berbaki",
+            "youngAll": "{start} anak",
+            "carried": "Mengandungkan {start} anak",
+            "takenBy": "{count} diambil oleh {aPredator}",
+            "didNotSurvive": "{count} tidak selamat",
+            "nestFailed": "Sarang gagal",
+            "failed": "Anak-anaknya tidak selamat",
+            "parentLost": "Hilang bersama induknya",
+            "unsettled": "{count} tidak menemui tempat menetap",
+            "independent": "{count} kini berdikari",
+            "logHatched": "{animal}: {count} telur menetas",
+            "logBorn": "{animal}: {count} anak dilahirkan",
+            "logRaid": "{animal}: {count} telur diambil oleh {aPredator} · {left} berbaki",
+            "logTaken": "{animal}: {count} anak diambil oleh {aPredator} · {left} berbaki",
+            "logHeldOff": "{animal}: induk menghalau {aPredator}",
+            "logNestFailed": "{animal}: sarang gagal",
+            "logFailed": "{animal}: anak-anaknya tidak selamat",
+            "logParentLost": "{animal}: anak-anaknya hilang bersama induknya",
+            "logRecruited": "{animal}: {count} anak kini berdikari",
+            "logUnsettled": "{animal}: {count} anak tidak menemui tempat menetap",
+            "logUnguarded": "{animal}: anak-anaknya meneruskan hidup tanpa induk"
         }
     },
     "talkPage": {
