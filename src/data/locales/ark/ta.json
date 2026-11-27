@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: குட்டிகள் உயிர் பிழைக்கவில்லை",
             "logParentLost": "{animal}: குட்டிகள் பெற்றோருடன் சேர்ந்து இழக்கப்பட்டன",
             "logRecruited": "{animal}: {count} குட்டிகள் இப்போது தனித்து வாழ்கின்றன",
-            "logUnsettled": "{animal}: {count} குட்டிகள் நிலைகொள்ளவில்லை"
+            "logUnsettled": "{animal}: {count} குட்டிகள் நிலைகொள்ளவில்லை",
+            "logUnguarded": "{animal}: குட்டிகள் பெற்றோர் இல்லாமல் தொடர்கின்றன"
         }
     },
     "talkPage": {

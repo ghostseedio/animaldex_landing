@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: las crías no sobrevivieron",
             "logParentLost": "{animal}: las crías se perdieron junto con su progenitor",
             "logRecruited": "{animal}: {count} crías ya viven por su cuenta",
-            "logUnsettled": "{animal}: {count} crías no lograron establecerse"
+            "logUnsettled": "{animal}: {count} crías no lograron establecerse",
+            "logUnguarded": "{animal}: las crías siguen adelante sin un progenitor"
         }
     },
     "talkPage": {

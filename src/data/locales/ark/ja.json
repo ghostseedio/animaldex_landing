@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}：子どもたちは生き残れなかった",
             "logParentLost": "{animal}：子どもたちは親とともに失われた",
             "logRecruited": "{animal}：子ども{count}匹が独り立ち",
-            "logUnsettled": "{animal}：子ども{count}匹は定着できなかった"
+            "logUnsettled": "{animal}：子ども{count}匹は定着できなかった",
+            "logUnguarded": "{animal}：子どもたちは親がいないまま生きていく"
         }
     },
     "talkPage": {

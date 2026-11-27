@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: 새끼들이 살아남지 못함",
             "logParentLost": "{animal}: 부모와 함께 새끼들을 잃음",
             "logRecruited": "{animal}: 새끼 {count}마리 이제 독립함",
-            "logUnsettled": "{animal}: 새끼 {count}마리 정착하지 못함"
+            "logUnsettled": "{animal}: 새끼 {count}마리 정착하지 못함",
+            "logUnguarded": "{animal}: 새끼들이 부모 없이 살아감"
         }
     },
     "talkPage": {

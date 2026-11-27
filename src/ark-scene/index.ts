@@ -11247,8 +11247,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         if (!read.on || broodsLoading) return;
         broodsLoading = true;
-        void Promise.all([import("@/ark-scene/live-broods"), import("@/ark-scene/brood-draw"), library.ready()])
-            .then(([layerModule, drawModule]) => {
+        void Promise.all([import("@/ark-scene/live-broods"), import("@/ark-scene/brood-draw"), import("@/ark-scene/brood-sites"), library.ready()])
+            .then(([layerModule, drawModule, sitesModule]) => {
                 if (disposed) return;
                 const draw = new drawModule.BroodDraw(tier, (slug) => {
                     const model = library.get(slug);
@@ -11317,6 +11317,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
                     flies: (entry) => entry.sched?.profile.move === "fly",
                     swims: (entry) => entry.sched?.profile.move === "swim" || Boolean(entry.sched?.profile.moves.includes("swim")),
+                    raisedSite: (brood, home, drawn) => sitesModule.broodNestSite(brood, home, drawn, (id) => placedAll.get(id) ?? null),
                     setAct: (entry, pose) => {
                         entry.act = pose;
                     },

@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: yavrular hayatta kalamadı",
             "logParentLost": "{animal}: yavrular ebeveynleriyle birlikte kaybedildi",
             "logRecruited": "{animal}: {count} yavru artık kendi başına",
-            "logUnsettled": "{animal}: {count} yavru yerleşemedi"
+            "logUnsettled": "{animal}: {count} yavru yerleşemedi",
+            "logUnguarded": "{animal}: yavrular ebeveynsiz yollarına devam ediyor"
         }
     },
     "talkPage": {

@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: młode nie przeżyły",
             "logParentLost": "{animal}: młode utracone wraz z rodzicem",
             "logRecruited": "{animal}: już samodzielne młode: {count}",
-            "logUnsettled": "{animal}: młode, które się nie osiedliły: {count}"
+            "logUnsettled": "{animal}: młode, które się nie osiedliły: {count}",
+            "logUnguarded": "{animal}: młode radzą sobie dalej bez rodzica"
         }
     },
     "talkPage": {

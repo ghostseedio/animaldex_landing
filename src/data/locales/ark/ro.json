@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: puii nu au supraviețuit",
             "logParentLost": "{animal}: puii s-au pierdut odată cu părintele",
             "logRecruited": "{animal}: pui acum pe cont propriu: {count}",
-            "logUnsettled": "{animal}: pui care nu s-au stabilit: {count}"
+            "logUnsettled": "{animal}: pui care nu s-au stabilit: {count}",
+            "logUnguarded": "{animal}: puii merg mai departe fără părinte"
         }
     },
     "talkPage": {

@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: kullen överlevde inte",
             "logParentLost": "{animal}: kullen gick förlorad tillsammans med föräldern",
             "logRecruited": "{animal}: {count} ungar klarar sig nu själva",
-            "logUnsettled": "{animal}: {count} ungar hittade ingen plats att slå sig ner på"
+            "logUnsettled": "{animal}: {count} ungar hittade ingen plats att slå sig ner på",
+            "logUnguarded": "{animal}: kullen klarar sig vidare utan förälder"
         }
     },
     "talkPage": {

@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: ลูกทั้งครอกไม่รอด",
             "logParentLost": "{animal}: ลูกทั้งครอกสูญเสียไปพร้อมกับพ่อแม่",
             "logRecruited": "{animal}: ลูก {count} ตัวออกไปใช้ชีวิตเองแล้ว",
-            "logUnsettled": "{animal}: ลูก {count} ตัวหาที่อยู่ไม่ได้"
+            "logUnsettled": "{animal}: ลูก {count} ตัวหาที่อยู่ไม่ได้",
+            "logUnguarded": "{animal}: ลูกทั้งครอกอยู่ต่อไปโดยไม่มีพ่อแม่"
         }
     },
     "talkPage": {

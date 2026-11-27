@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: τα μικρά δεν επέζησαν",
             "logParentLost": "{animal}: τα μικρά χάθηκαν μαζί με τον γονέα τους",
             "logRecruited": "{animal}: {count} μικρά ζουν πλέον μόνα τους",
-            "logUnsettled": "{animal}: {count} μικρά δεν εγκαταστάθηκαν"
+            "logUnsettled": "{animal}: {count} μικρά δεν εγκαταστάθηκαν",
+            "logUnguarded": "{animal}: τα μικρά συνεχίζουν χωρίς γονέα"
         }
     },
     "talkPage": {

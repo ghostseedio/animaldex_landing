@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: બચ્ચાં બચ્યાં નહીં",
             "logParentLost": "{animal}: બચ્ચાં માતા-પિતા સાથે ખોવાઈ ગયાં",
             "logRecruited": "{animal}: {count} બચ્ચાં હવે સ્વતંત્ર",
-            "logUnsettled": "{animal}: {count} બચ્ચાં ઠરીઠામ થયાં નહીં"
+            "logUnsettled": "{animal}: {count} બચ્ચાં ઠરીઠામ થયાં નહીં",
+            "logUnguarded": "{animal}: બચ્ચાં માતા-પિતા વિના આગળ વધે છે"
         }
     },
     "talkPage": {

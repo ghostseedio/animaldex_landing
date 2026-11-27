@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: hindi nakaligtas ang mga anak",
             "logParentLost": "{animal}: nawala ang mga anak kasama ng kanilang magulang",
             "logRecruited": "{animal}: {count} anak ang nagsasarili na ngayon",
-            "logUnsettled": "{animal}: {count} anak ang hindi nakahanap ng matitirhan"
+            "logUnsettled": "{animal}: {count} anak ang hindi nakahanap ng matitirhan",
+            "logUnguarded": "{animal}: nagpapatuloy ang mga anak nang walang magulang"
         }
     },
     "talkPage": {

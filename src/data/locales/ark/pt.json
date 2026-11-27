@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: a ninhada não sobreviveu",
             "logParentLost": "{animal}: a ninhada se perdeu junto com o progenitor",
             "logRecruited": "{animal}: {count} filhotes agora vivem por conta própria",
-            "logUnsettled": "{animal}: {count} filhotes não se estabeleceram"
+            "logUnsettled": "{animal}: {count} filhotes não se estabeleceram",
+            "logUnguarded": "{animal}: a ninhada segue sem um progenitor"
         }
     },
     "talkPage": {

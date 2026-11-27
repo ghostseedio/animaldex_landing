@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: kuldet overlevede ikke",
             "logParentLost": "{animal}: kuldet gik tabt sammen med forælderen",
             "logRecruited": "{animal}: {count} unger klarer sig nu selv",
-            "logUnsettled": "{animal}: {count} unger fandt ikke et sted at slå sig ned"
+            "logUnsettled": "{animal}: {count} unger fandt ikke et sted at slå sig ned",
+            "logUnguarded": "{animal}: kuldet klarer sig videre uden en forælder"
         }
     },
     "talkPage": {

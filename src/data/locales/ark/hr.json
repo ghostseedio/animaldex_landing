@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: mladi nisu preživjeli",
             "logParentLost": "{animal}: mladi su izgubljeni zajedno s roditeljem",
             "logRecruited": "{animal}: sada samostalnih mladih: {count}",
-            "logUnsettled": "{animal}: mladih koji se nisu nastanili: {count}"
+            "logUnsettled": "{animal}: mladih koji se nisu nastanili: {count}",
+            "logUnguarded": "{animal}: mladi nastavljaju bez roditelja"
         }
     },
     "talkPage": {

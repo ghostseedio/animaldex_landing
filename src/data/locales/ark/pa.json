@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: ਬੱਚੇ ਨਹੀਂ ਬਚੇ",
             "logParentLost": "{animal}: ਬੱਚੇ ਮਾਂ ਜਾਂ ਪਿਓ ਦੇ ਨਾਲ ਗੁਆਚ ਗਏ",
             "logRecruited": "{animal}: {count} ਬੱਚੇ ਹੁਣ ਆਤਮ-ਨਿਰਭਰ",
-            "logUnsettled": "{animal}: {count} ਬੱਚੇ ਟਿਕ ਨਹੀਂ ਸਕੇ"
+            "logUnsettled": "{animal}: {count} ਬੱਚੇ ਟਿਕ ਨਹੀਂ ਸਕੇ",
+            "logUnguarded": "{animal}: ਬੱਚੇ ਮਾਂ-ਪਿਓ ਤੋਂ ਬਿਨਾਂ ਅੱਗੇ ਵਧ ਰਹੇ ਹਨ"
         }
     },
     "talkPage": {

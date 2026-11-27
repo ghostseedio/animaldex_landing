@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: mláďata nepřežila",
             "logParentLost": "{animal}: mláďata byla ztracena spolu s rodičem",
             "logRecruited": "{animal}: nyní samostatná mláďata: {count}",
-            "logUnsettled": "{animal}: neusazená mláďata: {count}"
+            "logUnsettled": "{animal}: neusazená mláďata: {count}",
+            "logUnguarded": "{animal}: mláďata pokračují bez rodiče"
         }
     },
     "talkPage": {

@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: đàn con không sống sót",
             "logParentLost": "{animal}: đàn con mất cùng bố mẹ",
             "logRecruited": "{animal}: {count} con non đã sống tự lập",
-            "logUnsettled": "{animal}: {count} con non không tìm được nơi ở"
+            "logUnsettled": "{animal}: {count} con non không tìm được nơi ở",
+            "logUnguarded": "{animal}: đàn con tiếp tục sống mà không có bố mẹ"
         }
     },
     "talkPage": {

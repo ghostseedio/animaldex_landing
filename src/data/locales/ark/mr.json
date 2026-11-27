@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: पिल्ले वाचली नाहीत",
             "logParentLost": "{animal}: पिल्ले पालकासोबत गमावली",
             "logRecruited": "{animal}: {count} पिल्ले आता स्वतंत्र",
-            "logUnsettled": "{animal}: {count} पिल्ले स्थिरावली नाहीत"
+            "logUnsettled": "{animal}: {count} पिल्ले स्थिरावली नाहीत",
+            "logUnguarded": "{animal}: पिल्ले पालकाशिवाय पुढे जगत आहेत"
         }
     },
     "talkPage": {

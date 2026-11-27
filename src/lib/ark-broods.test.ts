@@ -4,9 +4,10 @@ import path from "node:path";
 import {test} from "node:test";
 import {ARK_BROODS_OFF, ARK_BROOD_ENGLISH, arkBroodCardLine, arkBroodLossStage, arkBroodMemberId, arkBroodOfMember, arkBroodsByParent, decodeArkBroods, type ArkBroodsRead} from "@/lib/ark-broods";
 import {rawBrood, rawBroodsRead, rawLoss, type RawBrood} from "@/ark-scene/fixtures/broods";
-import {BROOD_EGGS_DRAWN, BROOD_MODELS, BROOD_MODELS_MOST, LiveBroods, RAID_WALK, broodDrawn, broodEggLook, broodFlees, broodModels, broodSpeck, carerPose, eggSpot, raidPose, type BroodPlace, type BroodSink, type LiveBroodsHost} from "@/ark-scene/live-broods";
+import {BROOD_EGGS_DRAWN, BROOD_MODELS, BROOD_MODELS_MOST, HATCH_ROCK, LiveBroods, RAID_WALK, broodCareSex, broodDrawn, broodEggLook, broodFlees, broodModels, broodNestlings, broodSpeck, carerPose, eggSpot, hatchPose, nestlingLength, raidPose, type BroodPlace, type BroodSink, type LiveBroodsHost} from "@/ark-scene/live-broods";
 import {broodItems, broodRecruitIds, broodRecruits, broodText, isBroodActedRow, isBroodRow} from "@/ark-scene/live/brood-lines";
 import {ARK_ACT_HOLD_SECONDS} from "@/lib/ark-act-hold";
+import {setRecordedSexes} from "@/ark-scene/behaviour-recipes";
 import type {ActPose} from "@/ark-scene/acts";
 import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkLiveText} from "@/lib/ark-live-log";
@@ -20,6 +21,8 @@ const ID = "b100d000-0000-4000-8000-000000000001";
 const mallard = (given: Partial<RawBrood> = {}): RawBrood => rawBrood({id: ID, name: "Mallard", model_slug: "mallard", parents: [A, B], stage: "egg", count: 9, start: 9, zone: "wetland", care: "follow", hold: "sit", laid_ark_day: DAY - 10, stage_ark_day: DAY - 10, ...given});
 const read = (epoch: number, broods: RawBrood[], ended: RawBrood[] = []): ArkBroodsRead => decodeArkBroods(JSON.parse(JSON.stringify(rawBroodsRead(epoch, DAY, broods, ended))));
 const an = (name: string) => `${/^[aeiou]/i.test(name) ? "an" : "a"} ${name}`;
+// (The record's sexes, as a snapshot carries them: A the duck, B the drake; the duck sits and leads, `broodCareSex`.)
+setRecordedSexes([{id: A, sex: "f"}, {id: B, sex: "m"}]);
 
 // MARK: The read
 
@@ -200,12 +203,12 @@ test("the looks follow the MODEL's plan (ark.json behaviour.plan), never a rig c
     assert.equal(broodModels({care: "carry"}, "arthropod"), true, "carried young ride with their own model");
     assert.equal(broodFlees({care: "follow"}, "bird"), true);
     assert.equal(broodFlees({care: "nest"}, "bird"), false, "nestlings are taken where they are: a raid, not a chase");
-    assert.deepEqual([broodSpeck("frog", true), broodSpeck("fish", true), broodSpeck("bird", true), broodSpeck("mammal", false), broodSpeck("arthropod", false), broodSpeck("reptile", true)], ["tadpole", "fry", "oval", "four", "grub", "grub"], "a duckling on the water is still a duckling");
+    assert.deepEqual([broodSpeck("frog", true), broodSpeck("fish", true), broodSpeck("bird", true), broodSpeck("mammal", false), broodSpeck("arthropod", false), broodSpeck("reptile", true)], ["tadpole", "fry", "oval", "four", "grub", "scaly"], "a duckling on the water is still a duckling; a hatchling crocodile is no grub");
     // Every plan the models carry (2,632 local ark.json, 2026-11-27) draws its young somehow, and its eggs unless they drift.
     const every: Record<string, {models: boolean; speck: string; egg: string | null}> = {
         mammal: {models: true, speck: "four", egg: "shell"}, bird: {models: true, speck: "oval", egg: "speckled"}, arthropod: {models: false, speck: "grub", egg: "shell"},
-        fish: {models: true, speck: "fry", egg: "spawn"}, reptile: {models: true, speck: "grub", egg: "shell"}, butterfly: {models: false, speck: "grub", egg: "shell"},
-        turtle: {models: true, speck: "grub", egg: "shell"}, snake: {models: true, speck: "grub", egg: "shell"}, slow_invertebrate: {models: false, speck: "grub", egg: "shell"},
+        fish: {models: true, speck: "fry", egg: "spawn"}, reptile: {models: true, speck: "scaly", egg: "shell"}, butterfly: {models: false, speck: "grub", egg: "shell"},
+        turtle: {models: true, speck: "scaly", egg: "shell"}, snake: {models: true, speck: "scaly", egg: "shell"}, slow_invertebrate: {models: false, speck: "grub", egg: "shell"},
         frog: {models: false, speck: "tadpole", egg: "spawn"}, cetacean: {models: true, speck: "fry", egg: "spawn"}, sessile: {models: false, speck: "fry", egg: "spawn"},
         cephalopod: {models: false, speck: "fry", egg: "spawn"}, eel: {models: true, speck: "fry", egg: "spawn"}, ray: {models: true, speck: "fry", egg: "spawn"},
         jellyfish: {models: false, speck: "fry", egg: "spawn"}, worm: {models: false, speck: "grub", egg: "shell"}, flatfish: {models: true, speck: "fry", egg: "spawn"}
@@ -264,6 +267,39 @@ test("a raid: the hunter comes to the brood, feeds there, and goes back to its d
     assert.ok(Math.hypot(far.x - 10, far.z - 20) < 1);
 });
 
+test("who attends: the sex that sits and leads in its kind (a duck, not the drake; an emu's father; a mammal's mother)", () => {
+    assert.equal(broodCareSex({model_slug: "mallard", kind: "k"}, "bird"), "female", "a mallard duck incubates and leads the ducklings");
+    assert.equal(broodCareSex({model_slug: "american-robin", kind: "k"}, "bird"), "female", "a robin's female incubates");
+    assert.equal(broodCareSex({model_slug: "emu", kind: "k"}, "bird"), "male", "an emu's father sits (its recipe's maleSits)");
+    assert.equal(broodCareSex({model_slug: "red-fox", kind: "k"}, "mammal"), "female");
+    assert.equal(broodCareSex({model_slug: "rock-dove", kind: "k"}, "bird"), null, "both sit: the engine's carer as it is");
+});
+
+test("hatchlings come out scattered, each its own way; some make for the parent or the water", () => {
+    const n = 6;
+    const target = {x: 14, z: 20};
+    const at = (s: number) => Array.from({length: n}, (_, k) => hatchPose(s, k, n, NEST, 0.6, ID, [target])!);
+    // (All out of the egg by then: the last comes out up to 2.4 s after the first, and takes 1.4 s to be clear.)
+    const out = at(HATCH_ROCK + 3.9);
+    const bearings = out.map((p) => Math.atan2(p.x - NEST.x, p.z - NEST.z)).sort((a, b) => a - b);
+    const gaps = bearings.map((b, i) => (i ? b - bearings[i - 1] : b + 2 * Math.PI - bearings[n - 1]));
+    assert.ok(Math.max(...gaps) - Math.min(...gaps) > 0.3, "not evenly spaced round the nest");
+    const radii = out.map((p) => Math.hypot(p.x - NEST.x, p.z - NEST.z));
+    assert.ok(Math.max(...radii) - Math.min(...radii) > 0.05, "not on one ring");
+    const later = at(11.5);
+    assert.ok(later.some((p) => Math.hypot(p.x - target.x, p.z - target.z) < Math.hypot(NEST.x - target.x, NEST.z - target.z) - 0.1), "some head for the parent");
+    assert.deepEqual(at(HATCH_ROCK + 3.9).map((p) => [p.x, p.z]), out.map((p) => [p.x, p.z]), "the same for every viewer");
+});
+
+test("nestlings are heads and gapes in the cup, not small birds: their size honest to the parent's", () => {
+    assert.equal(broodNestlings({care: "nest"}, "bird"), true);
+    assert.equal(broodModels({care: "nest"}, "bird"), false, "no stand-in model sits in the cup");
+    assert.equal(broodNestlings({care: "follow"}, "bird"), false, "ducklings are walking models");
+    assert.equal(nestlingLength(0.25, 0), 0.25 * 0.26);
+    assert.ok(nestlingLength(0.25, 1) < 0.25 && nestlingLength(0.25, 1) > nestlingLength(0.25, 0.5));
+    assert.equal(nestlingLength(0.25, 5), nestlingLength(0.25, 1));
+});
+
 // MARK: The layer
 
 type E = {id: string; act: ActPose | null; x: number; z: number};
@@ -295,7 +331,7 @@ function world(tier: "high" | "medium" | "low" = "high", chases = true, plans: R
     const layer = new LiveBroods<E>(host);
     layer.tier = tier;
     const drawn = {nests: 0, eggs: 0, specks: 0};
-    const sink: BroodSink = {nest: () => void drawn.nests++, egg: () => void drawn.eggs++, speck: () => void drawn.specks++};
+    const sink: BroodSink = {nest: () => void drawn.nests++, egg: () => void drawn.eggs++, speck: () => void drawn.specks++, nestling: () => void drawn.specks++};
     const base = {animals: [{id: A, model_slug: "mallard"}, {id: B, model_slug: "mallard"}, {id: HUNTER.id, model_slug: "grey-heron"}] as unknown as ArkAnimal[]} as ArkSnapshot;
     const add = (id: string, x = 0, z = 0) => void entries.set(id, {id, act: null, x, z});
     /** The scene's side of a layout: every roster animal (the stand-ins too) gets an entry. */
@@ -342,6 +378,18 @@ test("eggs: the record's count where it was laid, the parent on them; a clutch s
     w.layer.set(read(T0 + 86400, []), T0 + 86400);
     w.step(T0 + 86401);
     assert.equal(w.entries.get(A)!.act, null);
+});
+
+test("the engine's carer is the drake: the duck of the pair sits; a pair with no duck out has no sitter drawn", () => {
+    const w = world();
+    w.layer.set(read(T0, [mallard({carer: B})]), T0);
+    w.layout();
+    w.step(T0 + 30);
+    assert.equal(w.entries.get(A)!.act?.state, "rest", "the duck on the eggs");
+    assert.equal(w.entries.get(B)!.act, null, "never the drake");
+    w.entries.delete(A);
+    w.step(T0 + 31);
+    assert.equal(w.entries.get(B)!.act, null, "the duck not out: no drake sitting in her place");
 });
 
 test("a nest raid is acted: the hunter pinned, at the nest, and the record's count of eggs goes one by one", () => {
@@ -635,8 +683,12 @@ test("7.2 as of BROODS 3feb455cf: a brood's mated and laid stay the pair's; an e
     assert.deepEqual(items.map((item) => broodText(item)), [
         "Mallard: the parent drove off a Grey Heron",
         "Mallard: 2 young taken by a Grey Heron · 7 left",
+        "Mallard: the brood goes on without a parent",
         "Mallard: 1 young now on their own"
-    ], "the mated and laid rows are the log's own lines; a brood that carries on unguarded was not lost; a stage change past the young (floaters, to come) says nothing yet");
+    ], "the mated and laid rows are the log's own lines; a brood that carries on unguarded was not lost: it goes on without a parent; a stage change past the young says nothing yet");
+    // (Unguarded with none of it left: nothing goes on, nothing is said.)
+    const none = broodItems([row(9, "brood_loss", {animal: duck, brood: {id: ID, cause: "parent_lost", count: 0, left: 0, of: 9, unguarded: true}})], -Infinity, () => false, {words: null, text: TEXT, locale: "en", brood: () => null}).items;
+    assert.deepEqual(none, []);
     // (A brood lost with its parent is still said so.)
     const lost = broodItems([row(8, "brood_loss", {animal: duck, brood: {id: ID, cause: "parent_lost", count: 7, left: 0, of: 9}})], -Infinity, () => false, {words: null, text: TEXT, locale: "en", brood: () => null}).items;
     assert.deepEqual(lost.map((item) => broodText(item)), ["Mallard: the brood was lost with its parent"]);

@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}：這窩幼體未能存活",
             "logParentLost": "{animal}：這窩幼體隨親代一同失去",
             "logRecruited": "{animal}：{count} 隻幼體已獨立生活",
-            "logUnsettled": "{animal}：{count} 隻幼體未能安家"
+            "logUnsettled": "{animal}：{count} 隻幼體未能安家",
+            "logUnguarded": "{animal}：這窩幼體在沒有親代的情況下繼續生存"
         }
     },
     "talkPage": {

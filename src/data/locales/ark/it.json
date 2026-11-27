@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: i piccoli non sono sopravvissuti",
             "logParentLost": "{animal}: i piccoli sono andati persi insieme al genitore",
             "logRecruited": "{animal}: {count} piccoli ora indipendenti",
-            "logUnsettled": "{animal}: {count} piccoli non si sono insediati"
+            "logUnsettled": "{animal}: {count} piccoli non si sono insediati",
+            "logUnguarded": "{animal}: i piccoli vanno avanti senza un genitore"
         }
     },
     "talkPage": {

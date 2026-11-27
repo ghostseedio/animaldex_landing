@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: watoto hawakunusurika",
             "logParentLost": "{animal}: watoto wamepotea pamoja na mzazi wao",
             "logRecruited": "{animal}: watoto {count} sasa wanajitegemea",
-            "logUnsettled": "{animal}: watoto {count} hawakupata makazi"
+            "logUnsettled": "{animal}: watoto {count} hawakupata makazi",
+            "logUnguarded": "{animal}: watoto wanaendelea bila mzazi"
         }
     },
     "talkPage": {

@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: بچه‌ها زنده نماندند",
             "logParentLost": "{animal}: بچه‌ها همراه با والدشان از دست رفتند",
             "logRecruited": "{animal}: {count} بچه اکنون مستقل شده‌اند",
-            "logUnsettled": "{animal}: {count} بچه مستقر نشدند"
+            "logUnsettled": "{animal}: {count} بچه مستقر نشدند",
+            "logUnguarded": "{animal}: بچه‌ها بدون والد به زندگی ادامه می‌دهند"
         }
     },
     "talkPage": {

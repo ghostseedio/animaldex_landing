@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: az utódok nem élték túl",
             "logParentLost": "{animal}: az utódok a szülővel együtt odavesztek",
             "logRecruited": "{animal}: {count} utód már önálló",
-            "logUnsettled": "{animal}: {count} utód nem telepedett meg"
+            "logUnsettled": "{animal}: {count} utód nem telepedett meg",
+            "logUnguarded": "{animal}: az utódok szülő nélkül élnek tovább"
         }
     },
     "talkPage": {

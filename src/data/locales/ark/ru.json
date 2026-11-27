@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: выводок не выжил",
             "logParentLost": "{animal}: выводок потерян вместе с родителем",
             "logRecruited": "{animal}: детёныши стали самостоятельными: {count}",
-            "logUnsettled": "{animal}: детёныши не обосновались: {count}"
+            "logUnsettled": "{animal}: детёныши не обосновались: {count}",
+            "logUnguarded": "{animal}: выводок живёт дальше без родителя"
         }
     },
     "talkPage": {

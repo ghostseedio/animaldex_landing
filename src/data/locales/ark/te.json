@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: పిల్లలు బతకలేదు",
             "logParentLost": "{animal}: పిల్లలు తల్లి లేదా తండ్రితో పాటే పోయాయి",
             "logRecruited": "{animal}: {count} పిల్లలు ఇప్పుడు స్వతంత్రంగా ఉన్నాయి",
-            "logUnsettled": "{animal}: {count} పిల్లలు స్థిరపడలేదు"
+            "logUnsettled": "{animal}: {count} పిల్లలు స్థిరపడలేదు",
+            "logUnguarded": "{animal}: పిల్లలు తల్లిదండ్రులు లేకుండానే ముందుకు సాగుతున్నాయి"
         }
     },
     "talkPage": {

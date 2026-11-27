@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: കുഞ്ഞുങ്ങൾ അതിജീവിച്ചില്ല",
             "logParentLost": "{animal}: കുഞ്ഞുങ്ങൾ രക്ഷിതാവിനൊപ്പം നഷ്ടപ്പെട്ടു",
             "logRecruited": "{animal}: {count} കുഞ്ഞുങ്ങൾ ഇപ്പോൾ സ്വതന്ത്രമായി",
-            "logUnsettled": "{animal}: {count} കുഞ്ഞുങ്ങൾക്ക് ഇടം കണ്ടെത്താനായില്ല"
+            "logUnsettled": "{animal}: {count} കുഞ്ഞുങ്ങൾക്ക് ഇടം കണ്ടെത്താനായില്ല",
+            "logUnguarded": "{animal}: കുഞ്ഞുങ്ങൾ രക്ഷിതാവില്ലാതെ മുന്നോട്ട് പോകുന്നു"
         }
     },
     "talkPage": {

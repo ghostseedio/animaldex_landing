@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: הצאצאים לא שרדו",
             "logParentLost": "{animal}: הצאצאים אבדו יחד עם ההורה",
             "logRecruited": "{animal}: {count} צאצאים עצמאיים כעת",
-            "logUnsettled": "{animal}: {count} צאצאים לא התיישבו"
+            "logUnsettled": "{animal}: {count} צאצאים לא התיישבו",
+            "logUnguarded": "{animal}: הצאצאים ממשיכים בלי הורה"
         }
     },
     "talkPage": {

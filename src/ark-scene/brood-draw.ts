@@ -12,6 +12,7 @@ import {
     ConeGeometry,
     CylinderGeometry,
     DynamicDrawUsage,
+    Float32BufferAttribute,
     Group,
     InstancedBufferAttribute,
     InstancedMesh,
@@ -26,6 +27,7 @@ import {
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {placeholderGeometry} from "@/ark-scene/placeholder";
 import type {BroodSink, EggLook, NestLook, SpeckLook} from "@/ark-scene/live-broods";
+import {eggLook, nestProfile} from "@/ark-scene/props/nest-kinds";
 
 const SHELL = new Color("#f2eadb");
 const SPECKLED = new Color("#d9e3d0");
@@ -36,6 +38,12 @@ const SCRAPE = new Color("#9d8466");
 const TADPOLE = new Color("#2a2622");
 const GRUB = new Color("#d8cfae");
 const PLAIN = new Color("#a8977a");
+const WHITE = new Color(1, 1, 1);
+/** A nestling: its sparse down, its skin, its gape's flanges and the mouth inside. */
+const DOWN = new Color("#8e8178");
+const SKIN = new Color("#7a6a66");
+const GAPE = new Color("#f2c335");
+const MOUTH = new Color("#e2702c");
 
 /** Scaled and moved to fill the unit box: x and z −0.5…0.5, y 0…1 (as `herd-specks.ts`). */
 function unitBox(geometry: BufferGeometry): BufferGeometry {
@@ -61,6 +69,52 @@ function tailed(head: number, fat: number): BufferGeometry {
     body.dispose();
     tail.dispose();
     return unitBox(merged);
+}
+
+/** A geometry in one colour (vertex colours: the instance's own colour, white, leaves it as it is). */
+function coloured(geometry: BufferGeometry, colour: Color): BufferGeometry {
+    const g = geometry.index ? geometry.toNonIndexed() : geometry;
+    if (g !== geometry) geometry.dispose();
+    const n = g.getAttribute("position").count;
+    const c = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+        c[i * 3] = colour.r;
+        c[i * 3 + 1] = colour.g;
+        c[i * 3 + 2] = colour.b;
+    }
+    g.setAttribute("color", new Float32BufferAttribute(c, 3));
+    if (g.getAttribute("uv")) g.deleteAttribute("uv");
+    return g;
+}
+
+/** A nestling's body (unit: its length; its belly at y 0, its front along +z): a low round lump of skin and sparse down. */
+function nestlingBody(): BufferGeometry {
+    const body = new SphereGeometry(0.5, 8, 6);
+    body.scale(0.52, 0.4, 0.66);
+    body.translate(0, 0.2, 0);
+    return coloured(body, DOWN);
+}
+
+/**
+ * A nestling's head (unit: the head is 1 across, its middle at the origin, its bill along +z): a round head and its open
+ * gape, the wide yellow flanges of the upper and lower bill parted round the orange mouth, as a begging nestling's is.
+ */
+function nestlingHead(): BufferGeometry {
+    const head = coloured(new SphereGeometry(0.5, 8, 6), SKIN);
+    const bill = (tilt: number, lift: number) => {
+        const cone = new ConeGeometry(0.4, 0.62, 7, 1);
+        cone.rotateX(Math.PI / 2);
+        cone.translate(0, 0, 0.31);
+        cone.scale(1.05, 0.32, 1);
+        cone.rotateX(tilt);
+        cone.translate(0, lift, 0.3);
+        return coloured(cone, GAPE);
+    };
+    const mouth = new SphereGeometry(0.5, 7, 5);
+    mouth.scale(0.5, 0.34, 0.16);
+    mouth.translate(0, 0, 0.42);
+    const merged = mergeGeometries([head, bill(-0.32, 0.05), bill(0.26, -0.07), coloured(mouth, MOUTH)]);
+    return merged;
 }
 
 class Pool {
@@ -113,11 +167,13 @@ class Pool {
 }
 
 /** How much the drawer holds at once, by tier (what is beyond it is not drawn: the nearest broods come first in the layer's order). */
-const CAPS = {high: {eggs: 3072, spawn: 4096, nests: 512, specks: 2048}, medium: {eggs: 1536, spawn: 2048, nests: 256, specks: 1024}, low: {eggs: 768, spawn: 1024, nests: 128, specks: 512}} as const;
+const CAPS = {high: {eggs: 3072, spawn: 4096, nests: 512, specks: 2048, nestlings: 512}, medium: {eggs: 1536, spawn: 2048, nests: 256, specks: 1024, nestlings: 256}, low: {eggs: 768, spawn: 1024, nests: 128, specks: 512, nestlings: 128}} as const;
 
 export class BroodDraw implements BroodSink {
     readonly root = new Group();
-    private readonly pools: {nest: Pool; scrape: Pool; eggs: Pool; spawn: Pool; oval: Pool; four: Pool; fry: Pool; tadpole: Pool; grub: Pool};
+    private readonly pools: {nest: Pool; scrape: Pool; eggs: Pool; spawn: Pool; oval: Pool; four: Pool; fry: Pool; tadpole: Pool; grub: Pool; scaly: Pool; nestBody: Pool; nestHead: Pool};
+    private readonly tilt = new Quaternion();
+    private readonly side = new Vector3(1, 0, 0);
     private readonly matrix = new Matrix4();
     private readonly quaternion = new Quaternion();
     private readonly position = new Vector3();
@@ -125,6 +181,7 @@ export class BroodDraw implements BroodSink {
     private readonly axis = new Vector3(1, 0, 0.4).normalize();
     private readonly up = new Vector3(0, 1, 0);
     private readonly colours = new Map<string, Color>();
+    private readonly eggColours = new Map<string, Color>();
 
     /** `colourOf`: a species' own colour (its model's, as its herd's specks are tinted), or null until its model is in. */
     constructor(tier: "high" | "medium" | "low", private readonly colourOf: (slug: string) => Color | null) {
@@ -146,7 +203,10 @@ export class BroodDraw implements BroodSink {
             four: new Pool(unitBox(placeholderGeometry("low")), matte(), caps.specks, true),
             fry: new Pool(tailed(0.62, 0.42), matte(), caps.specks, false),
             tadpole: new Pool(tailed(0.45, 0.7), matte(), caps.specks, false),
-            grub: new Pool(unitBox(grub), matte(), caps.specks, false)
+            grub: new Pool(unitBox(grub), matte(), caps.specks, false),
+            scaly: new Pool(unitBox(new SphereGeometry(0.5, 6, 4)), matte(), caps.specks, false),
+            nestBody: new Pool(nestlingBody(), new MeshStandardMaterial({roughness: 0.95, metalness: 0, vertexColors: true}), caps.nestlings, false),
+            nestHead: new Pool(nestlingHead(), new MeshStandardMaterial({roughness: 0.7, metalness: 0, vertexColors: true}), caps.nestlings, false)
         };
         this.root.name = "broods";
         for (const pool of Object.values(this.pools)) {
@@ -180,12 +240,24 @@ export class BroodDraw implements BroodSink {
         this.pools[look === "nest" ? "nest" : "scrape"].push(this.matrix, look === "nest" ? TWIGS : SCRAPE);
     }
 
-    egg(look: EggLook, x: number, y: number, z: number, size: number, roll: number) {
+    egg(look: EggLook, x: number, y: number, z: number, size: number, roll: number, slug?: string) {
         const s = Math.max(size, 0.0001);
         this.quaternion.setFromAxisAngle(this.axis, roll);
         this.matrix.compose(this.position.set(x, y, z), this.quaternion, this.scale.set(s, s, s));
         if (look === "spawn") this.pools.spawn.push(this.matrix, SPAWN);
-        else this.pools.eggs.push(this.matrix, look === "sac" ? SAC : look === "speckled" ? SPECKLED : SHELL);
+        else this.pools.eggs.push(this.matrix, look === "sac" ? SAC : look === "speckled" ? this.birdEgg(slug) : SHELL);
+    }
+
+    /** A bird's eggs' ground colour, as the props colour a clutch (`props/nest-kinds.ts` eggLook: a robin's blue, a duck's cream, a raptor's buff). */
+    private birdEgg(slug: string | undefined): Color {
+        if (!slug) return SPECKLED;
+        let colour = this.eggColours.get(slug);
+        if (!colour) {
+            const look = eggLook(slug, nestProfile({model_slug: slug, name: "", zone: "woodland"}));
+            colour = new Color().setHSL(look.hue, look.saturation, look.lightness);
+            this.eggColours.set(slug, colour);
+        }
+        return colour;
     }
 
     speck(look: SpeckLook, slug: string, x: number, y: number, z: number, yaw: number, length: number, scale: number) {
@@ -193,8 +265,8 @@ export class BroodDraw implements BroodSink {
         if (k <= 0.01) return;
         const l = length * k;
         // (Its body's proportions by its shape: wide and tall as a share of its length.)
-        const wide = look === "four" ? 0.36 : look === "oval" ? 0.5 : look === "tadpole" ? 0.36 : look === "fry" ? 0.2 : 0.34;
-        const tall = look === "four" ? 0.62 : look === "oval" ? 0.58 : look === "tadpole" ? 0.3 : look === "fry" ? 0.26 : 0.3;
+        const wide = look === "four" ? 0.36 : look === "oval" ? 0.5 : look === "tadpole" ? 0.36 : look === "fry" ? 0.2 : look === "scaly" ? 0.2 : 0.34;
+        const tall = look === "four" ? 0.62 : look === "oval" ? 0.58 : look === "tadpole" ? 0.3 : look === "fry" ? 0.26 : look === "scaly" ? 0.11 : 0.3;
         this.quaternion.setFromAxisAngle(this.up, yaw);
         this.matrix.compose(this.position.set(x, y, z), this.quaternion, this.scale.set(l * wide, l * tall, l));
         let colour = look === "tadpole" ? TADPOLE : look === "grub" ? GRUB : this.colours.get(slug) ?? null;
@@ -204,6 +276,26 @@ export class BroodDraw implements BroodSink {
             colour = own ?? PLAIN;
         }
         this.pools[look].push(this.matrix, colour);
+    }
+
+    nestling(x: number, y: number, z: number, yaw: number, length: number, beg: number, scale: number) {
+        const k = Math.min(Math.max(scale, 0), 1);
+        if (k <= 0.01) return;
+        const l = length * k;
+        const b = Math.min(Math.max(beg, 0), 1);
+        // Its body low in the cup, stretched up a little as it begs.
+        this.quaternion.setFromAxisAngle(this.up, yaw);
+        this.matrix.compose(this.position.set(x, y, z), this.quaternion, this.scale.set(l, l * (1 + 0.55 * b), l));
+        this.pools.nestBody.push(this.matrix, WHITE);
+        // Its head on top: lying forward on the body at rest; begging, up on its neck, the gape turned to the sky.
+        const s = Math.sin(yaw);
+        const c = Math.cos(yaw);
+        const ahead = l * (0.22 - 0.1 * b);
+        const head = l * (0.34 + 0.04 * b);
+        this.tilt.setFromAxisAngle(this.side, -(0.3 + 0.95 * b));
+        this.quaternion.multiply(this.tilt);
+        this.matrix.compose(this.position.set(x + s * ahead, y + l * (0.36 + 0.5 * b), z + c * ahead), this.quaternion, this.scale.set(head, head, head));
+        this.pools.nestHead.push(this.matrix, WHITE);
     }
 
     /** Development (the broods harness): what was drawn last frame. */

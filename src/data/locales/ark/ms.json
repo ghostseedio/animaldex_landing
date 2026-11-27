@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: anak-anaknya tidak selamat",
             "logParentLost": "{animal}: anak-anaknya hilang bersama induknya",
             "logRecruited": "{animal}: {count} anak kini berdikari",
-            "logUnsettled": "{animal}: {count} anak tidak menemui tempat menetap"
+            "logUnsettled": "{animal}: {count} anak tidak menemui tempat menetap",
+            "logUnguarded": "{animal}: anak-anaknya meneruskan hidup tanpa induk"
         }
     },
     "talkPage": {

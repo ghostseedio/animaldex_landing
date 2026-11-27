@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: poikue ei selvinnyt",
             "logParentLost": "{animal}: poikue menetettiin emon mukana",
             "logRecruited": "{animal}: {count} poikasta elää nyt omillaan",
-            "logUnsettled": "{animal}: {count} poikasta ei asettunut aloilleen"
+            "logUnsettled": "{animal}: {count} poikasta ei asettunut aloilleen",
+            "logUnguarded": "{animal}: poikue jatkaa ilman emoa"
         }
     },
     "talkPage": {

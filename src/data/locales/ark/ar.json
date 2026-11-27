@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: لم تنجُ الصغار",
             "logParentLost": "{animal}: فُقدت الصغار مع أحد أبويها",
             "logRecruited": "{animal}: استقلّ {count} من الصغار الآن",
-            "logUnsettled": "{animal}: لم يستقر {count} من الصغار"
+            "logUnsettled": "{animal}: لم يستقر {count} من الصغار",
+            "logUnguarded": "{animal}: تواصل الصغار حياتها بلا أحد الأبوين"
         }
     },
     "talkPage": {

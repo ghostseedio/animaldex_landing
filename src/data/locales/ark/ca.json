@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: les cries no han sobreviscut",
             "logParentLost": "{animal}: les cries s'han perdut amb el seu progenitor",
             "logRecruited": "{animal}: {count} cries ja viuen pel seu compte",
-            "logUnsettled": "{animal}: {count} cries no s'han establert"
+            "logUnsettled": "{animal}: {count} cries no s'han establert",
+            "logUnguarded": "{animal}: les cries continuen sense cap progenitor"
         }
     },
     "talkPage": {

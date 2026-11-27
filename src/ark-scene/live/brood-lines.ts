@@ -134,8 +134,10 @@ export function broodItems(raw: unknown, from: number, said: (key: string) => bo
             const species = speciesOf(row.animal) || known?.species || "";
             if (cause === "unsettled") say("gone", "logUnsettled", name, species, focus, {count: num(n(brood.count) ?? 0)});
             // (`unguarded` with count 0, docs/ark/broods.md 7.2: its last carer is gone and the brood carries on. Nothing of
-            // it was lost, so no "lost with its parent" line; the words for "goes on without a parent" are a follow-up.)
-            else if (cause === "parent_lost" && brood.unguarded !== true && (n(brood.count) ?? 1) > 0) say("gone", "logParentLost", name, species, focus, {});
+            // it was lost: it goes on without a parent, while any of it is left.)
+            else if (cause === "parent_lost" && brood.unguarded === true) {
+                if ((n(brood.left) ?? 1) > 0) say("gone", "logUnguarded", name, species, focus, {});
+            } else if (cause === "parent_lost" && (n(brood.count) ?? 1) > 0) say("gone", "logParentLost", name, species, focus, {});
             else if (cause === "failed") say("gone", (brood.stage ?? known?.stage) === "egg" ? "logNestFailed" : "logFailed", name, species, focus, {});
         } else if (row.kind === "birth" && row.recruit === true) {
             // Recruits: one line a brood, its young counted.

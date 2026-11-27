@@ -293,7 +293,8 @@ export const ARK_BROOD_ENGLISH = {
     logFailed: "{animal}: the brood did not survive",
     logParentLost: "{animal}: the brood was lost with its parent",
     logRecruited: "{animal}: {count} young now on their own",
-    logUnsettled: "{animal}: {count} young did not settle"
+    logUnsettled: "{animal}: {count} young did not settle",
+    logUnguarded: "{animal}: the brood goes on without a parent"
 } as const;
 export type ArkBroodWordKey = keyof typeof ARK_BROOD_ENGLISH;
 export type ArkBroodWords = Partial<Record<ArkBroodWordKey, string>>;

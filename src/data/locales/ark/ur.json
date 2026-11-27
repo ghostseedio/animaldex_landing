@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: بچے زندہ نہیں رہے",
             "logParentLost": "{animal}: بچے ماں یا باپ کے ساتھ کھو گئے",
             "logRecruited": "{animal}: {count} بچے اب خود مختار",
-            "logUnsettled": "{animal}: {count} بچوں کو ٹھکانا نہیں ملا"
+            "logUnsettled": "{animal}: {count} بچوں کو ٹھکانا نہیں ملا",
+            "logUnguarded": "{animal}: بچے ماں باپ کے بغیر آگے بڑھ رہے ہیں"
         }
     },
     "talkPage": {

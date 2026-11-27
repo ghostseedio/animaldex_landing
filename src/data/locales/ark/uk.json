@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: виводок не вижив",
             "logParentLost": "{animal}: виводок втрачено разом з одним із батьків",
             "logRecruited": "{animal}: дитинчата стали самостійними: {count}",
-            "logUnsettled": "{animal}: дитинчата не оселилися: {count}"
+            "logUnsettled": "{animal}: дитинчата не оселилися: {count}",
+            "logUnguarded": "{animal}: виводок живе далі без батьків"
         }
     },
     "talkPage": {

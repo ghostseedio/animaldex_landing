@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: বাচ্চারা বাঁচেনি",
             "logParentLost": "{animal}: বাচ্চারা মা-বাবার সঙ্গে হারিয়ে গেছে",
             "logRecruited": "{animal}: {count}টি বাচ্চা এখন স্বনির্ভর",
-            "logUnsettled": "{animal}: {count}টি বাচ্চা থিতু হতে পারেনি"
+            "logUnsettled": "{animal}: {count}টি বাচ্চা থিতু হতে পারেনি",
+            "logUnguarded": "{animal}: বাচ্চারা মা-বাবা ছাড়াই বেঁচে চলেছে"
         }
     },
     "talkPage": {

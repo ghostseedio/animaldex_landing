@@ -5449,7 +5449,8 @@
       "logFailed": "{animal}: anak-anaknya tidak bertahan hidup",
       "logParentLost": "{animal}: anak-anaknya hilang bersama induknya",
       "logRecruited": "{animal}: {count} anak kini mandiri",
-      "logUnsettled": "{animal}: {count} anak tidak menemukan tempat menetap"
+      "logUnsettled": "{animal}: {count} anak tidak menemukan tempat menetap",
+      "logUnguarded": "{animal}: anak-anaknya bertahan tanpa induk"
     }
   },
   "seo": {

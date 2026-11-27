@@ -1245,7 +1245,8 @@
             "logFailed": "{animal}: ಮರಿಗಳು ಬದುಕುಳಿಯಲಿಲ್ಲ",
             "logParentLost": "{animal}: ಮರಿಗಳು ಪೋಷಕ ಪ್ರಾಣಿಯೊಂದಿಗೆ ಕಳೆದುಹೋದವು",
             "logRecruited": "{animal}: {count} ಮರಿಗಳು ಈಗ ಸ್ವತಂತ್ರವಾಗಿವೆ",
-            "logUnsettled": "{animal}: {count} ಮರಿಗಳು ನೆಲೆ ಕಂಡುಕೊಳ್ಳಲಿಲ್ಲ"
+            "logUnsettled": "{animal}: {count} ಮರಿಗಳು ನೆಲೆ ಕಂಡುಕೊಳ್ಳಲಿಲ್ಲ",
+            "logUnguarded": "{animal}: ಮರಿಗಳು ಪೋಷಕರಿಲ್ಲದೆ ಮುಂದುವರಿಯುತ್ತಿವೆ"
         }
     },
     "talkPage": {
