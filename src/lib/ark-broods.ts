@@ -66,6 +66,8 @@ export type ArkBrood = {
     stage_count: number;
     taken: number;
     lost: number;
+    /** On an ended brood, when the read says: how many of it became animals of their own. */
+    recruited: number | null;
     laid_ark_day: number | null;
     stage_ark_day: number | null;
     /** The hatch, or independence, due (Ark day). */
@@ -167,6 +169,7 @@ function decodeBrood(raw: unknown, ended: boolean): ArkBrood | null {
         stage_count: Math.max(count(row.stage_count) ?? start, Math.min(now, start)),
         taken: count(row.taken) ?? 0,
         lost: count(row.lost) ?? 0,
+        recruited: ended ? count(row.recruited) : null,
         laid_ark_day: num(row.laid_ark_day),
         stage_ark_day: num(row.stage_ark_day),
         next_ark_day: num(row.next_ark_day),

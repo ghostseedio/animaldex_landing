@@ -153,7 +153,7 @@ const SCENES: Record<string, Scene> = {
         cast: [{slug: "mugger-crocodile", name: "Mugger Crocodile", n: 2}, {slug: "savannah-monitor", name: "Savannah Monitor", n: 1}],
         brood: ({id, day}) => rawBrood({id: BROOD_ID, name: "Mugger Crocodile", model_slug: "mugger-crocodile", parents: [id(0, 0), id(0, 1)], stage: "egg", count: 28, start: 28, zone: "river_lake", care: "guard", hold: "guard", laid_ark_day: day - 30, stage_ark_day: day - 30, next_ark_day: day + 30, young_mass_g: 70}),
         steps: [[40, (c) => lose(c, "taken", 9, 1)], [200, (c) => hatch(c, {care: "guard"})]],
-        shots: [{s: 10, label: "28 eggs in a scrape (24 drawn), guarded"}, {s: 121, label: "RAID: the monitor comes", distance: 7}, {s: 131, label: "RAID: at the clutch"}, {s: 137, label: "RAID: eggs going"}, {s: 145, label: "9 taken: 19 left"}, {s: 201, label: "HATCH"}, {s: 204, label: "hatchlings out"}, {s: 230, label: "19 hatchlings: 6 models + 13 instanced"}]
+        shots: [{s: 10, label: "28 eggs in a scrape (24 drawn), guarded"}, {s: 121, label: "RAID: the monitor comes", distance: 7}, {s: 131, label: "RAID: at the clutch"}, {s: 137, label: "RAID: eggs going"}, {s: 145, label: "9 taken: 19 left"}, {s: 201, label: "HATCH"}, {s: 204, label: "hatchlings out"}, {s: 230, label: "19 hatchlings: 6 models + 13 instanced, by the guarding parent", follow: 0, distance: 5}]
     },
     // A fox's litter: carried (nothing drawn), then cubs at the den; one lost with no cause.
     broodden: {
@@ -296,10 +296,14 @@ async function main() {
         }
     };
     const view = (distance: number, at: {x: number; y?: number; z: number}, polar: number, azimuth: number): ArkCameraView => ({target: {x: at.x, y: (at.y ?? Math.max(handle.heightAt(at.x, at.z), 0)) + distance * 0.06, z: at.z}, distance, polar, azimuth});
+    /** Where the brood is (kept from the `on` run's own layer; with no layer, the first parent's home). */
+    let spot: {x: number; y: number; z: number} | null = null;
     const api = {
         plan: () => scene.shots,
         steps: () => scene.steps.map(([s]) => s),
-        shot: async (i: number) => {
+        /** The view the last shot was framed with (the `on` run's are given to the others: the same camera before and after). */
+        lastView: null as ArkCameraView | null,
+        shot: async (i: number, given?: ArkCameraView | null) => {
             const shot = scene.shots[i];
             await advance(shot.s);
             await setAt(t0 + shot.s - 2.5);
@@ -308,10 +312,17 @@ async function main() {
                 fake!.date += 100;
                 await frames(1);
             }
-            const nest = debug.broods()?.broods[0]?.place ?? {x: home.x, y: home.ground, z: home.z};
+            const placed = debug.broods()?.broods[0]?.place as {x: number; y: number; z: number; top?: number; water?: boolean} | null | undefined;
+            // (A brood in the water is framed from above its surface: the scene draws the freshwater's animals from there.)
+            if (placed) spot = {x: placed.x, y: placed.water ? Math.max(placed.top ?? placed.y, placed.y) : placed.y, z: placed.z};
+            const nest = spot ?? {x: home.x, y: home.ground, z: home.z};
             const who = shot.follow !== undefined ? handle.locate(castId(shot.follow, 0)) : null;
             const distance = shot.distance ?? scene.distance;
-            const shown = view(distance, who ?? nest, shot.polar ?? scene.polar ?? 1.1, shot.azimuth ?? scene.azimuth ?? 0.7);
+            const at = who ?? nest;
+            // (From the clearest side: a nest under a fern or in a tuft was filmed through its leaves.)
+            const clear = handle.clearView?.({x: at.x, y: at.y ?? 0, z: at.z}, distance, shot.polar ?? scene.polar ?? 1.1, shot.azimuth ?? scene.azimuth ?? 0.7) ?? null;
+            const shown = given ?? view(distance, at, clear?.polar ?? shot.polar ?? scene.polar ?? 1.1, clear?.azimuth ?? shot.azimuth ?? scene.azimuth ?? 0.7);
+            api.lastView = shown;
             // (Closer than the page lets a visitor come, set with each view: the scene puts its own floor back.)
             handle.setNearCut?.(null, Math.min(distance, 4));
             await frames(2);

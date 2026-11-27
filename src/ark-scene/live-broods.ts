@@ -103,6 +103,8 @@ export type LiveBroodsHost<E> = {
     place: (animals: ArkAnimal[]) => Map<string, BroodPlace>;
     /** The water's edge near a point (a land-layer whose home is in the water lays on the shore), or null: none near. */
     shore?: (x: number, z: number) => Point | null;
+    /** Water near a point (spawn is laid in it, whatever damp ground the parent's home is on), or null: none near. */
+    wet?: (x: number, z: number) => Point | null;
     /** An adult of the kind's drawn length (m). */
     adultLength: (brood: ArkBrood) => number;
     /** Where an entry is drawn now, and where its day has it at a time (null: off its day). */
@@ -269,7 +271,8 @@ export function carerPose(hold: "sit" | "guard", water: boolean, nest: BroodPlac
         const off = length * 0.35;
         return mk(nest.x - Math.sin(yaw0) * off, nest.z - Math.cos(yaw0) * off, nest.y + Math.max(length * 0.12, 0.02), yaw0 + Math.sin(epoch * 0.7) * 0.18, "swim", 0.14 + 0.07 * Math.sin(epoch * 5.2));
     }
-    if (hold === "sit") return mk(nest.x, nest.z, nest.y, yaw0, "rest", 0.04 * Math.sin(epoch * 0.5));
+    // Sitting: low in the cup, its legs under it.
+    if (hold === "sit") return mk(nest.x, nest.z, nest.y - length * 0.1, yaw0, "rest", 0.04 * Math.sin(epoch * 0.5));
     // Guarding: a body length off, turned outward, looking about.
     return mk(nest.x + Math.sin(yaw0) * length * 0.9, nest.z + Math.cos(yaw0) * length * 0.9, nest.y, yaw0 + Math.sin(epoch * 0.23) * 0.9, "scan");
 }
@@ -535,6 +538,12 @@ export class LiveBroods<E> {
                 if (shore) place = {...place, x: shore.x, z: shore.z, y: Math.max(this.host.ground(shore.x, shore.z), 0), water: false};
                 else place = {...place, y: Math.max(place.y, place.top)};
             }
+            const look = place ? broodEggLook(live.brood, plan, place.water) : null;
+            if (place && !place.water && (look?.egg === "spawn" || (!look && WATER_PLAN.test(plan ?? "")))) {
+                // Spawn is laid in water: the nearest to the parent's home.
+                const wet = this.host.wet?.(place.x, place.z) ?? null;
+                if (wet) place = {...place, x: wet.x, z: wet.z, y: this.host.ground(wet.x, wet.z), top: this.host.waterTop(wet.x, wet.z), water: true};
+            }
             // A ground-nester whose home is up on a perch or a limb (a plover, a duck): its scrape on the ground beneath.
             if (place && !place.water && broodEggLook(live.brood, plan, false)?.nest === "scrape") {
                 const ground = this.host.ground(place.x, place.z);
@@ -542,7 +551,10 @@ export class LiveBroods<E> {
             }
             live.place = place;
             live.adult = this.host.adultLength(live.brood);
-            live.size = clamp(live.adult * 0.7, 0.1, 1.6);
+            // (A clutch's size across: from the parent's length, with a floor so a small animal's is seen (as `clutchSize`), and
+            // a mass of spawn larger the more eggs it holds.)
+            const spawn = place && broodEggLook(live.brood, plan, place.water)?.egg === "spawn";
+            live.size = clamp(live.adult * 0.5, 0.1, 1) * (spawn ? clamp(1 + Math.log10(Math.max(live.brood.start, 1)) / 3, 1, 3) : 1);
         });
     }
 
@@ -585,8 +597,9 @@ export class LiveBroods<E> {
                 // (An ended brood: its survivors wait for their recruits a while; any other only while its last members fade.)
                 const handing = live.ended && brood.outcome === "independent";
                 const waiting = handing && live.endedAt !== null && epoch - live.endedAt < HANDOVER_WAIT;
-                const shown = handing ? (waiting ? Math.max(live.handing ?? live.models, 0) - live.recruits.filter((r) => r.since !== null).length : 0) : Math.min(this.shown(live, epoch, "young"), brood.stage_count);
-                if (handing && live.handing === undefined) live.handing = live.models;
+                // (As many as became animals, where the read says; the others have gone with their own loss, "did not settle".)
+                if (handing && live.handing === undefined) live.handing = Math.min(live.models, brood.recruited ?? (brood.count > 0 ? brood.count : live.models));
+                const shown = handing ? (waiting ? Math.max(live.handing ?? 0, 0) - live.recruits.filter((r) => r.since !== null).length : 0) : Math.min(this.shown(live, epoch, "young"), brood.stage_count);
                 n = Math.max(Math.min(shown, cap, left), 0);
             }
             left -= n;
@@ -595,7 +608,8 @@ export class LiveBroods<E> {
             for (let i = 0; i < n; i++) {
                 const id = arkBroodMemberId(brood.id, i);
                 list.push(this.memberAnimal(brood, id, 1 + i));
-                parents.set(id, brood.parents);
+                // (The young keep to the parent the record says attends them; with none attending, to their parents as the scene picks.)
+                parents.set(id, brood.carer ? [brood.carer] : brood.parents);
             }
         }
         if (!changed) return;
@@ -676,7 +690,7 @@ export class LiveBroods<E> {
             const near = !view || Math.hypot(nest.x - view.x, nest.z - view.z) < reach;
             // (Up off the ground: whoever is posed at the nest is posed on its surface.)
             const raised = !nest.water && nest.y > h.ground(nest.x, nest.z) + 0.2;
-            const seat = (p: ActPose | null): ActPose | null => (p && raised && Math.abs(p.base - nest.y) < 0.15 && p.state !== "walk" && p.state !== "fly" ? onSurface(p) : p);
+            const seat = (p: ActPose | null): ActPose | null => (p && raised && Math.abs(p.base - nest.y) < Math.max(0.15, live.adult * 0.15) && p.state !== "walk" && p.state !== "fly" ? onSurface(p) : p);
             // The takes: a chase handed to `live-meals`, or a raid acted here.
             let raided: LossAct | null = null;
             live.acts.forEach((act) => {
@@ -839,7 +853,13 @@ export class LiveBroods<E> {
                 }
                 if (live.endedAt !== null && epoch - live.endedAt >= HANDOVER_WAIT && live.models) dirty = true;
             }
-            if (live.ended || !near) return;
+            if (live.ended) return;
+            if (!near) {
+                // (Young that go about with a parent are drawn where it is, however far from the nest.)
+                const with_ = view && brood.carer && brood.care !== "nest" && brood.care !== "none" ? h.find(brood.carer) : null;
+                const b = with_ ? h.body(with_) : null;
+                if (!b || Math.hypot(b.x - view!.x, b.z - view!.z) >= reach) return;
+            }
             // The specks: whoever of the count is not drawn with a model (a model stand-in the budget rests is a speck too).
             let models = 0;
             for (let i = 0; i < live.models; i++) if (h.out(arkBroodMemberId(brood.id, i))) models++;
@@ -887,7 +907,7 @@ export class LiveBroods<E> {
             return;
         }
         const seed = unit(brood.id);
-        const bead = look.egg === "spawn" ? size * (look.layout === "string" ? 0.07 : 0.085) : size * clamp(0.62 / Math.sqrt(Math.max(all, 1)), 0.1, 0.22);
+        const bead = look.egg === "spawn" ? size * (look.layout === "string" ? 0.07 : 0.085) : size * clamp(0.62 / Math.sqrt(Math.max(all, 1)), 0.1, 0.2);
         for (let k = 0; k < n; k++) {
             const p = eggSpot(look.layout, k, all, seed);
             // Coming one by one as she lays; rocking, then split and gone, as they hatch.

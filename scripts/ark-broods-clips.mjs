@@ -55,6 +55,7 @@ try {
     browser = await chromium.launch({executablePath: path.join(cache, dir, "chrome-mac-arm64", "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing"), headless: true, args: ["--use-angle=metal", "--ignore-gpu-blocklist"]});
 }
 const summary = {};
+const views = {};
 for (const name of scenes) {
     summary[name] = {};
     for (const mode of modes) {
@@ -87,11 +88,13 @@ for (const name of scenes) {
         const labels = [];
         const hashes = [];
         for (let i = 0; i < plan.length; i++) {
-            const note = await page.evaluate(async (k) => {
-                const text = await window.__broods.shot(k);
+            // (The `on` run's own views are the others': the same camera before and after.)
+            const [note, shown] = await page.evaluate(async ([k, given]) => {
+                const text = await window.__broods.shot(k, given);
                 document.getElementById("note").textContent = text.split("\n").slice(0, 3).join("\n");
-                return text;
-            }, i);
+                return [text, window.__broods.lastView];
+            }, [i, mode === "on" ? null : views[name]?.[i] ?? null]);
+            if (mode === "on") (views[name] ??= [])[i] = shown;
             labels.push(`${String(i).padStart(2, "0")} ${note.replace(/\n/g, " | ")}`);
             const file = path.join(dir, `${String(i).padStart(2, "0")}.jpg`);
             // (The same frame without the note, hashed: `off` must be `none`'s picture.)

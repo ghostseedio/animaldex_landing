@@ -174,7 +174,8 @@ const NEST: BroodPlace = {x: 10, z: 20, y: 0.5, top: 0.5, yaw: 0, water: false};
 test("the attending parent: on its eggs, beside them, or fanning them, for as long as it is asked", () => {
     for (const epoch of [T0, T0 + 3600, T0 + 86400 * 3]) {
         const sit = carerPose("sit", false, NEST, 0.5, ID, epoch);
-        assert.deepEqual([sit.x, sit.z, sit.base, sit.state], [10, 20, 0.5, "rest"]);
+        assert.deepEqual([sit.x, sit.z, sit.state], [10, 20, "rest"]);
+        assert.ok(sit.base <= 0.5 && sit.base > 0.4, "low in the cup");
         const guard = carerPose("guard", false, NEST, 0.5, ID, epoch);
         assert.ok(Math.abs(Math.hypot(guard.x - 10, guard.z - 20) - 0.45) < 1e-9);
         assert.equal(guard.state, "scan");
@@ -339,7 +340,7 @@ test("young: stand-ins from the record, never more than the count, within the ti
             assert.equal(s.origin, "born");
             assert.equal(s.born_ark_day, DAY, "as old as its brood: drawn at young scale");
             assert.equal(s.mine, false);
-            assert.deepEqual(w.layer.parentsOf(s.id), [A, B]);
+            assert.deepEqual(w.layer.parentsOf(s.id), [A], "they keep to the parent the record says attends them");
             assert.equal(w.layer.parentFor(s.id), A, "a tap chooses the parent attending it");
         }
         assert.equal(w.layer.parentsOf(A), null);
