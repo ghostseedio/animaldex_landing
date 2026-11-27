@@ -218,7 +218,7 @@ for path in / /id /es/tier-list /fr/tier-list /pt/tier-list /animals /blog \
     /qualities /animal-frequencies /animal-trials /pokemon-animals \
     /wildlife-guides /animals/lion /animals/bengal-tiger \
     /animals/red-fox /animals/bald-eagle /animals/great-white-shark \
-    /animals/cheetah; do
+    /animals/cheetah /animal-survival /id/animal-survival; do
     warm_url "$path" 30
 done
 # The sitemap is a daily-ISR route itself, so this fetch warms it as well.
