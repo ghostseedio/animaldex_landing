@@ -9,6 +9,7 @@
 
 import {
     Color,
+    BoxGeometry,
     ConeGeometry,
     CylinderGeometry,
     DynamicDrawUsage,
@@ -68,6 +69,33 @@ function tailed(head: number, fat: number): BufferGeometry {
     const merged = mergeGeometries([body.toNonIndexed(), tail.toNonIndexed()]);
     body.dispose();
     tail.dispose();
+    return unitBox(merged);
+}
+
+/**
+ * A hatchling reptile seen from above (a crocodile's, a monitor's, a gecko's): a slim body, a head, a long tapering tail
+ * and four legs out to the sides, lying flat; its head along +z. As a share of its length: about 0.3 across the legs,
+ * 0.09 high.
+ */
+function lizard(): BufferGeometry {
+    const part = (g: BufferGeometry, sx: number, sy: number, sz: number, x: number, y: number, z: number) => {
+        g.scale(sx, sy, sz);
+        g.translate(x, y, z);
+        const flat = g.index ? g.toNonIndexed() : g;
+        if (flat !== g) g.dispose();
+        if (flat.getAttribute("uv")) flat.deleteAttribute("uv");
+        return flat;
+    };
+    const tail = new ConeGeometry(0.5, 1, 6, 1);
+    tail.rotateX(-Math.PI / 2);
+    const parts = [
+        part(new SphereGeometry(0.5, 8, 6), 0.15, 0.08, 0.36, 0, 0.045, 0.06),
+        part(new SphereGeometry(0.5, 7, 5), 0.1, 0.065, 0.2, 0, 0.04, 0.3),
+        part(tail, 0.11, 0.05, 0.5, 0, 0.035, -0.36),
+        ...[0.16, -0.06].flatMap((z) => [-1, 1].map((side) => part(new BoxGeometry(1, 1, 1), 0.13, 0.025, 0.035, side * 0.1, 0.015, z)))
+    ];
+    const merged = mergeGeometries(parts);
+    for (const g of parts) g.dispose();
     return unitBox(merged);
 }
 
@@ -210,8 +238,7 @@ export class BroodDraw implements BroodSink {
             fry: new Pool(tailed(0.62, 0.42), matte(), caps.specks, false),
             tadpole: new Pool(tailed(0.45, 0.7), matte(), caps.specks, false),
             grub: new Pool(unitBox(grub), matte(), caps.specks, false),
-            // (A hatchling reptile from above: a body and a long tapering tail, lying flat.)
-            scaly: new Pool(tailed(0.5, 0.62), matte(), caps.specks, false),
+            scaly: new Pool(lizard(), matte(), caps.specks, false),
             nestBody: new Pool(nestlingBody(), new MeshStandardMaterial({roughness: 0.95, metalness: 0, vertexColors: true}), caps.nestlings, false),
             nestHead: new Pool(nestlingHead(), new MeshStandardMaterial({roughness: 0.7, metalness: 0, vertexColors: true}), caps.nestlings, false)
         };
@@ -272,8 +299,8 @@ export class BroodDraw implements BroodSink {
         if (k <= 0.01) return;
         const l = length * k;
         // (Its body's proportions by its shape: wide and tall as a share of its length.)
-        const wide = look === "four" ? 0.36 : look === "oval" ? 0.5 : look === "tadpole" ? 0.36 : look === "fry" ? 0.2 : look === "scaly" ? 0.24 : 0.34;
-        const tall = look === "four" ? 0.62 : look === "oval" ? 0.58 : look === "tadpole" ? 0.3 : look === "fry" ? 0.26 : look === "scaly" ? 0.11 : 0.3;
+        const wide = look === "four" ? 0.36 : look === "oval" ? 0.5 : look === "tadpole" ? 0.36 : look === "fry" ? 0.2 : look === "scaly" ? 0.3 : 0.34;
+        const tall = look === "four" ? 0.62 : look === "oval" ? 0.58 : look === "tadpole" ? 0.3 : look === "fry" ? 0.26 : look === "scaly" ? 0.09 : 0.3;
         this.quaternion.setFromAxisAngle(this.up, yaw);
         this.matrix.compose(this.position.set(x, y, z), this.quaternion, this.scale.set(l * wide, l * tall, l));
         let colour = look === "tadpole" ? TADPOLE : look === "grub" ? GRUB : this.colours.get(slug) ?? null;
