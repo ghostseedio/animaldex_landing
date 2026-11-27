@@ -190,3 +190,38 @@ test("runtime camera: a selected animal fits whole above the card (ARK-SIMPLE: t
     assert.ok(fitAboveCard(2.4, 1.7, phone, 0.2) > fitAboveCard(2.4, 1.7, phone, 0.25));
     assert.ok(fitAboveCard(2.4, 1.7, phone, 1) <= fitAboveCard(2.4, 1.7, phone, 0.25));
 });
+
+test("FOLLOW-REACH: a followed frigatebird keeps the camera with it round its whole thermal circle; unfollowed views keep the capsule", async () => {
+    const {viewReachPull, worldEdge, FOLLOW_SLACK} = await import("@/ark-scene/runtime/camera");
+    const {seaFlightAt, seaFlightSpec} = await import("@/ark-scene/sea-flight");
+    const spec = seaFlightSpec("magnificent-frigatebird");
+    assert.ok(spec, "the frigatebird has a sea-flight row");
+    // A two-island capsule as the v2 world's (wild centre at 0, the town out at `origin`), out over the sea by the margin.
+    const reach = {origin: {x: 700, z: -250}, r0: 330, r1: 220, margin: 200, edge: worldEdge("v2")};
+    // Its soaring home on the capsule's rim, seaward of the wild island: half its circles lie outside (as at 11:00 live).
+    const home = {x: -530, z: 0};
+    const id = "2f58f271-test";
+    let outside = 0;
+    let followedPulls = 0;
+    for (let s = 0; s < 600; s += 0.5) {
+        const bird = seaFlightAt(id, spec!, home, 1_800_000_000 + s, () => true);
+        // The view's middle a few metres behind it (the follow's lag), as the frame loop leaves it.
+        const lag = {x: bird.x - Math.sin(bird.yaw) * 2, z: bird.z - Math.cos(bird.yaw) * 2};
+        if (viewReachPull(lag.x, lag.z, reach)) outside++;
+        if (viewReachPull(lag.x, lag.z, reach, {x: bird.x, z: bird.z})) followedPulls++;
+    }
+    assert.ok(outside > 100, `unfollowed, the capsule would have pulled the view off the bird (${outside} of 1200 samples)`);
+    assert.equal(followedPulls, 0, "followed, the view is never pulled off the bird");
+
+    // Unfollowed: the same capsule as before (a point out at sea comes back to the rim, a point inside stays).
+    assert.equal(viewReachPull(0, 300, reach), null);
+    const back = viewReachPull(0, 900, reach)!;
+    assert.ok(Math.abs(Math.hypot(0, 900 + back.dz) - (reach.r0 + reach.margin)) < 1e-6, "back to the rim");
+    // Following, the view's middle more than the slack from the animal (a jump): back toward it, not left out there.
+    const far = viewReachPull(0, 900, reach, {x: 0, z: 700})!;
+    assert.ok(Math.abs(900 + far.dz - (700 + FOLLOW_SLACK)) < 1e-6, "pulled to the animal's slack, the nearer");
+    // Never past the world's edge, even following.
+    const edge = viewReachPull(0, reach.edge + 500, reach, {x: 0, z: reach.edge + 500})!;
+    assert.ok(Math.abs(reach.edge + 500 + edge.dz - reach.edge) < 1e-6, "held at the edge");
+    assert.ok(worldEdge("v2") > 3000 && worldEdge("v1") > 500, "the edge lies well out past every animal's place");
+});

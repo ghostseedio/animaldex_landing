@@ -527,6 +527,64 @@ export function dampingFor(dt: number, at60 = 0.075): number {
 }
 
 /**
+ * The view's reach over the world (FOLLOW-REACH, 2026-11-24). Unfollowed, the view's middle is kept over either island
+ * or the strait between (a capsule from the wild island's centre to the town's, its radius growing from `r0` to `r1`
+ * along it, plus `margin` out over the sea). Followed, the animal's own place counts as in reach too: the view's middle
+ * may be anywhere within `FOLLOW_SLACK` m of it, so a flyer that soars out past the capsule (the frigatebird's thermal
+ * circles, half outside it at 11:00) keeps the camera with it instead of being left behind after ~14 s. Either way the
+ * middle never goes past `edge` m from the world's centre, where the sea is drawn to (`seaHalf` less a far view).
+ * Returns the move back in, or null.
+ */
+export function viewReachPull(x: number, z: number, reach: {origin: {x: number; z: number}; r0: number; r1: number; margin: number; edge: number}, followed: {x: number; z: number} | null = null): {dx: number; dz: number} | null {
+    let px = x;
+    let pz = z;
+    const near = followed !== null && Math.hypot(x - followed.x, z - followed.z) <= FOLLOW_SLACK;
+    if (!near) {
+        const o = reach.origin;
+        const l2 = o.x * o.x + o.z * o.z || 1;
+        const t = Math.min(Math.max((x * o.x + z * o.z) / l2, 0), 1);
+        const cx = o.x * t;
+        const cz = o.z * t;
+        const radius = reach.r0 + (reach.r1 - reach.r0) * t + reach.margin;
+        const d = Math.hypot(x - cx, z - cz);
+        if (d > radius) {
+            // Following, but more than the slack from it (a jump, a respawn): back to the nearer of the capsule and the animal's slack.
+            const inCapsule = {x: cx + ((x - cx) * radius) / d, z: cz + ((z - cz) * radius) / d};
+            if (followed) {
+                const f = Math.hypot(x - followed.x, z - followed.z);
+                const byAnimal = {x: followed.x + ((x - followed.x) * FOLLOW_SLACK) / f, z: followed.z + ((z - followed.z) * FOLLOW_SLACK) / f};
+                const pick = Math.hypot(byAnimal.x - x, byAnimal.z - z) < Math.hypot(inCapsule.x - x, inCapsule.z - z) ? byAnimal : inCapsule;
+                px = pick.x;
+                pz = pick.z;
+            } else {
+                px = inCapsule.x;
+                pz = inCapsule.z;
+            }
+        }
+    }
+    const r = Math.hypot(px, pz);
+    if (r > reach.edge) {
+        px *= reach.edge / r;
+        pz *= reach.edge / r;
+    }
+    if (px === x && pz === z) return null;
+    return {dx: px - x, dz: pz - z};
+}
+
+/** How far the view's middle may be from a followed animal before the reach pulls it (m): the follow's own lead and lag. */
+export const FOLLOW_SLACK = 12;
+
+/** The sea plane's half width (m), per world: `terrain.ts` draws it this size round the world's centre. */
+export function seaHalf(world: "v1" | "v2"): number {
+    return world === "v2" ? 6000 : 2000;
+}
+
+/** The furthest the view's middle may be from the world's centre (m): the sea's edge less the camera's farthest reach and the fog beyond. */
+export function worldEdge(world: "v1" | "v2"): number {
+    return seaHalf(world) - CAMERA_RANGE.far * 3;
+}
+
+/**
  * Following an animal: the target moves toward where it is (and a little ahead, by its speed), closing the gap with
  * a time constant instead of a fixed share per frame. Returns the step to add to both the target and the camera.
  */
