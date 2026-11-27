@@ -307,7 +307,7 @@ test("nestlings are heads and gapes in the cup, not small birds: their size hone
 
 type E = {id: string; act: ActPose | null; x: number; z: number};
 
-function world(tier: "high" | "medium" | "low" = "high", chases = true, plans: Record<string, string> = {mallard: "bird", "grey-heron": "bird", "common-frog": "frog", "red-fox": "mammal", "american-robin": "bird"}, waterTop: (x: number, z: number) => number = () => 0) {
+function world(tier: "high" | "medium" | "low" = "high", chases = true, plans: Record<string, string> = {mallard: "bird", "grey-heron": "bird", "common-frog": "frog", "red-fox": "mammal", "american-robin": "bird"}, waterTop: (x: number, z: number) => number = () => 0, ground: (x: number, z: number) => number = () => 0) {
     const entries = new Map<string, E>();
     const meals: Array<{predator: string; prey: string; at: string}> = [];
     const dropped: string[] = [];
@@ -320,7 +320,7 @@ function world(tier: "high" | "medium" | "low" = "high", chases = true, plans: R
         adultLength: () => 0.5,
         body: (e) => ({x: e.act?.x ?? e.x, z: e.act?.z ?? e.z, base: 0, yaw: 0, length: 0.5}),
         scheduleAt: (e) => ({x: e.x, z: e.z, y: 0, yaw: 0}),
-        ground: () => 0,
+        ground,
         waterTop,
         walk: () => 1,
         flies: () => false,
@@ -351,6 +351,31 @@ function world(tier: "high" | "medium" | "low" = "high", chases = true, plans: R
     };
     return {layer, entries, meals, dropped, base, add, layout, step, relayouts: () => relayouts};
 }
+
+test("a parent guarding a body length off its eggs stands on what is there: a slope's ground, or the water's top at a bank", () => {
+    // (The nest at (10, 20) in a hollow: the ground rising half a metre a metre all round it; in the second world a pond's
+    // top 0.3 m up from 0.3 m out, over a bed 0.1 m up.)
+    const out = (x: number, z: number) => Math.hypot(x - 10, z - 20);
+    for (const pond of [false, true]) {
+        const ground = (x: number, z: number) => (pond ? Math.min(out(x, z) * 0.5, 0.1) : out(x, z) * 0.5);
+        const top = (x: number, z: number) => (pond && out(x, z) > 0.3 ? 0.3 : -1);
+        const w = world("high", true, undefined, top, ground);
+        w.layer.set(read(T0, [mallard({laid_ark_day: DAY, stage_ark_day: DAY, hold: "guard"})]), T0);
+        w.layout();
+        let checked = 0;
+        for (let t = 30; t <= 600; t += 37) {
+            w.step(T0 + t);
+            const act = w.entries.get(A)!.act!;
+            if (act.state === "walk") continue;
+            assert.ok(out(act.x, act.z) > 0.3, "a body length off the eggs");
+            const under = top(act.x, act.z) > ground(act.x, act.z) ? top(act.x, act.z) : ground(act.x, act.z);
+            assert.ok(Math.abs(act.base - under) < 1e-9, `on what is under it at t ${t}: ${act.base}, not ${under}`);
+            assert.equal(act.state, pond ? "swim" : "scan");
+            checked++;
+        }
+        assert.ok(checked > 5);
+    }
+});
 
 test("off: no stand-ins, the roster is the read itself, nothing drawn, nothing posed", () => {
     const w = world();
