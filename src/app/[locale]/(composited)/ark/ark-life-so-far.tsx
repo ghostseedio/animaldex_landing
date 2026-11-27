@@ -2,6 +2,7 @@
 
 import React, {useEffect, useState} from "react";
 import {arkHumanAgo} from "@/lib/ark-human-time";
+import {arkHeartsEscape, decodeArkHeartsRules, type ArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {ARK_LIFE_SO_FAR_ENGLISH, arkLifeSoFar, arkMomentText, arkMomentTone, decodeArkMoments, type ArkLifeSoFarWords, type ArkMoment} from "@/lib/ark-life-so-far";
 
 /**
@@ -16,33 +17,34 @@ import {ARK_LIFE_SO_FAR_ENGLISH, arkLifeSoFar, arkMomentText, arkMomentTone, dec
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** One read per animal per visit (both parts share it); a failed read is no list, never asked again on this visit. */
-const reads = new Map<string, Promise<ArkMoment[] | null>>();
-function readMoments(id: string): Promise<ArkMoment[] | null> {
+type Read = {moments: ArkMoment[] | null; /** The server's hearts rule with it (a heart a survived attack, or a life); null when it does not say. */ rules: ArkHeartsRules | null};
+const reads = new Map<string, Promise<Read>>();
+function readMoments(id: string): Promise<Read> {
     let read = reads.get(id);
     if (!read) {
         read = fetch(`/api/ark/moments/${encodeURIComponent(id)}`)
             .then((response) => (response.ok ? response.json() : null))
-            .then((json: {moments?: unknown} | null) => {
+            .then((json: {moments?: unknown; heartsRules?: unknown} | null): Read => {
                 const decoded = decodeArkMoments(json?.moments ?? null);
-                return decoded ? arkLifeSoFar(decoded) : null;
-            }, () => null);
+                return {moments: decoded ? arkLifeSoFar(decoded) : null, rules: decodeArkHeartsRules(json?.heartsRules)};
+            }, () => ({moments: null, rules: null}));
         reads.set(id, read);
     }
     return read;
 }
 
-function useMoments(id: string): {moments: ArkMoment[] | null; loading: boolean} {
-    const [state, setState] = useState<{id: string; moments: ArkMoment[] | null} | null>(null);
+function useMoments(id: string): {moments: ArkMoment[] | null; rules: ArkHeartsRules | null; loading: boolean} {
+    const [state, setState] = useState<({id: string} & Read) | null>(null);
     useEffect(() => {
         if (!UUID.test(id)) return;
         let live = true;
-        void readMoments(id).then((moments) => live && setState({id, moments}));
+        void readMoments(id).then((read) => live && setState({id, ...read}));
         return () => {
             live = false;
         };
     }, [id]);
-    if (!UUID.test(id)) return {moments: null, loading: false};
-    return state?.id === id ? {moments: state.moments, loading: false} : {moments: null, loading: true};
+    if (!UUID.test(id)) return {moments: null, rules: null, loading: false};
+    return state?.id === id ? {moments: state.moments, rules: state.rules, loading: false} : {moments: null, rules: null, loading: true};
 }
 
 const TONE: Record<ReturnType<typeof arkMomentTone>, string> = {
@@ -72,11 +74,11 @@ type Props = {
 
 export default function ArkLifeSoFar({part, animalId, self, human = false, locale, words: given, by = null, onOpen, now}: Props) {
     const words: ArkLifeSoFarWords = {...ARK_LIFE_SO_FAR_ENGLISH, ...(given ?? {})};
-    const {moments, loading} = useMoments(animalId);
+    const {moments, rules, loading} = useMoments(animalId);
     const [open, setOpen] = useState<string | null>(null);
     const clock = now ?? Date.now();
     const stamp = (moment: ArkMoment) => arkHumanAgo(moment.at, clock, locale, "short");
-    const say = (moment: ArkMoment) => arkMomentText(moment, {self, human, words});
+    const say = (moment: ArkMoment) => arkMomentText(moment, {self, human, words, escape: arkHeartsEscape(rules)});
     const withBy = (moment: ArkMoment) => by && (moment.kind === "arrived" || moment.kind === "born");
 
     if (part === "line") {

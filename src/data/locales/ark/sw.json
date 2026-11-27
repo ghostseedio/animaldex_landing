@@ -293,7 +293,8 @@
                 "hiding": "kujificha",
                 "climb": "kutoroka juu",
                 "mimicry": "kuiga"
-            }
+            },
+            "endedUnknown": "Alikufa, sababu haijulikani"
         },
         "replay": {
             "title": "Ulipokuwa mbali",
@@ -337,7 +338,10 @@
             "laidCountOne": "kundi 1 la mayai",
             "laidCountOther": "makundi {count} ya mayai",
             "hatchedCountOne": "aliyeanguliwa 1",
-            "hatchedCountOther": "walioanguliwa {count}"
+            "hatchedCountOther": "walioanguliwa {count}",
+            "deathUnknown": "{animal} alikufa. Sababu haijulikani",
+            "deathsUnknownOne": "kifo 1, sababu haijulikani",
+            "deathsUnknownOther": "vifo {count}, sababu haijulikani"
         },
         "capture": {
             "aboardOne": "Ndani ya Ark: {animal} 1",
@@ -453,7 +457,12 @@
             "antSeeds": "{animals}: kubeba mbegu nyumbani",
             "antRaid": "{animals}: uvamizi kwa mstari mpana",
             "antBivouac": "{animals}: kuhamisha kiota cha muda",
-            "antWeave": "{animals}: kuvuta majani pamoja kwa kiota"
+            "antWeave": "{animals}: kuvuta majani pamoja kwa kiota",
+            "escapedWounded": "{aPrey} alimtoroka {aPredator} akiwa amejeruhiwa, na amejificha kupumzika",
+            "rescued": "{aAnimal} alipatikana akiwa na njaa kali, akapelekwa kutunzwa",
+            "lostHome": "{aAnimal} alipoteza makazi yake: miti ya msitu wake ilikatwa",
+            "deathUnknownOther": "{animals} {count} walikufa, sababu haijulikani",
+            "closeCall": "{aAnimal} alikaribia kufa. Sababu haijulikani. Hata hivyo, alinusurika"
         },
         "card": {
             "now": "Sasa: {activity}",
@@ -728,7 +737,8 @@
             "speciesBack": "Ndani tena: ilitoweka siku ya Ark {day} · {date}.",
             "notAboard": "Hakuna {animal} ndani sasa.",
             "bringBack": "Mkamate mmoja umrudishe",
-            "listLabel": "Spishi zilizopotea kutoka Ark, mpya kwanza"
+            "listLabel": "Spishi zilizopotea kutoka Ark, mpya kwanza",
+            "diedUnknown": "Wa mwisho alikufa, sababu haijulikani"
         },
         "endangered": {
             "title": "Zilizo hatarini sasa",
@@ -776,7 +786,15 @@
             "failed": "Haikufaulu. Jaribu tena baada ya muda mfupi.",
             "recoveringOne": "1 inapona",
             "recoveringOther": "{count} zinapona",
-            "away": "Iko mbali inapopona, kisha inatoka tena nyumbani kwake."
+            "away": "Iko mbali inapopona, kisha inatoka tena nyumbani kwake.",
+            "escapeLivesOne": "Moyo 1 ndani ya Ark",
+            "escapeLivesOther": "Mioyo {n} ndani ya Ark",
+            "escapeLivesNone": "Hakuna mioyo iliyobaki ndani ya Ark",
+            "escapeNote": "Kila moyo humwezesha mnyama wako kunusurika shambulio moja au kipindi kimoja cha njaa ndani ya Ark. Mioyo haiwezi kuzuia uzee.",
+            "escapeNoteOld": "Kila moyo humwezesha mnyama wako kunusurika shambulio moja au kipindi kimoja cha njaa ndani ya Ark. Moyo pia humrudisha kutoka uzeeni akiwa mtu mzima kijana.",
+            "recoveringWounded": "Imejificha, imejeruhiwa · inarudi {when}",
+            "recoveringCare": "Chini ya uangalizi wa mji · inarudi {when}",
+            "recoveringHome": "Imepoteza makazi yake · inarudi {when}"
         },
         "release": {
             "button": "Mwachilie porini · Credits {credits}",
@@ -834,7 +852,10 @@
                 "epic": "Kuu",
                 "legendary": "Hadithi",
                 "mythic": "Kizushi"
-            }
+            },
+            "escapeHearts": "Anabaki na mioyo yake. Moyo mmoja unamwezesha kunusurika shambulio moja au kipindi kimoja cha njaa porini. Bila moyo uliobaki, kukamatwa ni mwisho. Uzee ni mwisho.",
+            "escapeHeartsOld": "Anabaki na mioyo yake. Moyo mmoja unamwezesha kunusurika shambulio moja au kipindi kimoja cha njaa porini, na kumrudisha kutoka uzeeni akiwa mtu mzima kijana. Bila moyo uliobaki, kukamatwa ni mwisho.",
+            "escapeLastOfKind": "Ni wa mwisho wa aina yake ndani ya Ark. Akikamatwa bila moyo uliobaki, au akifa kwa uzee, aina yake inatoweka kwenye Ark."
         },
         "seen": {
             "searching": "Anatafuta windo",
@@ -1047,7 +1068,13 @@
                 "faqQ1": "Ni mahali gani palipo salama zaidi katika Ark?",
                 "faqA1": "{place} ina sehemu ya juu zaidi ya walio hai katika siku {days} zilizopita: {percent}.",
                 "faqQ2": "Nini kinaua wanyama katika Ark?",
-                "faqA2": "Katika siku {days} zilizopita rekodi inaonyesha vifo {old} vya uzee, {starved} vya njaa na {eaten} vya kuliwa. {hunting}"
+                "faqA2": "Katika siku {days} zilizopita rekodi inaonyesha vifo {old} vya uzee, {starved} vya njaa na {eaten} vya kuliwa. {hunting}",
+                "introEscape": "Mnyama katika Ark anaweza kuanguka kwa uzee, njaa au mwindaji. Wengine hutoroka, wengine hawatoroki. Hizi ni namba, mahali kwa mahali, pamoja na wanyama na aina walio karibu zaidi na mwisho.",
+                "placesDescriptionEscape": "Kati ya wanyama waliokuwa katika kila eneo katika siku {days} zilizopita, sehemu ambayo bado iko hai. Mnyama aliyejificha akipona baada ya shambulio au njaa huhesabiwa kuwa hai: atarudi.",
+                "recoverNoteEscape": "Shambulio si mwisho kila wakati: mnyama mwenye moyo uliobaki hutoroka akiwa amejeruhiwa na kurudi, na mnyama mwenye njaa kali huchukuliwa kutunzwa na kurudi, kwa hiyo ni wale ambao hawakurudi tu wanaohesabiwa kuwa wamepotea moja kwa moja. Uzee ni mwisho.",
+                "recoverNoteEscapeOld": "Shambulio si mwisho kila wakati: mnyama mwenye moyo uliobaki hutoroka akiwa amejeruhiwa na kurudi, na mnyama mwenye njaa kali huchukuliwa kutunzwa na kurudi. Anayekufa kwa uzee akiwa na moyo uliobaki hurudi akiwa mtu mzima kijana, kwa hiyo ni wale ambao hawakurudi tu wanaohesabiwa kuwa wamepotea moja kwa moja.",
+                "causeUnknown": "Sababu haijulikani",
+                "faqA2Unknown": "Katika siku {days} zilizopita rekodi inaonyesha vifo {old} vya uzee, {unknown} vya sababu ambayo Ark haijui, {starved} vya njaa na {eaten} vya kuliwa. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Wazaaji wa haraka zaidi katika Ark: wanyama gani wana watoto wengi zaidi",
@@ -1150,7 +1177,8 @@
             "bar": "Upau uliojaa: maisha aliyoishi hadi sasa, kwa rangi ya hali yake (kijani salama, kahawia-njano mzee au hatarini, nyekundu ana njaa)",
             "now": "Alama nyeupe: sasa",
             "end": "Mwisho wenye mistari: lini huenda akafa kwa uzee, kama kipindi, si ahadi",
-            "heart": "Moyo %: nafasi yake ya kuishi mwaka ujao wa Safina (takriban wiki 2 za muda halisi), ikihesabu wawindaji walio karibu, njaa, umri na kuachiliwa"
+            "heart": "Moyo %: nafasi yake ya kuishi mwaka ujao wa Safina (takriban wiki 2 za muda halisi), ikihesabu wawindaji walio karibu, njaa, umri na kuachiliwa",
+            "endRisk": "Mwisho wenye mistari: muda wake wa kawaida wa kuishi. Mnyama wa porini anaweza kufa mapema zaidi, au kuishi zaidi ya huo"
         },
         "flow": {
             "sleep": "Amelala",

@@ -50,13 +50,15 @@ export type ArkHistory = {
 /**
  * Per island ([wild, town]): count at t0, and per step: [arrived, born, revived, died, eaten], then (kept populations,
  * AnimalDex migration 20261223120000, only on a step that has one) the animals born aboard that left alive: rehomed, sent
- * to market, moved to another zoo.
+ * to market, moved to another zoo; then (hearts a survived attack, AnimalDex migration 20270104120000, only on a step that has
+ * one) `layUp`: animals taken off the Ark while they lie up after a wounded escape or a rescue, whose return is in `revived`.
  */
-export type ArkKindRecord = {base: [number, number]; rows: Array<{step: number; island: 0 | 1; arrived: number; born: number; revived: number; died: number; eaten: number; rehomed: number; toMarket: number; movedZoo: number}>};
+export type ArkKindRecord = {base: [number, number]; rows: Array<{step: number; island: 0 | 1; arrived: number; born: number; revived: number; died: number; eaten: number; rehomed: number; toMarket: number; movedZoo: number; layUp: number}>};
 
 /** A step's change: in (arrived, born, back from recovery) minus out (died, eaten, left alive). */
-function net(row: {arrived: number; born: number; revived: number; died: number; eaten: number; rehomed: number; toMarket: number; movedZoo: number}): number {
-    return row.arrived + row.born + row.revived - row.died - row.eaten - row.rehomed - row.toMarket - row.movedZoo;
+function net(row: {arrived: number; born: number; revived: number; died: number; eaten: number; rehomed: number; toMarket: number; movedZoo: number; layUp: number}): number {
+    // (An animal lying up left the count when it was hurt or found weak, and its `revived` is the matching +1.)
+    return row.arrived + row.born + row.revived - row.died - row.eaten - row.rehomed - row.toMarket - row.movedZoo - row.layUp;
 }
 
 /** One species' line: `counts[i]` is the count at `times[i]` (the last is now). */
@@ -188,7 +190,7 @@ export function arkRebucketDays(source: ArkHistory, zoneName: string = source.zo
             }
             const step = dayOf(end);
             const id = step * 2 + row.island;
-            const into = rows.get(id) ?? {step, island: row.island, arrived: 0, born: 0, revived: 0, died: 0, eaten: 0, rehomed: 0, toMarket: 0, movedZoo: 0};
+            const into = rows.get(id) ?? {step, island: row.island, arrived: 0, born: 0, revived: 0, died: 0, eaten: 0, rehomed: 0, toMarket: 0, movedZoo: 0, layUp: 0};
             into.arrived += row.arrived;
             into.born += row.born;
             into.revived += row.revived;
@@ -197,6 +199,7 @@ export function arkRebucketDays(source: ArkHistory, zoneName: string = source.zo
             into.rehomed += row.rehomed;
             into.toMarket += row.toMarket;
             into.movedZoo += row.movedZoo;
+            into.layUp += row.layUp;
             rows.set(id, into);
         }
         kinds.set(key, {base, rows: Array.from(rows.values())});
@@ -264,7 +267,7 @@ export function decodeArkHistory(raw: unknown, zone: string = arkViewerZone()): 
         const step = num(item[2]);
         const record = kindOf(item[0]);
         if (!record || step === null || step < 0 || step >= steps) continue;
-        record.rows.push({step, island: item[1] === 1 ? 1 : 0, arrived: int(item[3]), born: int(item[4]), revived: int(item[5]), died: int(item[6]), eaten: int(item[7]), rehomed: int(item[8]), toMarket: int(item[9]), movedZoo: int(item[10])});
+        record.rows.push({step, island: item[1] === 1 ? 1 : 0, arrived: int(item[3]), born: int(item[4]), revived: int(item[5]), died: int(item[6]), eaten: int(item[7]), rehomed: int(item[8]), toMarket: int(item[9]), movedZoo: int(item[10]), layUp: int(item[11])});
     }
     const gone = new Map<string, {name: string; slug: string | null}>();
     const goneRaw = body.gone && typeof body.gone === "object" && !Array.isArray(body.gone) ? (body.gone as Row) : {};

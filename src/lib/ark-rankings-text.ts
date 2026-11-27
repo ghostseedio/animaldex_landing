@@ -106,9 +106,11 @@ export type ArkCauseBar = {cause: ArkDeathCause; name: string; falls: number; lo
 
 export function arkCauseBars(survival: ArkSurvival, words: ArkRankingsWords, locale: string): ArkCauseBar[] {
     const s = words.survival;
-    const names: Record<ArkDeathCause, string> = {old: s.causeOld, starved: s.causeStarved, eaten: s.causeEaten};
-    const total = ARK_DEATH_CAUSES.reduce((sum, cause) => sum + survival.causes.falls[cause], 0);
-    return ARK_DEATH_CAUSES.map((cause) => ({
+    const names: Record<ArkDeathCause, string> = {old: s.causeOld, starved: s.causeStarved, eaten: s.causeEaten, unknown: s.causeUnknown ?? "Cause not known"};
+    // (AGE-RISK: the "cause not known" bar is there only once the record holds such a death; until then the bars are as they were.)
+    const causes: readonly ArkDeathCause[] = survival.causes.falls.unknown > 0 ? [...ARK_DEATH_CAUSES, "unknown"] : ARK_DEATH_CAUSES;
+    const total = causes.reduce((sum, cause) => sum + survival.causes.falls[cause], 0);
+    return causes.map((cause) => ({
         cause,
         name: names[cause],
         falls: survival.causes.falls[cause],

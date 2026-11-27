@@ -12,6 +12,7 @@
 
 import {companionDisplayName} from "@/lib/ask-animaldex/companion-loop";
 import type {AnimalPowerRoute} from "@/lib/animal-powers";
+import {arkHeartsEscape, arkHeartsVariant, type ArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {decodeAnimalStep, type AnimalStep} from "@/lib/your-step";
 
 export type BondStrands = {lesson: number; practice: number; life: number};
@@ -512,6 +513,17 @@ export const HEAL_COPY = {
     arkLives: "{n} lives in the Ark",
     arkNone: "No lives left in the Ark",
     arkNote: "Each heart is one more life for your animal in the Ark.",
+    /**
+     * A heart a survived attack (the server's `hearts_escape`, AnimalDex docs/ark/hearts-escape.md): the band's words in that
+     * state (`companionWordsForHearts`, from `voyage_hearts_rules_v1`): `arkNoteEscape` while old age is final, `arkNoteEscapeOld`
+     * while a heart still brings it back.
+     */
+    arkTitleEscape: "Hearts in the Ark",
+    arkLifeEscape: "1 heart in the Ark",
+    arkLivesEscape: "{n} hearts in the Ark",
+    arkNoneEscape: "No hearts left in the Ark",
+    arkNoteEscape: "Each heart lets your animal survive one attack or one hungry spell in the Ark. Hearts can't hold back old age.",
+    arkNoteEscapeOld: "Each heart lets your animal survive one attack or one hungry spell in the Ark. A heart also brings it back from old age as a young adult.",
     arkNoCredits: "You need 5 Credits to restore a heart.",
     arkRestoring: "Restoring…",
     /** Filled only with `ark_hearts` on (`companionWordsForHearts`): the band's lives line and the note under its button. */
@@ -744,7 +756,7 @@ export function companionWords(raw: unknown): CompanionWords {
  * on and pay no Credits, so their copy says the XP instead and drops the heart lines (empty: not shown); with
  * `arkHearts` on, the card's hearts band speaks of lives in the Ark and "Restore a heart". Either unknown (null): as is.
  */
-export function companionWordsForHearts(words: CompanionWords, flags: {heartsInDebates: boolean | null; arkHearts: boolean | null}): CompanionWords {
+export function companionWordsForHearts(words: CompanionWords, flags: {heartsInDebates: boolean | null; arkHearts: boolean | null; /** The server's hearts rule (`voyage_hearts_rules_v1`): null from one that does not say, which is today's rule. */ rules?: ArkHeartsRules | null}): CompanionWords {
     let out = words;
     if (flags.heartsInDebates === false) {
         out = {
@@ -755,10 +767,18 @@ export function companionWordsForHearts(words: CompanionWords, flags: {heartsInD
         };
     }
     if (flags.arkHearts === true) {
+        // A heart a survived attack: hearts, not lives, and what a heart does (old age final, or still returning).
+        const survived = arkHeartsEscape(flags.rules);
+        const heal = out.heal;
+        const title = survived ? heal.arkTitleEscape || heal.arkTitle : heal.arkTitle;
+        const lives = survived ? heal.arkLivesEscape || heal.arkLives : heal.arkLives;
+        const life = survived ? heal.arkLifeEscape || heal.arkLife : heal.arkLife;
+        const none = survived ? heal.arkNoneEscape || heal.arkNone : heal.arkNone;
+        const note = survived ? arkHeartsVariant(flags.rules, heal.arkNote, heal.arkNoteEscape, heal.arkNoteEscapeOld) : heal.arkNote;
         out = {
             ...out,
-            heal: {...out.heal, title: out.heal.arkTitle, one: out.heal.arkOne, full: fillWords(out.heal.arkLives, {n: 3}), lives: out.heal.arkLives, life: out.heal.arkLife, note: out.heal.arkNote},
-            debateWeb: {...out.debateWeb, outOfHearts: out.heal.arkNone, healing: out.heal.arkRestoring, problems: {...out.debateWeb.problems, noCredits: out.heal.arkNoCredits}}
+            heal: {...heal, title, one: heal.arkOne, full: fillWords(lives, {n: 3}), lives, life, note},
+            debateWeb: {...out.debateWeb, outOfHearts: none, healing: heal.arkRestoring, problems: {...out.debateWeb.problems, noCredits: heal.arkNoCredits}}
         };
     }
     return out;

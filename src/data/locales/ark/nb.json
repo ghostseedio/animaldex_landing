@@ -293,7 +293,8 @@
                 "hiding": "gjemmer seg",
                 "climb": "flukt oppover",
                 "mimicry": "mimikry"
-            }
+            },
+            "endedUnknown": "Døde, årsak ukjent"
         },
         "replay": {
             "title": "Mens du var borte",
@@ -337,7 +338,10 @@
             "laidCountOne": "1 kull lagt",
             "laidCountOther": "{count} kull lagt",
             "hatchedCountOne": "1 klekket",
-            "hatchedCountOther": "{count} klekket"
+            "hatchedCountOther": "{count} klekket",
+            "deathUnknown": "{animal} døde. Årsaken er ukjent",
+            "deathsUnknownOne": "1 dødsfall, ukjent årsak",
+            "deathsUnknownOther": "{count} dødsfall, ukjent årsak"
         },
         "capture": {
             "aboardOne": "I Ark: 1 {animal} om bord",
@@ -453,7 +457,12 @@
             "antSeeds": "{animals}: frø bæres hjem",
             "antRaid": "{animals}: raid i bred front",
             "antBivouac": "{animals}: bivuakken flytter",
-            "antWeave": "{animals}: blader trekkes sammen til reiret"
+            "antWeave": "{animals}: blader trekkes sammen til reiret",
+            "escapedWounded": "{aPrey} kom seg unna {aPredator}, såret, og hviler skjult",
+            "rescued": "{aAnimal} ble funnet sultende og tatt i omsorg",
+            "lostHome": "{aAnimal} mistet hjemmet sitt: skogen ble hugget ned",
+            "deathUnknownOther": "{animals}: {count} døde, ukjent årsak",
+            "closeCall": "{aAnimal} var nær ved å dø. Årsaken er ukjent. Men det gikk bra"
         },
         "card": {
             "now": "Nå: {activity}",
@@ -728,7 +737,8 @@
             "speciesBack": "Om bord igjen: døde ut på Ark-dag {day} · {date}.",
             "notAboard": "Ingen {animal} er om bord nå.",
             "bringBack": "Fang en for å bringe den tilbake",
-            "listLabel": "Arter borte fra Ark, nyeste først"
+            "listLabel": "Arter borte fra Ark, nyeste først",
+            "diedUnknown": "Det siste døde, årsak ukjent"
         },
         "endangered": {
             "title": "Truet nå",
@@ -776,7 +786,15 @@
             "failed": "Det gikk ikke. Prøv igjen om litt.",
             "recoveringOne": "1 kommer seg",
             "recoveringOther": "{count} kommer seg",
-            "away": "Det er borte mens det kommer seg, og går så ut av hjemmet sitt igjen."
+            "away": "Det er borte mens det kommer seg, og går så ut av hjemmet sitt igjen.",
+            "escapeLivesOne": "1 hjerte i Ark",
+            "escapeLivesOther": "{n} hjerter i Ark",
+            "escapeLivesNone": "Ingen hjerter igjen i Ark",
+            "escapeNote": "Hvert hjerte lar dyret ditt overleve ett angrep eller én sultperiode i Ark. Hjerter kan ikke holde alderdommen borte.",
+            "escapeNoteOld": "Hvert hjerte lar dyret ditt overleve ett angrep eller én sultperiode i Ark. Et hjerte henter det også tilbake fra alderdom som ung voksen.",
+            "recoveringWounded": "Hviler skjult, såret · er tilbake {when}",
+            "recoveringCare": "I byens omsorg · er tilbake {when}",
+            "recoveringHome": "Mistet hjemmet sitt · er tilbake {when}"
         },
         "release": {
             "button": "Slipp fri i naturen · {credits} kreditter",
@@ -834,7 +852,10 @@
                 "epic": "Episk",
                 "legendary": "Legendarisk",
                 "mythic": "Mytisk"
-            }
+            },
+            "escapeHearts": "Det beholder hjertene sine. Et hjerte lar det overleve ett angrep eller én sultperiode i naturen. Blir det fanget uten et hjerte igjen, er det endelig. Alderdom er endelig.",
+            "escapeHeartsOld": "Det beholder hjertene sine. Et hjerte lar det overleve ett angrep eller én sultperiode i naturen, og henter det tilbake fra alderdom som ung voksen. Blir det fanget uten et hjerte igjen, er det endelig.",
+            "escapeLastOfKind": "Det er det siste av sin art om bord. Blir det fanget uten et hjerte igjen, eller dør det av alderdom, er arten borte fra Ark."
         },
         "seen": {
             "searching": "Leter etter bytte",
@@ -1047,7 +1068,13 @@
                 "faqQ1": "Hvilket sted er tryggest i Ark?",
                 "faqA1": "{place} har høyest andel i live de siste {days} dagene: {percent}.",
                 "faqQ2": "Hva dreper dyr i Ark?",
-                "faqA2": "De siste {days} dagene viser registreringen {old} dødsfall av alderdom, {starved} av sult og {eaten} spist. {hunting}"
+                "faqA2": "De siste {days} dagene viser registreringen {old} dødsfall av alderdom, {starved} av sult og {eaten} spist. {hunting}",
+                "introEscape": "Et dyr i Ark kan dø av alderdom, sult eller et rovdyr. Noen kommer seg unna, andre ikke. Her er tallene, sted for sted, med dyrene og artene som er nærmest slutten.",
+                "placesDescriptionEscape": "Av dyrene som var på hvert sted de siste {days} dagene, andelen som fortsatt lever. Et dyr som ligger skjult etter et angrep eller en sultperiode, regnes som levende: det kommer tilbake.",
+                "recoverNoteEscape": "Et angrep er ikke alltid slutten: et dyr med et hjerte igjen kommer seg unna såret og vender tilbake, og et sultent dyr tas i omsorg og vender tilbake, så bare dyr som ikke kom tilbake, regnes som tapt for godt. Alderdom er endelig.",
+                "recoverNoteEscapeOld": "Et angrep er ikke alltid slutten: et dyr med et hjerte igjen kommer seg unna såret og vender tilbake, og et sultent dyr tas i omsorg og vender tilbake. Et dyr som dør av alderdom med et hjerte igjen, vender tilbake som ung voksen, så bare dyr som ikke kom tilbake, regnes som tapt for godt.",
+                "causeUnknown": "Ukjent årsak",
+                "faqA2Unknown": "De siste {days} dagene viser registreringen {old} dødsfall av alderdom, {unknown} av en årsak Ark ikke kjenner, {starved} av sult og {eaten} spist. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Arks raskeste formerere: hvilke dyr har flest unger",
@@ -1150,7 +1177,8 @@
             "bar": "Fylt linje: livet levd så langt, farget etter hvordan den har det (grønn bra, rav gammel eller i fare, rød sulten)",
             "now": "Hvitt merke: nå",
             "end": "Stripete ende: når den sannsynligvis dør av alderdom, som et spenn, ikke et løfte",
-            "heart": "Hjerte %: sjansen for å overleve det neste Arkåret (omtrent 2 uker i virkeligheten), med rovdyr i nærheten, sult, alder og utsetting regnet med"
+            "heart": "Hjerte %: sjansen for å overleve det neste Arkåret (omtrent 2 uker i virkeligheten), med rovdyr i nærheten, sult, alder og utsetting regnet med",
+            "endRisk": "Stripete ende: dens typiske levetid. Et vilt dyr kan dø tidligere, eller leve lenger"
         },
         "flow": {
             "sleep": "Sover",

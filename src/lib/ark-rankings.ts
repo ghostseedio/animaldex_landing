@@ -53,7 +53,8 @@ const DAY_MS = 86_400_000;
 
 // MARK: The event log
 
-export type ArkDeathCause = "old" | "starved" | "eaten";
+/** `unknown`: AGE-RISK (docs/ark/age-risk.md): a clock death the Ark cannot call old age. */
+export type ArkDeathCause = "old" | "starved" | "eaten" | "unknown";
 export const ARK_DEATH_CAUSES: readonly ArkDeathCause[] = ["old", "starved", "eaten"];
 
 /** +1 for an arrival, a birth or a return from recovering; -1 for a death: the same rule the population record sums. */
@@ -77,8 +78,14 @@ export function arkReadEvents(raw: unknown): {flows: ArkFlow[]; falls: ArkFall[]
         const row = record(item);
         const kind = typeof row?.kind === "string" ? row.kind : "";
         const gain = GAIN.has(kind);
-        const cause = LOSS[kind];
-        if (!row || (!gain && !cause)) continue;
+        // AGE-RISK: a `death_old` the Ark cannot call old age is its own cause; a survived close call (`closeCall`) is a -1 for the
+        // population record (its return is a `revived`) but no death, so no cause and no fall.
+        const closeCall = kind === "death_old" && row?.closeCall === true;
+        const cause = closeCall ? undefined : kind === "death_old" && row?.unknown === true ? "unknown" as const : LOSS[kind];
+        // A heart a survived attack (the server's `hearts_escape`): a wounded escape and a rescue take the animal off the Ark for the
+        // time it lies up, and its return is a `revived` (+1): so they are a -1 here, no death (no cause, no fall).
+        const leaves = !cause && !gain && row !== null && (closeCall || (kind === "escaped" && row.wounded === true) || (kind === "fed" && row.rescued === true));
+        if (!row || (!gain && !cause && !leaves)) continue;
         const serial = typeof row.id === "number" && Number.isFinite(row.id) ? row.id : null;
         if (serial !== null) {
             if (seen.has(serial)) continue;
@@ -148,8 +155,8 @@ export function arkSurvivalByPlace(animals: readonly Pick<ArkAnimal, "id" | "isl
     const lostBy = new Map<ArkPlace, number>();
     const recoveringBy = new Map<ArkPlace, number>();
     const lostAt = new Map<ArkPlace, number[]>();
-    const lostForGood: Record<ArkDeathCause, number> = {old: 0, starved: 0, eaten: 0};
-    const falls: Record<ArkDeathCause, number> = {old: 0, starved: 0, eaten: 0};
+    const lostForGood: Record<ArkDeathCause, number> = {old: 0, starved: 0, eaten: 0, unknown: 0};
+    const falls: Record<ArkDeathCause, number> = {old: 0, starved: 0, eaten: 0, unknown: 0};
     for (const fall of events.falls) falls[fall.cause]++;
     for (const [id, fall] of Array.from(last.entries())) {
         if (aliveIds.has(id)) continue;

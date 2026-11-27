@@ -24,7 +24,8 @@ import {arkGrewWords, arkStatGainNotes, decodeArkStatGains} from "@/lib/ark-stat
 import {ArkLivesRow} from "@/app/[locale]/(composited)/ark/ark-lives";
 import {ArkCaptureBadges} from "@/app/[locale]/(composited)/ark/ark-capture-badges";
 import {ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-card-focus";
-import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
+import type {ArkAnimalHearts, ArkHeartsWordsFor} from "@/lib/ark-hearts";
+import type {ArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {arkCycleKey, arkCycleOf, arkCycleStep, type ArkCycle} from "@/lib/ark-cycle";
 import {arkLifeStoryOn} from "@/lib/ark-life-so-far";
 
@@ -210,7 +211,7 @@ type CardProps = {
      * Hearts are lives (behind the server's `ark_hearts`): the owner's own animal's hearts and the restore, or null
      * (someone else's animal, hearts off, the read absent): the card is as it was.
      */
-    lives?: {entry: ArkAnimalHearts; words: ArkHeartsWords; cost: number; onRestored: (captureId: string, hearts: number) => void} | null;
+    lives?: {entry: ArkAnimalHearts; words: ArkHeartsWordsFor; cost: number; onRestored: (captureId: string, hearts: number) => void; /** Which rule the server runs for a heart (a survived attack, or a life): the release sheet says it the same way. */ rules?: ArkHeartsRules | null} | null;
     /** The public snapshot, for "Estimated time left" (the animals around it, the Ark day): read only, never changed. */
     snapshot?: ArkSnapshot | null;
     /** "My animals" is on: the chevrons page through the reader's own of its kind only (the others are hidden). */
@@ -458,7 +459,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                     <div className="min-w-0 space-y-2">
                         {snapshot ? <Suspense fallback={<div className="h-[2.6rem]" />}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense> : null}
                         {/* Release to the Wild (P1-8, behind the server's switch) and carers (decision 418), then who is around it: what it eats, what could hunt it, its mates, as icons (lane ark-relation-lines; no fallback is React 18's null). */}
-                        <Suspense><ArkTimeLeft release={Link} animal={animal} words={words} locale={locale} day={arkDay} scene={scene} snapshot={snapshot} /></Suspense>
+                        <Suspense><ArkTimeLeft release={Link} animal={animal} words={words} locale={locale} day={arkDay} scene={scene} snapshot={snapshot} heartsRules={lives?.rules ?? null} /></Suspense>
                         {/* EATSOON (public; `?eatsoon=0` hides it): its chance of a catch in the next Ark day, or how it is fed; a kept animal's carers are said above. */}
                         {text?.soon && status?.eatSoon?.kind !== "kept" ? (
                             <p data-testid="ark-card-eat-soon" data-kind={status?.eatSoon?.kind} className="flex min-w-0 items-center gap-1.5 text-[12px] leading-snug text-ink-200">
@@ -534,7 +535,7 @@ function ArkLifeStory({animal, life, state, facts, words, locale, rest = null, l
         const k = life.died.kind;
         rows.push(isArkLeftKind(k)
             ? [w.left, k === "rehomed" ? w.endedRehomed : k === "to_market" ? w.endedMarket : w.endedMovedZoo]
-            : [w.ended, k === "starved" ? w.starved : k === "eaten" ? w.endedEaten : arkIsHuman(animal) ? w.endedOldPeaceful ?? "Died peacefully of old age" : w.endedOld]);
+            : [w.ended, k === "starved" ? w.starved : k === "eaten" ? w.endedEaten : life.died.unknown ? w.endedUnknown ?? "Died, cause not known" : arkIsHuman(animal) ? w.endedOldPeaceful ?? "Died peacefully of old age" : w.endedOld]);
     }
     // A young one whose breeding the server estimated (its record gives none, or only part): said so.
     if (life?.origin.kind === "born" && (life.origin.breeding_source === "estimate" || life.origin.breeding_source === "partial")) {

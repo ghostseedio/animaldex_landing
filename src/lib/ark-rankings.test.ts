@@ -92,8 +92,8 @@ test("survival by place: alive, recovering and lost for good, with the share sti
     assert.equal(zoo.lost, 0);
     assert.equal(zoo.share, 1);
     // Causes: every death is a fall (w0's too; a return is not one); only the animals that did not come back are lost for good.
-    assert.deepEqual(survival.causes.falls, {old: 5, starved: 0, eaten: 0});
-    assert.deepEqual(survival.causes.lostForGood, {old: 2, starved: 0, eaten: 0});
+    assert.deepEqual(survival.causes.falls, {old: 5, starved: 0, eaten: 0, unknown: 0});
+    assert.deepEqual(survival.causes.lostForGood, {old: 2, starved: 0, eaten: 0, unknown: 0});
     assert.equal(survival.windowDays, 7);
 });
 

@@ -44,6 +44,7 @@ import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
 import {noteArkArrivalsSeen, startArkSession, trackArk} from "@/lib/ark-measure-client";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 import {ArkRecoveringCard} from "@/app/[locale]/(composited)/ark/ark-lives";
+import {arkAgeRisk, decodeArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {arkHeartsForScene, arkHeartsWords, arkRecoveringAnimals, arkTrueArrivals, arkWithHearts, decodeArkOwnerHearts, type ArkOwnerHearts} from "@/lib/ark-hearts";
 
 export type {ArkWords} from "@/lib/ark-words";
@@ -199,7 +200,8 @@ function actCaption(act: ArkAct, words: ArkWords, locale: string, animals: ArkAn
                 + (act.phrase ? ` · ${fillArkWords(w.mealPhrase, {phrase: act.phrase})}` : "")
                 + gone(act.prey.name, act.extinct);
         case "death":
-            return fillArkWords(act.cause === "starved" ? w.starved : arkIsHuman(act.animal) ? w.deathPeaceful ?? "The {animal} died peacefully of old age" : w.death, {animal: act.animal.name}) + gone(act.animal.name, act.extinct);
+            // (AGE-RISK: a clock death the Ark cannot call old age is said so, never "of old age".)
+            return fillArkWords(act.cause === "starved" ? w.starved : act.unknown ? w.deathUnknown ?? "The {animal} died. The cause is not known" : arkIsHuman(act.animal) ? w.deathPeaceful ?? "The {animal} died peacefully of old age" : w.death, {animal: act.animal.name}) + gone(act.animal.name, act.extinct);
         case "extinction":
             return fillArkWords(w.extinction, {animal: act.species});
     }
@@ -216,6 +218,7 @@ function replaySummary(summary: ArkReplaySummary, since: Date, words: ArkWords, 
         part(summary.births - summary.hatched, w.birthsOne, w.birthsOther),
         part(summary.meals, w.mealsOne, w.mealsOther),
         part(summary.deaths, w.deathsOne, w.deathsOther),
+        part(summary.unknownDeaths ?? 0, w.deathsUnknownOne ?? "1 death, cause not known", w.deathsUnknownOther ?? "{count} deaths, cause not known"),
         part(summary.starved, w.starvedOne, w.starvedOther),
         part(summary.extinctions, w.extinctionsOne, w.extinctionsOther)
     ].filter((p): p is string => Boolean(p));
@@ -240,8 +243,25 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, summary: pageSummary = null, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, follow: followAsked = false, arrival: arrivalAsked = false, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false, newest: newestAboard = null, fixtureHearts = null}: Props) {
+export default function ArkView({locale, initial, summary: pageSummary = null, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words: wordsGiven, talkTitles, modelBase, rigBase, focus: focusOn = null, follow: followAsked = false, arrival: arrivalAsked = false, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false, newest: newestAboard = null, fixtureHearts = null}: Props) {
     arkPerfCountRender();
+    // AGE-RISK (the server's `age_risk`, read with the hearts rule from /api/ark/rules): while a free animal's end is a risk, not a date,
+    // the life bar's help says so. Off, or until the rule is read, the words are the page's own, untouched.
+    const [ageRisk, setAgeRisk] = useState(false);
+    const words = useMemo(() => (ageRisk && wordsGiven.lifeHelp?.endRisk ? {...wordsGiven, lifeHelp: {...wordsGiven.lifeHelp, end: wordsGiven.lifeHelp.endRisk}} : wordsGiven), [wordsGiven, ageRisk]);
+    useEffect(() => {
+        if (fixture || local) return;
+        let stopped = false;
+        void fetch("/api/ark/rules")
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: {rules?: unknown} | null) => {
+                if (!stopped) setAgeRisk(arkAgeRisk(decodeArkHeartsRules(body?.rules)));
+            })
+            .catch(() => undefined);
+        return () => {
+            stopped = true;
+        };
+    }, [fixture, local]);
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<ArkSceneHandle | null>(null);
@@ -268,7 +288,9 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     // Hearts are lives (behind the server's `ark_hearts`): the reader's own animals' hearts, null while off or unread.
     const [ownerHearts, setOwnerHearts] = useState<ArkOwnerHearts | null>(fixtureHearts);
     const [recoveringOpen, setRecoveringOpen] = useState(false);
-    const heartsWords = useMemo(() => arkHeartsWords(words.hearts), [words]);
+    // (A heart a survived attack, `hearts_escape`: the hearts' words follow the rule the server reads out with them.)
+    const heartsRules = ownerHearts?.rules ?? null;
+    const heartsWords = useMemo(() => arkHeartsWords(words.hearts, heartsRules), [words, heartsRules]);
     // Part C: the island loaded now, and whether a crossing is under way (one island at a time; `islands/archipelago.ts`).
     const [island, setIsland] = useState<ArkIsland>("wild");
     const [crossing, setCrossing] = useState(false);
@@ -825,8 +847,8 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
             heartsReadAt.current = Date.now();
             void fetch("/api/ark/hearts", {cache: "no-store"})
                 .then((response) => (response.ok ? response.json() : null))
-                .then((body: {hearts?: unknown} | null) => {
-                    if (!stopped) setOwnerHearts(decodeArkOwnerHearts(body?.hearts));
+                .then((body: {hearts?: unknown; rules?: unknown} | null) => {
+                    if (!stopped) setOwnerHearts(decodeArkOwnerHearts(body?.hearts, body?.rules));
                 })
                 .catch(() => undefined);
         }, wait);
@@ -1467,7 +1489,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                                 localePath: shareLocalePath,
                                 text: fillArkWords(words.share.textAnimal, {animal: selected.name, count: (snapshot?.animals.filter((animal) => arkSpeciesKey(animal) === arkSpeciesKey(selected)).length ?? 1).toLocaleString(locale)})
                             }}
-                            lives={selectedLives && ownerHearts ? {entry: selectedLives, words: heartsWords, cost: ownerHearts.healCost, onRestored: onHeartRestored} : null}
+                            lives={selectedLives && ownerHearts ? {entry: selectedLives, words: heartsWords, cost: ownerHearts.healCost, onRestored: onHeartRestored, rules: ownerHearts.rules ?? null} : null}
                             snapshot={snapshot}
                             mineOnly={mineOnly}
                         />

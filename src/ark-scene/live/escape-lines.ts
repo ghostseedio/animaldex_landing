@@ -4,18 +4,35 @@
  * Lion"). The server decides every one, from the predator kind's published hunting success rate; this only says it.
  * A tap flies to the one that got away: it is alive.
  *
+ * A heart is a survived attack (behind the server's `hearts_escape`, AnimalDex docs/ark/hearts-escape.md): the same row with
+ * `wounded: true` and `lives {heartsLeft}` is a WOUNDED escape: the hunter was not fed and the animal lies up and returns.
+ * Said as such ("got away from a Fox, wounded, and is lying up · 2 ♥ left"). With the switch off the server sends neither, and
+ * the line is the plain one.
+ *
  * Read here from the server's rows as they come, with their own words (as `dormancy-lines.ts`): with the scene, never
  * in the Ark page's static JavaScript.
  */
 
-import {arkWithArticle, type ArkLiveItem, type ArkLiveText} from "@/lib/ark-live-log";
+import {arkHeartsLeftText, arkWithArticle, type ArkLiveItem, type ArkLiveText} from "@/lib/ark-live-log";
 import {fillArkWords} from "@/lib/ark-words";
 import {arkActStart} from "@/lib/ark-act-hold";
 
 const ENGLISH = "{aPrey} got away from {aPredator}";
+const ENGLISH_WOUNDED = "{aPrey} got away from {aPredator}, wounded, and is lying up";
 
 type Animal = {id?: unknown; name?: unknown; species_profile_id?: unknown; model_slug?: unknown; zone?: unknown};
-type Row = {id?: unknown; kind?: unknown; at?: unknown; animal?: Animal | null; other?: Animal | null; reason?: unknown};
+type Row = {id?: unknown; kind?: unknown; at?: unknown; animal?: Animal | null; other?: Animal | null; reason?: unknown; wounded?: unknown; lives?: {heartsLeft?: unknown} | null; payload?: {wounded?: unknown; lives?: {heartsLeft?: unknown} | null} | null};
+
+/** The server's wounded-escape flag on a row (the public read's `wounded`, or the raw event's payload). */
+export function escapeWounded(row: Pick<Row, "wounded" | "payload"> | null | undefined): boolean {
+    return Boolean(row) && (row!.wounded === true || row!.payload?.wounded === true);
+}
+
+/** Its hearts left (0..3) when the row says; undefined otherwise (the line then says none: never a made-up count). */
+export function escapeHearts(row: Pick<Row, "lives" | "payload"> | null | undefined): number | undefined {
+    const left = Number(row?.lives?.heartsLeft ?? row?.payload?.lives?.heartsLeft);
+    return Number.isFinite(left) && left >= 0 ? Math.min(Math.round(left), 3) : undefined;
+}
 
 const named = (a: Animal | null | undefined) => (a && typeof a.name === "string" && a.name ? a.name.slice(0, 120) : "");
 const speciesOf = (a: Animal) => (typeof a.species_profile_id === "string" && a.species_profile_id ? a.species_profile_id : `slug:${String(a.model_slug ?? "")}`);
@@ -35,7 +52,10 @@ export function escapeItems(raw: unknown, from: number, said: (key: string) => b
         if (!prey || !predator || !Number.isFinite(at) || at < from || said(id)) continue;
         const zone = typeof row.animal!.zone === "string" ? (row.animal!.zone as ArkLiveItem["focus"]["zone"]) : null;
         // (Its place in the queue and its dot are a return's: it lives. Its words are its own, `say`.)
-        items.push({id, kind: "revived", say: "escaped", source: "server", key: `escaped:${speciesOf(row.animal!)}:${speciesOf(row.other!)}`, animal: prey, other: predator, count: 1, eggs: null, focus: {animalId: typeof row.animal!.id === "string" ? row.animal!.id : null, speciesId: speciesOf(row.animal!), zone}});
+        // A wounded escape is its own line (never folded into "got away" ×2): its hearts left ride on it.
+        const hurt = escapeWounded(row);
+        const hearts = hurt ? escapeHearts(row) : undefined;
+        items.push({id, kind: "revived", say: "escaped", source: "server", key: `escaped:${speciesOf(row.animal!)}:${speciesOf(row.other!)}${hurt ? `:hurt:${String(row.animal!.id)}` : ""}`, animal: prey, other: predator, count: 1, eggs: null, ...(hurt ? {hurt: true as const} : {}), ...(hearts !== undefined ? {hearts} : {}), focus: {animalId: typeof row.animal!.id === "string" ? row.animal!.id : null, speciesId: speciesOf(row.animal!), zone}});
     }
     return items;
 }
@@ -61,9 +81,12 @@ export function escapeActs(raw: unknown, from: number): Array<{key: string; prey
     return acts;
 }
 
-/** An escape line's words, or null for any other line. */
-export function escapeText(line: Pick<ArkLiveItem, "animal" | "other"> & Partial<Pick<ArkLiveItem, "say">>, words: ArkLiveText): string | null {
+/** An escape line's words, or null for any other line. A wounded one says so, and its hearts left when the record does (`locale`: their number's). */
+export function escapeText(line: Pick<ArkLiveItem, "animal" | "other"> & Partial<Pick<ArkLiveItem, "say" | "hurt" | "hearts">>, words: ArkLiveText, locale = "en"): string | null {
     if (line.say !== "escaped" || !line.other) return null;
-    const text = fillArkWords(words.live.escaped ?? ENGLISH, {aPrey: arkWithArticle(line.animal, words), aPredator: arkWithArticle(line.other, words)});
-    return text ? text[0].toLocaleUpperCase() + text.slice(1) : text;
+    const template = line.hurt ? words.live.escapedWounded ?? ENGLISH_WOUNDED : words.live.escaped ?? ENGLISH;
+    const text = fillArkWords(template, {aPrey: arkWithArticle(line.animal, words), aPredator: arkWithArticle(line.other, words)});
+    const said = text ? text[0].toLocaleUpperCase() + text.slice(1) : text;
+    if (!line.hurt || typeof line.hearts !== "number") return said;
+    return fillArkWords(words.live.withHearts ?? "{line} · {hearts}", {line: said, hearts: arkHeartsLeftText(line.hearts, words, locale)});
 }

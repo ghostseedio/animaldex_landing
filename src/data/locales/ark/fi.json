@@ -293,7 +293,8 @@
                 "hiding": "piiloutuminen",
                 "climb": "pako ylöspäin",
                 "mimicry": "mimikry"
-            }
+            },
+            "endedUnknown": "Kuoli, syy tuntematon"
         },
         "replay": {
             "title": "Sillä aikaa kun olit poissa",
@@ -337,7 +338,10 @@
             "laidCountOne": "1 pesye munittu",
             "laidCountOther": "{count} pesyettä munittu",
             "hatchedCountOne": "1 kuoriutui",
-            "hatchedCountOther": "{count} kuoriutui"
+            "hatchedCountOther": "{count} kuoriutui",
+            "deathUnknown": "{animal} kuoli. Syy ei ole tiedossa",
+            "deathsUnknownOne": "1 kuolemantapaus, syy ei tiedossa",
+            "deathsUnknownOther": "{count} kuolemantapausta, syy ei tiedossa"
         },
         "capture": {
             "aboardOne": "Arkissa: {animal}, 1 kyydissä",
@@ -453,7 +457,12 @@
             "antSeeds": "{animals}: siementen kantaminen kotiin",
             "antRaid": "{animals}: ryöstöretki leveänä rintamana",
             "antBivouac": "{animals}: bivuakin muutto",
-            "antWeave": "{animals}: lehtien vetäminen yhteen pesäksi"
+            "antWeave": "{animals}: lehtien vetäminen yhteen pesäksi",
+            "escapedWounded": "{aPrey} pääsi pakoon loukkaantuneena ja piileskelee, saalistaja: {aPredator}",
+            "rescued": "{aAnimal} löydettiin nääntymäisillään ja otettiin hoitoon",
+            "lostHome": "{aAnimal} menetti kotinsa: sen metsä kaadettiin",
+            "deathUnknownOther": "{animals}: {count} kuoli, syy ei tiedossa",
+            "closeCall": "{aAnimal} oli lähellä kuolemaa. Syy ei ole tiedossa. Selvisi kuitenkin"
         },
         "card": {
             "now": "Nyt: {activity}",
@@ -728,7 +737,8 @@
             "speciesBack": "Taas kyydissä: kuoli sukupuuttoon Ark-päivänä {day} · {date}.",
             "notAboard": "{animal} ei ole nyt kyydissä.",
             "bringBack": "Nappaa yksi ja tuo se takaisin",
-            "listLabel": "Arkista kadonneet lajit, uusimmat ensin"
+            "listLabel": "Arkista kadonneet lajit, uusimmat ensin",
+            "diedUnknown": "Viimeinen kuoli, syy tuntematon"
         },
         "endangered": {
             "title": "Uhanalaiset nyt",
@@ -776,7 +786,15 @@
             "failed": "Se ei onnistunut. Yritä hetken päästä uudelleen.",
             "recoveringOne": "1 toipuu",
             "recoveringOther": "{count} toipuu",
-            "away": "Se on poissa toipuessaan ja tulee sitten taas ulos kodistaan."
+            "away": "Se on poissa toipuessaan ja tulee sitten taas ulos kodistaan.",
+            "escapeLivesOne": "1 sydän Arkissa",
+            "escapeLivesOther": "{n} sydäntä Arkissa",
+            "escapeLivesNone": "Arkissa ei ole enää sydämiä",
+            "escapeNote": "Jokainen sydän antaa eläimesi selvitä yhdestä hyökkäyksestä tai yhdestä nälkäjaksosta Arkissa. Sydämet eivät pysäytä vanhuutta.",
+            "escapeNoteOld": "Jokainen sydän antaa eläimesi selvitä yhdestä hyökkäyksestä tai yhdestä nälkäjaksosta Arkissa. Sydän myös tuo sen takaisin vanhuudesta nuorena aikuisena.",
+            "recoveringWounded": "Loukkaantuneena piilossa · palaa {when}",
+            "recoveringCare": "Kaupungin hoidossa · palaa {when}",
+            "recoveringHome": "Menetti kotinsa · palaa {when}"
         },
         "release": {
             "button": "Vapauta luontoon · {credits} krediittiä",
@@ -834,7 +852,10 @@
                 "epic": "Eeppinen",
                 "legendary": "Legendaarinen",
                 "mythic": "Myyttinen"
-            }
+            },
+            "escapeHearts": "Se pitää sydämensä. Sydän antaa sen selvitä yhdestä hyökkäyksestä tai yhdestä nälkäjaksosta luonnossa. Ilman yhtään sydäntä saaliiksi jääminen on lopullista. Vanhuus on lopullista.",
+            "escapeHeartsOld": "Se pitää sydämensä. Sydän antaa sen selvitä yhdestä hyökkäyksestä tai yhdestä nälkäjaksosta luonnossa ja tuo sen takaisin vanhuudesta nuorena aikuisena. Ilman yhtään sydäntä saaliiksi jääminen on lopullista.",
+            "escapeLastOfKind": "Se on lajinsa viimeinen Arkissa. Jos se jää saaliiksi ilman yhtään sydäntä tai kuolee vanhuuteen, sen laji katoaa Arkista."
         },
         "seen": {
             "searching": "Etsii saalista",
@@ -1047,7 +1068,13 @@
                 "faqQ1": "Mikä paikka on turvallisin Arkissa?",
                 "faqA1": "Paikalla {place} on korkein hengissä olevien osuus viimeisten {days} päivän aikana: {percent}.",
                 "faqQ2": "Mikä tappaa eläimiä Arkissa?",
-                "faqA2": "Viimeisten {days} päivän aikana kirjaus näyttää {old} kuolemaa vanhuuteen, {starved} nälkään ja {eaten} syötyä. {hunting}"
+                "faqA2": "Viimeisten {days} päivän aikana kirjaus näyttää {old} kuolemaa vanhuuteen, {starved} nälkään ja {eaten} syötyä. {hunting}",
+                "introEscape": "Arkin eläin voi kuolla vanhuuteen, nälkään tai petoon. Jotkut selviävät, jotkut eivät. Tässä ovat luvut paikka paikalta, lähimpänä loppua olevien eläinten ja lajien kanssa.",
+                "placesDescriptionEscape": "Niistä eläimistä, jotka olivat kussakin paikassa viimeisten {days} päivän aikana, osuus, joka on yhä hengissä. Hyökkäyksen tai nälkäjakson jälkeen piilossa oleva eläin lasketaan eläväksi, koska se palaa.",
+                "recoverNoteEscape": "Hyökkäys ei aina ole loppu: eläin, jolla on sydän jäljellä, pääsee pakoon loukkaantuneena ja palaa, ja nälkiintynyt eläin otetaan hoitoon ja palaa, joten vain palaamatta jääneet lasketaan lopullisesti menetetyiksi. Vanhuus on lopullista.",
+                "recoverNoteEscapeOld": "Hyökkäys ei aina ole loppu: eläin, jolla on sydän jäljellä, pääsee pakoon loukkaantuneena ja palaa, ja nälkiintynyt eläin otetaan hoitoon ja palaa. Vanhuuteen kuoleva eläin, jolla on sydän jäljellä, palaa nuorena aikuisena, joten vain palaamatta jääneet lasketaan lopullisesti menetetyiksi.",
+                "causeUnknown": "Syy tuntematon",
+                "faqA2Unknown": "Viimeisten {days} päivän aikana kirjaus näyttää {old} kuolemaa vanhuuteen, {unknown} syystä, jota Ark ei tunne, {starved} nälkään ja {eaten} syötyä. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Arkin nopeimmat lisääntyjät: millä eläimillä on eniten poikasia",
@@ -1150,7 +1177,8 @@
             "bar": "Täysi palkki: tähän asti eletty elämä, värjättynä voinnin mukaan (vihreä hyvin, meripihka vanha tai vaarassa, punainen nälkäinen)",
             "now": "Valkoinen viiva: nyt",
             "end": "Raidallinen pää: milloin se todennäköisesti kuolee vanhuuteen, välinä, ei lupauksena",
-            "heart": "Sydän %: sen mahdollisuus selvitä seuraava Arkin vuosi (noin 2 viikkoa oikeaa aikaa), huomioiden lähellä olevat pedot, nälkä, ikä ja vapautus"
+            "heart": "Sydän %: sen mahdollisuus selvitä seuraava Arkin vuosi (noin 2 viikkoa oikeaa aikaa), huomioiden lähellä olevat pedot, nälkä, ikä ja vapautus",
+            "endRisk": "Raidallinen pää: sen tyypillinen elinikä. Luonnonvarainen eläin voi kuolla aiemmin tai elää sitä pidempään"
         },
         "flow": {
             "sleep": "Nukkuu",

@@ -103,7 +103,7 @@ test("words: every Ark language has every key, with the same placeholders as Eng
         const lost = JSON.parse(readFileSync(file, "utf8")).ark.lost as Record<string, string>;
         for (const key of Object.keys(ARK_LOST_WORDS_EN) as (keyof typeof ARK_LOST_WORDS_EN)[]) {
             assert.ok(lost?.[key]?.trim(), `${path.basename(file)}: ark.lost.${key}`);
-            assert.equal(holes(lost[key]), holes(ARK_LOST_WORDS_EN[key]), `${path.basename(file)}: ark.lost.${key} placeholders`);
+            assert.equal(holes(lost[key]), holes(ARK_LOST_WORDS_EN[key] ?? ""), `${path.basename(file)}: ark.lost.${key} placeholders`);
         }
     }
     assert.equal(arkLostWords({title: "  "}).title, "Lost from the Ark");

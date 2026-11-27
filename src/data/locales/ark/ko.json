@@ -293,7 +293,8 @@
                 "hiding": "숨기",
                 "climb": "위로 도망",
                 "mimicry": "의태"
-            }
+            },
+            "endedUnknown": "죽음, 원인 알 수 없음"
         },
         "replay": {
             "title": "자리를 비운 사이에",
@@ -337,7 +338,10 @@
             "laidCountOne": "산란 1번",
             "laidCountOther": "산란 {count}번",
             "hatchedCountOne": "부화 1마리",
-            "hatchedCountOther": "부화 {count}마리"
+            "hatchedCountOther": "부화 {count}마리",
+            "deathUnknown": "{animal}이(가) 죽었어요. 원인은 알 수 없어요",
+            "deathsUnknownOne": "원인 불명 사망 1건",
+            "deathsUnknownOther": "원인 불명 사망 {count}건"
         },
         "capture": {
             "aboardOne": "Ark: {animal} 1마리 탑승 중",
@@ -453,7 +457,12 @@
             "antSeeds": "{animals}: 씨앗을 집으로 나르기",
             "antRaid": "{animals}: 넓은 전선으로 습격",
             "antBivouac": "{animals}: 임시 둥지 이동",
-            "antWeave": "{animals}: 둥지를 위해 잎 끌어 모으기"
+            "antWeave": "{animals}: 둥지를 위해 잎 끌어 모으기",
+            "escapedWounded": "{aPrey}이(가) 다친 채 {aPredator}에게서 달아나 숨어 있어요",
+            "rescued": "{aAnimal}이(가) 굶주린 채 발견되어 보살핌을 받게 되었어요",
+            "lostHome": "{aAnimal}이(가) 집을 잃었어요: 살던 숲이 베어졌어요",
+            "deathUnknownOther": "{animals} {count}마리가 죽었어요, 원인은 알 수 없어요",
+            "closeCall": "{aAnimal}이(가) 죽을 뻔했어요. 원인은 알 수 없어요. 다행히 버텨 냈어요"
         },
         "card": {
             "now": "지금: {activity}",
@@ -728,7 +737,8 @@
             "speciesBack": "다시 탑승: Ark {day}일째에 멸종했었어요 · {date}.",
             "notAboard": "지금은 탑승한 {animal}이(가) 없어요.",
             "bringBack": "한 마리를 잡아 다시 데려오세요",
-            "listLabel": "Ark에서 사라진 종, 최신순"
+            "listLabel": "Ark에서 사라진 종, 최신순",
+            "diedUnknown": "마지막 개체는 죽었어요, 원인을 알 수 없어요"
         },
         "endangered": {
             "title": "지금 위기에 처한 종",
@@ -776,7 +786,15 @@
             "failed": "처리되지 않았어요. 잠시 후 다시 시도해 주세요.",
             "recoveringOne": "1마리 회복 중",
             "recoveringOther": "{count}마리 회복 중",
-            "away": "회복하는 동안 자리를 비우고, 그다음 다시 집에서 걸어 나와요."
+            "away": "회복하는 동안 자리를 비우고, 그다음 다시 집에서 걸어 나와요.",
+            "escapeLivesOne": "Ark에 하트 1개",
+            "escapeLivesOther": "Ark에 하트 {n}개",
+            "escapeLivesNone": "Ark에 남은 하트가 없어요",
+            "escapeNote": "하트 하나로 내 동물은 Ark에서 공격 한 번이나 굶주림 한 번을 견뎌낼 수 있어요. 하트로는 노화를 막을 수 없어요.",
+            "escapeNoteOld": "하트 하나로 내 동물은 Ark에서 공격 한 번이나 굶주림 한 번을 견뎌낼 수 있어요. 하트는 노화에서도 어린 성체로 돌아오게 해 줘요.",
+            "recoveringWounded": "다쳐서 숨어 있는 중 · {when} 돌아와요",
+            "recoveringCare": "마을의 보살핌 중 · {when} 돌아와요",
+            "recoveringHome": "집을 잃음 · {when} 돌아와요"
         },
         "release": {
             "button": "야생에 풀어주기 · {credits}크레딧",
@@ -834,7 +852,10 @@
                 "epic": "영웅",
                 "legendary": "전설",
                 "mythic": "신화"
-            }
+            },
+            "escapeHearts": "하트는 그대로 유지돼요. 하트 하나로 야생에서 공격 한 번이나 굶주림 한 번을 견뎌낼 수 있어요. 하트가 없으면 한 번 잡히는 순간 끝이에요. 노화 역시 끝이에요.",
+            "escapeHeartsOld": "하트는 그대로 유지돼요. 하트 하나로 야생에서 공격 한 번이나 굶주림 한 번을 견뎌낼 수 있고, 노화에서도 어린 성체로 돌아와요. 하트가 없으면 한 번 잡히는 순간 끝이에요.",
+            "escapeLastOfKind": "Ark에 남은 이 종의 마지막 동물이에요. 하트가 하나도 없이 잡히거나 노화로 죽으면 이 종은 Ark에서 사라져요."
         },
         "seen": {
             "searching": "먹잇감을 찾는 중",
@@ -1047,7 +1068,13 @@
                 "faqQ1": "Ark에서 가장 안전한 장소는 어디인가요?",
                 "faqA1": "{place}의 최근 {days}일 생존 비율이 가장 높아요: {percent}.",
                 "faqQ2": "Ark에서 동물을 죽이는 것은 무엇인가요?",
-                "faqA2": "최근 {days}일 동안 기록에는 노화 사망 {old}건, 굶주림 {starved}건, 잡아먹힘 {eaten}건이 있어요. {hunting}"
+                "faqA2": "최근 {days}일 동안 기록에는 노화 사망 {old}건, 굶주림 {starved}건, 잡아먹힘 {eaten}건이 있어요. {hunting}",
+                "introEscape": "Ark의 동물은 노화, 굶주림, 포식자 때문에 쓰러질 수 있어요. 달아나는 동물도, 그러지 못하는 동물도 있어요. 장소별 수치와 끝에 가장 가까운 동물과 종류를 보여 드려요.",
+                "placesDescriptionEscape": "최근 {days}일 동안 각 장소에 있던 동물 중 아직 살아 있는 비율. 공격이나 굶주림 뒤에 숨어 있는 동물은 돌아오므로 살아 있는 것으로 셉니다.",
+                "recoverNoteEscape": "공격이 항상 끝은 아니에요. 하트가 남은 동물은 다친 채 달아났다가 돌아오고, 굶주린 동물은 보호를 받다가 돌아오므로, 돌아오지 못한 동물만 영구 손실로 셉니다. 노화는 되돌릴 수 없어요.",
+                "recoverNoteEscapeOld": "공격이 항상 끝은 아니에요. 하트가 남은 동물은 다친 채 달아났다가 돌아오고, 굶주린 동물은 보호를 받다가 돌아와요. 하트가 남은 채 노화로 죽은 동물은 어린 성체로 돌아오므로, 돌아오지 못한 동물만 영구 손실로 셉니다.",
+                "causeUnknown": "원인 알 수 없음",
+                "faqA2Unknown": "최근 {days}일 동안 기록에는 노화 사망 {old}건, Ark가 원인을 알지 못하는 사망 {unknown}건, 굶주림 {starved}건, 잡아먹힘 {eaten}건이 있어요. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Ark 번식 속도 순위: 새끼가 가장 많은 동물은?",
@@ -1150,7 +1177,8 @@
             "bar": "채워진 막대: 지금까지 산 삶, 상태에 따라 색이 달라요 (초록 좋음, 호박색 늙었거나 위험, 빨강 배고픔)",
             "now": "흰 눈금: 지금",
             "end": "줄무늬 끝: 노령으로 죽을 가능성이 큰 시기, 약속이 아닌 범위",
-            "heart": "하트 %: 다음 방주의 1년(실제 약 2주)을 살아남을 확률, 근처 포식자, 배고픔, 나이, 방생을 반영"
+            "heart": "하트 %: 다음 방주의 1년(실제 약 2주)을 살아남을 확률, 근처 포식자, 배고픔, 나이, 방생을 반영",
+            "endRisk": "줄무늬 끝: 보통의 수명. 야생 동물은 더 일찍 죽을 수도, 그보다 오래 살 수도 있어요"
         },
         "flow": {
             "sleep": "자는 중",

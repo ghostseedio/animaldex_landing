@@ -17,6 +17,8 @@ export type ArkSpeciesTrend = {
     born: number;
     eaten: number;
     diedOld: number;
+    /** AGE-RISK: a clock death the Ark cannot call old age (`unknown`): said "died, cause not known". */
+    diedUnknown: number;
     starved: number;
     /** Came aboard less left. */
     net: number;
@@ -32,7 +34,7 @@ export type ArkTrendWindow = {
     events: unknown[];
 };
 
-const EMPTY: ArkSpeciesTrend = {arrived: 0, born: 0, eaten: 0, diedOld: 0, starved: 0, net: 0};
+const EMPTY: ArkSpeciesTrend = {arrived: 0, born: 0, eaten: 0, diedOld: 0, diedUnknown: 0, starved: 0, net: 0};
 
 function record(value: unknown): Record<string, unknown> | null {
     return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
@@ -42,7 +44,7 @@ function text(value: unknown): string | null {
     return typeof value === "string" && value.trim() ? value.trim().toLowerCase() : null;
 }
 
-type Bucket = "arrived" | "born" | "eaten" | "diedOld" | "starved";
+type Bucket = "arrived" | "born" | "eaten" | "diedOld" | "diedUnknown" | "starved";
 
 /** Which count a row adds to, and whose animal it names (a meal names its prey as `other`). */
 function bucketOf(kind: string): {bucket: Bucket; field: "animal" | "other"} | null {
@@ -74,7 +76,8 @@ export function arkSpeciesTrends(raw: unknown, kindOf: (speciesProfileId: string
     for (const item of arkEventRows(raw)) {
         const row = record(item);
         const kind = text(row?.kind);
-        const how = kind ? bucketOf(kind) : null;
+        // (AGE-RISK: a `death_old` the Ark cannot call old age is its own count; a survived close call is no death.)
+        const how = kind === "death_old" && row?.closeCall === true ? null : kind === "death_old" && row?.unknown === true ? {bucket: "diedUnknown" as const, field: "animal" as const} : kind ? bucketOf(kind) : null;
         if (!row || !how) continue;
         const animal = record(row[how.field]);
         const id = text(animal?.id);
@@ -86,7 +89,7 @@ export function arkSpeciesTrends(raw: unknown, kindOf: (speciesProfileId: string
         const key = kindOf(look) ?? look;
         const trend = out.get(key) ?? {...EMPTY};
         trend[how.bucket]++;
-        trend.net = trend.arrived + trend.born - trend.eaten - trend.diedOld - trend.starved;
+        trend.net = trend.arrived + trend.born - trend.eaten - trend.diedOld - trend.diedUnknown - trend.starved;
         out.set(key, trend);
     }
     return out;
@@ -102,9 +105,10 @@ export function arkSpeciesTrendOf(trends: Map<string, ArkSpeciesTrend>, keys: st
         total.born += trend.born;
         total.eaten += trend.eaten;
         total.diedOld += trend.diedOld;
+        total.diedUnknown += trend.diedUnknown;
         total.starved += trend.starved;
     }
-    total.net = total.arrived + total.born - total.eaten - total.diedOld - total.starved;
+    total.net = total.arrived + total.born - total.eaten - total.diedOld - total.diedUnknown - total.starved;
     return total;
 }
 
@@ -117,6 +121,8 @@ export type ArkTrendWords = {
     born: string;
     eaten: string;
     diedOld: string;
+    /** AGE-RISK: "{count} died, cause not known". */
+    diedUnknown?: string;
     starved: string;
     /** Joins the changes ("2 came aboard, 1 was born"). */
     separator: string;
@@ -132,6 +138,7 @@ export function arkSpeciesTrendLine(trend: ArkSpeciesTrend, words: ArkTrendWords
     add(trend.born, words.born);
     add(trend.eaten, words.eaten);
     add(trend.diedOld, words.diedOld);
+    add(trend.diedUnknown, words.diedUnknown ?? "{count} died, cause not known");
     add(trend.starved, words.starved);
     if (!parts.length) return words.none.replace("{date}", date);
     return words.line.replace("{date}", date).replace("{changes}", parts.join(words.separator));

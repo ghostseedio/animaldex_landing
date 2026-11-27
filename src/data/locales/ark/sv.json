@@ -293,7 +293,8 @@
                 "hiding": "gömmer sig",
                 "climb": "flykt uppåt",
                 "mimicry": "mimikry"
-            }
+            },
+            "endedUnknown": "Dog, orsak okänd"
         },
         "replay": {
             "title": "Medan du var borta",
@@ -337,7 +338,10 @@
             "laidCountOne": "1 kull lagd",
             "laidCountOther": "{count} kullar lagda",
             "hatchedCountOne": "1 kläckt",
-            "hatchedCountOther": "{count} kläckta"
+            "hatchedCountOther": "{count} kläckta",
+            "deathUnknown": "{animal} dog. Orsaken är okänd",
+            "deathsUnknownOne": "1 dödsfall, okänd orsak",
+            "deathsUnknownOther": "{count} dödsfall, okänd orsak"
         },
         "capture": {
             "aboardOne": "I Ark: 1 {animal} ombord",
@@ -453,7 +457,12 @@
             "antSeeds": "{animals}: frön bärs hem",
             "antRaid": "{animals}: räd i bred front",
             "antBivouac": "{animals}: bivacken flyttar",
-            "antWeave": "{animals}: löv dras ihop till boet"
+            "antWeave": "{animals}: löv dras ihop till boet",
+            "escapedWounded": "{aPrey} kom undan {aPredator} med ett sår och ligger lågt",
+            "rescued": "{aAnimal} hittades svältande och togs om hand",
+            "lostHome": "{aAnimal} förlorade sitt hem: dess skog höggs ned",
+            "deathUnknownOther": "{animals}: {count} dog, okänd orsak",
+            "closeCall": "{aAnimal} var nära att dö. Orsaken är okänd. Det gick bra till slut"
         },
         "card": {
             "now": "Nu: {activity}",
@@ -728,7 +737,8 @@
             "speciesBack": "Ombord igen: dog ut på Ark-dag {day} · {date}.",
             "notAboard": "Ingen {animal} är ombord nu.",
             "bringBack": "Fånga en för att ta tillbaka den",
-            "listLabel": "Arter förlorade från Ark, nyaste först"
+            "listLabel": "Arter förlorade från Ark, nyaste först",
+            "diedUnknown": "Den sista dog, orsak okänd"
         },
         "endangered": {
             "title": "Hotade nu",
@@ -776,7 +786,15 @@
             "failed": "Det gick inte. Försök igen om en stund.",
             "recoveringOne": "1 återhämtar sig",
             "recoveringOther": "{count} återhämtar sig",
-            "away": "Det är borta medan det återhämtar sig och går sedan ut ur sitt hem igen."
+            "away": "Det är borta medan det återhämtar sig och går sedan ut ur sitt hem igen.",
+            "escapeLivesOne": "1 hjärta i Ark",
+            "escapeLivesOther": "{n} hjärtan i Ark",
+            "escapeLivesNone": "Inga hjärtan kvar i Ark",
+            "escapeNote": "Varje hjärta låter ditt djur överleva ett angrepp eller en svältperiod i Ark. Hjärtan kan inte hålla ålderdomen borta.",
+            "escapeNoteOld": "Varje hjärta låter ditt djur överleva ett angrepp eller en svältperiod i Ark. Ett hjärta för det också tillbaka från ålderdom som ung vuxen.",
+            "recoveringWounded": "Ligger lågt med ett sår · tillbaka {when}",
+            "recoveringCare": "I stadens omsorg · tillbaka {when}",
+            "recoveringHome": "Förlorat sitt hem · tillbaka {when}"
         },
         "release": {
             "button": "Släpp ut i det fria · {credits} krediter",
@@ -834,7 +852,10 @@
                 "epic": "Episk",
                 "legendary": "Legendarisk",
                 "mythic": "Mytisk"
-            }
+            },
+            "escapeHearts": "Det behåller sina hjärtan. Ett hjärta låter det överleva ett angrepp eller en svältperiod i det vilda. Fångas det utan något hjärta kvar är det slutgiltigt. Ålderdom är slutgiltig.",
+            "escapeHeartsOld": "Det behåller sina hjärtan. Ett hjärta låter det överleva ett angrepp eller en svältperiod i det vilda och för det tillbaka från ålderdom som ung vuxen. Fångas det utan något hjärta kvar är det slutgiltigt.",
+            "escapeLastOfKind": "Det är det sista av sin art ombord. Fångas det utan något hjärta kvar, eller dör det av ålderdom, är arten borta från Ark."
         },
         "seen": {
             "searching": "Letar efter byte",
@@ -1047,7 +1068,13 @@
                 "faqQ1": "Vilken plats är säkrast i Ark?",
                 "faqA1": "{place} har högst andel levande de senaste {days} dagarna: {percent}.",
                 "faqQ2": "Vad dödar djur i Ark?",
-                "faqA2": "De senaste {days} dagarna visar registret {old} dödsfall av ålderdom, {starved} av svält och {eaten} uppätna. {hunting}"
+                "faqA2": "De senaste {days} dagarna visar registret {old} dödsfall av ålderdom, {starved} av svält och {eaten} uppätna. {hunting}",
+                "introEscape": "Ett djur i Ark kan dö av ålderdom, svält eller ett rovdjur. Vissa kommer undan, andra inte. Här är siffrorna, plats för plats, med de djur och arter som är närmast slutet.",
+                "placesDescriptionEscape": "Av de djur som var på varje plats de senaste {days} dagarna, andelen som fortfarande lever. Ett djur som ligger lågt efter ett angrepp eller en svältperiod räknas som levande: det kommer tillbaka.",
+                "recoverNoteEscape": "Ett angrepp är inte alltid slutet: ett djur med ett hjärta kvar kommer undan sårat och kommer tillbaka, och ett svältande tas om hand och kommer tillbaka, så bara djur som inte kom tillbaka räknas som förlorade för gott. Ålderdom är slutgiltig.",
+                "recoverNoteEscapeOld": "Ett angrepp är inte alltid slutet: ett djur med ett hjärta kvar kommer undan sårat och kommer tillbaka, och ett svältande tas om hand och kommer tillbaka. Ett som dör av ålderdom med ett hjärta kvar kommer tillbaka som ung vuxen, så bara djur som inte kom tillbaka räknas som förlorade för gott.",
+                "causeUnknown": "Okänd orsak",
+                "faqA2Unknown": "De senaste {days} dagarna visar registret {old} dödsfall av ålderdom, {unknown} av en orsak som Ark inte känner till, {starved} av svält och {eaten} uppätna. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Arks snabbaste förökare: vilka djur har flest ungar",
@@ -1150,7 +1177,8 @@
             "bar": "Fylld stapel: livet hittills, färgad efter hur den mår (grön bra, bärnsten gammal eller i fara, röd hungrig)",
             "now": "Vitt streck: nu",
             "end": "Randigt slut: när den troligen dör av ålder, som ett spann, inte ett löfte",
-            "heart": "Hjärta %: chansen att överleva nästa Arkår (cirka 2 veckor i verkligheten), med rovdjur i närheten, hunger, ålder och utsläppning medräknade"
+            "heart": "Hjärta %: chansen att överleva nästa Arkår (cirka 2 veckor i verkligheten), med rovdjur i närheten, hunger, ålder och utsläppning medräknade",
+            "endRisk": "Randigt slut: dess typiska livslängd. Ett vilt djur kan dö tidigare eller leva längre"
         },
         "flow": {
             "sleep": "Sover",

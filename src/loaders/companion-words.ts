@@ -1,6 +1,8 @@
 import "server-only";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {companionWords, companionWordsForHearts, type CompanionWords} from "@/lib/companion-bond";
+import {readArkHeartsRules} from "@/data/ark-hearts-rules";
+import type {ArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {createSupabasePublicClient, createSupabaseServiceClient} from "@/lib/supabase/server";
 
 /**
@@ -24,19 +26,20 @@ export async function getCompanionWords(locale: string): Promise<CompanionWords>
     return companionWordsForHearts(words, await readHeartsFlags());
 }
 
-type HeartsFlags = {heartsInDebates: boolean | null; arkHearts: boolean | null};
+type HeartsFlags = {heartsInDebates: boolean | null; arkHearts: boolean | null; rules: ArkHeartsRules | null};
 const FLAGS_TTL_MS = 60_000;
 let cached: {at: number; flags: HeartsFlags} | null = null;
 
 /** The server's two switches, read at most once a minute per server process; unknown (null) when they can't be read. */
 async function readHeartsFlags(): Promise<HeartsFlags> {
     if (cached && Date.now() - cached.at < FLAGS_TTL_MS) return cached.flags;
-    let flags: HeartsFlags = {heartsInDebates: null, arkHearts: null};
+    let flags: HeartsFlags = {heartsInDebates: null, arkHearts: null, rules: null};
     try {
         const supabase = createSupabaseServiceClient() ?? createSupabasePublicClient();
         const config = supabase ? await supabase.rpc("debates_config_v1") : null;
         const row = config && !config.error && config.data && typeof config.data === "object" ? config.data as Record<string, unknown> : null;
-        if (row) flags = {heartsInDebates: typeof row.hearts_in_debates === "boolean" ? row.hearts_in_debates : null, arkHearts: typeof row.ark_hearts === "boolean" ? row.ark_hearts : null};
+        // (The hearts rule beside them: a heart a survived attack, `hearts_escape`; null from a server that does not say it.)
+        if (row) flags = {heartsInDebates: typeof row.hearts_in_debates === "boolean" ? row.hearts_in_debates : null, arkHearts: typeof row.ark_hearts === "boolean" ? row.ark_hearts : null, rules: await readArkHeartsRules(60)};
     } catch {
         // As they were.
     }

@@ -114,7 +114,9 @@ test("the page shows the section only while the seeds are published, in its own 
     const page = read("app/[locale]/(composited)/ark/how-it-works/ark-how-view.tsx");
     assert.match(page, /const fair = seeds\?\.available === true;/);
     assert.match(page, /readArkSeeds\(revalidate\)/);
-    assert.match(page, /fair \? \[\.\.\.SECTIONS\.slice\(0, -1\), "fair", SECTIONS\[SECTIONS\.length - 1\]\] : SECTIONS/);
+    // (The list is SECTIONS, with the hearts section after the lifespans while a heart is a survived attack; the fairness one goes before the last.)
+    assert.match(page, /fair \? \[\.\.\.base\.slice\(0, -1\), "fair", base\[base\.length - 1\]\] : base/);
+    assert.match(page, /hearts \? \[\.\.\.SECTIONS\.slice\(0, after\), "hearts", \.\.\.SECTIONS\.slice\(after\)\] : SECTIONS/);
     const component = read("app/[locale]/(composited)/ark/how-it-works/ark-fair-seeds.tsx");
     assert.doesNotMatch(component, /["']use client["']/);
     // /ark's JS budget is nearly spent: nothing of this may reach it.

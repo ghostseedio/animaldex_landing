@@ -13,13 +13,15 @@
  */
 
 import {fillArkWords} from "@/lib/ark-words";
+import {arkHeartsEscape, arkHeartsVariant, decodeArkHeartsRules, type ArkHeartsRules} from "@/lib/ark-hearts-rules";
 
 export const ARK_HEARTS_MAX = 3;
 export const ARK_HEART_COST = 5;
 /** 1 Ark year is 14 real days (the server's clock, `ark_hearts_when`). */
 export const ARK_DAY_MS = (14 / 365) * 86_400_000;
 
-export type ArkRecoverCause = "eaten" | "starved" | "died_old";
+/** What a recovery is from. With the escape rule on: `eaten` a hunt it survived, `starved` found weak and taken into care, `deforested` its home lost to logging. */
+export type ArkRecoverCause = "eaten" | "starved" | "died_old" | "deforested";
 
 /** One of the owner's animals with a card: its hearts, and while away, when it returns. */
 export type ArkAnimalHearts = {
@@ -41,6 +43,8 @@ export type ArkOwnerHearts = {
     /** The restore's price (`debates_config_v1().heal_cost`, 5 today). */
     healCost: number;
     animals: Record<string, ArkAnimalHearts>;
+    /** Which rule the server runs (`/api/ark/hearts`'s `rules`): null from a server that does not say, which is today's rule. */
+    rules?: ArkHeartsRules | null;
 };
 
 /** The card's and the scene's words (`ark.hearts` in the locale files). */
@@ -63,7 +67,23 @@ export type ArkHeartsWords = {
     recoveringOne: string;
     recoveringOther: string;
     away: string;
+    /**
+     * A heart is a survived attack (`hearts_escape` on, docs/ark/hearts-escape.md): the words that take the lives' place while
+     * it is. `escapeNote` says old age is final, `escapeNoteOld` that it still returns (`hearts_escape_rules.oldAge`).
+     * The three `recovering*` are the chip for what the heart was spent surviving.
+     */
+    escapeLivesOne: string;
+    escapeLivesOther: string;
+    escapeLivesNone: string;
+    escapeNote: string;
+    escapeNoteOld: string;
+    recoveringWounded: string;
+    recoveringCare: string;
+    recoveringHome: string;
 };
+
+/** The words once the rule is read (`arkHeartsWords`): the chip's variants by cause, set only while a heart is a survived attack. */
+export type ArkHeartsWordsFor = ArkHeartsWords & {recoveringByCause?: Partial<Record<ArkRecoverCause, string>>};
 
 export const ARK_HEARTS_ENGLISH: ArkHeartsWords = {
     livesOne: "1 life in the Ark",
@@ -83,18 +103,36 @@ export const ARK_HEARTS_ENGLISH: ArkHeartsWords = {
     failed: "That didn't go through. Try again in a moment.",
     recoveringOne: "1 recovering",
     recoveringOther: "{count} recovering",
-    away: "It's away while it recovers, then walks out of its home again."
+    away: "It's away while it recovers, then walks out of its home again.",
+    escapeLivesOne: "1 heart in the Ark",
+    escapeLivesOther: "{n} hearts in the Ark",
+    escapeLivesNone: "No hearts left in the Ark",
+    escapeNote: "Each heart lets your animal survive one attack or one hungry spell in the Ark. Hearts can't hold back old age.",
+    escapeNoteOld: "Each heart lets your animal survive one attack or one hungry spell in the Ark. A heart also brings it back from old age as a young adult.",
+    recoveringWounded: "Lying up, wounded · returns {when}",
+    recoveringCare: "In the town's care · returns {when}",
+    recoveringHome: "Lost its home · returns {when}"
 };
 
-/** The reader's `ark.hearts` over English, key by key. */
-export function arkHeartsWords(raw: Partial<ArkHeartsWords> | null | undefined): ArkHeartsWords {
-    const out = {...ARK_HEARTS_ENGLISH};
+/**
+ * The reader's `ark.hearts` over English, key by key. With `rules` saying a heart is a survived attack, the `escape*` words
+ * take the lives' place (hearts, the note, and the chip by cause); without them (the switch off, a server that does not say)
+ * the words are exactly the lives' as they were.
+ */
+export function arkHeartsWords(raw: Partial<ArkHeartsWords> | null | undefined, rules?: ArkHeartsRules | null): ArkHeartsWordsFor {
+    const out: ArkHeartsWordsFor = {...ARK_HEARTS_ENGLISH};
     if (raw && typeof raw === "object") {
-        for (const key of Object.keys(out) as Array<keyof ArkHeartsWords>) {
+        for (const key of Object.keys(ARK_HEARTS_ENGLISH) as Array<keyof ArkHeartsWords>) {
             const value = raw[key];
             if (typeof value === "string" && value.trim()) out[key] = value;
         }
     }
+    if (!arkHeartsEscape(rules)) return out;
+    out.livesOne = out.escapeLivesOne;
+    out.livesOther = out.escapeLivesOther;
+    out.livesNone = out.escapeLivesNone;
+    out.note = arkHeartsVariant(rules, out.note, out.escapeNote, out.escapeNoteOld);
+    out.recoveringByCause = {eaten: out.recoveringWounded, starved: out.recoveringCare, deforested: out.recoveringHome};
     return out;
 }
 
@@ -104,7 +142,7 @@ export function clampArkHearts(value: unknown): number {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const CAUSES = new Set<ArkRecoverCause>(["eaten", "starved", "died_old"]);
+const CAUSES = new Set<ArkRecoverCause>(["eaten", "starved", "died_old", "deforested"]);
 
 function record(value: unknown): Record<string, unknown> | null {
     return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -114,8 +152,8 @@ function text(value: unknown, max: number): string | null {
     return typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null;
 }
 
-/** `/api/ark/hearts`'s `hearts`, checked: null (off, absent, signed out) or the owner's animals; a bad row is dropped. */
-export function decodeArkOwnerHearts(raw: unknown): ArkOwnerHearts | null {
+/** `/api/ark/hearts`'s `hearts`, checked: null (off, absent, signed out) or the owner's animals; a bad row is dropped. `rules`: its `rules`. */
+export function decodeArkOwnerHearts(raw: unknown, rulesRaw?: unknown): ArkOwnerHearts | null {
     const row = record(raw);
     const animals = record(row?.animals);
     if (!row || !animals) return null;
@@ -141,7 +179,8 @@ export function decodeArkOwnerHearts(raw: unknown): ArkOwnerHearts | null {
         };
     }
     const cost = typeof row.healCost === "number" && Number.isFinite(row.healCost) && row.healCost > 0 ? Math.round(row.healCost) : ARK_HEART_COST;
-    return {healCost: cost, animals: out};
+    const rules = decodeArkHeartsRules(rulesRaw);
+    return {healCost: cost, animals: out, ...(rules ? {rules} : {})};
 }
 
 /** The real time an Ark day falls on (the voyage started at `startedAt`): the server's own rule. */
@@ -169,9 +208,10 @@ export function arkLivesText(hearts: number, words: ArkHeartsWords, locale = "en
     return fillArkWords(words.livesOther, {n: n.toLocaleString(locale)});
 }
 
-/** "Recovering · returns tomorrow". */
-export function arkRecoveringText(entry: Pick<ArkAnimalHearts, "returnsAt">, now: number, words: ArkHeartsWords, locale = "en"): string {
-    return fillArkWords(words.recovering, {when: entry.returnsAt ? arkHeartsWhen(entry.returnsAt, now, words, locale) : words.whenTomorrow});
+/** "Recovering · returns tomorrow"; with a heart a survived attack, what it survived: "Lying up, wounded · returns tomorrow". */
+export function arkRecoveringText(entry: Pick<ArkAnimalHearts, "returnsAt"> & Partial<Pick<ArkAnimalHearts, "cause">>, now: number, words: ArkHeartsWordsFor, locale = "en"): string {
+    const chip = (entry.cause ? words.recoveringByCause?.[entry.cause] : null) ?? words.recovering;
+    return fillArkWords(chip, {when: entry.returnsAt ? arkHeartsWhen(entry.returnsAt, now, words, locale) : words.whenTomorrow});
 }
 
 /** The restore button shows whenever the card is below 3. */

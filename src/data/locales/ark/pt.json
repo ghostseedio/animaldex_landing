@@ -293,7 +293,8 @@
                 "hiding": "esconder-se",
                 "climb": "fuga para cima",
                 "mimicry": "mimetismo"
-            }
+            },
+            "endedUnknown": "Morreu, causa desconhecida"
         },
         "replay": {
             "title": "Enquanto você estava fora",
@@ -337,7 +338,10 @@
             "laidCountOne": "1 ninhada posta",
             "laidCountOther": "{count} ninhadas postas",
             "hatchedCountOne": "1 eclosão",
-            "hatchedCountOther": "{count} eclosões"
+            "hatchedCountOther": "{count} eclosões",
+            "deathUnknown": "{animal} morreu. A causa é desconhecida",
+            "deathsUnknownOne": "1 morte, causa desconhecida",
+            "deathsUnknownOther": "{count} mortes, causa desconhecida"
         },
         "capture": {
             "aboardOne": "Na Ark: 1 {animal} a bordo",
@@ -453,7 +457,12 @@
             "antSeeds": "{animals}: transporte de sementes para o ninho",
             "antRaid": "{animals}: incursão em frente ampla",
             "antBivouac": "{animals}: mudança do bivaque",
-            "antWeave": "{animals}: folhas unidas para o ninho"
+            "antWeave": "{animals}: folhas unidas para o ninho",
+            "escapedWounded": "{aPrey} escapou de {aPredator} com um ferimento e se esconde para descansar",
+            "rescued": "Encontraram {aAnimal} passando fome e levaram para receber cuidados",
+            "lostHome": "{aAnimal} perdeu o lar: a floresta onde vivia foi derrubada",
+            "deathUnknownOther": "{animals}: {count} morreram, causa desconhecida",
+            "closeCall": "{aAnimal} quase morreu. A causa é desconhecida. Sobreviveu"
         },
         "card": {
             "now": "Agora: {activity}",
@@ -728,7 +737,8 @@
             "speciesBack": "De volta a bordo: foi extinta no dia {day} da Ark · {date}.",
             "notAboard": "Nenhum {animal} está a bordo agora.",
             "bringBack": "Capture um para trazê-lo de volta",
-            "listLabel": "Espécies perdidas da Ark, as mais recentes primeiro"
+            "listLabel": "Espécies perdidas da Ark, as mais recentes primeiro",
+            "diedUnknown": "O último morreu, causa desconhecida"
         },
         "endangered": {
             "title": "Em perigo agora",
@@ -776,7 +786,15 @@
             "failed": "Não deu certo. Tente de novo daqui a pouco.",
             "recoveringOne": "1 se recuperando",
             "recoveringOther": "{count} se recuperando",
-            "away": "Ele fica fora enquanto se recupera e depois sai de novo da sua toca."
+            "away": "Ele fica fora enquanto se recupera e depois sai de novo da sua toca.",
+            "escapeLivesOne": "1 coração na Ark",
+            "escapeLivesOther": "{n} corações na Ark",
+            "escapeLivesNone": "Nenhum coração restante na Ark",
+            "escapeNote": "Cada coração permite que o seu animal sobreviva a um ataque ou a um período de fome na Ark. Corações não seguram a velhice.",
+            "escapeNoteOld": "Cada coração permite que o seu animal sobreviva a um ataque ou a um período de fome na Ark. Um coração também o traz de volta da velhice como jovem adulto.",
+            "recoveringWounded": "Curando um ferimento no esconderijo · volta {when}",
+            "recoveringCare": "Aos cuidados da cidade · volta {when}",
+            "recoveringHome": "Perdeu o lar · volta {when}"
         },
         "release": {
             "button": "Soltar na natureza · {credits} créditos",
@@ -834,7 +852,10 @@
                 "epic": "Épico",
                 "legendary": "Lendário",
                 "mythic": "Mítico"
-            }
+            },
+            "escapeHearts": "Ele mantém os corações. Um coração permite que ele sobreviva a um ataque ou a um período de fome na natureza. Sem nenhum coração restante, ser pego é definitivo. A velhice é definitiva.",
+            "escapeHeartsOld": "Ele mantém os corações. Um coração permite que ele sobreviva a um ataque ou a um período de fome na natureza e o traz de volta da velhice como jovem adulto. Sem nenhum coração restante, ser pego é definitivo.",
+            "escapeLastOfKind": "É o último da sua espécie a bordo. Se for pego sem nenhum coração restante, ou morrer de velhice, a espécie some da Ark."
         },
         "seen": {
             "searching": "Procura uma presa",
@@ -1047,7 +1068,13 @@
                 "faqQ1": "Qual é o lugar mais seguro da Ark?",
                 "faqA1": "{place} tem a maior parcela de vivos nos últimos {days} dias: {percent}.",
                 "faqQ2": "O que mata os animais na Ark?",
-                "faqA2": "Nos últimos {days} dias o registro mostra {old} mortes por velhice, {starved} por fome e {eaten} devorados. {hunting}"
+                "faqA2": "Nos últimos {days} dias o registro mostra {old} mortes por velhice, {starved} por fome e {eaten} devorados. {hunting}",
+                "introEscape": "Um animal na Ark pode cair por velhice, fome ou um predador. Alguns escapam, outros não. Estes são os números, lugar por lugar, com os animais e espécies mais perto do fim.",
+                "placesDescriptionEscape": "Dos animais que estiveram em cada lugar nos últimos {days} dias, a parcela que ainda está viva. Um animal escondido após um ataque ou um período de fome conta como vivo, porque volta.",
+                "recoverNoteEscape": "Um ataque nem sempre é o fim: um animal com coração restante escapa ferido e volta, e um que passa fome é acolhido e volta, então só contam como perdidos para sempre os que não voltaram. A velhice é definitiva.",
+                "recoverNoteEscapeOld": "Um ataque nem sempre é o fim: um animal com coração restante escapa ferido e volta, e um que passa fome é acolhido e volta. Um que morre de velhice com coração restante volta como jovem adulto, então só contam como perdidos para sempre os que não voltaram.",
+                "causeUnknown": "Causa desconhecida",
+                "faqA2Unknown": "Nos últimos {days} dias o registro mostra {old} mortes por velhice, {unknown} por uma causa que a Ark não conhece, {starved} por fome e {eaten} devorados. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Reprodutores mais rápidos da Ark: quais animais têm mais filhotes",
@@ -1150,7 +1177,8 @@
             "bar": "Barra cheia: a vida vivida até agora, colorida conforme está (verde bem, âmbar velho ou em risco, vermelho com fome)",
             "now": "Traço branco: agora",
             "end": "Fim listrado: quando é provável que morra de velhice, como intervalo, não promessa",
-            "heart": "Coração %: a chance de sobreviver ao próximo ano da Arca (cerca de 2 semanas reais), contando predadores próximos, fome, idade e soltura"
+            "heart": "Coração %: a chance de sobreviver ao próximo ano da Arca (cerca de 2 semanas reais), contando predadores próximos, fome, idade e soltura",
+            "endRisk": "Fim listrado: o tempo de vida típico dele. Um animal selvagem pode morrer antes, ou viver além disso"
         },
         "flow": {
             "sleep": "Dormindo",

@@ -4,6 +4,7 @@ import React, {Suspense, lazy, useEffect, useMemo, useState} from "react";
 import type SiteLink from "@/app/[locale]/_components/link";
 import {isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import type {ArkAnimal, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {ARK_LIFE_HELP_ENGLISH, ARK_SIMPLE_ENGLISH, fillArkWords, type ArkLifeHelpWords, type ArkWords} from "@/lib/ark-words";
 import {ARK_TIME_LEFT_HOOKS, arkLifeOutlook, arkLifeText, arkNeedsFacts, arkTimeLeftWordsFrom, arkTimeLeftWorldOf, type ArkLifeBar, type ArkTimeLeftFacts} from "@/lib/ark-time-left";
 import {arkTimeLeftFetch, readArkTimeLeftFacts, type ArkTimeLeftFetch} from "@/lib/ark-time-left-facts";
@@ -41,6 +42,8 @@ type Props = {
     scene?: () => ArkSceneHandle | null;
     /** Male or female beside the card's name (or its kind's note), instead of the estimate: `ark-sex.tsx`. */
     sex?: boolean;
+    /** With `release`: which rule the server runs for a heart (the owner's hearts read), so the sheet's hearts lines say it so. */
+    heartsRules?: ArkHeartsRules | null;
 };
 
 /**
@@ -48,7 +51,7 @@ type Props = {
  * page's static JavaScript, which is budgeted): the estimate, or with `release` the Release to the Wild block. The card
  * wraps each in its own Suspense.
  */
-export default function ArkTimeLeft({release, day, snapshot = null, scene, sex, ...rest}: Props) {
+export default function ArkTimeLeft({release, day, snapshot = null, scene, sex, heartsRules = null, ...rest}: Props) {
     if (sex) return <ArkSex animals={[rest.animal]} words={rest.words.sex} locale={rest.locale} />;
     if (!release) return <ArkTimeLeftPanel snapshot={snapshot} {...rest} />;
     // Carers (AnimalDex decision 418): who feeds a kept animal (a pet its owner, a farm animal the farmer, a zoo animal a
@@ -60,7 +63,7 @@ export default function ArkTimeLeft({release, day, snapshot = null, scene, sex, 
     return (
         <>
             {cared ? <p data-testid="ark-card-carer" className="mt-1 text-[11.5px] leading-snug text-ink-300">{cared}</p> : null}
-            <ArkRelease animal={animal} words={words} locale={rest.locale} day={day ?? null} link={release} />
+            <ArkRelease animal={animal} words={words} locale={rest.locale} day={day ?? null} link={release} heartsRules={heartsRules} />
             {scene ? <Suspense fallback={null}><ArkRelations key={animal.id} animal={animal} snapshot={snapshot} scene={scene} words={words} locale={rest.locale} /></Suspense> : null}
         </>
     );

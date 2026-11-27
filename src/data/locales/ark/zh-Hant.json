@@ -293,7 +293,8 @@
                 "hiding": "躲藏",
                 "climb": "向上逃離",
                 "mimicry": "擬態"
-            }
+            },
+            "endedUnknown": "死亡，原因不明"
         },
         "replay": {
             "title": "你不在的時候",
@@ -337,7 +338,10 @@
             "laidCountOne": "產下 1 窩蛋",
             "laidCountOther": "產下 {count} 窩蛋",
             "hatchedCountOne": "1 隻孵化",
-            "hatchedCountOther": "{count} 隻孵化"
+            "hatchedCountOther": "{count} 隻孵化",
+            "deathUnknown": "{animal}死了。原因不明",
+            "deathsUnknownOne": "1 隻死亡，原因不明",
+            "deathsUnknownOther": "{count} 隻死亡，原因不明"
         },
         "capture": {
             "aboardOne": "Ark 中：船上有 1 隻{animal}",
@@ -453,7 +457,12 @@
             "antSeeds": "{animals}：把種子搬回巢",
             "antRaid": "{animals}：以寬闊的陣線突襲",
             "antBivouac": "{animals}：遷移臨時巢",
-            "antWeave": "{animals}：把葉子拉攏築巢"
+            "antWeave": "{animals}：把葉子拉攏築巢",
+            "escapedWounded": "{aPrey}負傷從{aPredator}身邊逃走了，正躲起來養傷",
+            "rescued": "{aAnimal}被發現正在挨餓，已被接去照料",
+            "lostHome": "{aAnimal}失去了家：牠的森林被砍伐了",
+            "deathUnknownOther": "{count} 隻{animals}死了，原因不明",
+            "closeCall": "{aAnimal}差點死掉。原因不明。最後撐過來了"
         },
         "card": {
             "now": "現在：{activity}",
@@ -728,7 +737,8 @@
             "speciesBack": "重新登船：曾於 Ark 第 {day} 天滅絕 · {date}。",
             "notAboard": "船上現在沒有{animal}。",
             "bringBack": "捉一隻把牠帶回來",
-            "listLabel": "從 Ark 消失的物種，最新的在前"
+            "listLabel": "從 Ark 消失的物種，最新的在前",
+            "diedUnknown": "最後一隻死了，原因不明"
         },
         "endangered": {
             "title": "目前瀕危",
@@ -776,7 +786,15 @@
             "failed": "沒有成功。請稍後再試。",
             "recoveringOne": "1 隻恢復中",
             "recoveringOther": "{count} 隻恢復中",
-            "away": "牠恢復期間會暫時離開，之後再從自己的家裡走出來。"
+            "away": "牠恢復期間會暫時離開，之後再從自己的家裡走出來。",
+            "escapeLivesOne": "在 Ark 中有 1 顆心",
+            "escapeLivesOther": "在 Ark 中有 {n} 顆心",
+            "escapeLivesNone": "在 Ark 中已沒有心",
+            "escapeNote": "每顆心能讓你的動物在 Ark 中熬過一次攻擊或一段飢餓期。心無法阻止衰老。",
+            "escapeNoteOld": "每顆心能讓你的動物在 Ark 中熬過一次攻擊或一段飢餓期。心還能讓牠從衰老中以年輕的成年個體回來。",
+            "recoveringWounded": "受傷，躲起來養傷 · {when}回來",
+            "recoveringCare": "由小鎮照料 · {when}回來",
+            "recoveringHome": "失去了家 · {when}回來"
         },
         "release": {
             "button": "野放 · {credits} 點數",
@@ -834,7 +852,10 @@
                 "epic": "史詩",
                 "legendary": "傳說",
                 "mythic": "神話"
-            }
+            },
+            "escapeHearts": "牠保留自己的心。一顆心能讓牠在野外熬過一次攻擊或一段飢餓期。沒有心了，被捕就無可挽回。衰老也無可挽回。",
+            "escapeHeartsOld": "牠保留自己的心。一顆心能讓牠在野外熬過一次攻擊或一段飢餓期，還能讓牠從衰老中以年輕的成年個體回來。沒有心了，被捕就無可挽回。",
+            "escapeLastOfKind": "牠是 Ark 上同類中的最後一隻。如果牠在沒有心的情況下被捕，或因衰老而死，牠的種類將從 Ark 消失。"
         },
         "seen": {
             "searching": "正在尋找獵物",
@@ -1047,7 +1068,13 @@
                 "faqQ1": "Ark 裡哪個地方最安全？",
                 "faqA1": "{place}在最近 {days} 天裡的存活比例最高：{percent}。",
                 "faqQ2": "是什麼在殺死 Ark 裡的動物？",
-                "faqA2": "最近 {days} 天裡，紀錄顯示 {old} 例死於衰老，{starved} 例死於飢餓，{eaten} 例被吃掉。{hunting}"
+                "faqA2": "最近 {days} 天裡，紀錄顯示 {old} 例死於衰老，{starved} 例死於飢餓，{eaten} 例被吃掉。{hunting}",
+                "introEscape": "Ark 中的動物可能死於衰老、飢餓或捕食者。有些能逃脫，有些不能。這裡是各地的數字，以及最接近終點的動物和物種。",
+                "placesDescriptionEscape": "在最近 {days} 天裡出現在各地點的動物中，仍然活著的比例。遭到攻擊或挨餓後正躲起來養傷的動物算作活著，因為牠會回來。",
+                "recoverNoteEscape": "攻擊並不總是終點：還剩有心的動物會負傷逃走並回來，挨餓的動物會被接去照料並回來，所以只有沒有回來的才算永久失去。衰老無可挽回。",
+                "recoverNoteEscapeOld": "攻擊並不總是終點：還剩有心的動物會負傷逃走並回來，挨餓的動物會被接去照料並回來。還剩有心時死於衰老的動物會以年輕的成年個體回來，所以只有沒有回來的才算永久失去。",
+                "causeUnknown": "原因不明",
+                "faqA2Unknown": "最近 {days} 天裡，紀錄顯示 {old} 例死於衰老，{unknown} 例死於 Ark 不清楚的原因，{starved} 例死於飢餓，{eaten} 例被吃掉。{hunting}"
             },
             "breeders": {
                 "metaTitle": "Ark 繁殖最快榜：哪些動物的幼崽最多",
@@ -1150,7 +1177,8 @@
             "bar": "實心條：到目前為止的生命，顏色表示狀況（綠色良好，琥珀色年老或有危險，紅色飢餓）",
             "now": "白色刻線：現在",
             "end": "條紋末端：牠可能因衰老而死的時間，是一個範圍，不是承諾",
-            "heart": "心形 %：牠活過下一個方舟年（現實中約 2 週）的機率，計入附近的掠食者、飢餓、年齡和放歸"
+            "heart": "心形 %：牠活過下一個方舟年（現實中約 2 週）的機率，計入附近的掠食者、飢餓、年齡和放歸",
+            "endRisk": "條紋末端：牠的一般壽命。野生動物可能更早死去，也可能活得更久"
         },
         "flow": {
             "sleep": "正在睡覺",

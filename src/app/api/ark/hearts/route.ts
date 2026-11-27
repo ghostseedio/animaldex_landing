@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {cookies} from "next/headers";
+import {readArkHeartsRules} from "@/data/ark-hearts-rules";
 import {ARK_HEART_COST, arkDayToTime, clampArkHearts, type ArkAnimalHearts} from "@/lib/ark-hearts";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {createSupabaseServerClient, createSupabaseServiceClient} from "@/lib/supabase/server";
@@ -13,6 +14,9 @@ const MAX_ANIMALS = 400;
 /**
  * GET: the signed-in reader's own Ark animals' hearts (AnimalDex docs/ark/HEARTS-LIVES-DESIGN.md, section 6), for the
  * /ark tap card's lives row, the bars' hearts and the "recovering" list.
+ *
+ * `rules` beside it: which rule the server runs for a heart (`voyage_hearts_rules_v1`: `{hearts, escape, oldAge}`; docs/ark/hearts-escape.md),
+ * so the card says what a heart does as the server does it, in both states of old age. Null from a server that does not say.
  *
  * Only while the server's `ark_hearts` switch is on (`ark_hearts_enabled()`): off, signed out, or on a server without
  * the hearts columns (the migration not applied), the answer is `{hearts: null}` and the page shows nothing new.
@@ -30,7 +34,7 @@ export async function GET() {
     if (!user) return NextResponse.json({hearts: null}, {headers: HEADERS});
     try {
         const hearts = await readOwnerHearts(service, user.id);
-        return NextResponse.json({hearts}, {headers: HEADERS});
+        return NextResponse.json({hearts, rules: hearts ? await readArkHeartsRules(30) : null}, {headers: HEADERS});
     } catch (error) {
         console.warn("[ark] hearts read failed", error instanceof Error ? error.message.slice(0, 200) : error);
         return NextResponse.json({hearts: null}, {headers: HEADERS});
@@ -102,7 +106,7 @@ async function readOwnerHearts(service: Service, userId: string) {
             hearts: heartsOf.get(captureId) ?? 3,
             status: recovering ? "recovering" : "present",
             returnsAt: back !== null ? new Date(back).toISOString() : null,
-            cause: recovering && (animal.recover_cause === "eaten" || animal.recover_cause === "starved" || animal.recover_cause === "died_old") ? animal.recover_cause : null,
+            cause: recovering && (animal.recover_cause === "eaten" || animal.recover_cause === "starved" || animal.recover_cause === "died_old" || animal.recover_cause === "deforested") ? animal.recover_cause : null,
             revives: Math.max(Number(animal.revives ?? 0) || 0, 0),
             name: recovering ? nameOf.get(animal.species_profile_id) ?? null : null,
             modelSlug: recovering ? slugOf.get(animal.species_profile_id) ?? null : null

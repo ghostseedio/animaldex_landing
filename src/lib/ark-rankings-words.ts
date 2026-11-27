@@ -4,6 +4,7 @@
  * Pure and client-safe.
  */
 
+import {arkHeartsEscape, arkHeartsVariant, type ArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {fillArkWords} from "@/lib/ark-words";
 import type {ArkGroup, ArkPlace} from "@/lib/ark-rankings";
 
@@ -64,11 +65,23 @@ export type ArkRankingsWords = {
         causeOld: string;
         causeStarved: string;
         causeEaten: string;
+        /** AGE-RISK (docs/ark/age-risk.md): deaths whose cause the Ark does not know, and the FAQ line that counts them. */
+        causeUnknown?: string;
+        faqA2Unknown?: string;
         causeLine: string;
         huntingProtected: string;
         huntingCounted: string;
         huntingOn: string;
         recoverNote: string;
+        /**
+         * A heart a survived attack (behind `hearts_escape`, docs/ark/hearts-escape.md): the words that take `intro`,
+         * `placesDescription` and `recoverNote` while it is (`recoverNoteEscapeOld`: old age still returns).
+         * `arkSurvivalHeartsWords` swaps them in; the page's metadata keeps the plain ones.
+         */
+        introEscape?: string;
+        placesDescriptionEscape?: string;
+        recoverNoteEscape?: string;
+        recoverNoteEscapeOld?: string;
         notRecorded: string;
         allTime: string;
         closeUpTitle: string;
@@ -127,3 +140,14 @@ export type ArkRankingsWords = {
 
 /** `fillArkWords` for these words (the one filler, so a page imports one module). */
 export const fillRankingWords = fillArkWords;
+
+/** The survival page's words with a heart a survived attack: "Some get away, some do not", not "Some come back". Without the rule, exactly the plain words. */
+export function arkSurvivalHeartsWords(words: ArkRankingsWords["survival"], rules: ArkHeartsRules | null | undefined): ArkRankingsWords["survival"] {
+    if (!arkHeartsEscape(rules)) return words;
+    return {
+        ...words,
+        intro: words.introEscape ?? words.intro,
+        placesDescription: words.placesDescriptionEscape ?? words.placesDescription,
+        recoverNote: arkHeartsVariant(rules, words.recoverNote, words.recoverNoteEscape, words.recoverNoteEscapeOld)
+    };
+}

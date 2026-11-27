@@ -93,6 +93,7 @@ export async function loadSpeciesArk({slug, speciesProfileId}: {slug: string; sp
             born: word(inTheArk, "trendBorn"),
             eaten: word(inTheArk, "trendEaten"),
             diedOld: word(inTheArk, "trendDiedOld"),
+            diedUnknown: word(inTheArk, "trendDiedUnknown") || undefined,
             starved: word(inTheArk, "trendStarved"),
             separator: word(inTheArk, "trendSeparator") || ", "
         }, trendDate(trends.since), "en")

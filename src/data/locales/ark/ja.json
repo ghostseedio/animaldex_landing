@@ -293,7 +293,8 @@
                 "hiding": "隠れる",
                 "climb": "上へ逃げる",
                 "mimicry": "擬態（なりすまし）"
-            }
+            },
+            "endedUnknown": "原因不明で死亡"
         },
         "replay": {
             "title": "留守のあいだに",
@@ -337,7 +338,10 @@
             "laidCountOne": "産卵1回",
             "laidCountOther": "産卵{count}回",
             "hatchedCountOne": "ふ化1匹",
-            "hatchedCountOther": "ふ化{count}匹"
+            "hatchedCountOther": "ふ化{count}匹",
+            "deathUnknown": "{animal}が死にました。原因は不明です",
+            "deathsUnknownOne": "原因不明の死1件",
+            "deathsUnknownOther": "原因不明の死{count}件"
         },
         "capture": {
             "aboardOne": "Ark：{animal}が1匹乗船中",
@@ -453,7 +457,12 @@
             "antSeeds": "{animals}：種を巣へ運ぶ",
             "antRaid": "{animals}：広い前線で襲撃中",
             "antBivouac": "{animals}：仮の巣を移動中",
-            "antWeave": "{animals}：葉を引き寄せて巣作り"
+            "antWeave": "{animals}：葉を引き寄せて巣作り",
+            "escapedWounded": "{aPrey}が{aPredator}から傷を負いながら逃げ、身を潜めています",
+            "rescued": "{aAnimal}が飢えているところを見つかり、保護されました",
+            "lostHome": "{aAnimal}がすみかを失いました: 森が切り倒されました",
+            "deathUnknownOther": "{animals}が{count}匹死にました。原因は不明です",
+            "closeCall": "{aAnimal}は死にかけました。原因は不明です。なんとか持ちこたえました"
         },
         "card": {
             "now": "いま：{activity}",
@@ -728,7 +737,8 @@
             "speciesBack": "再び乗船中：Ark {day}日目に絶滅していました · {date}。",
             "notAboard": "{animal}は今は乗船していません。",
             "bringBack": "捕まえて連れ戻そう",
-            "listLabel": "Arkから消えた種、新しい順"
+            "listLabel": "Arkから消えた種、新しい順",
+            "diedUnknown": "最後の一匹は原因不明で死にました"
         },
         "endangered": {
             "title": "いま危機にある種",
@@ -776,7 +786,15 @@
             "failed": "うまくいきませんでした。少ししてからもう一度お試しください。",
             "recoveringOne": "1匹が回復中",
             "recoveringOther": "{count}匹が回復中",
-            "away": "回復するあいだは姿を消し、その後また自分のすみかから出てきます。"
+            "away": "回復するあいだは姿を消し、その後また自分のすみかから出てきます。",
+            "escapeLivesOne": "Arkのハート 1つ",
+            "escapeLivesOther": "Arkのハート {n}つ",
+            "escapeLivesNone": "Arkのハートは残っていません",
+            "escapeNote": "ハート1つで、あなたの動物はArkで襲撃1回か飢えの時期1回を乗り切れます。ハートでは寿命を止められません。",
+            "escapeNoteOld": "ハート1つで、あなたの動物はArkで襲撃1回か飢えの時期1回を乗り切れます。ハートがあれば、寿命を迎えても若い成体として戻ってきます。",
+            "recoveringWounded": "ケガをして身を潜めています · {when}戻ります",
+            "recoveringCare": "町が世話をしています · {when}戻ります",
+            "recoveringHome": "すみかを失いました · {when}戻ります"
         },
         "release": {
             "button": "野生に放す · {credits}クレジット",
@@ -834,7 +852,10 @@
                 "epic": "エピック",
                 "legendary": "レジェンダリー",
                 "mythic": "ミシック"
-            }
+            },
+            "escapeHearts": "ハートはそのまま残ります。ハート1つで、野生での襲撃1回か飢えの時期1回を乗り切れます。ハートが残っていなければ、捕まった時点で終わりです。寿命は覆りません。",
+            "escapeHeartsOld": "ハートはそのまま残ります。ハート1つで、野生での襲撃1回か飢えの時期1回を乗り切れ、寿命を迎えても若い成体として戻ってきます。ハートが残っていなければ、捕まった時点で終わりです。",
+            "escapeLastOfKind": "Arkにいるこの種の最後の1頭です。ハートが残っていない状態で捕まるか、寿命で死ぬと、この種はArkからいなくなります。"
         },
         "seen": {
             "searching": "獲物を探しています",
@@ -1047,7 +1068,13 @@
                 "faqQ1": "Arkで最も安全な場所は？",
                 "faqA1": "{place}は直近{days}日間で生存の割合が最も高く、{percent}です。",
                 "faqQ2": "Arkで動物の命を奪うのは？",
-                "faqA2": "直近{days}日間の記録では、寿命による死亡が{old}件、飢えが{starved}件、捕食が{eaten}件です。{hunting}"
+                "faqA2": "直近{days}日間の記録では、寿命による死亡が{old}件、飢えが{starved}件、捕食が{eaten}件です。{hunting}",
+                "introEscape": "Arkの動物は、寿命、飢え、捕食者のいずれかで倒れることがあります。逃げのびるものもいれば、そうでないものもいます。場所ごとの数字と、最期に近い動物や種類をご覧ください。",
+                "placesDescriptionEscape": "直近{days}日間に各場所にいた動物のうち、まだ生きている割合。襲われたり飢えたりしたあと身を潜めている動物は戻ってくるので、生きているものとして数えます。",
+                "recoverNoteEscape": "襲撃は必ずしも終わりではありません。ハートが残っている動物は傷を負いながら逃げのびて戻ってきます。飢えた動物は保護されて戻ってきます。そのため、戻らなかった動物だけを完全に失われたものと数えます。寿命は覆りません。",
+                "recoverNoteEscapeOld": "襲撃は必ずしも終わりではありません。ハートが残っている動物は傷を負いながら逃げのびて戻ってきます。飢えた動物は保護されて戻ってきます。ハートが残ったまま寿命で死んだ動物は、若い成体として戻ってきます。そのため、戻らなかった動物だけを完全に失われたものと数えます。",
+                "causeUnknown": "原因不明",
+                "faqA2Unknown": "直近{days}日間の記録では、寿命による死亡が{old}件、Arkが原因を把握していないものが{unknown}件、飢えが{starved}件、捕食が{eaten}件です。{hunting}"
             },
             "breeders": {
                 "metaTitle": "Ark繁殖ランキング：最も子を産む動物は？",
@@ -1150,7 +1177,8 @@
             "bar": "塗りつぶしのバー：これまで生きた期間。調子で色が変わります（緑は元気、琥珀色は高齢か危険、赤は空腹）",
             "now": "白い線：いま",
             "end": "しま模様の端：老衰で死にそうな時期。約束ではなく幅で示します",
-            "heart": "ハート％：次の箱舟の1年（現実で約2週間）を生き延びる確率。近くの捕食者、空腹、年齢、野生への放出を考慮します"
+            "heart": "ハート％：次の箱舟の1年（現実で約2週間）を生き延びる確率。近くの捕食者、空腹、年齢、野生への放出を考慮します",
+            "endRisk": "しま模様の端：ふつうの寿命。野生の動物は、それより早く死ぬことも、長く生きることもあります"
         },
         "flow": {
             "sleep": "眠っている",

@@ -21,6 +21,7 @@ import {
     type ArkReleaseWords
 } from "@/lib/ark-release";
 import {arkReleasedEntry, noteArkReleased, useArkReleased} from "@/lib/ark-release-read";
+import type {ArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 
 /**
@@ -36,9 +37,9 @@ import {fillArkWords, type ArkWords} from "@/lib/ark-words";
  * The price shown is the server's quote and the release sends only the animal and a retry key (`/api/ark/release`):
  * nothing here can set what is charged. Out of Credits: a link to the site's Credits page.
  */
-export default function ArkRelease({animal, words: all, locale, day: arkDay, link: Link}: {animal: ArkAnimal; words: ArkWords; locale: string; /** The snapshot's Ark day. */ day: number | null; link: ArkLink}) {
+export default function ArkRelease({animal, words: all, locale, day: arkDay, link: Link, heartsRules = null}: {animal: ArkAnimal; words: ArkWords; locale: string; /** The snapshot's Ark day. */ day: number | null; link: ArkLink; /** Which rule the server runs for a heart (a survived attack, or a life): the sheet's hearts lines say it so. */ heartsRules?: ArkHeartsRules | null}) {
     const released = useArkReleased();
-    const words = useMemo(() => arkReleaseWords((all as unknown as {release?: unknown}).release), [all]);
+    const words = useMemo(() => arkReleaseWords((all as unknown as {release?: unknown}).release, heartsRules), [all, heartsRules]);
     // Off (or unread), or an animal born on the Ark (nobody's to release): nothing.
     if (released === null || animal.origin === "born") return null;
     const talkHref = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug) ? null : `/talk/${animal.model_slug}`;

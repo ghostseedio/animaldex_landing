@@ -173,7 +173,7 @@ test("words: every one of the 45 Ark languages has every line, reason and tier w
     // What a language may leave as English: the price where "Credits" stays the product's word, and a tier word.
     const sameAllowed = (key: string) => key === "price" || key.startsWith("tier.");
     assert.equal(ARK_LANGUAGES.length, 45);
-    assert.equal(Object.keys(expected).length, 30 + ARK_RELEASE_REASONS.length + ARK_RELEASE_TIERS.length);
+    assert.equal(Object.keys(expected).length, 33 + ARK_RELEASE_REASONS.length + ARK_RELEASE_TIERS.length);
     for (const language of ARK_LANGUAGES) {
         const ark = read(language);
         const own = flat(ark.release);

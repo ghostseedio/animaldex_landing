@@ -293,7 +293,8 @@
                 "hiding": "amagar-se",
                 "climb": "fugida cap amunt",
                 "mimicry": "mimetisme"
-            }
+            },
+            "endedUnknown": "Va morir, causa desconeguda"
         },
         "replay": {
             "title": "Mentre no hi eres",
@@ -337,7 +338,10 @@
             "laidCountOne": "1 posta",
             "laidCountOther": "{count} postes",
             "hatchedCountOne": "1 eclosió",
-            "hatchedCountOther": "{count} eclosions"
+            "hatchedCountOther": "{count} eclosions",
+            "deathUnknown": "{animal} ha mort. No se sap la causa",
+            "deathsUnknownOne": "1 mort, causa desconeguda",
+            "deathsUnknownOther": "{count} morts, causa desconeguda"
         },
         "capture": {
             "aboardOne": "A l'Ark: 1 {animal} a bord",
@@ -453,7 +457,12 @@
             "antSeeds": "{animals}: transport de llavors al niu",
             "antRaid": "{animals}: incursió en un front ampli",
             "antBivouac": "{animals}: trasllat del bivac",
-            "antWeave": "{animals}: fulles ajuntades per al niu"
+            "antWeave": "{animals}: fulles ajuntades per al niu",
+            "escapedWounded": "{aPrey} s'ha escapat de {aPredator} amb ferides i s'ha amagat a reposar",
+            "rescued": "Han trobat {aAnimal} morint-se de fam i se n'han fet càrrec",
+            "lostHome": "{aAnimal} ha perdut la llar: li han talat el bosc",
+            "deathUnknownOther": "{animals}: {count} han mort, causa desconeguda",
+            "closeCall": "{aAnimal} ha estat a punt de morir. No se sap la causa. Se n'ha sortit"
         },
         "card": {
             "now": "Ara: {activity}",
@@ -728,7 +737,8 @@
             "speciesBack": "De nou a bord: es va extingir el dia {day} de l'Ark · {date}.",
             "notAboard": "Ara no hi ha cap exemplar de {animal} a bord.",
             "bringBack": "Captura'n un per fer-lo tornar",
-            "listLabel": "Espècies perdudes de l'Ark, les més recents primer"
+            "listLabel": "Espècies perdudes de l'Ark, les més recents primer",
+            "diedUnknown": "L'últim va morir, causa desconeguda"
         },
         "endangered": {
             "title": "En perill ara",
@@ -776,7 +786,15 @@
             "failed": "No ha funcionat. Torna-ho a provar d'aquí a una estona.",
             "recoveringOne": "1 es recupera",
             "recoveringOther": "{count} es recuperen",
-            "away": "És fora mentre es recupera, i després torna a sortir del seu cau."
+            "away": "És fora mentre es recupera, i després torna a sortir del seu cau.",
+            "escapeLivesOne": "1 cor a l'Ark",
+            "escapeLivesOther": "{n} cors a l'Ark",
+            "escapeLivesNone": "No queden cors a l'Ark",
+            "escapeNote": "Cada cor deixa que el teu animal sobrevisqui a un atac o a un període de fam a l'Ark. Els cors no poden frenar la vellesa.",
+            "escapeNoteOld": "Cada cor deixa que el teu animal sobrevisqui a un atac o a un període de fam a l'Ark. Un cor també el fa tornar de la vellesa com a jove adult.",
+            "recoveringWounded": "Ferit i amagat · torna {when}",
+            "recoveringCare": "A cura del poble · torna {when}",
+            "recoveringHome": "Ha perdut la llar · torna {when}"
         },
         "release": {
             "button": "Allibera'l a la natura · {credits} crèdits",
@@ -834,7 +852,10 @@
                 "epic": "Èpic",
                 "legendary": "Llegendari",
                 "mythic": "Mític"
-            }
+            },
+            "escapeHearts": "Conserva els cors. Un cor li permet sobreviure a un atac o a un període de fam a la natura. Sense cap cor, que el cacin és definitiu. La vellesa és definitiva.",
+            "escapeHeartsOld": "Conserva els cors. Un cor li permet sobreviure a un atac o a un període de fam a la natura, i el fa tornar de la vellesa com a jove adult. Sense cap cor, que el cacin és definitiu.",
+            "escapeLastOfKind": "És l'últim de la seva espècie a bord. Si el cacen sense cap cor, o mor de vellesa, la seva espècie desapareix de l'Ark."
         },
         "seen": {
             "searching": "Busca presa",
@@ -1047,7 +1068,13 @@
                 "faqQ1": "Quin és el lloc més segur de l'Ark?",
                 "faqA1": "{place} té la proporció més alta de vius en els últims {days} dies: {percent}.",
                 "faqQ2": "Què mata els animals de l'Ark?",
-                "faqA2": "En els últims {days} dies el registre mostra {old} morts de vellesa, {starved} de fam i {eaten} devorats. {hunting}"
+                "faqA2": "En els últims {days} dies el registre mostra {old} morts de vellesa, {starved} de fam i {eaten} devorats. {hunting}",
+                "introEscape": "Un animal de l'Ark pot caure per vellesa, per fam o per un depredador. Alguns se n'escapen, d'altres no. Aquestes són les xifres, lloc per lloc, amb els animals i les espècies més a prop del final.",
+                "placesDescriptionEscape": "Dels animals que han estat a cada lloc en els últims {days} dies, la proporció que encara és viva. Un animal amagat després d'un atac o d'un període de fam compta com a viu, perquè torna.",
+                "recoverNoteEscape": "Un atac no sempre és el final: un animal al qual queden cors s'escapa ferit i torna, i un de famèlic és acollit i torna, així que només compten com a perduts per sempre els que no han tornat. La vellesa és definitiva.",
+                "recoverNoteEscapeOld": "Un atac no sempre és el final: un animal al qual queden cors s'escapa ferit i torna, i un de famèlic és acollit i torna. Un que mor de vellesa quan encara li queden cors torna com a jove adult, així que només compten com a perduts per sempre els que no han tornat.",
+                "causeUnknown": "Causa desconeguda",
+                "faqA2Unknown": "En els últims {days} dies el registre mostra {old} morts de vellesa, {unknown} d'una causa que l'Ark no coneix, {starved} de fam i {eaten} devorats. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Els criadors més ràpids de l'Ark: quins animals tenen més cries",
@@ -1150,7 +1177,8 @@
             "bar": "Barra plena: la vida viscuda fins ara, del color de com està (verd bé, ambre vell o en risc, vermell famolenc)",
             "now": "Marca blanca: ara",
             "end": "Final ratllat: quan és probable que mori de vell, com a interval, no com a promesa",
-            "heart": "Cor %: la seva probabilitat de sobreviure el pròxim any de l'Arca (unes 2 setmanes reals), tenint en compte depredadors propers, gana, edat i alliberament"
+            "heart": "Cor %: la seva probabilitat de sobreviure el pròxim any de l'Arca (unes 2 setmanes reals), tenint en compte depredadors propers, gana, edat i alliberament",
+            "endRisk": "Final ratllat: la seva longevitat típica. Un animal salvatge pot morir abans, o viure més temps"
         },
         "flow": {
             "sleep": "Dorm",

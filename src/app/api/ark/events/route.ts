@@ -1,4 +1,5 @@
 import {NextResponse} from "next/server";
+import {decodeArkHeartsRules, type ArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {isMissingArkFunction} from "@/lib/ark-story";
 import {createSupabasePublicClient} from "@/lib/supabase/server";
 
@@ -18,6 +19,10 @@ export const dynamic = "force-dynamic";
  * when there was still more. The page decodes them against its snapshot
  * (`decodeArkEvents`). `{events: [], available: false}` until the function
  * exists.
+ *
+ * `heartsRules` beside them (docs/ark/hearts-escape.md, "Public read"): which rule the server runs for a heart, from the
+ * read's `hearts_rules` (`{hearts, escape, oldAge}`), absent from a server that does not say (the page then says a heart as
+ * it always has). While `hearts_escape` is on the rows carry `wounded`, `rescued` and `lives`, passed on as they are.
  */
 const LIMIT = 200;
 const PAGES = 5;
@@ -36,6 +41,7 @@ export async function GET(request: Request) {
     const events: unknown[] = [];
     let cursor = from.toISOString();
     let more = false;
+    let heartsRules: ArkHeartsRules | null = null;
     for (let page = 0; page < PAGES; page++) {
         const {data, error} = await supabase.rpc("voyage_events_since_v1", {p_since: cursor, p_limit: LIMIT});
         if (error) {
@@ -43,11 +49,12 @@ export async function GET(request: Request) {
             if (page > 0) break;
             return NextResponse.json({events: [], available: false}, {headers: {"Cache-Control": isMissingArkFunction(error) ? "public, s-maxage=60" : "no-store"}});
         }
-        const answer = data && typeof data === "object" ? data as {events?: unknown; next_since?: unknown; more?: unknown} : {};
+        const answer = data && typeof data === "object" ? data as {events?: unknown; next_since?: unknown; more?: unknown; hearts_rules?: unknown} : {};
         if (Array.isArray(answer.events)) events.push(...answer.events);
+        heartsRules ??= decodeArkHeartsRules(answer.hearts_rules);
         more = answer.more === true;
         if (!more || typeof answer.next_since !== "string" || answer.next_since === cursor) break;
         cursor = answer.next_since;
     }
-    return NextResponse.json({events, more, available: true}, {headers: {"Cache-Control": "public, s-maxage=30, stale-while-revalidate=60"}});
+    return NextResponse.json({events, more, available: true, ...(heartsRules ? {heartsRules} : {})}, {headers: {"Cache-Control": "public, s-maxage=30, stale-while-revalidate=60"}});
 }

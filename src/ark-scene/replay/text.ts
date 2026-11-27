@@ -55,13 +55,13 @@ function headlineOf(replay: ArkEventReplay, text: ArkLiveText, words: Record<key
             return line(replay.feed.play ? "hatched" : "birth", young[0]?.name ?? first, null, Math.max(young.length, 1));
         }
         case "death":
-            return line(replay.eventKind === "starved" ? "starved" : "death", first);
+            return replay.unknownCause && replay.eventKind !== "starved" ? arkLiveLineText({kind: "death", animal: first, other: null, count: 1, eggs: null, source: "server", unknown: true}, text, locale) : line(replay.eventKind === "starved" ? "starved" : "death", first);
         case "extinct":
             return line("extinction", replay.species.name || first);
         case "meal":
             return line("meal", by("predator")[0]?.name ?? first, by("prey")[0]?.name ?? "");
         case "escaped":
-            return escapeText({say: "escaped", animal: by("prey")[0]?.name ?? first, other: by("predator")[0]?.name ?? ""}, text) ?? "";
+            return escapeText({say: "escaped", animal: by("prey")[0]?.name ?? first, other: by("predator")[0]?.name ?? "", ...(replay.feed.escapes?.[0]?.hurt ? {hurt: true as const, ...(typeof replay.feed.escapes[0].hearts === "number" ? {hearts: replay.feed.escapes[0].hearts} : {})} : {})}, text, locale) ?? "";
         case "last_stand": {
             const predator = by("predator")[0];
             return predator ? fillArkWords(words.lastStandWith, {animal: first, aPredator: arkWithArticle(predator.name, text)}) : fillArkWords(words.lastStand, {animal: first});

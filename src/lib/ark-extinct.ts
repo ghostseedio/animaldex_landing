@@ -25,6 +25,8 @@ export type ArkExtinction = {
     at: string;
     /** How the last one went; null when the event did not say. */
     cause: ArkExtinctCause | null;
+    /** AGE-RISK (docs/ark/age-risk.md): the Ark does not know how the last one died (the read's `cause_unknown`, with no cause). */
+    causeUnknown?: true;
     /** The eater of the last one, for `eaten`. */
     eatenBy: {speciesProfileId: string; name: string; modelSlug: string | null} | null;
     /** Living animals of the species now. */
@@ -45,6 +47,8 @@ export type ArkLostWords = {
     back: string;
     /** "Last one died of old age" */
     diedOld: string;
+    /** AGE-RISK: "Last one died, cause not known" (the read's `cause_unknown`). Optional: older bundles. */
+    diedUnknown?: string;
     /** "Last one eaten by {animal}" */
     eatenBy: string;
     /** "Last one eaten" (the eater not known) */
@@ -69,6 +73,7 @@ export const ARK_LOST_WORDS_EN: ArkLostWords = {
     when: "Extinct on Ark day {day} · {date}",
     back: "Back aboard",
     diedOld: "Last one died of old age",
+    diedUnknown: "Last one died, cause not known",
     eatenBy: "Last one eaten by {animal}",
     eaten: "Last one eaten",
     starved: "Last one starved",
@@ -124,6 +129,7 @@ function decodeOne(raw: unknown): ArkExtinction | null {
         arkDay,
         at,
         cause,
+        ...(cause === null && row.cause_unknown === true ? {causeUnknown: true as const} : {}),
         eatenBy: eaterId && UUID.test(eaterId) && eaterName ? {speciesProfileId: eaterId.toLowerCase(), name: eaterName, modelSlug: eater ? slug(eater.model_slug) : null} : null,
         aboard,
         // Only when the read says so and a living one is counted.
@@ -178,7 +184,8 @@ export function arkExtinctWhen(template: string, extinction: Pick<ArkExtinction,
 }
 
 /** How the last one went, in a few words; null when the log did not say. */
-export function arkExtinctHow(words: ArkLostWords, extinction: Pick<ArkExtinction, "cause" | "eatenBy">): string | null {
+export function arkExtinctHow(words: ArkLostWords, extinction: Pick<ArkExtinction, "cause" | "eatenBy"> & Partial<Pick<ArkExtinction, "causeUnknown">>): string | null {
+    if (extinction.cause === null && extinction.causeUnknown) return words.diedUnknown ?? ARK_LOST_WORDS_EN.diedUnknown!;
     switch (extinction.cause) {
         case "died_old":
             return words.diedOld;
@@ -236,6 +243,7 @@ export function arkExtinctForHost(answer: ArkExtinctAnswer) {
             ark_day: one.arkDay,
             at: one.at,
             cause: one.cause,
+            ...(one.causeUnknown ? {cause_unknown: true} : {}),
             eaten_by: one.eatenBy ? {species_profile_id: one.eatenBy.speciesProfileId, name: one.eatenBy.name, model_slug: one.eatenBy.modelSlug} : null,
             aboard: one.aboard,
             back_aboard: one.backAboard

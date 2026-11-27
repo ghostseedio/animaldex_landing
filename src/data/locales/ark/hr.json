@@ -293,7 +293,8 @@
                 "hiding": "skrivanje",
                 "climb": "bijeg prema gore",
                 "mimicry": "mimikrija"
-            }
+            },
+            "endedUnknown": "Uginula, uzrok nepoznat"
         },
         "replay": {
             "title": "Dok te nije bilo",
@@ -337,7 +338,10 @@
             "laidCountOne": "1 leglo",
             "laidCountOther": "legala: {count}",
             "hatchedCountOne": "1 izlegnuto",
-            "hatchedCountOther": "izlegnutih: {count}"
+            "hatchedCountOther": "izlegnutih: {count}",
+            "deathUnknown": "{animal} ugiba. Uzrok nije poznat",
+            "deathsUnknownOne": "1 smrt, uzrok nepoznat",
+            "deathsUnknownOther": "smrti: {count}, uzrok nepoznat"
         },
         "capture": {
             "aboardOne": "U Arku: {animal} · na brodu: 1",
@@ -453,7 +457,12 @@
             "antSeeds": "{animals}: nošenje sjemenki kući",
             "antRaid": "{animals}: pohod u širokom stroju",
             "antBivouac": "{animals}: selidba bivaka",
-            "antWeave": "{animals}: privlačenje listova za gnijezdo"
+            "antWeave": "{animals}: privlačenje listova za gnijezdo",
+            "escapedWounded": "{aPrey} uspijeva pobjeći od {aPredator} s ranom i skriva se",
+            "rescued": "Našli su {aAnimal} kako gladuje i zbrinuli ga",
+            "lostHome": "{aAnimal} gubi dom: posječena je šuma u kojoj živi",
+            "deathUnknownOther": "{animals}: ugiba {count}, uzrok nepoznat",
+            "closeCall": "{aAnimal}: smrt je bila blizu. Uzrok nije poznat. Sve je dobro prošlo"
         },
         "card": {
             "now": "Sada: {activity}",
@@ -728,7 +737,8 @@
             "speciesBack": "Ponovno na brodu: izumrla na Ark dan {day} · {date}.",
             "notAboard": "{animal}: trenutačno nijedna na brodu.",
             "bringBack": "Ulovite jednu da je vratite",
-            "listLabel": "Vrste nestale s Arka, najnovije prve"
+            "listLabel": "Vrste nestale s Arka, najnovije prve",
+            "diedUnknown": "Posljednja je uginula, uzrok nepoznat"
         },
         "endangered": {
             "title": "Ugroženo sada",
@@ -776,7 +786,15 @@
             "failed": "Nije uspjelo. Pokušaj ponovno za trenutak.",
             "recoveringOne": "1 se oporavlja",
             "recoveringOther": "Oporavlja se: {count}",
-            "away": "Odsutna je dok se oporavlja, a onda opet izlazi iz svog doma."
+            "away": "Odsutna je dok se oporavlja, a onda opet izlazi iz svog doma.",
+            "escapeLivesOne": "1 srce u Arku",
+            "escapeLivesOther": "Srca u Arku: {n}",
+            "escapeLivesNone": "U Arku nema više srca",
+            "escapeNote": "Svako srce omogućuje tvojoj životinji da u Arku preživi jedan napad ili jedno razdoblje gladi. Srca ne mogu zaustaviti starost.",
+            "escapeNoteOld": "Svako srce omogućuje tvojoj životinji da u Arku preživi jedan napad ili jedno razdoblje gladi. Srce je ujedno vraća iz starosti kao mladu odraslu životinju.",
+            "recoveringWounded": "Skriva se zbog rane · vraća se {when}",
+            "recoveringCare": "U skrbi grada · vraća se {when}",
+            "recoveringHome": "Izgubljen dom · vraća se {when}"
         },
         "release": {
             "button": "Pusti u divljinu · {credits} kredita",
@@ -834,7 +852,10 @@
                 "epic": "Epsko",
                 "legendary": "Legendarno",
                 "mythic": "Mitsko"
-            }
+            },
+            "escapeHearts": "Zadržava svoja srca. Jedno srce mu omogućuje da u divljini preživi jedan napad ili jedno razdoblje gladi. Bez ijednog srca ulov je konačan. Starost je konačna.",
+            "escapeHeartsOld": "Zadržava svoja srca. Jedno srce mu omogućuje da u divljini preživi jedan napad ili jedno razdoblje gladi, a vraća ga i iz starosti kao mladu odraslu životinju. Bez ijednog srca ulov je konačan.",
+            "escapeLastOfKind": "Posljednje je od svoje vrste na brodu. Ako bude uhvaćeno bez ijednog srca ili ugine od starosti, njegova vrsta nestaje iz Arka."
         },
         "seen": {
             "searching": "Traži plijen",
@@ -1047,7 +1068,13 @@
                 "faqQ1": "Koje je mjesto u Arku najsigurnije?",
                 "faqA1": "{place} ima najviši udio živih u posljednjih {days} dana: {percent}.",
                 "faqQ2": "Što ubija životinje u Arku?",
-                "faqA2": "U posljednjih {days} dana zapis pokazuje {old} smrti od starosti, {starved} od gladi i {eaten} pojedenih. {hunting}"
+                "faqA2": "U posljednjih {days} dana zapis pokazuje {old} smrti od starosti, {starved} od gladi i {eaten} pojedenih. {hunting}",
+                "introEscape": "Životinja u Arku može pasti od starosti, gladi ili grabežljivca. Neke umaknu, neke ne. Evo brojki, mjesto po mjesto, sa životinjama i vrstama najbližima kraju.",
+                "placesDescriptionEscape": "Od životinja koje su u posljednjih {days} dana bile na pojedinom mjestu, udio onih koje su još žive. Životinja koja se skriva nakon napada ili razdoblja gladi računa se kao živa jer se vraća.",
+                "recoverNoteEscape": "Napad nije uvijek kraj: životinja s preostalim srcem umakne ranjena i vrati se, a ona koja gladuje biva zbrinuta i vrati se, pa se kao zauvijek izgubljene računaju samo one koje se nisu vratile. Starost je konačna.",
+                "recoverNoteEscapeOld": "Napad nije uvijek kraj: životinja s preostalim srcem umakne ranjena i vrati se, a ona koja gladuje biva zbrinuta i vrati se. Ona koja ugine od starosti s preostalim srcem vrati se kao mlada odrasla životinja, pa se kao zauvijek izgubljene računaju samo one koje se nisu vratile.",
+                "causeUnknown": "Uzrok nepoznat",
+                "faqA2Unknown": "U posljednjih {days} dana zapis pokazuje {old} smrti od starosti, {unknown} od uzroka koji Ark ne zna, {starved} od gladi i {eaten} pojedenih. {hunting}"
             },
             "breeders": {
                 "metaTitle": "Najbrži uzgajivači u Arku: koje životinje imaju najviše mladunaca",
@@ -1150,7 +1177,8 @@
             "bar": "Puna traka: dosad proživljeni život, obojen prema tome kako mu je (zelena dobro, jantarna staro ili u opasnosti, crvena gladno)",
             "now": "Bijela crta: sada",
             "end": "Prugasti kraj: kada će vjerojatno umrijeti od starosti, kao raspon, ne obećanje",
-            "heart": "Srce %: njegova šansa da preživi sljedeću godinu Arke (oko 2 tjedna stvarnog vremena), uz grabežljivce u blizini, glad, dob i puštanje"
+            "heart": "Srce %: njegova šansa da preživi sljedeću godinu Arke (oko 2 tjedna stvarnog vremena), uz grabežljivce u blizini, glad, dob i puštanje",
+            "endRisk": "Prugasti kraj: njegov uobičajeni životni vijek. Divlja životinja može uginuti ranije ili živjeti dulje"
         },
         "flow": {
             "sleep": "Spava",

@@ -25,8 +25,8 @@ test("each animal counts once per change; a meal and its eaten row are one; bree
         "junk"
     ]};
     const trends = arkSpeciesTrends(events, (look) => (look === LAB ? DOG : null));
-    assert.deepEqual(trends.get(FOX), {arrived: 2, born: 1, eaten: 1, diedOld: 0, starved: 1, net: 1});
-    assert.deepEqual(trends.get(DOG), {arrived: 1, born: 0, eaten: 0, diedOld: 0, starved: 0, net: 1});
+    assert.deepEqual(trends.get(FOX), {arrived: 2, born: 1, eaten: 1, diedOld: 0, diedUnknown: 0, starved: 1, net: 1});
+    assert.deepEqual(trends.get(DOG), {arrived: 1, born: 0, eaten: 0, diedOld: 0, diedUnknown: 0, starved: 0, net: 1});
     assert.equal(trends.has(LAB), false);
     // The meal's predator is never counted as eaten.
     assert.equal(trends.has("x"), false);
@@ -34,8 +34,8 @@ test("each animal counts once per change; a meal and its eaten row are one; bree
 });
 
 test("the line says only what happened, in a fixed order", () => {
-    const trend = {arrived: 2, born: 0, eaten: 1, diedOld: 0, starved: 0, net: 1};
+    const trend = {arrived: 2, born: 0, eaten: 1, diedOld: 0, diedUnknown: 0, starved: 0, net: 1};
     assert.equal(arkSpeciesTrendLine(trend, WORDS, "November 5", "en"), "Since November 5: 2 came aboard, 1 eaten.");
-    assert.equal(arkSpeciesTrendLine({arrived: 0, born: 0, eaten: 0, diedOld: 0, starved: 0, net: 0}, WORDS, "November 5", "en"), "None have come aboard or left since November 5.");
+    assert.equal(arkSpeciesTrendLine({arrived: 0, born: 0, eaten: 0, diedOld: 0, diedUnknown: 0, starved: 0, net: 0}, WORDS, "November 5", "en"), "None have come aboard or left since November 5.");
     assert.equal(arkSpeciesTrendLine({...trend, arrived: 1200}, WORDS, "5 November", "en"), "Since 5 November: 1,200 came aboard, 1 eaten.");
 });
