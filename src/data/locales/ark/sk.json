@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: nosenie semien domov",
             "antRaid": "{animals}: nájazd v širokom šíku",
             "antBivouac": "{animals}: sťahovanie bivaku",
-            "antWeave": "{animals}: sťahovanie listov do hniezda"
+            "antWeave": "{animals}: sťahovanie listov do hniezda",
+            "escapedWounded": "{aPrey}: podarilo sa ujsť so zranením, lovec: {aPredator}; teraz sa ukrýva",
+            "rescued": "{aAnimal}: našli, ako hladuje, a vzali do opatery",
+            "lostHome": "{aAnimal} stráca domov: vyrúbali les, v ktorom žije"
         },
         "card": {
             "now": "Teraz: {activity}",
@@ -776,7 +779,15 @@
             "failed": "Nepodarilo sa to. Skús to o chvíľu znova.",
             "recoveringOne": "1 sa zotavuje",
             "recoveringOther": "Zotavuje sa: {count}",
-            "away": "Je preč, kým sa zotavuje, potom znova vyjde zo svojho domova."
+            "away": "Je preč, kým sa zotavuje, potom znova vyjde zo svojho domova.",
+            "escapeLivesOne": "1 srdce v Arku",
+            "escapeLivesOther": "Srdcia v Arku: {n}",
+            "escapeLivesNone": "V Arku už nezostalo žiadne srdce",
+            "escapeNote": "Každé srdce dovolí tvojmu zvieraťu prežiť jeden útok alebo jedno obdobie hladu v Arku. Srdcia nezadržia starobu.",
+            "escapeNoteOld": "Každé srdce dovolí tvojmu zvieraťu prežiť jeden útok alebo jedno obdobie hladu v Arku. Srdce ho zároveň vráti zo staroby ako mladého dospelého.",
+            "recoveringWounded": "Zranené, oddychuje v úkryte · vráti sa {when}",
+            "recoveringCare": "V starostlivosti mesta · vráti sa {when}",
+            "recoveringHome": "Prišlo o domov · vráti sa {when}"
         },
         "release": {
             "button": "Vypustiť do voľnej prírody · {credits} kreditov",
@@ -834,7 +845,10 @@
                 "epic": "Epické",
                 "legendary": "Legendárne",
                 "mythic": "Mýtické"
-            }
+            },
+            "escapeHearts": "Srdcia mu zostávajú. Jedno srdce mu dovolí prežiť jeden útok alebo jedno obdobie hladu v divočine. Bez jediného srdca je ulovenie konečné. Staroba je konečná.",
+            "escapeHeartsOld": "Srdcia mu zostávajú. Jedno srdce mu dovolí prežiť jeden útok alebo jedno obdobie hladu v divočine a vráti ho zo staroby ako mladého dospelého. Bez jediného srdca je ulovenie konečné.",
+            "escapeLastOfKind": "Je posledné svojho druhu na palube. Ak ho ulovia bez jediného srdca alebo zomrie na starobu, jeho druh z Arku zmizne."
         },
         "seen": {
             "searching": "Hľadá korisť",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Ktoré miesto v Ark je najbezpečnejšie?",
                 "faqA1": "{place} má najvyšší podiel živých za posledných {days} dní: {percent}.",
                 "faqQ2": "Čo zabíja zvieratá v Ark?",
-                "faqA2": "Za posledných {days} dní záznam ukazuje {old} úmrtí od staroby, {starved} od hladu a {eaten} zožratých. {hunting}"
+                "faqA2": "Za posledných {days} dní záznam ukazuje {old} úmrtí od staroby, {starved} od hladu a {eaten} zožratých. {hunting}",
+                "introEscape": "Zviera v Arku môže padnúť od staroby, hladu alebo predátora. Niektorým sa podarí ujsť, iným nie. Tu sú čísla, miesto po mieste, so zvieratami a druhmi najbližšie ku koncu.",
+                "placesDescriptionEscape": "Zo zvierat, ktoré boli v každom mieste za posledných {days} dní, podiel tých, ktoré stále žijú. Zviera, ktoré sa po útoku alebo období hladu ukrýva, sa počíta ako živé: vráti sa.",
+                "recoverNoteEscape": "Útok nie je vždy koniec: zviera so zostávajúcim srdcom unikne so zranením a vráti sa, a hladujúce zviera vezmú do opatery a vráti sa, takže za navždy stratené sa počítajú len tie, ktoré sa nevrátili. Staroba je konečná.",
+                "recoverNoteEscapeOld": "Útok nie je vždy koniec: zviera so zostávajúcim srdcom unikne so zranením a vráti sa, a hladujúce zviera vezmú do opatery a vráti sa. Zviera, ktoré zomrie na starobu so zostávajúcim srdcom, sa vráti ako mladé dospelé, takže za navždy stratené sa počítajú len tie, ktoré sa nevrátili."
             },
             "breeders": {
                 "metaTitle": "Najrýchlejší chovatelia v Ark: ktoré zvieratá majú najviac mláďat",

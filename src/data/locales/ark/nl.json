@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: zaden naar huis dragen",
             "antRaid": "{animals}: rooftocht in een breed front",
             "antBivouac": "{animals}: het bivak verhuist",
-            "antWeave": "{animals}: bladeren samentrekken voor het nest"
+            "antWeave": "{animals}: bladeren samentrekken voor het nest",
+            "escapedWounded": "{aPrey} is gewond ontsnapt aan {aPredator} en ligt schuil",
+            "rescued": "{aAnimal} is uitgehongerd gevonden en in de zorg genomen",
+            "lostHome": "{aAnimal} is zijn thuis kwijt: zijn bos is gekapt"
         },
         "card": {
             "now": "Nu: {activity}",
@@ -776,7 +779,15 @@
             "failed": "Dat is niet gelukt. Probeer het zo nog eens.",
             "recoveringOne": "1 herstelt",
             "recoveringOther": "{count} herstellen",
-            "away": "Het is weg zolang het herstelt en komt daarna weer uit zijn thuis."
+            "away": "Het is weg zolang het herstelt en komt daarna weer uit zijn thuis.",
+            "escapeLivesOne": "1 hart in de Ark",
+            "escapeLivesOther": "{n} harten in de Ark",
+            "escapeLivesNone": "Geen harten meer in de Ark",
+            "escapeNote": "Elk hart laat je dier één aanval of één hongerperiode in de Ark overleven. Harten houden de ouderdom niet tegen.",
+            "escapeNoteOld": "Elk hart laat je dier één aanval of één hongerperiode in de Ark overleven. Een hart brengt het ook terug van ouderdom als jong volwassene.",
+            "recoveringWounded": "Gewond, ligt schuil · komt {when} terug",
+            "recoveringCare": "In de zorg van de stad · komt {when} terug",
+            "recoveringHome": "Zijn thuis kwijt · komt {when} terug"
         },
         "release": {
             "button": "Vrijlaten in het wild · {credits} credits",
@@ -834,7 +845,10 @@
                 "epic": "Episch",
                 "legendary": "Legendarisch",
                 "mythic": "Mythisch"
-            }
+            },
+            "escapeHearts": "Het houdt zijn harten. Een hart laat het één aanval of één hongerperiode in het wild overleven. Zonder hart over is gevangen worden definitief. Ouderdom is definitief.",
+            "escapeHeartsOld": "Het houdt zijn harten. Een hart laat het één aanval of één hongerperiode in het wild overleven en brengt het terug van ouderdom als jong volwassene. Zonder hart over is gevangen worden definitief.",
+            "escapeLastOfKind": "Het is de laatste van zijn soort aan boord. Wordt het gevangen zonder hart over, of sterft het van ouderdom, dan is zijn soort weg uit de Ark."
         },
         "seen": {
             "searching": "Zoekt prooi",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Welke plek is het veiligst in de Ark?",
                 "faqA1": "{place} heeft het hoogste aandeel levenden in de afgelopen {days} dagen: {percent}.",
                 "faqQ2": "Wat doodt dieren in de Ark?",
-                "faqA2": "In de afgelopen {days} dagen laat het logboek {old} sterfgevallen door ouderdom, {starved} door honger en {eaten} opgegeten zien. {hunting}"
+                "faqA2": "In de afgelopen {days} dagen laat het logboek {old} sterfgevallen door ouderdom, {starved} door honger en {eaten} opgegeten zien. {hunting}",
+                "introEscape": "Een dier in de Ark kan sterven aan ouderdom, honger of een roofdier. Sommige ontsnappen, andere niet. Dit zijn de cijfers, plek voor plek, met de dieren en soorten die het dichtst bij het einde zijn.",
+                "placesDescriptionEscape": "Van de dieren die de afgelopen {days} dagen op elke plek waren, het aandeel dat nog leeft. Een dier dat na een aanval of een hongerperiode schuilligt, telt als levend: het komt terug.",
+                "recoverNoteEscape": "Een aanval is niet altijd het einde: een dier met nog een hart ontsnapt gewond en komt terug, en een uitgehongerd dier wordt in de zorg genomen en komt terug, dus alleen dieren die niet terugkwamen tellen als definitief verloren. Ouderdom is definitief.",
+                "recoverNoteEscapeOld": "Een aanval is niet altijd het einde: een dier met nog een hart ontsnapt gewond en komt terug, en een uitgehongerd dier wordt in de zorg genomen en komt terug. Een dier dat van ouderdom sterft met nog een hart komt terug als jong volwassene, dus alleen dieren die niet terugkwamen tellen als definitief verloren."
             },
             "breeders": {
                 "metaTitle": "Snelste fokkers van de Ark: welke dieren hebben de meeste jongen",

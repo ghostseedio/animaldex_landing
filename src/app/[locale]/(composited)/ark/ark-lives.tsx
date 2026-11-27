@@ -5,7 +5,7 @@ import Link from "@/app/[locale]/_components/link";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkIconUrl} from "@/ark-scene/placeholder-icon";
 import {healHeart} from "@/components/debates/use-debates";
-import {ARK_HEARTS_MAX, arkCanRestoreHeart, arkLivesText, arkRecoveringText, type ArkAnimalHearts, type ArkHeartsWords} from "@/lib/ark-hearts";
+import {ARK_HEARTS_MAX, arkCanRestoreHeart, arkLivesText, arkRecoveringText, type ArkAnimalHearts, type ArkHeartsWordsFor} from "@/lib/ark-hearts";
 import {fillArkWords} from "@/lib/ark-words";
 import {ArkHeartIcons} from "@/app/[locale]/(composited)/ark/ark-heart-icons";
 
@@ -20,7 +20,7 @@ export {ArkHeartIcons};
 
 type LivesProps = {
     entry: ArkAnimalHearts;
-    words: ArkHeartsWords;
+    words: ArkHeartsWordsFor;
     locale: string;
     cost: number;
     /** A heart restored: the card's new count (the page updates every animal that card brought). */
@@ -105,7 +105,7 @@ function useNow(ticking: boolean): number {
  * One of the owner's animals away recovering: not in the scene, so its own small card at the world's foot (opened from
  * the "1 recovering" chip, or from a notice's `?focus=`): who it is, its lives, when it returns, and the restore.
  */
-export function ArkRecoveringCard({entries, words, locale, cost, onRestored, onClose, closeLabel, bandRef}: {bandRef?: React.Ref<HTMLDivElement>; entries: ArkAnimalHearts[]; words: ArkHeartsWords; locale: string; cost: number; onRestored: LivesProps["onRestored"]; onClose: () => void; closeLabel: string}) {
+export function ArkRecoveringCard({entries, words, locale, cost, onRestored, onClose, closeLabel, bandRef}: {bandRef?: React.Ref<HTMLDivElement>; entries: ArkAnimalHearts[]; words: ArkHeartsWordsFor; locale: string; cost: number; onRestored: LivesProps["onRestored"]; onClose: () => void; closeLabel: string}) {
     return (
         <div ref={bandRef} data-testid="ark-recovering-card" role="region" aria-label={entries.length === 1 ? words.recoveringOne : fillArkWords(words.recoveringOther, {count: entries.length})} onKeyDown={(event) => {
             if (event.key !== "Escape") return;

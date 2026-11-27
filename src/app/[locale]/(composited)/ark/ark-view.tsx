@@ -268,7 +268,9 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     // Hearts are lives (behind the server's `ark_hearts`): the reader's own animals' hearts, null while off or unread.
     const [ownerHearts, setOwnerHearts] = useState<ArkOwnerHearts | null>(fixtureHearts);
     const [recoveringOpen, setRecoveringOpen] = useState(false);
-    const heartsWords = useMemo(() => arkHeartsWords(words.hearts), [words]);
+    // (A heart a survived attack, `hearts_escape`: the hearts' words follow the rule the server reads out with them.)
+    const heartsRules = ownerHearts?.rules ?? null;
+    const heartsWords = useMemo(() => arkHeartsWords(words.hearts, heartsRules), [words, heartsRules]);
     // Part C: the island loaded now, and whether a crossing is under way (one island at a time; `islands/archipelago.ts`).
     const [island, setIsland] = useState<ArkIsland>("wild");
     const [crossing, setCrossing] = useState(false);
@@ -825,8 +827,8 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
             heartsReadAt.current = Date.now();
             void fetch("/api/ark/hearts", {cache: "no-store"})
                 .then((response) => (response.ok ? response.json() : null))
-                .then((body: {hearts?: unknown} | null) => {
-                    if (!stopped) setOwnerHearts(decodeArkOwnerHearts(body?.hearts));
+                .then((body: {hearts?: unknown; rules?: unknown} | null) => {
+                    if (!stopped) setOwnerHearts(decodeArkOwnerHearts(body?.hearts, body?.rules));
                 })
                 .catch(() => undefined);
         }, wait);
@@ -1467,7 +1469,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                                 localePath: shareLocalePath,
                                 text: fillArkWords(words.share.textAnimal, {animal: selected.name, count: (snapshot?.animals.filter((animal) => arkSpeciesKey(animal) === arkSpeciesKey(selected)).length ?? 1).toLocaleString(locale)})
                             }}
-                            lives={selectedLives && ownerHearts ? {entry: selectedLives, words: heartsWords, cost: ownerHearts.healCost, onRestored: onHeartRestored} : null}
+                            lives={selectedLives && ownerHearts ? {entry: selectedLives, words: heartsWords, cost: ownerHearts.healCost, onRestored: onHeartRestored, rules: ownerHearts.rules ?? null} : null}
                             snapshot={snapshot}
                             mineOnly={mineOnly}
                         />

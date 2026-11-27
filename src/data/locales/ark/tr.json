@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: tohumları yuvaya taşıma",
             "antRaid": "{animals}: geniş bir cephede baskın",
             "antBivouac": "{animals}: geçici yuvanın taşınması",
-            "antWeave": "{animals}: yuva için yaprakları birleştirme"
+            "antWeave": "{animals}: yuva için yaprakları birleştirme",
+            "escapedWounded": "{aPrey} yaralı kaçıp kurtuldu, saklanıp dinleniyor; kovalayan: {aPredator}",
+            "rescued": "{aAnimal} açlıktan ölmek üzereyken bulundu ve bakıma alındı",
+            "lostHome": "{aAnimal} evini kaybetti: ormanı kesildi"
         },
         "card": {
             "now": "Şimdi: {activity}",
@@ -776,7 +779,15 @@
             "failed": "Olmadı. Birazdan tekrar dene.",
             "recoveringOne": "1 iyileşiyor",
             "recoveringOther": "{count} iyileşiyor",
-            "away": "İyileşene kadar ortada yok, sonra yine evinden çıkıp geliyor."
+            "away": "İyileşene kadar ortada yok, sonra yine evinden çıkıp geliyor.",
+            "escapeLivesOne": "Ark'ta 1 kalp",
+            "escapeLivesOther": "Ark'ta {n} kalp",
+            "escapeLivesNone": "Ark'ta hiç kalp kalmadı",
+            "escapeNote": "Her kalp, hayvanın Ark'ta bir saldırıdan ya da bir aç kalma döneminden sağ çıkmasını sağlar. Kalpler yaşlılığı durduramaz.",
+            "escapeNoteOld": "Her kalp, hayvanın Ark'ta bir saldırıdan ya da bir aç kalma döneminden sağ çıkmasını sağlar. Kalp ayrıca onu yaşlılıktan genç bir yetişkin olarak geri getirir.",
+            "recoveringWounded": "Yaralı, saklanıp dinleniyor · {when} dönüyor",
+            "recoveringCare": "Kasabanın bakımında · {when} dönüyor",
+            "recoveringHome": "Evini kaybetti · {when} dönüyor"
         },
         "release": {
             "button": "Doğaya sal · {credits} Kredi",
@@ -834,7 +845,10 @@
                 "epic": "Destansı",
                 "legendary": "Efsanevi",
                 "mythic": "Mitik"
-            }
+            },
+            "escapeHearts": "Kalpleri onda kalır. Bir kalp, onun doğada bir saldırıdan ya da bir aç kalma döneminden sağ çıkmasını sağlar. Hiç kalbi kalmadıysa yakalanmak son demektir. Yaşlılık da son demektir.",
+            "escapeHeartsOld": "Kalpleri onda kalır. Bir kalp, onun doğada bir saldırıdan ya da bir aç kalma döneminden sağ çıkmasını sağlar ve onu yaşlılıktan genç bir yetişkin olarak geri getirir. Hiç kalbi kalmadıysa yakalanmak son demektir.",
+            "escapeLastOfKind": "Ark'ta türünün son üyesi. Hiç kalbi kalmadan yakalanırsa ya da yaşlılıktan ölürse türü Ark'tan yok olur."
         },
         "seen": {
             "searching": "Av arıyor",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Ark'ta en güvenli yer neresi?",
                 "faqA1": "{place}, son {days} günde en yüksek hayatta kalma payına sahip: {percent}.",
                 "faqQ2": "Ark'ta hayvanları ne öldürüyor?",
-                "faqA2": "Son {days} günde kayıtta {old} yaşlılıktan, {starved} açlıktan ölüm ve {eaten} yenen var. {hunting}"
+                "faqA2": "Son {days} günde kayıtta {old} yaşlılıktan, {starved} açlıktan ölüm ve {eaten} yenen var. {hunting}",
+                "introEscape": "Ark'taki bir hayvan yaşlılıktan, açlıktan ya da bir avcıdan düşebilir. Bazıları kurtulur, bazıları kurtulamaz. İşte yer yer rakamlar, sona en yakın hayvanlar ve türlerle birlikte.",
+                "placesDescriptionEscape": "Son {days} günde her yerde bulunan hayvanlardan hâlâ hayatta olanların payı. Saldırıdan ya da aç kalma döneminden sonra saklanıp dinlenen hayvan, geri döneceği için yaşıyor sayılır.",
+                "recoverNoteEscape": "Saldırı her zaman son değildir: kalbi kalan hayvan yaralı kaçıp kurtulur ve geri döner, açlıktan ölmek üzere olan da bakıma alınır ve geri döner, bu yüzden yalnızca geri dönmeyenler kalıcı olarak kayıp sayılır. Yaşlılık son demektir.",
+                "recoverNoteEscapeOld": "Saldırı her zaman son değildir: kalbi kalan hayvan yaralı kaçıp kurtulur ve geri döner, açlıktan ölmek üzere olan da bakıma alınır ve geri döner. Kalbi kalmışken yaşlılıktan ölen genç bir yetişkin olarak geri döner, bu yüzden yalnızca geri dönmeyenler kalıcı olarak kayıp sayılır."
             },
             "breeders": {
                 "metaTitle": "Ark'ın en hızlı üreyenleri: hangi hayvanların en çok yavrusu var",

@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: trasporto di semi al nido",
             "antRaid": "{animals}: razzia su un fronte ampio",
             "antBivouac": "{animals}: trasloco del bivacco",
-            "antWeave": "{animals}: foglie avvicinate per il nido"
+            "antWeave": "{animals}: foglie avvicinate per il nido",
+            "escapedWounded": "{aPrey} sfugge a {aPredator} con una ferita e si nasconde per riprendersi",
+            "rescued": "Hanno trovato {aAnimal} che soffriva la fame e se ne sono presi cura",
+            "lostHome": "{aAnimal} ha perso la sua casa: la sua foresta è stata abbattuta"
         },
         "card": {
             "now": "Ora: {activity}",
@@ -776,7 +779,15 @@
             "failed": "Non è andato a buon fine. Riprova tra un momento.",
             "recoveringOne": "1 in convalescenza",
             "recoveringOther": "{count} in convalescenza",
-            "away": "È via mentre si riprende, poi esce di nuovo dalla sua tana."
+            "away": "È via mentre si riprende, poi esce di nuovo dalla sua tana.",
+            "escapeLivesOne": "1 cuore nell'Ark",
+            "escapeLivesOther": "{n} cuori nell'Ark",
+            "escapeLivesNone": "Nessun cuore rimasto nell'Ark",
+            "escapeNote": "Ogni cuore permette al tuo animale di sopravvivere a un attacco o a un periodo di fame nell'Ark. I cuori non possono fermare la vecchiaia.",
+            "escapeNoteOld": "Ogni cuore permette al tuo animale di sopravvivere a un attacco o a un periodo di fame nell'Ark. Un cuore lo fa anche tornare dalla vecchiaia come giovane adulto.",
+            "recoveringWounded": "Si nasconde per una ferita · torna {when}",
+            "recoveringCare": "Alle cure della città · torna {when}",
+            "recoveringHome": "Ha perso la casa · torna {when}"
         },
         "release": {
             "button": "Libera in natura · {credits} crediti",
@@ -834,7 +845,10 @@
                 "epic": "Epico",
                 "legendary": "Leggendario",
                 "mythic": "Mitico"
-            }
+            },
+            "escapeHearts": "Conserva i suoi cuori. Un cuore gli permette di sopravvivere a un attacco o a un periodo di fame in natura. Senza più cuori, essere preso è definitivo. La vecchiaia è definitiva.",
+            "escapeHeartsOld": "Conserva i suoi cuori. Un cuore gli permette di sopravvivere a un attacco o a un periodo di fame in natura, e lo fa tornare dalla vecchiaia come giovane adulto. Senza più cuori, essere preso è definitivo.",
+            "escapeLastOfKind": "È l'ultimo della sua specie a bordo. Se viene preso senza più cuori, o muore di vecchiaia, la sua specie scompare dall'Ark."
         },
         "seen": {
             "searching": "Cerca una preda",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Qual è il luogo più sicuro dell'Ark?",
                 "faqA1": "{place} ha la quota più alta di vivi negli ultimi {days} giorni: {percent}.",
                 "faqQ2": "Che cosa uccide gli animali nell'Ark?",
-                "faqA2": "Negli ultimi {days} giorni il registro mostra {old} morti per vecchiaia, {starved} per fame e {eaten} divorati. {hunting}"
+                "faqA2": "Negli ultimi {days} giorni il registro mostra {old} morti per vecchiaia, {starved} per fame e {eaten} divorati. {hunting}",
+                "introEscape": "Un animale nell'Ark può cadere per vecchiaia, fame o per un predatore. Alcuni sfuggono, altri no. Ecco i numeri, luogo per luogo, con gli animali e le specie più vicini alla fine.",
+                "placesDescriptionEscape": "Tra gli animali che negli ultimi {days} giorni sono stati in ciascun luogo, la quota ancora viva. Un animale che si nasconde dopo un attacco o un periodo di fame conta come vivo, perché torna.",
+                "recoverNoteEscape": "Un attacco non è sempre la fine: un animale con un cuore rimasto sfugge ferito e torna, e uno che soffre la fame viene preso in cura e torna, quindi contano come persi per sempre solo quelli che non sono tornati. La vecchiaia è definitiva.",
+                "recoverNoteEscapeOld": "Un attacco non è sempre la fine: un animale con un cuore rimasto sfugge ferito e torna, e uno che soffre la fame viene preso in cura e torna. Chi muore di vecchiaia con un cuore rimasto torna da giovane adulto, quindi contano come persi per sempre solo quelli che non sono tornati."
             },
             "breeders": {
                 "metaTitle": "I riproduttori più veloci dell'Ark: quali animali hanno più cuccioli",

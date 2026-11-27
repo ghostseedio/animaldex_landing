@@ -135,6 +135,13 @@ export type ArkEvent = {
      */
     lives?: ArkEventLives;
     /**
+     * A heart is a survived attack (behind the server's `hearts_escape`, docs/ark/hearts-escape.md): a `fed` row the server says
+     * is a rescue (`rescued: true`): the animal was found starving and taken into care, and `lives` says its hearts left and
+     * when it returns. Absent otherwise. (A wounded `escaped` row is not decoded here, `escaped` is not one of `ARK_EVENT_KINDS`:
+     * `ark-scene/live/escape-lines.ts` reads its `wounded` and `lives` from the raw row.)
+     */
+    rescued?: true;
+    /**
      * REAL-REPRODUCTION (AnimalDex decision 440, behind the server's `real_reproduction`): a `mated` row's way of breeding
      * (`payload.way`: broadcast, brooding, spawn_pair, amplexus, male_pregnancy...), a birth's `alone` (a split or a bud
      * off one parent) or `pouch` (from a father's pouch). Absent with it off, or when the read sends no payload.
@@ -149,7 +156,7 @@ export type ArkEvent = {
     web?: true;
 };
 
-export type ArkEventLives = {heartsLeft: number; returnsDay: number | null; final: boolean; ageReset: boolean; cause: "eaten" | "starved" | "died_old" | null};
+export type ArkEventLives = {heartsLeft: number; returnsDay: number | null; final: boolean; ageReset: boolean; cause: "eaten" | "starved" | "died_old" | "deforested" | null};
 
 /** `payload.lives` (a death) or the `revived` payload itself, checked; null when there is none. */
 export function decodeArkEventLives(kind: string, payload: Record<string, unknown>): ArkEventLives | null {
@@ -158,7 +165,7 @@ export function decodeArkEventLives(kind: string, payload: Record<string, unknow
     const left = typeof source.heartsLeft === "number" && Number.isFinite(source.heartsLeft) ? Math.min(Math.max(Math.round(source.heartsLeft), 0), 3) : null;
     if (left === null) return null;
     const returns = typeof source.returnsDay === "number" && Number.isFinite(source.returnsDay) ? source.returnsDay : null;
-    const cause = source.cause === "eaten" || source.cause === "starved" || source.cause === "died_old" ? source.cause : null;
+    const cause = source.cause === "eaten" || source.cause === "starved" || source.cause === "died_old" || source.cause === "deforested" ? source.cause : null;
     return {heartsLeft: left, returnsDay: returns, final: source.final === true, ageReset: source.ageReset === true, cause};
 }
 
@@ -307,7 +314,9 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
         // today, and the lines then say no count: never a made-up one).
         const livesRow = record(row.lives);
         const livesSource = livesRow ? (kind === "revived" ? livesRow : {lives: livesRow}) : payload;
-        const lives = kind === "revived" || kind === "eaten" || kind === "death_old" || kind === "starved" ? decodeArkEventLives(kind, livesSource) : null;
+        // (A rescue, `fed` with `rescued`: found starving, taken into care; its hearts left ride on it as a death's do.)
+        const rescued = kind === "fed" && (row.rescued === true || payload.rescued === true);
+        const lives = kind === "revived" || kind === "eaten" || kind === "death_old" || kind === "starved" || rescued ? decodeArkEventLives(kind, livesSource) : null;
         const way = payload.pouch === true || row.pouch === true ? "pouch" : text(row.way ?? payload.way, 24);
         // ARK-LOG-FOOD: where it happened (the read's `place`, or a payload that carries it); else the animal as it is now.
         const place = decodeArkEventPlace(row.place ?? payload);
@@ -332,6 +341,7 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             ...(encounter ? {encounter} : {}),
             ...(kind === "meal" && (encounter?.web || row.trap === "web" || payload.trap === "web") ? {web: true as const} : {}),
             ...(lives ? {lives} : {}),
+            ...(rescued ? {rescued: true as const} : {}),
             ...(way && (kind === "mated" || kind === "birth") ? {way} : {}),
             ...(place ? {place} : {})
         });

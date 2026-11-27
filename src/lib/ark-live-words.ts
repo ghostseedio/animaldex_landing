@@ -47,6 +47,15 @@ export type ArkLiveWords = {
     woke?: string;
     /** A prey animal that got away from a predator's attempt (decision 373): "{aPrey} got away from {aPredator}". */
     escaped?: string;
+    /**
+     * A heart is a survived attack (behind `hearts_escape`, docs/ark/hearts-escape.md; `src/ark-scene/live/escape-lines.ts`,
+     * `hearts-lines.ts`, `forest-lines.ts`): a wounded escape ("{aPrey} got away from {aPredator}, wounded, and is lying up"), a
+     * rescue from starving ("{aAnimal} was found starving and taken into care") and a logging recovery said as a lost home
+     * ("{aAnimal} lost its home: its forest was cut down"). Each takes "· 2 ♥ left" after it, as a death's line does.
+     */
+    escapedWounded?: string;
+    rescued?: string;
+    lostHome?: string;
     /** SIG-EVENTS signature_caches: a corvid moved the cache it was watched making; another found and took a cache. */
     cacheRehidden?: string;
     cacheStolen?: string;
@@ -148,6 +157,9 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     dormant: "{animals} have gone into their winter sleep",
     woke: "{animals} are awake again",
     escaped: "{aPrey} got away from {aPredator}",
+    escapedWounded: "{aPrey} got away from {aPredator}, wounded, and is lying up",
+    rescued: "{aAnimal} was found starving and taken into care",
+    lostHome: "{aAnimal} lost its home: its forest was cut down",
     cacheRehidden: "{aAnimal} is re-hiding its food after being watched",
     cacheStolen: "{aThief} dug up food that {aOwner} had hidden",
     revived: "{animal} is back",

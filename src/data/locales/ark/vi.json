@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: khiêng hạt về tổ",
             "antRaid": "{animals}: đột kích trên một mặt trận rộng",
             "antBivouac": "{animals}: dời tổ tạm",
-            "antWeave": "{animals}: kéo lá lại với nhau để làm tổ"
+            "antWeave": "{animals}: kéo lá lại với nhau để làm tổ",
+            "escapedWounded": "{aPrey} đã thoát khỏi {aPredator}, bị thương, và đang ẩn mình nghỉ ngơi",
+            "rescued": "{aAnimal} được tìm thấy trong tình trạng đói lả và được đưa đi chăm sóc",
+            "lostHome": "{aAnimal} mất nơi ở: khu rừng của nó bị chặt phá"
         },
         "card": {
             "now": "Lúc này: đang {activity}",
@@ -776,7 +779,15 @@
             "failed": "Chưa được. Hãy thử lại sau giây lát.",
             "recoveringOne": "1 con đang hồi phục",
             "recoveringOther": "{count} con đang hồi phục",
-            "away": "Nó vắng mặt trong lúc hồi phục, rồi lại bước ra từ nơi ở của mình."
+            "away": "Nó vắng mặt trong lúc hồi phục, rồi lại bước ra từ nơi ở của mình.",
+            "escapeLivesOne": "1 trái tim trên Ark",
+            "escapeLivesOther": "{n} trái tim trên Ark",
+            "escapeLivesNone": "Không còn trái tim nào trên Ark",
+            "escapeNote": "Mỗi trái tim giúp con vật của bạn sống sót qua một lần bị tấn công hoặc một đợt đói trên Ark. Trái tim không thể ngăn tuổi già.",
+            "escapeNoteOld": "Mỗi trái tim giúp con vật của bạn sống sót qua một lần bị tấn công hoặc một đợt đói trên Ark. Trái tim còn đưa nó trở lại từ tuổi già thành một con trưởng thành trẻ.",
+            "recoveringWounded": "Bị thương, ẩn mình nghỉ ngơi · trở lại {when}",
+            "recoveringCare": "Được thị trấn chăm sóc · trở lại {when}",
+            "recoveringHome": "Mất nơi ở · trở lại {when}"
         },
         "release": {
             "button": "Thả về tự nhiên · {credits} Credits",
@@ -834,7 +845,10 @@
                 "epic": "Sử thi",
                 "legendary": "Huyền thoại",
                 "mythic": "Thần thoại"
-            }
+            },
+            "escapeHearts": "Nó giữ nguyên các trái tim. Một trái tim giúp nó sống sót qua một lần bị tấn công hoặc một đợt đói ngoài tự nhiên. Khi không còn trái tim nào, bị bắt là dấu chấm hết. Tuổi già là dấu chấm hết.",
+            "escapeHeartsOld": "Nó giữ nguyên các trái tim. Một trái tim giúp nó sống sót qua một lần bị tấn công hoặc một đợt đói ngoài tự nhiên, và đưa nó trở lại từ tuổi già thành một con trưởng thành trẻ. Khi không còn trái tim nào, bị bắt là dấu chấm hết.",
+            "escapeLastOfKind": "Nó là con cuối cùng của loài trên Ark. Nếu nó bị bắt khi không còn trái tim nào, hoặc chết vì tuổi già, loài của nó sẽ biến mất khỏi Ark."
         },
         "seen": {
             "searching": "Đang tìm con mồi",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Nơi nào an toàn nhất trong Ark?",
                 "faqA1": "{place} có tỷ lệ còn sống cao nhất trong {days} ngày qua: {percent}.",
                 "faqQ2": "Điều gì giết động vật trong Ark?",
-                "faqA2": "Trong {days} ngày qua, ghi chép cho thấy {old} ca chết vì tuổi già, {starved} vì đói và {eaten} bị ăn thịt. {hunting}"
+                "faqA2": "Trong {days} ngày qua, ghi chép cho thấy {old} ca chết vì tuổi già, {starved} vì đói và {eaten} bị ăn thịt. {hunting}",
+                "introEscape": "Một con vật trong Ark có thể gục ngã vì tuổi già, cái đói hoặc thú săn mồi. Có con thoát được, có con không. Đây là các con số, từng nơi một, cùng những con vật và loài gần cuối đường nhất.",
+                "placesDescriptionEscape": "Trong số những con vật đã ở mỗi nơi trong {days} ngày qua, tỷ lệ còn sống. Con vật đang ẩn mình nghỉ ngơi sau một lần bị tấn công hay một đợt đói được tính là còn sống, vì nó sẽ trở lại.",
+                "recoverNoteEscape": "Bị tấn công không phải lúc nào cũng là kết thúc: con vật còn trái tim sẽ thoát đi trong tình trạng bị thương rồi trở lại, còn con đang đói lả sẽ được đưa đi chăm sóc rồi trở lại, nên chỉ những con không trở lại mới tính là mất vĩnh viễn. Tuổi già là dấu chấm hết.",
+                "recoverNoteEscapeOld": "Bị tấn công không phải lúc nào cũng là kết thúc: con vật còn trái tim sẽ thoát đi trong tình trạng bị thương rồi trở lại, còn con đang đói lả sẽ được đưa đi chăm sóc rồi trở lại. Con chết vì tuổi già khi còn trái tim sẽ trở lại thành con trưởng thành trẻ, nên chỉ những con không trở lại mới tính là mất vĩnh viễn."
             },
             "breeders": {
                 "metaTitle": "Những loài sinh sản nhanh nhất trong Ark: con vật nào có nhiều con non nhất",

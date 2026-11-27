@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: noszenie nasion do gniazda",
             "antRaid": "{animals}: najazd szerokim frontem",
             "antBivouac": "{animals}: przeprowadzka biwaku",
-            "antWeave": "{animals}: ściąganie liści do gniazda"
+            "antWeave": "{animals}: ściąganie liści do gniazda",
+            "escapedWounded": "{aPrey}: udało się uciec z raną, łowca: {aPredator}, teraz się ukrywa",
+            "rescued": "{aAnimal}: znaleziono w skrajnym głodzie i wzięto pod opiekę",
+            "lostHome": "{aAnimal} traci dom: wycięto las, w którym mieszka"
         },
         "card": {
             "now": "Teraz: {activity}",
@@ -776,7 +779,15 @@
             "failed": "Nie udało się. Spróbuj ponownie za chwilę.",
             "recoveringOne": "1 dochodzi do siebie",
             "recoveringOther": "Dochodzi do siebie: {count}",
-            "away": "Nie ma go, póki dochodzi do siebie, a potem znów wychodzi ze swojego domu."
+            "away": "Nie ma go, póki dochodzi do siebie, a potem znów wychodzi ze swojego domu.",
+            "escapeLivesOne": "1 serce w Ark",
+            "escapeLivesOther": "Serca w Ark: {n}",
+            "escapeLivesNone": "Brak serc w Ark",
+            "escapeNote": "Każde serce pozwala twojemu zwierzęciu przeżyć jeden atak albo jeden okres głodu w Ark. Serca nie powstrzymają starości.",
+            "escapeNoteOld": "Każde serce pozwala twojemu zwierzęciu przeżyć jeden atak albo jeden okres głodu w Ark. Serce przywraca je też ze starości jako młode dorosłe zwierzę.",
+            "recoveringWounded": "Leczy rany w ukryciu · wraca {when}",
+            "recoveringCare": "Pod opieką miasta · wraca {when}",
+            "recoveringHome": "Straciło dom · wraca {when}"
         },
         "release": {
             "button": "Wypuść na wolność · {credits} kredytów",
@@ -834,7 +845,10 @@
                 "epic": "Epickie",
                 "legendary": "Legendarne",
                 "mythic": "Mityczne"
-            }
+            },
+            "escapeHearts": "Zachowuje swoje serca. Serce pozwala przeżyć jeden atak albo jeden okres głodu na wolności. Bez żadnego serca upolowanie jest ostateczne. Starość jest ostateczna.",
+            "escapeHeartsOld": "Zachowuje swoje serca. Serce pozwala przeżyć jeden atak albo jeden okres głodu na wolności i przywraca je ze starości jako młode dorosłe zwierzę. Bez żadnego serca upolowanie jest ostateczne.",
+            "escapeLastOfKind": "To ostatnie ze swojego gatunku na pokładzie. Jeśli zostanie upolowane bez żadnego serca albo umrze ze starości, jego gatunek zniknie z Ark."
         },
         "seen": {
             "searching": "Szuka zdobyczy",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Które miejsce w Ark jest najbezpieczniejsze?",
                 "faqA1": "{place} ma najwyższy odsetek żywych w ostatnich {days} dniach: {percent}.",
                 "faqQ2": "Co zabija zwierzęta w Ark?",
-                "faqA2": "W ostatnich {days} dniach rejestr pokazuje {old} zgonów ze starości, {starved} z głodu i {eaten} zjedzonych. {hunting}"
+                "faqA2": "W ostatnich {days} dniach rejestr pokazuje {old} zgonów ze starości, {starved} z głodu i {eaten} zjedzonych. {hunting}",
+                "introEscape": "Zwierzę w Ark może paść ze starości, z głodu albo ofiarą drapieżnika. Niektórym udaje się uciec, innym nie. Oto liczby, miejsce po miejscu, ze zwierzętami i gatunkami najbliższymi końca.",
+                "placesDescriptionEscape": "Spośród zwierząt, które w ostatnich {days} dniach były w danym miejscu, odsetek wciąż żywych. Zwierzę ukrywające się po ataku lub okresie głodu liczy się jako żywe: wróci.",
+                "recoverNoteEscape": "Atak nie zawsze jest końcem: zwierzę z pozostałym sercem ucieka z raną i wraca, a to, które głoduje, trafia pod opiekę i wraca, więc jako utracone na stałe liczą się tylko te, które nie wróciły. Starość jest ostateczna.",
+                "recoverNoteEscapeOld": "Atak nie zawsze jest końcem: zwierzę z pozostałym sercem ucieka z raną i wraca, a to, które głoduje, trafia pod opiekę i wraca. Zwierzę, które umiera ze starości z pozostałym sercem, wraca jako młode dorosłe, więc jako utracone na stałe liczą się tylko te, które nie wróciły."
             },
             "breeders": {
                 "metaTitle": "Najszybciej rozmnażające się w Ark: które zwierzęta mają najwięcej młodych",

@@ -74,6 +74,13 @@ export type ArkLiveItem = {
     hearts?: number | null;
     /** A return from old age: a young adult again. */
     young?: boolean;
+    /**
+     * A heart is a survived attack (behind the server's `hearts_escape`, docs/ark/hearts-escape.md): `hurt`, an `escaped` row the
+     * server says is a wounded escape (it lies up and returns; `hearts` are its hearts left); `lost`, a logging recovery
+     * said as a lost home, not a death. Absent with the switch off: the lines read as before.
+     */
+    hurt?: true;
+    lost?: true;
     /** A human's old-age death (decision 442): said gently, "died peacefully of old age". */
     peaceful?: boolean;
     /** REAL-REPRODUCTION (decision 440): a breeding said its kind's own way (a spawning night, a pair's spawn, amplexus, a father's pouch, a split). */
@@ -84,7 +91,7 @@ export type ArkLiveItem = {
     web?: boolean;
     /** A kind's dormant season beginning or ending (`src/ark-scene/live/dormancy-lines.ts`): said with its own words. */
     /** (`signature`: a saved signature move, AnimalDex SIG-EVENTS, `src/ark-scene/live/signature-events.ts`.) */
-    say?: "dormant" | "woke" | "escaped" | "deforested" | "dated" | "moved_in" | "released" | "signature" | "cacheRehidden" | "cacheStolen" | "mate_found";
+    say?: "dormant" | "woke" | "escaped" | "rescued" | "deforested" | "dated" | "moved_in" | "released" | "signature" | "cacheRehidden" | "cacheStolen" | "mate_found";
     /** A species' own sentence for what it is seen doing (`src/ark-scene/live/signature-lines.ts`): said as it is. */
     line?: string;
     /**

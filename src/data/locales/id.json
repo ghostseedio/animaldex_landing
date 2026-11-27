@@ -3333,7 +3333,13 @@
       "arkRestoring": "Memulihkan…",
       "lives": "",
       "life": "",
-      "note": ""
+      "note": "",
+      "arkTitleEscape": "Hati di Ark",
+      "arkLifeEscape": "1 hati di Ark",
+      "arkLivesEscape": "{n} hati di Ark",
+      "arkNoneEscape": "Tidak ada hati tersisa di Ark",
+      "arkNoteEscape": "Setiap hati membuat hewanmu bisa selamat dari satu serangan atau satu masa kelaparan di Ark. Hati tidak bisa menahan usia tua.",
+      "arkNoteEscapeOld": "Setiap hati membuat hewanmu bisa selamat dari satu serangan atau satu masa kelaparan di Ark. Satu hati juga membawanya kembali dari usia tua sebagai hewan dewasa muda."
     },
     "debates": {
       "tab": "Debat"
@@ -4705,7 +4711,10 @@
       "antSeeds": "{animals}: membawa biji pulang",
       "antRaid": "{animals}: serbuan di garis depan yang lebar",
       "antBivouac": "{animals}: memindahkan sarang sementara",
-      "antWeave": "{animals}: menarik daun bersama untuk sarang"
+      "antWeave": "{animals}: menarik daun bersama untuk sarang",
+      "escapedWounded": "{aPrey} lolos dari {aPredator}, terluka, dan kini beristirahat",
+      "rescued": "{aAnimal} ditemukan kelaparan dan dibawa ke perawatan",
+      "lostHome": "{aAnimal} kehilangan rumahnya: hutannya ditebang"
     },
     "card": {
       "now": "Sekarang: {activity}",
@@ -4980,7 +4989,15 @@
       "failed": "Itu tidak berhasil. Coba lagi sebentar lagi.",
       "recoveringOne": "1 sedang pulih",
       "recoveringOther": "{count} sedang pulih",
-      "away": "Ia pergi sementara untuk pulih, lalu keluar lagi dari rumahnya."
+      "away": "Ia pergi sementara untuk pulih, lalu keluar lagi dari rumahnya.",
+      "escapeLivesOne": "1 hati di Ark",
+      "escapeLivesOther": "{n} hati di Ark",
+      "escapeLivesNone": "Tidak ada hati tersisa di Ark",
+      "escapeNote": "Setiap hati membuat hewanmu bisa selamat dari satu serangan atau satu masa kelaparan di Ark. Hati tidak bisa menahan usia tua.",
+      "escapeNoteOld": "Setiap hati membuat hewanmu bisa selamat dari satu serangan atau satu masa kelaparan di Ark. Satu hati juga membawanya kembali dari usia tua sebagai hewan dewasa muda.",
+      "recoveringWounded": "Beristirahat, terluka · kembali {when}",
+      "recoveringCare": "Dalam perawatan kota · kembali {when}",
+      "recoveringHome": "Kehilangan rumahnya · kembali {when}"
     },
     "release": {
       "button": "Lepas ke alam liar · {credits} Kredit",
@@ -5038,7 +5055,10 @@
         "epic": "Epik",
         "legendary": "Legendaris",
         "mythic": "Mitos"
-      }
+      },
+      "escapeHearts": "Hatinya tetap. Satu hati membuatnya bisa selamat dari satu serangan atau satu masa kelaparan di alam liar. Tanpa hati tersisa, ditangkap berarti akhir. Usia tua adalah akhir.",
+      "escapeHeartsOld": "Hatinya tetap. Satu hati membuatnya bisa selamat dari satu serangan atau satu masa kelaparan di alam liar, dan membawanya kembali dari usia tua sebagai hewan dewasa muda. Tanpa hati tersisa, ditangkap berarti akhir.",
+      "escapeLastOfKind": "Ia yang terakhir dari jenisnya di Ark. Jika ia ditangkap tanpa hati tersisa, atau mati karena usia tua, jenisnya hilang dari Ark."
     },
     "seen": {
       "searching": "Mencari mangsa",
@@ -5251,7 +5271,11 @@
         "faqQ1": "Tempat mana yang paling aman di Ark?",
         "faqA1": "{place} punya bagian hidup tertinggi dalam {days} hari terakhir: {percent}.",
         "faqQ2": "Apa yang membunuh hewan di Ark?",
-        "faqA2": "Dalam {days} hari terakhir catatan menunjukkan {old} kematian karena usia tua, {starved} karena kelaparan, dan {eaten} dimangsa. {hunting}"
+        "faqA2": "Dalam {days} hari terakhir catatan menunjukkan {old} kematian karena usia tua, {starved} karena kelaparan, dan {eaten} dimangsa. {hunting}",
+        "introEscape": "Hewan di Ark bisa mati karena usia tua, kelaparan, atau pemangsa. Ada yang lolos, ada yang tidak. Inilah angkanya, tempat demi tempat, bersama hewan dan jenis yang paling dekat dengan akhir.",
+        "placesDescriptionEscape": "Dari hewan yang berada di setiap tempat dalam {days} hari terakhir, bagian yang masih hidup. Hewan yang sedang beristirahat setelah serangan atau masa kelaparan dihitung hidup: ia akan kembali.",
+        "recoverNoteEscape": "Serangan tidak selalu akhir: hewan yang masih punya hati lolos dalam keadaan terluka dan kembali, dan hewan yang kelaparan dibawa ke perawatan lalu kembali, jadi hanya hewan yang tidak kembali yang dihitung hilang selamanya. Usia tua adalah akhir.",
+        "recoverNoteEscapeOld": "Serangan tidak selalu akhir: hewan yang masih punya hati lolos dalam keadaan terluka dan kembali, dan hewan yang kelaparan dibawa ke perawatan lalu kembali. Hewan yang mati karena usia tua saat masih punya hati kembali sebagai hewan dewasa muda, jadi hanya hewan yang tidak kembali yang dihitung hilang selamanya."
       },
       "breeders": {
         "metaTitle": "Pembiak Tercepat di Ark: Hewan Mana yang Punya Anak Terbanyak",
@@ -5492,6 +5516,12 @@
         "p1": "Ark punya kalendernya sendiri: satu tahun Ark berlalu setiap 14 hari nyata, masing-masing dimulai pada 1 Januari, dan dunianya bergerak maju sekali setiap jam, jadi ia sudah berubah di antara kunjunganmu. Spesies yang panduan lapangannya menyebut bulan atau musim kawin hanya berkembang biak saat itu. Spesies tanpa musim yang disebut, atau yang berkembang biak sepanjang tahun, bisa berkembang biak kapan saja.",
         "p2": "Di dunia 3D, hewan yang disebut nokturnal oleh panduan lapangannya keluar pada malam hari, yang diurnal pada siang hari, dan yang krepuskular saat fajar dan senja.",
         "p3": "Hewan dengan masa hidup liar yang diketahui menjadi tua dan mati karena usia saat mencapainya. Masa hidup berjalan menurut jam Ark, jadi hewan yang hidup dua tahun di alam liar hidup sekitar empat minggu nyata di Ark. Saat hewan terakhir dari suatu spesies mati, spesies itu hilang dari Ark sampai seseorang menangkap yang lain."
+      },
+      "hearts": {
+        "title": "Hati: serangan yang berhasil dilewati",
+        "p1": "Hewan yang dibawa ke Ark lewat sebuah tangkapan memegang hati pada kartu tangkapan itu, paling banyak tiga. Satu hati adalah satu serangan yang berhasil dilewati: saat pemangsa hendak menangkap hewan yang masih punya hati, hewan itu lolos dalam keadaan terluka, beristirahat sekitar satu hari lalu keluar lagi dari rumahnya, dan pemangsa gagal mendapat makanan. Hewan yang kelaparan dan masih punya hati ditemukan lemah dan dibawa ke perawatan oleh petugas kota, lalu kembali dalam keadaan kenyang. Tidak ada yang mati lalu hidup lagi.",
+        "p2": "Hewan yang lahir di Ark tidak punya hati, dan tanpa hati tersisa, ditangkap atau kelaparan berarti akhir. Usia tua juga akhir: hati tidak bisa menahannya. Memulihkan satu hati berharga 5 Kredit dan memberi satu serangan lagi yang bisa dilewati.",
+        "p2Old": "Hewan yang lahir di Ark tidak punya hati, dan tanpa hati tersisa, ditangkap atau kelaparan berarti akhir. Usia tua belum ditahan oleh hati: hewan yang mati karena usia tua saat masih punya hati memakainya dan kembali sebagai hewan dewasa muda. Memulihkan satu hati berharga 5 Kredit dan memberi satu serangan lagi yang bisa dilewati."
       },
       "fair": {
         "title": "Bagaimana Ark dijaga tetap adil",

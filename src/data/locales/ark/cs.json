@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: nošení semen domů",
             "antRaid": "{animals}: nájezd v širokém šiku",
             "antBivouac": "{animals}: stěhování bivaku",
-            "antWeave": "{animals}: stahování listů do hnízda"
+            "antWeave": "{animals}: stahování listů do hnízda",
+            "escapedWounded": "{aPrey}: podařilo se utéct před {aPredator} se zraněním, teď se ukrývá",
+            "rescued": "{aAnimal}: nalezeno hladovějící a vzato do péče",
+            "lostHome": "{aAnimal}: přišlo o domov, jeho les byl vykácen"
         },
         "card": {
             "now": "Teď: {activity}",
@@ -776,7 +779,15 @@
             "failed": "Nepovedlo se to. Zkus to za chvíli znovu.",
             "recoveringOne": "1 se zotavuje",
             "recoveringOther": "Zotavuje se: {count}",
-            "away": "Je pryč, dokud se zotavuje, pak znovu vyjde ze svého domova."
+            "away": "Je pryč, dokud se zotavuje, pak znovu vyjde ze svého domova.",
+            "escapeLivesOne": "1 srdce v Arku",
+            "escapeLivesOther": "Srdce v Arku: {n}",
+            "escapeLivesNone": "V Arku už nezbývá žádné srdce",
+            "escapeNote": "Každé srdce dovolí tvému zvířeti v Arku přežít jeden útok nebo jedno období hladu. Srdce nezadrží stáří.",
+            "escapeNoteOld": "Každé srdce dovolí tvému zvířeti v Arku přežít jeden útok nebo jedno období hladu. Srdce také vrátí zvíře ze stáří do mladé dospělosti.",
+            "recoveringWounded": "Ukrývá se po zranění · vrátí se {when}",
+            "recoveringCare": "V péči města · vrátí se {when}",
+            "recoveringHome": "Bez domova · vrátí se {when}"
         },
         "release": {
             "button": "Vypustit do volné přírody · {credits} kreditů",
@@ -834,7 +845,10 @@
                 "epic": "Epické",
                 "legendary": "Legendární",
                 "mythic": "Mýtické"
-            }
+            },
+            "escapeHearts": "Srdce mu zůstávají. Srdce mu umožní přežít jeden útok nebo jedno období hladu v divočině. Bez jediného srdce je ulovení konečné. Stáří je konečné.",
+            "escapeHeartsOld": "Srdce mu zůstávají. Srdce mu umožní přežít jeden útok nebo jedno období hladu v divočině a vrátí ho ze stáří do mladé dospělosti. Bez jediného srdce je ulovení konečné.",
+            "escapeLastOfKind": "Je poslední svého druhu na palubě. Pokud bude ulovený bez jediného srdce nebo zemře stářím, jeho druh z Arku zmizí."
         },
         "seen": {
             "searching": "Hledá kořist",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Které místo v Ark je nejbezpečnější?",
                 "faqA1": "{place} má nejvyšší podíl živých za posledních {days} dní: {percent}.",
                 "faqQ2": "Co zabíjí zvířata v Ark?",
-                "faqA2": "Za posledních {days} dní záznam ukazuje {old} úmrtí stářím, {starved} hladem a {eaten} sežráno. {hunting}"
+                "faqA2": "Za posledních {days} dní záznam ukazuje {old} úmrtí stářím, {starved} hladem a {eaten} sežráno. {hunting}",
+                "introEscape": "Zvíře v Arku může padnout stářím, hladem nebo predátorem. Některá uniknou, jiná ne. Tady jsou čísla, místo po místě, se zvířaty a druhy nejblíže konci.",
+                "placesDescriptionEscape": "Ze zvířat, která byla v každém místě za posledních {days} dní, podíl těch, která stále žijí. Zvíře, které se ukrývá po útoku nebo po období hladu, se počítá jako živé, protože se vrátí.",
+                "recoverNoteEscape": "Útok není vždy konec: zvíře, kterému zbývá srdce, unikne zraněné a vrátí se, hladovějící zvíře se vezme do péče a vrátí se, takže za navždy ztracená se počítají jen ta, která se nevrátila. Stáří je konečné.",
+                "recoverNoteEscapeOld": "Útok není vždy konec: zvíře, kterému zbývá srdce, unikne zraněné a vrátí se, hladovějící zvíře se vezme do péče a vrátí se. Zvíře, které zemře stářím a zbývá mu srdce, se vrátí jako mladé dospělé, takže za navždy ztracená se počítají jen ta, která se nevrátila."
             },
             "breeders": {
                 "metaTitle": "Nejrychlejší plemenitelé v Ark: která zvířata mají nejvíc mláďat",

@@ -1,4 +1,5 @@
 import {NextResponse} from "next/server";
+import {readArkHeartsRules} from "@/data/ark-hearts-rules";
 import {decodeArkMoments} from "@/lib/ark-life-so-far";
 import {isArkUuid, isMissingArkFunction} from "@/lib/ark-story";
 import {createSupabasePublicClient} from "@/lib/supabase/server";
@@ -13,6 +14,10 @@ export const dynamic = "force-dynamic";
  *
  * `{moments: null}` when there is none: the function is not applied yet (PostgREST's PGRST202), the animal is unknown,
  * or the read failed. The card then shows no list.
+ *
+ * `heartsRules` beside it (`voyage_hearts_rules_v1`, docs/ark/hearts-escape.md): which rule the server runs for a heart, so a
+ * return reads "Back after lying up" while a heart is a survived attack, and "Came back for another life" otherwise. Absent
+ * from a server that does not say (the words are then as they were).
  */
 const CACHED = "public, s-maxage=60, stale-while-revalidate=300";
 
@@ -27,5 +32,6 @@ export async function GET(_request: Request, {params}: {params: {id: string}}) {
         return NextResponse.json({moments: null}, {headers: {"Cache-Control": isMissingArkFunction(error) ? "public, s-maxage=60" : "no-store"}});
     }
     // The server's answer as it is (the card decodes it again: `decodeArkMoments`), or null when it is not one.
-    return NextResponse.json({moments: decodeArkMoments(data) ? data : null}, {headers: {"Cache-Control": CACHED}});
+    const heartsRules = await readArkHeartsRules(60);
+    return NextResponse.json({moments: decodeArkMoments(data) ? data : null, ...(heartsRules ? {heartsRules} : {})}, {headers: {"Cache-Control": CACHED}});
 }

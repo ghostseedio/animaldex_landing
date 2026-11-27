@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: transporte de semillas al nido",
             "antRaid": "{animals}: incursión en un frente amplio",
             "antBivouac": "{animals}: traslado del vivac",
-            "antWeave": "{animals}: hojas unidas para el nido"
+            "antWeave": "{animals}: hojas unidas para el nido",
+            "escapedWounded": "{aPrey} se escapó de {aPredator} con heridas y se ha ocultado a reposar",
+            "rescued": "Encontraron {aAnimal} muriéndose de hambre y se hicieron cargo de su cuidado",
+            "lostHome": "{aAnimal} perdió su hogar: talaron su bosque"
         },
         "card": {
             "now": "Ahora: {activity}",
@@ -776,7 +779,15 @@
             "failed": "No se pudo completar. Inténtalo de nuevo en un momento.",
             "recoveringOne": "1 recuperándose",
             "recoveringOther": "{count} recuperándose",
-            "away": "Está fuera mientras se recupera y luego vuelve a salir de su hogar."
+            "away": "Está fuera mientras se recupera y luego vuelve a salir de su hogar.",
+            "escapeLivesOne": "1 corazón en el Ark",
+            "escapeLivesOther": "{n} corazones en el Ark",
+            "escapeLivesNone": "No quedan corazones en el Ark",
+            "escapeNote": "Cada corazón deja que tu animal sobreviva a un ataque o a un periodo de hambre en el Ark. Los corazones no pueden frenar la vejez.",
+            "escapeNoteOld": "Cada corazón deja que tu animal sobreviva a un ataque o a un periodo de hambre en el Ark. Un corazón también lo devuelve de la vejez como adulto joven.",
+            "recoveringWounded": "Herido y escondido · vuelve {when}",
+            "recoveringCare": "Al cuidado del pueblo · vuelve {when}",
+            "recoveringHome": "Perdió su hogar · vuelve {when}"
         },
         "release": {
             "button": "Liberar en la naturaleza · {credits} créditos",
@@ -834,7 +845,10 @@
                 "epic": "Épico",
                 "legendary": "Legendario",
                 "mythic": "Mítico"
-            }
+            },
+            "escapeHearts": "Conserva sus corazones. Un corazón le permite sobrevivir a un ataque o a un periodo de hambre en la naturaleza. Sin ningún corazón, la caza es definitiva. La vejez es definitiva.",
+            "escapeHeartsOld": "Conserva sus corazones. Un corazón le permite sobrevivir a un ataque o a un periodo de hambre en la naturaleza, y lo devuelve de la vejez como adulto joven. Sin ningún corazón, la caza es definitiva.",
+            "escapeLastOfKind": "Es el último de su especie a bordo. Si lo cazan sin ningún corazón, o muere de vejez, su especie desaparece del Ark."
         },
         "seen": {
             "searching": "Busca presa",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "¿Qué lugar es el más seguro del Ark?",
                 "faqA1": "{place} tiene la mayor proporción de animales vivos en los últimos {days} días: {percent}.",
                 "faqQ2": "¿Qué mata a los animales del Ark?",
-                "faqA2": "En los últimos {days} días el registro muestra {old} muertes por vejez, {starved} por hambre y {eaten} devorados. {hunting}"
+                "faqA2": "En los últimos {days} días el registro muestra {old} muertes por vejez, {starved} por hambre y {eaten} devorados. {hunting}",
+                "introEscape": "Un animal del Ark puede caer por vejez, hambre o un depredador. Unos escapan y otros no. Estas son las cifras, lugar por lugar, con los animales y especies más cerca del final.",
+                "placesDescriptionEscape": "De los animales que estuvieron en cada lugar en los últimos {days} días, la proporción que sigue viva. Un animal escondido tras un ataque o un periodo de hambre cuenta como vivo, porque vuelve.",
+                "recoverNoteEscape": "Un ataque no siempre es el final: un animal al que le queda un corazón escapa herido y vuelve, y uno que se muere de hambre es acogido y vuelve, así que solo cuentan como perdidos para siempre los que no volvieron. La vejez es definitiva.",
+                "recoverNoteEscapeOld": "Un ataque no siempre es el final: un animal al que le queda un corazón escapa herido y vuelve, y uno que se muere de hambre es acogido y vuelve. Uno que muere de vejez teniendo aún un corazón vuelve como adulto joven, así que solo cuentan como perdidos para siempre los que no volvieron."
             },
             "breeders": {
                 "metaTitle": "Los que más se reproducen en el Ark: qué animales tienen más crías",

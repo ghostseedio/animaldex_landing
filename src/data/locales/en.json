@@ -3348,7 +3348,13 @@
       "arkRestoring": "Restoring…",
       "lives": "",
       "life": "",
-      "note": ""
+      "note": "",
+      "arkTitleEscape": "Hearts in the Ark",
+      "arkLifeEscape": "1 heart in the Ark",
+      "arkLivesEscape": "{n} hearts in the Ark",
+      "arkNoneEscape": "No hearts left in the Ark",
+      "arkNoteEscape": "Each heart lets your animal survive one attack or one hungry spell in the Ark. Hearts can't hold back old age.",
+      "arkNoteEscapeOld": "Each heart lets your animal survive one attack or one hungry spell in the Ark. A heart also brings it back from old age as a young adult."
     },
     "debates": {
       "tab": "Debates"
@@ -4672,7 +4678,10 @@
       "antSeeds": "{animals} are carrying seeds home",
       "antRaid": "{animals} are raiding in a broad swarm",
       "antBivouac": "{animals} are moving their bivouac",
-      "antWeave": "{animals} are pulling leaves together for their nest"
+      "antWeave": "{animals} are pulling leaves together for their nest",
+      "escapedWounded": "{aPrey} got away from {aPredator}, wounded, and is lying up",
+      "rescued": "{aAnimal} was found starving and taken into care",
+      "lostHome": "{aAnimal} lost its home: its forest was cut down"
     },
     "card": {
       "now": "Now: {activity}",
@@ -4995,7 +5004,15 @@
       "failed": "That didn't go through. Try again in a moment.",
       "recoveringOne": "1 recovering",
       "recoveringOther": "{count} recovering",
-      "away": "It's away while it recovers, then walks out of its home again."
+      "away": "It's away while it recovers, then walks out of its home again.",
+      "escapeLivesOne": "1 heart in the Ark",
+      "escapeLivesOther": "{n} hearts in the Ark",
+      "escapeLivesNone": "No hearts left in the Ark",
+      "escapeNote": "Each heart lets your animal survive one attack or one hungry spell in the Ark. Hearts can't hold back old age.",
+      "escapeNoteOld": "Each heart lets your animal survive one attack or one hungry spell in the Ark. A heart also brings it back from old age as a young adult.",
+      "recoveringWounded": "Lying up, wounded · returns {when}",
+      "recoveringCare": "In the town's care · returns {when}",
+      "recoveringHome": "Lost its home · returns {when}"
     },
     "release": {
       "button": "Release to the wild · {credits} Credits",
@@ -5053,7 +5070,10 @@
         "epic": "Epic",
         "legendary": "Legendary",
         "mythic": "Mythic"
-      }
+      },
+      "escapeHearts": "It keeps its hearts. A heart lets it survive one attack or one hungry spell in the wild. With no heart left, a catch is final. Old age is final.",
+      "escapeHeartsOld": "It keeps its hearts. A heart lets it survive one attack or one hungry spell in the wild, and brings it back from old age as a young adult. With no heart left, a catch is final.",
+      "escapeLastOfKind": "It is the last of its kind aboard. If it is caught with no heart left, or dies of old age, its kind is gone from the Ark."
     },
     "seen": {
       "searching": "Searching for prey",
@@ -5266,7 +5286,11 @@
         "faqQ1": "Which place is safest in the Ark?",
         "faqA1": "{place} has the highest share still alive in the last {days} days: {percent}.",
         "faqQ2": "What kills animals in the Ark?",
-        "faqA2": "In the last {days} days the record shows {old} deaths of old age, {starved} of hunger and {eaten} by predators. {hunting}"
+        "faqA2": "In the last {days} days the record shows {old} deaths of old age, {starved} of hunger and {eaten} by predators. {hunting}",
+        "introEscape": "An animal in the Ark can fall to old age, hunger or a predator. Some get away, some do not. These are the numbers, place by place, with the animals and kinds closest to the end.",
+        "placesDescriptionEscape": "Of the animals that were in each place in the last {days} days, the share still alive. An animal lying up after an attack or a hungry spell counts as alive: it returns.",
+        "recoverNoteEscape": "An attack is not always the end: an animal with a heart left gets away wounded and returns, and a starving one is taken into care and returns, so only animals that did not return count as lost for good. Old age is final.",
+        "recoverNoteEscapeOld": "An attack is not always the end: an animal with a heart left gets away wounded and returns, and a starving one is taken into care and returns. One that dies of old age with a heart left returns as a young adult, so only animals that did not return count as lost for good."
       },
       "breeders": {
         "metaTitle": "Ark Fastest Breeders: Which Animals Have the Most Young",
@@ -5507,6 +5531,12 @@
         "p1": "The Ark keeps its own calendar: one Ark year passes every 14 real days, each starting on 1 January, and the world moves on once an hour, so it has changed between your visits. A species whose field guide names breeding months or seasons breeds only then. One with no named season, or one that breeds all year, can breed at any time.",
         "p2": "In the 3D world, animals the field guide calls nocturnal are out at night, diurnal ones by day, and crepuscular ones at dawn and dusk.",
         "p3": "Animals with a known wild lifespan grow old and die of old age when they reach it. Lifespans run on the Ark's clock, so an animal that lives two years in the wild lives about four real weeks aboard. When the last animal of a species dies, that species is gone from the Ark until someone captures another."
+      },
+      "hearts": {
+        "title": "Hearts: a survived attack",
+        "p1": "An animal brought aboard by a capture holds the hearts on that capture's card, up to three. A heart is one survived attack: when a hunter would catch an animal that holds a heart, it gets away wounded, lies up for about a day and walks out of its home again, and the hunter misses its meal. A starving animal with a heart is found weak, taken into care by the town's carers and returns fed. Nothing dies and comes back.",
+        "p2": "Animals born aboard hold no hearts, and with no heart left a catch or starvation is final. Old age is final too: hearts do not hold it back. Restoring a heart costs 5 Credits and buys one more survived attack.",
+        "p2Old": "Animals born aboard hold no hearts, and with no heart left a catch or starvation is final. Old age is not held back by hearts yet: an animal that dies of old age with a heart left spends it and returns as a young adult. Restoring a heart costs 5 Credits and buys one more survived attack."
       },
       "fair": {
         "title": "How the Ark is kept fair",

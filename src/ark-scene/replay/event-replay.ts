@@ -22,6 +22,7 @@
 import type {ArkSnapshot, ArkAnimal} from "@/ark-scene/types";
 import type {ArkCastRecord} from "@/ark-scene/replay/cast";
 import {arkActStart, arkActStartOf} from "@/lib/ark-act-hold";
+import {escapeHearts, escapeWounded} from "@/ark-scene/live/escape-lines";
 import {arkEventRows, decodeArkEvents, decodeArkMealEncounter, planArkReplay, type ArkAct, type ArkEvent, type ArkEventAnimal, type ArkMealEncounter} from "@/lib/ark-life";
 
 export const ARK_REPLAY_KINDS = ["mated", "birth", "death", "extinct", "meal", "escaped", "last_stand", "released"] as const;
@@ -46,7 +47,8 @@ export type ArkReplayFeed = {
     births?: Array<{key: string; parents: string[]; young: string[]; t0: number}>;
     deaths?: Array<{key: string; animal: ArkEventAnimal; t0: number; cause?: "old" | "starved" | "wounds"}>;
     meals?: Array<Extract<ArkAct, {kind: "meal"}>>;
-    escapes?: Array<{key: string; prey: string; predator: string; t0: number; encounter?: ArkMealEncounter}>;
+    /** `hurt`, `hearts`: a wounded escape (a heart spent on a survived attack, `hearts_escape`) and the hearts it has left, for the headline only. */
+    escapes?: Array<{key: string; prey: string; predator: string; t0: number; encounter?: ArkMealEncounter; hurt?: true; hearts?: number}>;
     /** A hatching: the scene's own replay act (`play`), a clutch that hatches where the young stand. */
     play?: ArkAct[];
     /** A release: the animal comes ashore at its wild home with the entrance an arrival has; `from`: its record in the zoo it left. */
@@ -239,7 +241,9 @@ export function planArkEventReplay(eventId: string | number, raw: unknown, snaps
             if (!own.animal || !own.other) return none("does not name the prey and the hunter");
             const encounter = decodeArkMealEncounter(row.encounter ?? rowOf(row.payload)?.encounter);
             const step = arkActStart(t0, encounter?.t);
-            return {...base, t0: step, cast: [member("prey", own.animal), member("predator", own.other)], marks: [], feed: {escapes: [{key: `escaped:${wanted}`, prey: own.animal.id, predator: own.other.id, t0: step, ...(encounter ? {encounter} : {})}]}};
+            const hurt = escapeWounded(row);
+            const hearts = hurt ? escapeHearts(row) : undefined;
+            return {...base, t0: step, cast: [member("prey", own.animal), member("predator", own.other)], marks: [], feed: {escapes: [{key: `escaped:${wanted}`, prey: own.animal.id, predator: own.other.id, t0: step, ...(encounter ? {encounter} : {}), ...(hurt ? {hurt: true as const} : {}), ...(hearts !== undefined ? {hearts} : {})}]}};
         }
         case "last_stand": {
             // Provisional: the last of its kind in the wild (the row's animal), and a predator of it in reach when the row names one.

@@ -18,6 +18,7 @@ import RankingMethodology from "@/app/[locale]/(composited)/rankings/_components
 import RankingTable from "@/app/[locale]/(composited)/rankings/_components/ranking-table";
 import RelatedRankingsSection from "@/app/[locale]/(composited)/rankings/_components/related-rankings-section";
 import {ARK_RANKING_UPDATED} from "@/data/ark-ranking-pages";
+import {readArkHeartsRules} from "@/data/ark-hearts-rules";
 import {readArkSurvivalReport} from "@/data/ark-rankings";
 import {ARK_RANK_WINDOW_DAYS, arkIsVertebrate} from "@/lib/ark-rankings";
 import {
@@ -31,6 +32,7 @@ import {
     arkSafestPlace,
     arkPercent
 } from "@/lib/ark-rankings-text";
+import {arkSurvivalHeartsWords} from "@/lib/ark-rankings-words";
 import {fillArkWords} from "@/lib/ark-words";
 
 /**
@@ -57,8 +59,9 @@ export async function arkSurvivalMetadata(props: ArkRankingProps): Promise<Metad
 
 export async function ArkSurvivalView(props: ArkRankingProps) {
     const {locale, rankings: w, readerLocale, dir, time} = await arkRankingContext(props);
-    const s = w.survival;
-    const [report, related, arkIconOf] = await Promise.all([readArkSurvivalReport(), arkRelatedItems(SLUG, locale, w), arkIconResolver()]);
+    const [report, related, arkIconOf, heartsRules] = await Promise.all([readArkSurvivalReport(), arkRelatedItems(SLUG, locale, w), arkIconResolver(), readArkHeartsRules(3600)]);
+    // A heart a survived attack (the server's `hearts_escape`): "some get away", not "some come back". Off, the words are as they were.
+    const s = arkSurvivalHeartsWords(w.survival, heartsRules);
     const title = s.title;
     const modified = report?.asOf ? report.asOf.slice(0, 10) : ARK_RANKING_UPDATED;
     const updatedValue = new Intl.DateTimeFormat(readerLocale, {dateStyle: "long"}).format(new Date(report?.asOf ?? ARK_RANKING_UPDATED));

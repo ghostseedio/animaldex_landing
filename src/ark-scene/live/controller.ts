@@ -33,6 +33,8 @@ import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt
 import {crisisText, recordItems} from "@/ark-scene/live/crisis-lines"; // E4 (the crisis layer)
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
+import {heartsNotes, rescueItems, rescueText} from "@/ark-scene/live/hearts-lines";
+import {arkHeartsEscape, decodeArkHeartsRules, type ArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {cacheEventItems, cacheEventText, signatureCues, signatureEventItems, signatureEventText} from "@/ark-scene/live/signature-events"; // SIG-EVENTS: saved signature moves
 import {richItems, richNotes} from "@/ark-scene/live/rich-lines"; // decision 434
 import {careItems, careNotes} from "@/ark-scene/live/care-lines"; // GIFTS-CARE, decision 387
@@ -193,6 +195,8 @@ export class ArkLive {
     private crisesAt = -Infinity;
     private crisesEvery = CRISES_FIRST_MS;
     private readonly lineText: (line: ArkLiveLine) => string;
+    /** Which rule the server runs for a heart, from the events read (`heartsRules`): null until read, or from a server that does not say (today's rule). */
+    private heartsRules: ArkHeartsRules | null = null;
 
     constructor(private readonly options: ArkLiveOptions) {
         const read = words(options.words);
@@ -210,7 +214,7 @@ export class ArkLive {
             })();
             if (stored === "1" || stored === "0") collapsed = stored === "1";
         }
-        this.lineText = (line) => signatureEventText(line, this.text, this.locale) ?? cacheEventText(line, this.text) ?? signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? releaseText(line, this.text) ?? mateText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? crisisText(line, this.text) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale);
+        this.lineText = (line) => signatureEventText(line, this.text, this.locale) ?? cacheEventText(line, this.text) ?? signatureText(line, this.text) ?? escapeText(line, this.text, this.locale) ?? rescueText(line, this.text, this.locale) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? releaseText(line, this.text) ?? mateText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? crisisText(line, this.text) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale);
         this.crisesAt = performance.now();
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
@@ -390,8 +394,9 @@ export class ArkLive {
         else if (!this.seenLoading && this.options.seen !== false && next.animals.some((animal) => animal.lone === true || animal.state)) void this.loadSeen();
     }
 
-    /** Event rows in the server's shape (development's feed): said as the live ones are. */
-    events(raw: unknown) {
+    /** Event rows in the server's shape (development's feed): said as the live ones are. `heartsRules`: the server's rule for a heart, as `/api/ark/events` would send it. */
+    events(raw: unknown, heartsRules?: unknown) {
+        if (heartsRules !== undefined) this.heartsRules = decodeArkHeartsRules(heartsRules);
         // (V1: everyone the rows' acts name is brought into the scene first; the first time, once `seen/` has loaded.)
         const casting = this.casting(raw);
         if (casting) void casting.then(() => this.eventsNow(raw));
@@ -444,8 +449,10 @@ export class ArkLive {
 
     /** p5 (humans): logging's deaths (`forest-lines.ts`): said once, and each body laid where the server judged it. */
     private deforested(raw: unknown, from: number) {
-        const items = forestItems(raw, this.current, from, (key) => this.said.has(key));
-        const deaths = forestDeathRecords(raw, this.current, from).map((d) => ({key: d.key, animal: d.animal, t0: d.t0, at: d.spot}));
+        // A heart a survived attack: a logging recovery is a lost home, said so, and nothing died: no body is laid for it.
+        const lost = arkHeartsEscape(this.heartsRules);
+        const items = forestItems(raw, this.current, from, (key) => this.said.has(key), lost);
+        const deaths = forestDeathRecords(raw, this.current, from).filter((d) => !(lost && d.hearts !== undefined)).map((d) => ({key: d.key, animal: d.animal, t0: d.t0, at: d.spot}));
         for (const item of items) this.remember(`event:${item.id}`);
         if (deaths.length) {
             try {
@@ -503,6 +510,17 @@ export class ArkLive {
         if (rich.length) this.push(rich);
         try {
             const notes = richNotes(raw, this.text, this.locale);
+            if (notes.length) this.options.scene()?.noteRecord?.(notes);
+        } catch {
+            // (A scene without animal logs: the log says them all the same.)
+        }
+        // A heart is a survived attack (`hearts-lines.ts`, behind the server's `hearts_escape`): an animal found starving and taken
+        // into care, and the wounded escapes of the animals' own logs. (A wounded escape's line is the escapes' above.)
+        const rescued = rescueItems(raw, from, (key) => this.said.has(key));
+        for (const item of rescued) this.remember(item.id);
+        if (rescued.length) this.push(rescued);
+        try {
+            const notes = heartsNotes(raw, this.text, this.locale);
             if (notes.length) this.options.scene()?.noteRecord?.(notes);
         } catch {
             // (A scene without animal logs: the log says them all the same.)
@@ -762,12 +780,14 @@ export class ArkLive {
         let more = false;
         fetch(`${this.options.eventsUrl}?since=${encodeURIComponent(since)}`, {cache: "no-store"})
             .then((response) => (response.ok ? response.json() : null))
-            .then(async (body: {events?: unknown; available?: boolean; more?: boolean} | null) => {
+            .then(async (body: {events?: unknown; available?: boolean; more?: boolean; heartsRules?: unknown} | null) => {
                 if (this.disposed) return;
                 if (!body || body.available === false) {
                     this.newcomers(before, next);
                     return;
                 }
+                // (Which rule the server runs for a heart: absent from one that does not say, and the lines are today's.)
+                this.heartsRules = decodeArkHeartsRules(body.heartsRules);
                 // (V1: everyone the rows' acts name is brought into the scene before the layers are fed.)
                 await this.casting(body.events ?? []);
                 if (this.disposed) return;

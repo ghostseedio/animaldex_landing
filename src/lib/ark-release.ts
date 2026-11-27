@@ -13,6 +13,7 @@
  * Privacy: the owner's own quote and balance only; the public list names no person and no price.
  */
 
+import {arkHeartsEscape, arkHeartsVariant, arkOldAgeFinal, type ArkHeartsRules} from "@/lib/ark-hearts-rules";
 import {fillArkWords} from "@/lib/ark-words";
 
 /** The owner-approved ladder (decision 389, audit section 4.3), for words only: the server decides what is charged. */
@@ -232,6 +233,13 @@ export type ArkReleaseWords = {
     /** The snapshot's `last_of_kind`: no other living animal or egg of its kind is aboard. */
     lastOfKind: string;
     hearts: string;
+    /**
+     * A heart a survived attack (behind `hearts_escape`, docs/ark/hearts-escape.md): the words that take `hearts` and `lastOfKind`
+     * (old age final) or `hearts` (old age still returns: `escapeHeartsOld`) while it is. `arkReleaseWords(raw, rules)` swaps them in.
+     */
+    escapeHearts: string;
+    escapeHeartsOld: string;
+    escapeLastOfKind: string;
     rules: string;
     price: string;
     balance: string;
@@ -268,6 +276,9 @@ export const ARK_RELEASE_ENGLISH: ArkReleaseWords = {
     warn: "Zoo-raised animals struggle at first. Do its step to help it survive.",
     lastOfKind: "It is the last of its kind aboard. If it dies with no heart left, its kind is gone from the Ark.",
     hearts: "It keeps its hearts. If it dies with a heart left, it loses that heart and comes back in the wild. With no heart left, it dies.",
+    escapeHearts: "It keeps its hearts. A heart lets it survive one attack or one hungry spell in the wild. With no heart left, a catch is final. Old age is final.",
+    escapeHeartsOld: "It keeps its hearts. A heart lets it survive one attack or one hungry spell in the wild, and brings it back from old age as a young adult. With no heart left, a catch is final.",
+    escapeLastOfKind: "It is the last of its kind aboard. If it is caught with no heart left, or dies of old age, its kind is gone from the Ark.",
     rules: "No refund once it is released, whatever happens to it. One release a day, one of each kind a week.",
     price: "{credits} Credits",
     balance: "You have {credits}",
@@ -308,7 +319,7 @@ export const ARK_RELEASE_ENGLISH: ArkReleaseWords = {
 };
 
 /** The reader's `ark.release` over English, key by key. */
-export function arkReleaseWords(raw: unknown): ArkReleaseWords {
+export function arkReleaseWords(raw: unknown, rules?: ArkHeartsRules | null): ArkReleaseWords {
     const own = record(raw) ?? {};
     const reasonOwn = record(own.reason) ?? {};
     const tierOwn = record(own.tier) ?? {};
@@ -325,6 +336,12 @@ export function arkReleaseWords(raw: unknown): ArkReleaseWords {
     for (const key of ARK_RELEASE_TIERS) {
         const value = tierOwn[key];
         if (typeof value === "string" && value.trim()) out.tier[key] = value;
+    }
+    // A heart a survived attack: its words take the lives' place (old age final: also the last-of-its-kind line; while old age
+    // still returns, that line stays true as it is). Without the rule the words are exactly the lives'.
+    if (arkHeartsEscape(rules)) {
+        out.hearts = arkHeartsVariant(rules, out.hearts, out.escapeHearts, out.escapeHeartsOld);
+        if (arkOldAgeFinal(rules)) out.lastOfKind = out.escapeLastOfKind;
     }
     return out;
 }

@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: frø bæres hjem",
             "antRaid": "{animals}: plyndringstogt i bred front",
             "antBivouac": "{animals}: bivuakken flytter",
-            "antWeave": "{animals}: blade trækkes sammen til reden"
+            "antWeave": "{animals}: blade trækkes sammen til reden",
+            "escapedWounded": "{aPrey} slap væk fra {aPredator}, såret, og ligger lavt",
+            "rescued": "{aAnimal} blev fundet sultende og taget i pleje",
+            "lostHome": "{aAnimal} mistede sit hjem: dets skov blev fældet"
         },
         "card": {
             "now": "Nu: {activity}",
@@ -776,7 +779,15 @@
             "failed": "Det gik ikke igennem. Prøv igen om lidt.",
             "recoveringOne": "1 kommer sig",
             "recoveringOther": "{count} kommer sig",
-            "away": "Det er væk, mens det kommer sig, og går så ud af sit hjem igen."
+            "away": "Det er væk, mens det kommer sig, og går så ud af sit hjem igen.",
+            "escapeLivesOne": "1 hjerte i Ark",
+            "escapeLivesOther": "{n} hjerter i Ark",
+            "escapeLivesNone": "Ingen hjerter tilbage i Ark",
+            "escapeNote": "Hvert hjerte lader dit dyr overleve ét angreb eller én sultperiode i Ark. Hjerter kan ikke holde alderdom tilbage.",
+            "escapeNoteOld": "Hvert hjerte lader dit dyr overleve ét angreb eller én sultperiode i Ark. Et hjerte bringer det også tilbage fra alderdom som ung voksen.",
+            "recoveringWounded": "Ligger lavt, såret · vender tilbage {when}",
+            "recoveringCare": "I byens pleje · vender tilbage {when}",
+            "recoveringHome": "Har mistet sit hjem · vender tilbage {when}"
         },
         "release": {
             "button": "Sæt fri i naturen · {credits} kreditter",
@@ -834,7 +845,10 @@
                 "epic": "Episk",
                 "legendary": "Legendarisk",
                 "mythic": "Mytisk"
-            }
+            },
+            "escapeHearts": "Det beholder sine hjerter. Et hjerte lader det overleve ét angreb eller én sultperiode i naturen. Uden et hjerte tilbage er en fangst endelig. Alderdom er endelig.",
+            "escapeHeartsOld": "Det beholder sine hjerter. Et hjerte lader det overleve ét angreb eller én sultperiode i naturen og bringer det tilbage fra alderdom som ung voksen. Uden et hjerte tilbage er en fangst endelig.",
+            "escapeLastOfKind": "Det er det sidste af sin art om bord. Bliver det fanget uden et hjerte tilbage, eller dør det af alderdom, er arten væk fra Ark."
         },
         "seen": {
             "searching": "Leder efter bytte",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Hvilket sted er sikrest i Ark?",
                 "faqA1": "{place} har den højeste andel i live de sidste {days} dage: {percent}.",
                 "faqQ2": "Hvad dræber dyr i Ark?",
-                "faqA2": "De sidste {days} dage viser registreringen {old} dødsfald af alderdom, {starved} af sult og {eaten} spist. {hunting}"
+                "faqA2": "De sidste {days} dage viser registreringen {old} dødsfald af alderdom, {starved} af sult og {eaten} spist. {hunting}",
+                "introEscape": "Et dyr i Ark kan falde for alderdom, sult eller et rovdyr. Nogle slipper væk, andre gør ikke. Her er tallene, sted for sted, med de dyr og arter, der er tættest på enden.",
+                "placesDescriptionEscape": "Af de dyr, der var på hvert sted de sidste {days} dage, andelen der stadig lever. Et dyr, der ligger lavt efter et angreb eller en sultperiode, tæller som levende, fordi det vender tilbage.",
+                "recoverNoteEscape": "Et angreb er ikke altid enden: et dyr med et hjerte tilbage slipper væk såret og vender tilbage, og et sultent dyr tages i pleje og vender tilbage, så kun dyr, der ikke kom tilbage, tæller som tabt for altid. Alderdom er endelig.",
+                "recoverNoteEscapeOld": "Et angreb er ikke altid enden: et dyr med et hjerte tilbage slipper væk såret og vender tilbage, og et sultent dyr tages i pleje og vender tilbage. Et dyr, der dør af alderdom med et hjerte tilbage, vender tilbage som ung voksen, så kun dyr, der ikke kom tilbage, tæller som tabt for altid."
             },
             "breeders": {
                 "metaTitle": "Arks hurtigste formerere: hvilke dyr har flest unger",

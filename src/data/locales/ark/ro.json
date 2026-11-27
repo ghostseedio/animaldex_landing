@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: transportul semințelor acasă",
             "antRaid": "{animals}: raid pe un front larg",
             "antBivouac": "{animals}: mutarea bivuacului",
-            "antWeave": "{animals}: frunze trase împreună pentru cuib"
+            "antWeave": "{animals}: frunze trase împreună pentru cuib",
+            "escapedWounded": "{aPrey} a scăpat de {aPredator} cu o rană și se ascunde ca să se odihnească",
+            "rescued": "{aAnimal} a fost găsit murind de foame și luat în grijă",
+            "lostHome": "{aAnimal} și-a pierdut casa: pădurea în care trăia a fost tăiată"
         },
         "card": {
             "now": "Acum: {activity}",
@@ -776,7 +779,15 @@
             "failed": "Nu a mers. Încearcă din nou peste puțin timp.",
             "recoveringOne": "1 se reface",
             "recoveringOther": "{count} se refac",
-            "away": "E plecat cât se reface, apoi iese din nou din casa lui."
+            "away": "E plecat cât se reface, apoi iese din nou din casa lui.",
+            "escapeLivesOne": "1 inimă în Ark",
+            "escapeLivesOther": "{n} inimi în Ark",
+            "escapeLivesNone": "Nu mai sunt inimi în Ark",
+            "escapeNote": "Fiecare inimă îi permite animalului tău să supraviețuiască unui atac sau unei perioade de foame în Ark. Inimile nu pot opri bătrânețea.",
+            "escapeNoteOld": "Fiecare inimă îi permite animalului tău să supraviețuiască unui atac sau unei perioade de foame în Ark. O inimă îl aduce înapoi și din bătrânețe, ca adult tânăr.",
+            "recoveringWounded": "Se ascunde, cu o rană · revine {when}",
+            "recoveringCare": "În grija orașului · revine {when}",
+            "recoveringHome": "Și-a pierdut casa · revine {when}"
         },
         "release": {
             "button": "Eliberează în sălbăticie · {credits} credite",
@@ -834,7 +845,10 @@
                 "epic": "Epic",
                 "legendary": "Legendar",
                 "mythic": "Mitic"
-            }
+            },
+            "escapeHearts": "Își păstrează inimile. O inimă îi permite să supraviețuiască unui atac sau unei perioade de foame în sălbăticie. Fără nicio inimă rămasă, prinderea e definitivă. Bătrânețea e definitivă.",
+            "escapeHeartsOld": "Își păstrează inimile. O inimă îi permite să supraviețuiască unui atac sau unei perioade de foame în sălbăticie și îl aduce înapoi din bătrânețe ca adult tânăr. Fără nicio inimă rămasă, prinderea e definitivă.",
+            "escapeLastOfKind": "Este ultimul din specia lui la bord. Dacă este prins fără nicio inimă rămasă sau moare de bătrânețe, specia lui dispare din Ark."
         },
         "seen": {
             "searching": "Caută pradă",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Care este cel mai sigur loc din Ark?",
                 "faqA1": "{place} are cea mai mare parte în viață în ultimele {days} zile: {percent}.",
                 "faqQ2": "Ce omoară animalele din Ark?",
-                "faqA2": "În ultimele {days} zile registrul arată {old} decese de bătrânețe, {starved} de foame și {eaten} mâncați. {hunting}"
+                "faqA2": "În ultimele {days} zile registrul arată {old} decese de bătrânețe, {starved} de foame și {eaten} mâncați. {hunting}",
+                "introEscape": "Un animal din Ark poate cădea din cauza bătrâneții, a foamei sau a unui prădător. Unele scapă, altele nu. Iată cifrele, loc cu loc, cu animalele și speciile cele mai aproape de sfârșit.",
+                "placesDescriptionEscape": "Dintre animalele care au fost în fiecare loc în ultimele {days} zile, partea care mai trăiește. Un animal ascuns după un atac sau o perioadă de foame se numără ca viu: se întoarce.",
+                "recoverNoteEscape": "Un atac nu e mereu sfârșitul: un animal cu o inimă rămasă scapă rănit și se întoarce, iar unul înfometat e luat în grijă și se întoarce, așa că doar cele care nu s-au întors se numără ca pierdute definitiv. Bătrânețea e definitivă.",
+                "recoverNoteEscapeOld": "Un atac nu e mereu sfârșitul: un animal cu o inimă rămasă scapă rănit și se întoarce, iar unul înfometat e luat în grijă și se întoarce. Unul care moare de bătrânețe cu o inimă rămasă se întoarce ca adult tânăr, așa că doar cele care nu s-au întors se numără ca pierdute definitiv."
             },
             "breeders": {
                 "metaTitle": "Cei mai rapizi crescători din Ark: ce animale au cei mai mulți pui",

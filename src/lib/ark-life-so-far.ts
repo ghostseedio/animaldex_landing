@@ -200,6 +200,8 @@ export const ARK_LIFE_SO_FAR_ENGLISH = {
     movedZoo: "Moved to a zoo",
     rehomed: "Rehomed",
     revived: "Came back for another life",
+    /** A heart a survived attack (the server's `hearts_escape`, docs/ark/hearts-escape.md): nothing died, it lay up and returned. `arkMomentText`'s `escape`. */
+    revivedEscape: "Back after lying up",
     diedOld: "Died of old age",
     diedOldPeaceful: "Died peacefully of old age",
     eatenBy: "Eaten by {predator}",
@@ -225,7 +227,7 @@ const possessive = (name: string) => `${arkWithArticle(name)}'s`;
  * One moment in words. `self`: the animal's own kind's name (a mate of its own kind is "Mated", not "Mated with a Plains
  * Zebra"); `human`: a person aboard (old age is "peaceful", as the card's life story says it).
  */
-export function arkMomentText(moment: ArkMoment, options: {self?: string | null; human?: boolean; words?: Partial<ArkLifeSoFarWords>} = {}): string {
+export function arkMomentText(moment: ArkMoment, options: {self?: string | null; human?: boolean; /** A heart is a survived attack now (the server's rule): a return reads "Back after lying up", not another life. */ escape?: boolean; words?: Partial<ArkLifeSoFarWords>} = {}): string {
     const w: ArkLifeSoFarWords = {...ARK_LIFE_SO_FAR_ENGLISH, ...(options.words ?? {})};
     const other = (r: ArkMomentRef | undefined) => (r?.name && r.name !== options.self ? arkWithArticle(r.name) : null);
     switch (moment.kind) {
@@ -293,7 +295,7 @@ export function arkMomentText(moment: ArkMoment, options: {self?: string | null;
         case "rehomed":
             return w.rehomed;
         case "revived":
-            return w.revived;
+            return options.escape ? w.revivedEscape : w.revived;
         case "died":
             if (moment.way === "death_old" || moment.way === "died_old") return options.human ? w.diedOldPeaceful : w.diedOld;
             if (moment.way === "eaten") return moment.predator ? fill(w.eatenBy, {predator: arkWithArticle(moment.predator)}) : w.eaten;

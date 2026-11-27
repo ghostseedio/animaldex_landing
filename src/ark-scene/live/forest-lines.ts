@@ -9,6 +9,11 @@
  * Read here from the server's rows as they come, with their own words (as `escape-lines.ts`): with the scene, never in
  * the Ark page's static JavaScript. The rows' animals are decoded as a death's are (`decodeArkEvents` on the same row
  * read as a `death_old`), so the body and the line name it exactly as an old-age death would.
+ *
+ * A heart is a survived attack (behind `hearts_escape`, docs/ark/hearts-escape.md): the same record, a `deforested` row whose
+ * `lives` is not final, is a LOST HOME: the animal is away until its stand has grown back, and returns. Said that way ("A Sun
+ * Bear lost its home: its forest was cut down · 2 ♥ left") and, since nothing died, with no body laid in the cleared stand.
+ * With the switch off it is read as it always was.
  */
 
 import {arkHeartsLeftText, arkWithArticle, type ArkLiveItem, type ArkLiveText} from "@/lib/ark-live-log";
@@ -17,6 +22,7 @@ import {fillArkWords} from "@/lib/ark-words";
 import type {ArkSnapshot} from "@/ark-scene/types";
 
 const ENGLISH = "{aAnimal} died: its forest was cut down";
+const ENGLISH_LOST = "{aAnimal} lost its home: its forest was cut down";
 
 type Spot = {x?: unknown; z?: unknown; standId?: unknown; k?: unknown; until?: unknown; lives?: {heartsLeft?: unknown; final?: unknown} | null};
 /** The server's row: the judged home in `forest` (`voyage_events_since_v1`), or in `payload` (the raw event). */
@@ -47,21 +53,25 @@ export function forestDeathRecords(raw: unknown, snapshot: ArkSnapshot | null, f
     return out;
 }
 
-/** The rows' logging deaths as log items, oldest first (a death's place, dot and tap). */
-export function forestItems(raw: unknown, snapshot: ArkSnapshot | null, from: number, said: (key: string) => boolean): ArkLiveItem[] {
+/**
+ * The rows' logging deaths as log items, oldest first (a death's place, dot and tap). `lost`: a heart is a survived attack
+ * (`hearts_escape` on): one that recovers (its `lives` not final) is said as a lost home.
+ */
+export function forestItems(raw: unknown, snapshot: ArkSnapshot | null, from: number, said: (key: string) => boolean, lost = false): ArkLiveItem[] {
     const items: ArkLiveItem[] = [];
     for (const d of forestDeathRecords(raw, snapshot, from)) {
         const id = `event:${d.id}`;
         if (said(id)) continue;
-        items.push({id: d.id, kind: "death", say: "deforested", source: "server", key: `deforested:${d.animal.species_profile_id}`, animal: d.animal.name, other: null, count: 1, eggs: null, ...(d.hearts !== undefined ? {hearts: d.hearts} : {}), focus: {animalId: null, speciesId: d.animal.species_profile_id, zone: d.animal.zone}});
+        const home = lost && d.hearts !== undefined;
+        items.push({id: d.id, kind: "death", say: "deforested", source: "server", key: `deforested:${d.animal.species_profile_id}`, animal: d.animal.name, other: null, count: 1, eggs: null, ...(d.hearts !== undefined ? {hearts: d.hearts} : {}), ...(home ? {lost: true as const} : {}), focus: {animalId: null, speciesId: d.animal.species_profile_id, zone: d.animal.zone}});
     }
     return items;
 }
 
 /** A logging death's words, or null for any other line; a carded one's hearts left after it, as a death's line has them. */
-export function forestText(line: Pick<ArkLiveItem, "animal"> & Partial<Pick<ArkLiveItem, "say" | "hearts">>, words: ArkLiveText, locale = "en"): string | null {
+export function forestText(line: Pick<ArkLiveItem, "animal"> & Partial<Pick<ArkLiveItem, "say" | "hearts" | "lost">>, words: ArkLiveText, locale = "en"): string | null {
     if (line.say !== "deforested") return null;
-    const said = fillArkWords(ENGLISH, {aAnimal: arkWithArticle(line.animal, words)});
+    const said = fillArkWords(line.lost ? words.live?.lostHome ?? ENGLISH_LOST : ENGLISH, {aAnimal: arkWithArticle(line.animal, words)});
     const text = said ? said[0].toLocaleUpperCase() + said.slice(1) : said;
     if (typeof line.hearts !== "number") return text;
     return fillArkWords(words.live?.withHearts ?? "{line} · {hearts}", {line: text, hearts: arkHeartsLeftText(line.hearts, words, locale)});

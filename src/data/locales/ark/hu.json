@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: magvak hazaszállítása",
             "antRaid": "{animals}: portyázás széles fronton",
             "antBivouac": "{animals}: a bivak költözése",
-            "antWeave": "{animals}: levelek összehúzása a fészekhez"
+            "antWeave": "{animals}: levelek összehúzása a fészekhez",
+            "escapedWounded": "{aPrey} sebesülten elmenekült {aPredator} elől, és rejtőzve lábadozik",
+            "rescued": "{aAnimal} éhezve került elő, és gondozásba vették",
+            "lostHome": "{aAnimal} elvesztette az otthonát: kivágták az erdejét"
         },
         "card": {
             "now": "Most: {activity}",
@@ -776,7 +779,15 @@
             "failed": "Ez nem sikerült. Próbáld újra egy kis idő múlva.",
             "recoveringOne": "1 lábadozik",
             "recoveringOther": "{count} lábadozik",
-            "away": "Távol van, amíg felépül, aztán újra kijön az otthonából."
+            "away": "Távol van, amíg felépül, aztán újra kijön az otthonából.",
+            "escapeLivesOne": "1 szív az Arkban",
+            "escapeLivesOther": "{n} szív az Arkban",
+            "escapeLivesNone": "Nincs több szív az Arkban",
+            "escapeNote": "Minden szívvel az állatod túlél egy támadást vagy egy éhes időszakot az Arkban. A szívek nem tarthatják vissza az öregséget.",
+            "escapeNoteOld": "Minden szívvel az állatod túlél egy támadást vagy egy éhes időszakot az Arkban. Egy szív az öregségből is visszahozza fiatal felnőttként.",
+            "recoveringWounded": "Sebesülten rejtőzik · {when} tér vissza",
+            "recoveringCare": "A város gondozásában · {when} tér vissza",
+            "recoveringHome": "Elvesztette az otthonát · {when} tér vissza"
         },
         "release": {
             "button": "Szabadon engedés a vadonba · {credits} kredit",
@@ -834,7 +845,10 @@
                 "epic": "Epikus",
                 "legendary": "Legendás",
                 "mythic": "Mitikus"
-            }
+            },
+            "escapeHearts": "Megtartja a szíveit. Egy szív segítségével túlél egy támadást vagy egy éhes időszakot a vadonban. Ha nem maradt szíve, az elkapás végleges. Az öregség is végleges.",
+            "escapeHeartsOld": "Megtartja a szíveit. Egy szív segítségével túlél egy támadást vagy egy éhes időszakot a vadonban, és az öregségből is visszahozza fiatal felnőttként. Ha nem maradt szíve, az elkapás végleges.",
+            "escapeLastOfKind": "Ő a fajtája utolsó egyede a fedélzeten. Ha szív nélkül kapják el, vagy öregségben pusztul el, a fajtája eltűnik az Arkból."
         },
         "seen": {
             "searching": "Zsákmányt keres",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Melyik hely a legbiztonságosabb az Arkban?",
                 "faqA1": "{place} helyen a legmagasabb az élők aránya az elmúlt {days} napban: {percent}.",
                 "faqQ2": "Mi öli az állatokat az Arkban?",
-                "faqA2": "Az elmúlt {days} napban a nyilvántartás {old} öregségi, {starved} éhség okozta és {eaten} felfalt halálesetet mutat. {hunting}"
+                "faqA2": "Az elmúlt {days} napban a nyilvántartás {old} öregségi, {starved} éhség okozta és {eaten} felfalt halálesetet mutat. {hunting}",
+                "introEscape": "Az Ark egy állata elesik öregségtől, éhségtől vagy ragadozótól. Némelyik megmenekül, némelyik nem. Itt vannak a számok, helyenként, a véghez legközelebb álló állatokkal és fajokkal.",
+                "placesDescriptionEscape": "Az elmúlt {days} napban az egyes helyeken lévő állatok közül a még élők aránya. A támadás vagy éhezés után rejtőzködő állat élőnek számít, mert visszatér.",
+                "recoverNoteEscape": "A támadás nem mindig a vég: a megmaradt szívű állat sebesülten elmenekül és visszatér, az éhező állatot pedig gondozásba veszik, és az is visszatér, ezért csak azok számítanak végleg elveszettnek, amelyek nem tértek vissza. Az öregség végleges.",
+                "recoverNoteEscapeOld": "A támadás nem mindig a vég: a megmaradt szívű állat sebesülten elmenekül és visszatér, az éhező állatot pedig gondozásba veszik, és az is visszatér. Az az állat, amelyik megmaradt szívvel hal meg öregségben, fiatal felnőttként tér vissza, ezért csak azok számítanak végleg elveszettnek, amelyek nem tértek vissza."
             },
             "breeders": {
                 "metaTitle": "Az Ark leggyorsabb szaporodói: mely állatoknak van a legtöbb kölyke",

@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: pagbubuhat ng buto pauwi",
             "antRaid": "{animals}: pagsalakay sa malapad na hanay",
             "antBivouac": "{animals}: paglipat ng pansamantalang pugad",
-            "antWeave": "{animals}: paghila ng mga dahon para sa pugad"
+            "antWeave": "{animals}: paghila ng mga dahon para sa pugad",
+            "escapedWounded": "Nakatakas ang {aPrey} mula sa {aPredator} nang sugatan at nagtatago ngayon para gumaling",
+            "rescued": "Natagpuan ang {aAnimal} na gutom na gutom at kinupkop para alagaan",
+            "lostHome": "Nawalan ng tahanan ang {aAnimal}: pinutol ang kagubatan nito"
         },
         "card": {
             "now": "Ngayon: {activity}",
@@ -776,7 +779,15 @@
             "failed": "Hindi iyon natuloy. Subukan ulit maya-maya.",
             "recoveringOne": "1 nagpapagaling",
             "recoveringOther": "{count} nagpapagaling",
-            "away": "Wala muna ito habang nagpapagaling, saka lalabas ulit mula sa tahanan nito."
+            "away": "Wala muna ito habang nagpapagaling, saka lalabas ulit mula sa tahanan nito.",
+            "escapeLivesOne": "1 puso sa Ark",
+            "escapeLivesOther": "{n} puso sa Ark",
+            "escapeLivesNone": "Wala nang puso sa Ark",
+            "escapeNote": "Bawat puso ay nagpapahintulot sa hayop mo na makaligtas sa isang atake o isang panahon ng gutom sa Ark. Hindi napipigilan ng mga puso ang katandaan.",
+            "escapeNoteOld": "Bawat puso ay nagpapahintulot sa hayop mo na makaligtas sa isang atake o isang panahon ng gutom sa Ark. Ibinabalik din ito ng isang puso mula sa katandaan bilang batang adulto.",
+            "recoveringWounded": "Nagtatago, sugatan · babalik {when}",
+            "recoveringCare": "Inaalagaan ng bayan · babalik {when}",
+            "recoveringHome": "Nawalan ng tahanan · babalik {when}"
         },
         "release": {
             "button": "Pakawalan sa kalikasan · {credits} Credits",
@@ -834,7 +845,10 @@
                 "epic": "Epiko",
                 "legendary": "Maalamat",
                 "mythic": "Mitiko"
-            }
+            },
+            "escapeHearts": "Nananatili ang mga puso nito. Hinahayaan ng isang puso na makaligtas ito sa isang atake o isang panahon ng gutom sa kalikasan. Kapag wala nang puso, pinal ang pagkahuli. Pinal ang katandaan.",
+            "escapeHeartsOld": "Nananatili ang mga puso nito. Hinahayaan ng isang puso na makaligtas ito sa isang atake o isang panahon ng gutom sa kalikasan, at ibinabalik ito mula sa katandaan bilang batang adulto. Kapag wala nang puso, pinal ang pagkahuli.",
+            "escapeLastOfKind": "Ito na ang huli sa uri nito sa Ark. Kapag nahuli ito nang wala nang puso, o namatay ito sa katandaan, mawawala ang uri nito sa Ark."
         },
         "seen": {
             "searching": "Naghahanap ng mabibiktima",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Aling lugar ang pinakaligtas sa Ark?",
                 "faqA1": "Ang {place} ang may pinakamataas na bahaging buhay sa nakaraang {days} araw: {percent}.",
                 "faqQ2": "Ano ang pumapatay sa mga hayop sa Ark?",
-                "faqA2": "Sa nakaraang {days} araw, ipinapakita ng talaan ang {old} pagkamatay sa katandaan, {starved} sa gutom, at {eaten} na kinain. {hunting}"
+                "faqA2": "Sa nakaraang {days} araw, ipinapakita ng talaan ang {old} pagkamatay sa katandaan, {starved} sa gutom, at {eaten} na kinain. {hunting}",
+                "introEscape": "Ang hayop sa Ark ay maaaring mamatay sa katandaan, gutom, o maninila. Ang ilan ay nakakatakas, ang ilan ay hindi. Narito ang mga numero, bawat lugar, kasama ang mga hayop at uri na pinakamalapit sa katapusan.",
+                "placesDescriptionEscape": "Sa mga hayop na nasa bawat lugar sa nakaraang {days} araw, ang bahaging buhay pa. Ang hayop na nagtatago pagkatapos ng atake o panahon ng gutom ay binibilang na buhay, dahil babalik ito.",
+                "recoverNoteEscape": "Hindi laging wakas ang atake: ang hayop na may natitirang puso ay nakakatakas na sugatan at bumabalik, at ang hayop na nagugutom ay kinukupkop at bumabalik, kaya ang mga hindi bumalik lang ang binibilang na nawala nang tuluyan. Pinal ang katandaan.",
+                "recoverNoteEscapeOld": "Hindi laging wakas ang atake: ang hayop na may natitirang puso ay nakakatakas na sugatan at bumabalik, at ang hayop na nagugutom ay kinukupkop at bumabalik. Ang hayop na namamatay sa katandaan na may natitirang puso ay bumabalik bilang batang adulto, kaya ang mga hindi bumalik lang ang binibilang na nawala nang tuluyan."
             },
             "breeders": {
                 "metaTitle": "Pinakamabilis na nagpaparami sa Ark: aling mga hayop ang may pinakamaraming anak",

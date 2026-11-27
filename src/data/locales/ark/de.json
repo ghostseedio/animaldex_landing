@@ -453,7 +453,10 @@
             "antSeeds": "{animals}: Samen werden nach Hause getragen",
             "antRaid": "{animals}: Raubzug in breiter Front",
             "antBivouac": "{animals}: das Biwak zieht um",
-            "antWeave": "{animals}: Blätter werden zum Nest zusammengezogen"
+            "antWeave": "{animals}: Blätter werden zum Nest zusammengezogen",
+            "escapedWounded": "{aPrey} konnte verletzt vor {aPredator} fliehen und ruht sich im Versteck aus",
+            "rescued": "{aAnimal} wurde ausgehungert gefunden und in Obhut genommen",
+            "lostHome": "{aAnimal} hat sein Zuhause verloren: sein Wald wurde gefällt"
         },
         "card": {
             "now": "Jetzt: {activity}",
@@ -776,7 +779,15 @@
             "failed": "Das hat nicht geklappt. Versuch es gleich noch einmal.",
             "recoveringOne": "1 erholt sich",
             "recoveringOther": "{count} erholen sich",
-            "away": "Es ist fort, während es sich erholt, und kommt dann wieder aus seinem Zuhause."
+            "away": "Es ist fort, während es sich erholt, und kommt dann wieder aus seinem Zuhause.",
+            "escapeLivesOne": "1 Herz in der Ark",
+            "escapeLivesOther": "{n} Herzen in der Ark",
+            "escapeLivesNone": "Keine Herzen mehr in der Ark",
+            "escapeNote": "Jedes Herz lässt dein Tier einen Angriff oder eine Hungerphase in der Ark überstehen. Herzen können das Alter nicht aufhalten.",
+            "escapeNoteOld": "Jedes Herz lässt dein Tier einen Angriff oder eine Hungerphase in der Ark überstehen. Ein Herz bringt es auch aus dem Alter als junges erwachsenes Tier zurück.",
+            "recoveringWounded": "Verletzt, im Versteck · kommt {when} zurück",
+            "recoveringCare": "In der Obhut der Stadt · kommt {when} zurück",
+            "recoveringHome": "Zuhause verloren · kommt {when} zurück"
         },
         "release": {
             "button": "In die Wildnis entlassen · {credits} Credits",
@@ -834,7 +845,10 @@
                 "epic": "Episch",
                 "legendary": "Legendär",
                 "mythic": "Mythisch"
-            }
+            },
+            "escapeHearts": "Es behält seine Herzen. Ein Herz lässt es einen Angriff oder eine Hungerphase in der Wildnis überstehen. Ohne Herz ist ein Fang endgültig. Das Alter ist endgültig.",
+            "escapeHeartsOld": "Es behält seine Herzen. Ein Herz lässt es einen Angriff oder eine Hungerphase in der Wildnis überstehen und bringt es aus dem Alter als junges erwachsenes Tier zurück. Ohne Herz ist ein Fang endgültig.",
+            "escapeLastOfKind": "Es ist das letzte seiner Art an Bord. Wird es ohne Herz gefangen oder stirbt es an Altersschwäche, ist seine Art aus der Ark verschwunden."
         },
         "seen": {
             "searching": "Sucht Beute",
@@ -1047,7 +1061,11 @@
                 "faqQ1": "Welcher Ort ist in der Ark am sichersten?",
                 "faqA1": "{place} hat in den letzten {days} Tagen den höchsten Anteil Lebender: {percent}.",
                 "faqQ2": "Was tötet Tiere in der Ark?",
-                "faqA2": "In den letzten {days} Tagen zeigt die Aufzeichnung {old} Todesfälle durch Alter, {starved} durch Hunger und {eaten} durch Raubtiere. {hunting}"
+                "faqA2": "In den letzten {days} Tagen zeigt die Aufzeichnung {old} Todesfälle durch Alter, {starved} durch Hunger und {eaten} durch Raubtiere. {hunting}",
+                "introEscape": "Ein Tier in der Ark kann an Alter, Hunger oder einem Raubtier sterben. Manche entkommen, manche nicht. Das sind die Zahlen, Ort für Ort, mit den Tieren und Arten, die dem Ende am nächsten sind.",
+                "placesDescriptionEscape": "Von den Tieren, die in den letzten {days} Tagen an einem Ort waren, der Anteil, der noch lebt. Ein Tier, das nach einem Angriff oder einer Hungerphase im Versteck liegt, zählt als lebendig, weil es zurückkommt.",
+                "recoverNoteEscape": "Ein Angriff ist nicht immer das Ende: Ein Tier mit einem verbleibenden Herz entkommt verletzt und kommt zurück, und ein hungerndes Tier wird in Obhut genommen und kommt zurück, also zählen nur Tiere, die nicht zurückgekommen sind, als endgültig verloren. Das Alter ist endgültig.",
+                "recoverNoteEscapeOld": "Ein Angriff ist nicht immer das Ende: Ein Tier mit einem verbleibenden Herz entkommt verletzt und kommt zurück, und ein hungerndes Tier wird in Obhut genommen und kommt zurück. Ein Tier, das mit einem Herz übrig an Altersschwäche stirbt, kommt als junges erwachsenes Tier zurück, also zählen nur Tiere, die nicht zurückgekommen sind, als endgültig verloren."
             },
             "breeders": {
                 "metaTitle": "Die schnellsten Züchter der Ark: Welche Tiere haben die meisten Jungen",
