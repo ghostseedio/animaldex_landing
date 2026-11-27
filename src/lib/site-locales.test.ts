@@ -5,6 +5,7 @@ import test from "node:test";
 import {parse, TYPE, type MessageFormatElement} from "@formatjs/icu-messageformat-parser";
 import {APP_SHELL_WORDS_EN} from "./app-shell-words";
 import {SETTINGS_WORDS_EN} from "./settings-words";
+import {CATALOG_WORDS_EN} from "./collection-catalog-words";
 
 /**
  * The site's two locale files stay in step: every English string has an
@@ -85,6 +86,8 @@ test("the app shell's and Settings' English live in code and en.json alike", () 
     for (const [key, value] of Object.entries(APP_SHELL_WORDS_EN)) assert.equal(shell[key], value, `appShell.${key}`);
     const settings = (readJson("en.json").appSettings ?? {}) as Messages;
     assert.deepEqual(settings, SETTINGS_WORDS_EN);
+    const collection = (readJson("en.json").appCollection ?? {}) as Messages;
+    for (const [key, value] of Object.entries(CATALOG_WORDS_EN)) assert.equal(collection[key], value, `appCollection.${key}`);
 });
 
 test("each Ark bundle is translated, not English carried over (a few cognates and brand names may match)", () => {

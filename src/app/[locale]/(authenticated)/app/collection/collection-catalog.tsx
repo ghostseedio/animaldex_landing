@@ -1,5 +1,6 @@
 "use client";
 
+import {CATALOG_WORDS_EN, fillCatalogWords, type CollectionCatalogWords} from "@/lib/collection-catalog-words";
 import {type ReactNode, useEffect, useMemo, useRef, useState} from "react";
 import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import {useCompanions} from "@/components/companions/use-companions";
@@ -76,50 +77,52 @@ const DEFAULT_FILTERS: CatalogFilters = {
 const ANIMAL_BATCH_SIZE = 40;
 const FACET_BATCH_SIZE = 24;
 
-const OWNERSHIP_OPTIONS: Array<{id: Ownership; label: string}> = [
-    {id: "all", label: "All"},
-    {id: "discovered", label: "Discovered"},
-    {id: "undiscovered", label: "Undiscovered"}
+type Word = keyof CollectionCatalogWords;
+
+const OWNERSHIP_OPTIONS: Array<{id: Ownership; label: Word}> = [
+    {id: "all", label: "optionAll"},
+    {id: "discovered", label: "optionDiscovered"},
+    {id: "undiscovered", label: "optionUndiscovered"}
 ];
 
-const INDEXING_OPTIONS: Array<{id: Indexing; label: string}> = [
-    {id: "all", label: "All"},
-    {id: "indexed", label: "Indexed"},
-    {id: "unindexed", label: "Unindexed"}
+const INDEXING_OPTIONS: Array<{id: Indexing; label: Word}> = [
+    {id: "all", label: "optionAll"},
+    {id: "indexed", label: "optionIndexed"},
+    {id: "unindexed", label: "optionUnindexed"}
 ];
 
-const SPECIES_OPTIONS: Array<{id: SpeciesFilter; label: string}> = [
-    {id: "allSpecies", label: "All species"},
-    {id: "breedsOnly", label: "Breeds only"}
+const SPECIES_OPTIONS: Array<{id: SpeciesFilter; label: Word}> = [
+    {id: "allSpecies", label: "optionAllSpecies"},
+    {id: "breedsOnly", label: "optionBreedsOnly"}
 ];
 
-const CONTENT_MODE_OPTIONS: Array<{id: ContentMode; label: string}> = [
-    {id: "animals", label: "Animals"},
-    {id: "powers", label: "Powers"},
-    {id: "lessons", label: "Lessons"},
-    {id: "systemDynamics", label: "Systems Dynamics"},
-    {id: "binders", label: "Binders"}
+const CONTENT_MODE_OPTIONS: Array<{id: ContentMode; label: Word}> = [
+    {id: "animals", label: "modeAnimals"},
+    {id: "powers", label: "modePowers"},
+    {id: "lessons", label: "modeLessons"},
+    {id: "systemDynamics", label: "modeSystemDynamics"},
+    {id: "binders", label: "binders"}
 ];
 
-const ANIMAL_SORT_OPTIONS: Array<{id: AnimalSort; title: string; detail: string}> = [
-    {id: "dateNewest", title: "Most recent capture", detail: "Shows recently captured animals first"},
-    {id: "number", title: "AnimalDex number", detail: "Follows the official AnimalDex order"},
-    {id: "rarity", title: "Canonical rarity", detail: "Shows the rarest canonical species first"},
-    {id: "dominance", title: "Canonical dominance", detail: "Shows the strongest canonical species first"},
-    {id: "speed", title: "Canonical speed", detail: "Shows the fastest canonical species first"},
-    {id: "size", title: "Canonical size", detail: "Shows the largest canonical species first"},
-    {id: "intelligence", title: "Canonical intelligence", detail: "Shows the smartest canonical species first"},
-    {id: "name", title: "Alphabetical", detail: "Sorts by display name from A to Z"}
+const ANIMAL_SORT_OPTIONS: Array<{id: AnimalSort; title: Word; detail: Word}> = [
+    {id: "dateNewest", title: "sortNewest", detail: "sortNewestNote"},
+    {id: "number", title: "sortNumber", detail: "sortNumberNote"},
+    {id: "rarity", title: "sortRarity", detail: "sortRarityNote"},
+    {id: "dominance", title: "sortDominance", detail: "sortDominanceNote"},
+    {id: "speed", title: "sortSpeed", detail: "sortSpeedNote"},
+    {id: "size", title: "sortSize", detail: "sortSizeNote"},
+    {id: "intelligence", title: "sortIntelligence", detail: "sortIntelligenceNote"},
+    {id: "name", title: "sortAlphabetical", detail: "sortNameNote"}
 ];
 
-const POWER_SORT_OPTIONS: Array<{id: PowerSort; title: string; detail: string}> = [
-    {id: "alphabetical", title: "Alphabetical", detail: "Sorts tags from A to Z"},
-    {id: "mostLinked", title: "Most linked animals", detail: "Shows tags with the most linked animals first"}
+const POWER_SORT_OPTIONS: Array<{id: PowerSort; title: Word; detail: Word}> = [
+    {id: "alphabetical", title: "sortAlphabetical", detail: "sortTagsNote"},
+    {id: "mostLinked", title: "sortMostLinked", detail: "sortMostLinkedNote"}
 ];
 
-const LESSON_SORT_OPTIONS: Array<{id: LessonSort; title: string; detail: string}> = [
-    {id: "alphabetical", title: "Alphabetical", detail: "Sorts lesson names from A to Z"},
-    {id: "indexNumber", title: "Index number", detail: "Uses the lowest linked AnimalDex index"}
+const LESSON_SORT_OPTIONS: Array<{id: LessonSort; title: Word; detail: Word}> = [
+    {id: "alphabetical", title: "sortAlphabetical", detail: "sortLessonsNote"},
+    {id: "indexNumber", title: "sortIndexNumber", detail: "sortIndexNumberNote"}
 ];
 
 function normalizedSearchText(value: string) {
@@ -298,20 +301,8 @@ function SortOption<T extends string>({id, title, detail, selected, onSelect}: {
     );
 }
 
-/** The grid's own words (`appCollection`), English by default. */
-export type CollectionCatalogWords = {
-    noMatchesEyebrow: string;
-    noMatchesTitle: string;
-    noMatchesDetail: string;
-    resetView: string;
-};
-
-const CATALOG_WORDS_EN: CollectionCatalogWords = {
-    noMatchesEyebrow: "NO MATCHES",
-    noMatchesTitle: "No species match this view.",
-    noMatchesDetail: "Try another animal name or clear the current filters to explore the full catalogue.",
-    resetView: "Reset view"
-};
+/** The grid's own words (`appCollection`, lib/collection-catalog-words), English by default. */
+export type {CollectionCatalogWords};
 
 /**
  * A species not found yet is its silhouette art on the canvas (iOS IOS-21,
@@ -457,24 +448,24 @@ export default function CollectionCatalog({
     const hasMoreLessons = visibleLessonCount < lessonFacets.length;
 
     const searchPlaceholder = appliedFilters.contentMode === "animals"
-        ? "Search species, lesson, or animal power"
+        ? words.searchAnimals
         : appliedFilters.contentMode === "powers"
-            ? "Search powers"
+            ? words.searchPowers
             : appliedFilters.contentMode === "systemDynamics"
-                ? "Search systems"
-                : "Search lessons";
+                ? words.searchSystems
+                : words.searchLessons;
 
     const matchedSummary = appliedFilters.contentMode === "animals"
         ? appliedFilters.indexing === "all"
-            ? `Matched results total: ${filteredAnimals.filter((item) => item.hasIndexNumber).length} indexed · ${filteredAnimals.filter((item) => !item.hasIndexNumber).length} unindexed · ${filteredAnimals.filter((item) => item.captured).length} captured`
-            : `Matched results total: ${filteredAnimals.length}`
+            ? fillCatalogWords(words.matchedAll, {indexed: filteredAnimals.filter((item) => item.hasIndexNumber).length, unindexed: filteredAnimals.filter((item) => !item.hasIndexNumber).length, captured: filteredAnimals.filter((item) => item.captured).length})
+            : fillCatalogWords(words.matchedCount, {n: filteredAnimals.length})
         : appliedFilters.contentMode === "powers"
-            ? `Matched results total: ${powerFacets.length} powers · ${species.length} animals`
+            ? fillCatalogWords(words.matchedPowers, {powers: powerFacets.length, animals: species.length})
             : appliedFilters.contentMode === "systemDynamics"
-                ? `Matched results total: ${systemDynamicsCount} systems`
+                ? fillCatalogWords(words.matchedSystems, {n: systemDynamicsCount})
                 : appliedFilters.contentMode === "binders"
                     ? ""
-                    : `Matched results total: ${lessonFacets.length} lessons · ${species.length} animals`;
+                    : fillCatalogWords(words.matchedLessons, {lessons: lessonFacets.length, animals: species.length});
 
     function openFilters() {
         setPendingFilters(appliedFilters);
@@ -551,17 +542,17 @@ export default function CollectionCatalog({
     return (
         <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-white/45">
-                <span>{indexedCount} indexed · {breedCount} breeds · {discovered} found · {remaining} left</span>
+                <span>{fillCatalogWords(words.catalogSummary, {indexed: indexedCount, breeds: breedCount, found: discovered, left: remaining})}</span>
                 <span>
                     {appliedFilters.contentMode === "animals"
-                        ? `${filteredAnimals.length} shown`
+                        ? fillCatalogWords(words.shownAnimals, {n: filteredAnimals.length})
                         : appliedFilters.contentMode === "powers"
-                            ? `${powerFacets.length} powers`
+                            ? fillCatalogWords(words.shownPowers, {n: powerFacets.length})
                             : appliedFilters.contentMode === "systemDynamics"
-                                ? `${systemDynamicsCount} systems`
+                                ? fillCatalogWords(words.shownSystems, {n: systemDynamicsCount})
                                 : appliedFilters.contentMode === "binders"
-                                    ? "Binders"
-                                    : `${lessonFacets.length} lessons`}
+                                    ? words.binders
+                                    : fillCatalogWords(words.shownLessons, {n: lessonFacets.length})}
                 </span>
             </div>
 
@@ -580,7 +571,7 @@ export default function CollectionCatalog({
                         placeholder={searchPlaceholder}
                     />
                     {query ? (
-                        <button type="button" onClick={() => setQuery("")} aria-label="Clear search">
+                        <button type="button" onClick={() => setQuery("")} aria-label={words.clearSearch}>
                             <AppIcon name="close" className="h-4 w-4 text-white/35" />
                         </button>
                     ) : null}
@@ -595,7 +586,7 @@ export default function CollectionCatalog({
                         className={`flex min-h-11 flex-1 items-center gap-2 border px-4 py-3 text-sm font-black transition ${activeFilters ? "border-primary-400 bg-primary-400 text-black" : "border-white/10 bg-black/40 text-white"}`}
                     >
                         <AppIcon name="filter" />
-                        Filters
+                        {words.filters}
                         {activeFilters ? <span className="ml-auto h-2 w-2 rounded-full bg-black" /> : null}
                     </button>
                     {appliedFilters.contentMode === "animals" ? (
@@ -604,7 +595,7 @@ export default function CollectionCatalog({
                                 <button
                                     key={item}
                                     type="button"
-                                    aria-label={`${item} layout`}
+                                    aria-label={item === "grid" ? words.layoutGrid : words.layoutList}
                                     onClick={() => setLayout(item)}
                                     className={`p-2.5 transition ${layout === item ? "bg-primary-400 text-black" : "text-white/45 hover:text-white"}`}
                                 >
@@ -620,13 +611,13 @@ export default function CollectionCatalog({
                 <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20 sm:justify-end sm:p-5 sm:pt-24">
                     <button
                         type="button"
-                        aria-label="Close filters"
+                        aria-label={words.closeFilters}
                         className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
                         onClick={() => setFiltersOpen(false)}
                     />
                     <div className="relative z-10 flex max-h-[min(80vh,520px)] w-full max-w-md flex-col overflow-hidden border border-white/10 bg-[#0d0d0d] shadow-[0_24px_80px_-24px_rgba(0,0,0,0.95)]">
                         <div className="overflow-y-auto p-5">
-                            <h2 className="font-display text-lg font-bold text-white">Catalog filters</h2>
+                            <h2 className="font-display text-lg font-bold text-white">{words.catalogFilters}</h2>
 
                             <button
                                 type="button"
@@ -635,16 +626,16 @@ export default function CollectionCatalog({
                                 className={`mt-4 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-black transition ${hasPendingChanges ? "bg-primary-400 text-black" : "cursor-not-allowed bg-white/[0.04] text-white/35"}`}
                             >
                                 <AppIcon name="search" className="h-4 w-4" />
-                                Apply {pendingChangeCount} changes
+                                {fillCatalogWords(words.applyChanges, {n: pendingChangeCount})}
                             </button>
 
                             <div className="mt-5 space-y-2">
-                                <p className="text-xs font-black uppercase tracking-wider text-white/35">Show</p>
+                                <p className="text-xs font-black uppercase tracking-wider text-white/35">{words.show}</p>
                                 <div className="grid grid-cols-2 gap-2">
                                     {contentModeOptions.map((option) => (
                                         <FilterChip
                                             key={option.id}
-                                            title={option.label}
+                                            title={words[option.label]}
                                             selected={pendingFilters.contentMode === option.id}
                                             onClick={() => setPendingFilters((current) => ({...current, contentMode: option.id}))}
                                         />
@@ -655,12 +646,12 @@ export default function CollectionCatalog({
                             {pendingFilters.contentMode === "animals" ? (
                                 <>
                                     <div className="mt-5 space-y-2">
-                                        <p className="text-xs font-black uppercase tracking-wider text-white/35">Captured status</p>
+                                        <p className="text-xs font-black uppercase tracking-wider text-white/35">{words.capturedStatus}</p>
                                         <div className="flex flex-wrap gap-2">
                                             {OWNERSHIP_OPTIONS.map((option) => (
                                                 <FilterChip
                                                     key={option.id}
-                                                    title={option.label}
+                                                    title={words[option.label]}
                                                     selected={pendingFilters.ownership === option.id}
                                                     onClick={() => setPendingFilters((current) => ({...current, ownership: option.id}))}
                                                 />
@@ -669,12 +660,12 @@ export default function CollectionCatalog({
                                     </div>
 
                                     <div className="mt-5 space-y-2">
-                                        <p className="text-xs font-black uppercase tracking-wider text-white/35">Index scope</p>
+                                        <p className="text-xs font-black uppercase tracking-wider text-white/35">{words.indexScope}</p>
                                         <div className="flex flex-wrap gap-2">
                                             {INDEXING_OPTIONS.map((option) => (
                                                 <FilterChip
                                                     key={option.id}
-                                                    title={option.label}
+                                                    title={words[option.label]}
                                                     selected={pendingFilters.indexing === option.id}
                                                     onClick={() => setPendingFilters((current) => ({...current, indexing: option.id}))}
                                                 />
@@ -683,12 +674,12 @@ export default function CollectionCatalog({
                                     </div>
 
                                     <div className="mt-5 space-y-2">
-                                        <p className="text-xs font-black uppercase tracking-wider text-white/35">Animal type</p>
+                                        <p className="text-xs font-black uppercase tracking-wider text-white/35">{words.animalType}</p>
                                         <div className="flex flex-wrap gap-2">
                                             {SPECIES_OPTIONS.map((option) => (
                                                 <FilterChip
                                                     key={option.id}
-                                                    title={option.label}
+                                                    title={words[option.label]}
                                                     selected={pendingFilters.speciesFilter === option.id}
                                                     onClick={() => setPendingFilters((current) => ({...current, speciesFilter: option.id}))}
                                                 />
@@ -697,14 +688,14 @@ export default function CollectionCatalog({
                                     </div>
 
                                     <div className="mt-5 space-y-2">
-                                        <p className="text-xs font-black uppercase tracking-wider text-white/35">Sort by</p>
+                                        <p className="text-xs font-black uppercase tracking-wider text-white/35">{words.sortBy}</p>
                                         <div className="space-y-2">
                                             {ANIMAL_SORT_OPTIONS.map((option) => (
                                                 <SortOption
                                                     key={option.id}
                                                     id={option.id}
-                                                    title={option.title}
-                                                    detail={option.detail}
+                                                    title={words[option.title]}
+                                                    detail={words[option.detail]}
                                                     selected={pendingFilters.animalSort === option.id}
                                                     onSelect={(animalSort) => setPendingFilters((current) => ({...current, animalSort}))}
                                                 />
@@ -714,7 +705,7 @@ export default function CollectionCatalog({
                                 </>
                             ) : pendingFilters.contentMode === "systemDynamics" ? (
                                 <div className="mt-5 space-y-2">
-                                    <p className="text-xs font-black uppercase tracking-wider text-white/35">Frequency</p>
+                                    <p className="text-xs font-black uppercase tracking-wider text-white/35">{words.frequency}</p>
                                     <div className="flex flex-wrap gap-2">
                                         {FREQUENCY_FILTER_OPTIONS.map((option) => (
                                             <FilterChip
@@ -728,14 +719,14 @@ export default function CollectionCatalog({
                                 </div>
                             ) : pendingFilters.contentMode === "powers" ? (
                                 <div className="mt-5 space-y-2">
-                                    <p className="text-xs font-black uppercase tracking-wider text-white/35">Sort powers by</p>
+                                    <p className="text-xs font-black uppercase tracking-wider text-white/35">{words.sortPowersBy}</p>
                                     <div className="space-y-2">
                                         {POWER_SORT_OPTIONS.map((option) => (
                                             <SortOption
                                                 key={option.id}
                                                 id={option.id}
-                                                title={option.title}
-                                                detail={option.detail}
+                                                title={words[option.title]}
+                                                detail={words[option.detail]}
                                                 selected={pendingFilters.powerSort === option.id}
                                                 onSelect={(powerSort) => setPendingFilters((current) => ({...current, powerSort}))}
                                             />
@@ -744,14 +735,14 @@ export default function CollectionCatalog({
                                 </div>
                             ) : pendingFilters.contentMode === "binders" ? null : (
                                 <div className="mt-5 space-y-2">
-                                    <p className="text-xs font-black uppercase tracking-wider text-white/35">Sort lessons by</p>
+                                    <p className="text-xs font-black uppercase tracking-wider text-white/35">{words.sortLessonsBy}</p>
                                     <div className="space-y-2">
                                         {LESSON_SORT_OPTIONS.map((option) => (
                                             <SortOption
                                                 key={option.id}
                                                 id={option.id}
-                                                title={option.title}
-                                                detail={option.detail}
+                                                title={words[option.title]}
+                                                detail={words[option.detail]}
                                                 selected={pendingFilters.lessonSort === option.id}
                                                 onSelect={(lessonSort) => setPendingFilters((current) => ({...current, lessonSort}))}
                                             />
@@ -766,7 +757,7 @@ export default function CollectionCatalog({
                                     onClick={resetPendingFilters}
                                     className="mt-5 text-sm font-black text-primary-400"
                                 >
-                                    Clear all filters
+                                    {words.clearAllFilters}
                                 </button>
                             ) : null}
                         </div>
@@ -811,17 +802,17 @@ export default function CollectionCatalog({
                                     {item.captured
                                         ? <img src={item.imageSrc} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
                                         : <SpeciesSilhouette slug={item.slug} />}
-                                    {item.hasIndexNumber ? <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black tabular-nums text-primary-200">{formatAnimalDexNumber(item.number)}</span> : <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/45">NEW</span>}
+                                    {item.hasIndexNumber ? <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black tabular-nums text-primary-200">{formatAnimalDexNumber(item.number)}</span> : <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/45">{words.newBadge}</span>}
                                     {item.isLegendary ? (
                                         <span className="absolute bottom-2 left-2 right-2 truncate rounded-full border border-amber-400/35 bg-amber-400/90 px-2 py-1 text-center text-[0.58rem] font-black uppercase tracking-[0.08em] text-black">
-                                            {SHOWS_BATTLE_TIER_AND_POWER ? "S-tier Legendary" : "Legendary"}
+                                            {SHOWS_BATTLE_TIER_AND_POWER ? words.legendaryTier : words.legendary}
                                         </span>
                                     ) : null}
                                     {item.score !== null ? <span className="absolute right-2 top-2 rounded-full bg-primary-400 px-2 py-1 text-[0.62rem] font-black text-black">{item.score}</span> : null}
                                     {item.captured && levelFor(item.slug) > 0 ? (
                                         // Its bond level: a small number, read out as "Level {n}".
                                         <span
-                                            aria-label={`Level ${levelFor(item.slug)}`}
+                                            aria-label={fillCatalogWords(words.level, {n: levelFor(item.slug)})}
                                             className="absolute bottom-2 right-2 grid h-6 min-w-6 place-items-center rounded-full border border-primary-400/40 bg-black/75 px-1.5 text-[0.65rem] font-black tabular-nums text-primary-200"
                                         >
                                             {levelFor(item.slug)}
@@ -846,7 +837,7 @@ export default function CollectionCatalog({
                                 onClick={() => setVisibleAnimalCount((current) => Math.min(current + ANIMAL_BATCH_SIZE, filteredAnimals.length))}
                                 className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white/50 transition hover:border-white/20 hover:text-white"
                             >
-                                Load more animals
+                                {words.loadMoreAnimals}
                             </button>
                         </div>
                     ) : null}
@@ -866,16 +857,16 @@ export default function CollectionCatalog({
                             <AppSurface key={facet.key}>
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
-                                        <p className="text-[0.65rem] font-black uppercase tracking-wider text-primary-200">Animal power</p>
+                                        <p className="text-[0.65rem] font-black uppercase tracking-wider text-primary-200">{words.animalPower}</p>
                                         <h2 className="mt-2 font-display text-xl font-bold">{facet.name}</h2>
                                     </div>
-                                    <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-bold text-white/45">{facet.count} animals</span>
+                                    <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-bold text-white/45">{fillCatalogWords(words.animalsCount, {n: facet.count})}</span>
                                 </div>
                                 <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.08]">
                                     <div className="h-full rounded-full bg-primary-400 transition-all duration-500" style={{width: `${percent}%`}} />
                                 </div>
                                 <div className="mt-2 flex justify-between text-xs text-white/35">
-                                    <span>{facet.found} found</span>
+                                    <span>{fillCatalogWords(words.foundCount, {n: facet.found})}</span>
                                     <span>{percent}%</span>
                                 </div>
                             </AppSurface>
@@ -889,7 +880,7 @@ export default function CollectionCatalog({
                                 onClick={() => setVisiblePowerCount((current) => Math.min(current + FACET_BATCH_SIZE, powerFacets.length))}
                                 className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white/50 transition hover:border-white/20 hover:text-white"
                             >
-                                Load more powers
+                                {words.loadMorePowers}
                             </button>
                         </div>
                     ) : null}
@@ -903,16 +894,16 @@ export default function CollectionCatalog({
                             <AppSurface key={facet.name}>
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
-                                        <p className="text-[0.65rem] font-black uppercase tracking-wider text-primary-200">Core principle</p>
+                                        <p className="text-[0.65rem] font-black uppercase tracking-wider text-primary-200">{words.corePrinciple}</p>
                                         <h2 className="mt-2 font-display text-xl font-bold">{facet.name}</h2>
                                     </div>
-                                    <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-bold text-white/45">{facet.count} animals</span>
+                                    <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-bold text-white/45">{fillCatalogWords(words.animalsCount, {n: facet.count})}</span>
                                 </div>
                                 <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.08]">
                                     <div className="h-full rounded-full bg-primary-400 transition-all duration-500" style={{width: `${percent}%`}} />
                                 </div>
                                 <div className="mt-2 flex justify-between text-xs text-white/35">
-                                    <span>{facet.found} found</span>
+                                    <span>{fillCatalogWords(words.foundCount, {n: facet.found})}</span>
                                     <span>{percent}%</span>
                                 </div>
                             </AppSurface>
@@ -926,7 +917,7 @@ export default function CollectionCatalog({
                                 onClick={() => setVisibleLessonCount((current) => Math.min(current + FACET_BATCH_SIZE, lessonFacets.length))}
                                 className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white/50 transition hover:border-white/20 hover:text-white"
                             >
-                                Load more lessons
+                                {words.loadMoreLessons}
                             </button>
                         </div>
                     ) : null}
