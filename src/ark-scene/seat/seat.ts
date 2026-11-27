@@ -26,6 +26,7 @@
 import type {BufferGeometry, Matrix4, Object3D} from "three";
 import {ALL, DrawnSolids, HARD, ROCK, SOFT, TREE, type Near, type SolidHit} from "@/ark-scene/seat/solids";
 import {feetOf, hullKnown, hullOf, lyingPoints, posedHull, soleLevel, type RigPose} from "@/ark-scene/seat/support";
+import {holdTreeDetail, releaseTreeDetail} from "@/ark-scene/tree-detail";
 
 /** What the scene says the animal is doing, for the seat: the first four are seated, the rest left alone. */
 export type SeatKind = "stand" | "lie" | "perch" | "cling" | "fly" | "swim" | "hang" | "ride" | "carried" | "den" | "afloat" | "hop" | "act" | "swing" | "grow";
@@ -250,6 +251,7 @@ export class SeatPass {
     /** The frame's start (its own count of frames: the renderer's counts every pass it draws), `dt` seconds after the last. */
     begin(dt = 1 / 60): void {
         const frame = ++this.frame;
+        releaseTreeDetail(frame);
         this.clock += Math.min(Math.max(dt, 0), 0.25);
         // (The last frame's budget ran out before everyone due was seated: each waits a frame longer between turns; else less.)
         this.wait = this.short ? Math.min(this.wait + 1, 90) : Math.max(this.wait - 1, 0);
@@ -393,6 +395,9 @@ export class SeatPass {
     settle(input: SeatInput): void {
         const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, ox: NaN, oy: NaN, oz: NaN, sx: NaN, sz: NaN, urgent: false, mute: 0, mutes: 0, wasGap: NaN, wasOff: 0, wasOwnY: NaN, lean: 0, idle: 99, lift: 0, liftFrom: NaN, ring: 0, sides: 0, bx: NaN, by: NaN, bz: NaN, fell: false, fellX: 0, fellZ: 0});
         s.kind = input.kind;
+        // Lane SEAT (2026-11-27): one drawn near and held on a surface up in a tree: that tree drawn at the level its
+        // limbs are on (`tree-detail.ts`; a woodpecker drawn 50 m off on its beech's lod2, a metre over its crown).
+        if (input.surface && input.level !== "far") holdTreeDetail(input.holder, input.matrix.elements[12], input.matrix.elements[13], input.matrix.elements[14], this.frame);
         if (this.keepPoints) {
             // Development (the audit's probe, `audit-probe.ts`): the animal as drawn this frame.
             const holder = input.holder as SeatHolder & {seatDrawn?: {kind: SeatKind; level: string; m: number[]; geometry: BufferGeometry; pose: RigPose | null; height: number; length: number; surface: SeatInput["surface"]; frame: number; near: number; leaping: boolean; grips: ArrayLike<{bone: number}> | null; striding: boolean}};

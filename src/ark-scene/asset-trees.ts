@@ -30,6 +30,7 @@ import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {jungleTrees} from "@/ark-scene/islands/wild/jungle";
 import {arkWorld, sampleGround, zoneAt} from "@/ark-scene/world";
 import {inPool} from "@/ark-scene/islands/wild/falls";
+import {TREE_DETAIL_MOST, treeDetailPoints, treeDetailVersion, treeHoldsPoint} from "@/ark-scene/tree-detail";
 
 const LEVELS = ["lod0", "lod1", "lod2", "card"] as const;
 type Level = typeof LEVELS[number];
@@ -343,6 +344,9 @@ export class AssetTrees {
     private fill = 1;
     private lastAt = new Vector3(Infinity, 0, 0);
     private framesSince = 0;
+    /** Lane SEAT: the trees an animal drawn near is held up in, at full detail (`tree-detail.ts`), and the holds they are for. */
+    private detail = new Set<Instance>();
+    private detailVersion = -1;
     private shadows = true;
     // p5 (humans): logging stands' trees (`setOverride`).
     private override: TreeOverride | null = null;
@@ -464,7 +468,10 @@ export class AssetTrees {
         if (!this.ready) return;
         this.framesSince++;
         const forced = this.override !== null && (this.override.moving() || this.override.changed()); // p5 (humans)
-        if (!forced && camera.distanceToSquared(this.lastAt) < 2.25 && this.framesSince < 30) return;
+        // (Lane SEAT: an animal held up in a tree, or let go: its tree's level now, not half a second on.)
+        const held = treeDetailVersion() !== this.detailVersion;
+        if (held) this.detail = this.heldTrees();
+        if (!forced && !held && camera.distanceToSquared(this.lastAt) < 2.25 && this.framesSince < 30) return;
         this.framesSince = 0;
         this.lastAt.copy(camera);
         // A tree is "near" when the camera is inside (or within reach of) its crown's cylinder: drawn with the fade.
@@ -504,7 +511,8 @@ export class AssetTrees {
                 const d = away / size;
                 // Right beside the tree (up in its crown, a close-up on one of its leaves): full detail, the level its attach points are on.
                 const close = d >= d0 && treeLodDistance(instance, camera) < TREE_CLOSE;
-                let level: Level = d < d0 || close ? "lod0" : d < d1 ? "lod1" : d < d2 || away < instance.height * hold ? "lod2" : "card";
+                // (Lane SEAT: or an animal drawn near is held up in it, on a limb only this level has: `tree-detail.ts`.)
+                let level: Level = d < d0 || close || this.detail.has(instance) ? "lod0" : d < d1 ? "lod1" : d < d2 || away < instance.height * hold ? "lod2" : "card";
                 // A level that failed to load falls to the next one that did.
                 let index = LEVELS.indexOf(level);
                 while (index < LEVELS.length - 1 && !entry.meshes[LEVELS[index]]) index++;
@@ -530,6 +538,24 @@ export class AssetTrees {
                 if (entry.near.instanceColor) entry.near.instanceColor.needsUpdate = true;
             }
         });
+    }
+
+    /**
+     * Lane SEAT: the trees round the points animals drawn near are held at up in a crown (`tree-detail.ts`), at most
+     * `TREE_DETAIL_MOST`. Worked out when a hold comes, moves or goes, not at every re-sort.
+     */
+    private heldTrees(): Set<Instance> {
+        this.detailVersion = treeDetailVersion();
+        const out = new Set<Instance>();
+        const points = treeDetailPoints();
+        if (!points.length) return out;
+        this.byAsset.forEach((entry) => {
+            for (const instance of entry.instances) {
+                if (out.size >= TREE_DETAIL_MOST) return;
+                if (treeHoldsPoint(instance, points)) out.add(instance);
+            }
+        });
+        return out;
     }
 
     dispose() {
